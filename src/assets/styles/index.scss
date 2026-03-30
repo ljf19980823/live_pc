@@ -1,0 +1,81 @@
+// 样式入口（在 main.js 中引入此文件）
+
+@import 'normalize.css/normalize.css';
+@import './reset.scss';
+
+// ─── 通用工具类 ───────────────────────────────────────────────
+
+// 间距（margin / padding）
+@each $prop, $abbrev in (margin: m, padding: p) {
+  @each $size in (0, 4, 8, 12, 16, 20, 24, 32, 40, 48) {
+    .#{$abbrev}-#{$size} { #{$prop}: #{$size}px !important; }
+    .#{$abbrev}t-#{$size} { #{$prop}-top: #{$size}px !important; }
+    .#{$abbrev}r-#{$size} { #{$prop}-right: #{$size}px !important; }
+    .#{$abbrev}b-#{$size} { #{$prop}-bottom: #{$size}px !important; }
+    .#{$abbrev}l-#{$size} { #{$prop}-left: #{$size}px !important; }
+    .#{$abbrev}x-#{$size} { #{$prop}-left: #{$size}px !important; #{$prop}-right: #{$size}px !important; }
+    .#{$abbrev}y-#{$size} { #{$prop}-top: #{$size}px !important; #{$prop}-bottom: #{$size}px !important; }
+  }
+}
+
+// flex 工具
+.d-flex        { display: flex !important; }
+.flex-column   { flex-direction: column !important; }
+.flex-wrap     { flex-wrap: wrap !important; }
+.flex-1        { flex: 1 !important; }
+.justify-start   { justify-content: flex-start !important; }
+.justify-end     { justify-content: flex-end !important; }
+.justify-center  { justify-content: center !important; }
+.justify-between { justify-content: space-between !important; }
+.align-start   { align-items: flex-start !important; }
+.align-center  { align-items: center !important; }
+.align-end     { align-items: flex-end !important; }
+
+// 文字
+.text-left    { text-align: left !important; }
+.text-center  { text-align: center !important; }
+.text-right   { text-align: right !important; }
+.text-primary   { color: $color-primary !important; }
+.text-success   { color: $color-success !important; }
+.text-warning   { color: $color-warning !important; }
+.text-danger    { color: $color-danger !important; }
+.text-muted     { color: $text-secondary !important; }
+.text-ellipsis  { @include ellipsis; }
+
+// 宽高
+.w-full  { width: 100% !important; }
+.h-full  { height: 100% !important; }
+
+// 可见性
+.hidden   { display: none !important; }
+.invisible { visibility: hidden !important; }
+
+// 响应式：在移动端隐藏
+.hidden-mobile {
+  @include mobile { display: none !important; }
+}
+// 响应式：在平板端隐藏
+.hidden-tablet {
+  @include tablet { display: none !important; }
+}
+// 仅移动端显示
+.visible-mobile {
+  display: none !important;
+  @include mobile { display: block !important; }
+}
+
+// ─── ElementUI 全局样式覆盖 ───────────────────────────────────
+.el-button--primary {
+  background-color: $color-primary;
+  border-color: $color-primary;
+}
+
+// 表格斑马纹
+.el-table .el-table__row--striped td {
+  background-color: #FAFAFA;
+}
+
+// 弹窗圆角
+.el-dialog {
+  border-radius: $border-radius-md;
+}
