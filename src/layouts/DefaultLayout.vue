@@ -207,7 +207,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$nav-width: 150px;
+$nav-width: 121px;
 $header-h: $header-height;
 
 // ─── 整体布局 ─────────────────────────────────────────────────
@@ -224,7 +224,7 @@ $header-h: $header-height;
 // ─── 侧边栏 ───────────────────────────────────────────────────
 .layout-sidebar {
   width: $nav-width;
-  padding: 111px 15px 45px;
+  padding: 119px 16px 45px;
   box-sizing: border-box;
   height: 100%;
   background: #F0F3F6;
@@ -260,7 +260,7 @@ $header-h: $header-height;
   }
 
   .logo-name {
-    font-size: 20px;
+    font-size: 14px;
     color: $text-secondary;
     letter-spacing: 1px;
     white-space: nowrap;
@@ -290,15 +290,15 @@ $header-h: $header-height;
 
   .nav-icon {
     @include flex-center;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     border-radius: 10px;
     margin-bottom: 4px;
     transition: background $transition-fast;
 
     img {
-      width: 26px;
-      height: 26px;
+      width: 22px;
+      height: 22px;
       object-fit: contain;
       display: block;
       -webkit-user-drag: none;
@@ -307,7 +307,7 @@ $header-h: $header-height;
   }
 
   .nav-label {
-    font-size: 21px;
+    font-size: 14px;
     color: #787F8D;
     text-align: center;
     white-space: nowrap;
@@ -364,8 +364,8 @@ $header-h: $header-height;
 
   .nav-item {
     .nav-icon {
-      width: 36px;
-      height: 36px;
+      width: 59px;
+      height: 59px;
       border-radius: 50%;
       overflow: hidden;
     }
@@ -407,7 +407,7 @@ $header-h: $header-height;
   }
 
   .toggle-btn {
-    font-size: 20px;
+    font-size: 14px;
     padding: 4px;
     color: $text-regular;
     flex-shrink: 0;
@@ -445,7 +445,7 @@ $header-h: $header-height;
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  padding: 15px 32px 15px 0;
+  padding: 16px 16px 16px 0;
   box-sizing: border-box;
   @include scrollbar;
 }
@@ -455,19 +455,19 @@ $header-h: $header-height;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  gap: 21px;
+  gap: 11px;
   cursor: pointer;
 }
 
 .nav-icon_img {
-  width: 65px !important;
-  height: 65px !important;
+  width: 59px !important;
+  height: 59px !important;
   border-radius: 50%;
 }
 
 .nav-icon_last-label {
   font-weight: 500;
-  font-size: 21px;
+  font-size: 14px;
   color: #787F8D;
   transition: color $transition-fast, font-weight $transition-fast;
 }

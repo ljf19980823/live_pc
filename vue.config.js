@@ -6,8 +6,8 @@ function resolve(dir) {
 }
 
 module.exports = defineConfig({
-  // 部署应用包时的基本 URL，默认 '/'
-  publicPath: process.env.VUE_APP_PUBLIC_PATH || '/',
+  // 部署应用包时的基本 URL，Electron 打包使用 './' 相对路径
+  publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
 
   // 生产环境关闭 source map 以加速构建
   productionSourceMap: false,

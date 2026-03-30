@@ -2,12 +2,15 @@
   "name": "lisheng-live-pc",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "build:prod": "vue-cli-service build --mode production",
     "build:stage": "vue-cli-service build --mode staging",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "electron:serve": "cross-env NODE_ENV=development electron .",
+    "electron:build": "vue-cli-service build --mode production && electron-builder build --win"
   },
   "dependencies": {
     "axios": "^1.6.8",
@@ -23,8 +26,41 @@
   "devDependencies": {
     "@vue/cli-plugin-babel": "~5.0.8",
     "@vue/cli-service": "~5.0.8",
+    "cross-env": "^7.0.3",
+    "electron": "^25.9.8",
+    "electron-builder": "^23.6.0",
     "sass": "^1.69.7",
     "sass-loader": "^10.4.1"
+  },
+  "build": {
+    "appId": "com.lisheng.live.pc",
+    "productName": "立升直播",
+    "copyright": "Copyright © 2024 立升",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "立升直播"
+    }
   },
   "browserslist": [
     "> 1%",
