@@ -18,10 +18,12 @@
           class="nav-item"
           :class="{ active: activeMenu === item.path }"
           @click="goTo(item.path)"
+          @mouseenter="hoveredMenu = item.path"
+          @mouseleave="hoveredMenu = null"
         >
           <div class="nav-icon">
             <img
-              :src="activeMenu === item.path ? item.activeIcon : item.icon"
+              :src="(activeMenu === item.path || hoveredMenu === item.path) ? item.activeIcon : item.icon"
               :alt="item.title"
             />
           </div>
@@ -112,6 +114,7 @@ export default {
       // 一级菜单静态配置
       // icon：未选中图片；activeIcon：选中图片
       // 图片放在 src/assets/icons/menu/ 目录下，替换为实际文件即可
+      hoveredMenu: null,
       menuList: [
         {
           path: '/home',
@@ -204,7 +207,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 侧边栏宽度（固定窄条风格）
 $nav-width: 150px;
 $header-h: $header-height;
 
@@ -213,6 +215,8 @@ $header-h: $header-height;
   display: flex;
   width: 100%;
   height: 100vh;
+  min-width: 1280px;
+  min-height: 720px;
   overflow: hidden;
   background: $bg-base;
 }
@@ -297,12 +301,10 @@ $header-h: $header-height;
       height: 26px;
       object-fit: contain;
       display: block;
-      // 防止拖拽图片
       -webkit-user-drag: none;
       pointer-events: none;
     }
   }
-  
 
   .nav-label {
     font-size: 21px;
@@ -323,11 +325,10 @@ $header-h: $header-height;
     color: #C0C4CC;
   }
 
-  // 悬浮（图片通过 :src 切换，这里只改文字颜色和背景）
   &:hover:not(.active) {
     background: #F5F7FF;
 
-    .nav-label { color: $color-primary; }
+    .nav-label { color: $color-primary; font-weight: 600; }
   }
 
   // 激活
@@ -389,6 +390,7 @@ $header-h: $header-height;
 }
 
 .layout-header {
+  display: none !important;
   @include flex-between;
   height: $header-h;
   padding: 0 20px;
@@ -443,40 +445,36 @@ $header-h: $header-height;
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 15px 32px 15px 0;
+  box-sizing: border-box;
   @include scrollbar;
 }
 
-// ─── 移动端：侧边栏抽屉式 ─────────────────────────────────────
-@include mobile-tablet {
-  .layout-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    transform: translateX(-100%);
-    transition: transform $transition-base;
-    box-shadow: $shadow-lg;
-
-    &.visible { transform: translateX(0); }
-  }
+.nav-icon_last {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 21px;
+  cursor: pointer;
 }
 
-.nav-icon_last{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    gap: 21px;
-  }
-  .nav-icon_img{
-    width: 65px!important;
-    height: 65px!important;
-    border-radius: 50%;
-  }
-  .nav-icon_last-label{
-    font-weight: 500;
+.nav-icon_img {
+  width: 65px !important;
+  height: 65px !important;
+  border-radius: 50%;
+}
+
+.nav-icon_last-label {
+  font-weight: 500;
   font-size: 21px;
   color: #787F8D;
-  }
+  transition: color $transition-fast, font-weight $transition-fast;
+}
+
+.nav-icon_last:hover .nav-icon_last-label,
+.nav-icon_last.active .nav-icon_last-label {
+  color: $color-primary;
+  font-weight: 600;
+}
 </style>
