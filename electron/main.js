@@ -24,6 +24,16 @@ function createWindow() {
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    // 生产环境按 F12 打开 / 关闭 DevTools，方便排查问题
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.key === 'F12' && input.type === 'keyDown') {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools()
+        } else {
+          mainWindow.webContents.openDevTools()
+        }
+      }
+    })
   }
 
   mainWindow.once('ready-to-show', () => {
