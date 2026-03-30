@@ -5,7 +5,7 @@
     </div>
     <div class="app_container_last">
       <div class="app_container_last_left">
-        <div class="app_container_last_left_top">
+        <div class="app_container_last_left_top" @click="toMessage()">
           <div class="app_container_last_left_top_title">新消息</div>
           <img src="@/assets/images/home/right.png" class="app_container_last_left_top_icon" alt="">
         </div>
@@ -32,6 +32,20 @@
     </div>
   </div>
 </template>
+<script>
+export default {
+  data () {
+    return {
+      
+    }
+  },
+  methods:{
+    toMessage(){
+      this.$router.push('/message')
+    }
+  }
+}
+</script>
 <style scoped>
 .app_container{
   width: 100%;
@@ -40,6 +54,8 @@
   flex-direction: column;
   justify-content: flex-start;
   gap: 16px;
+    padding: 16px 16px 16px 0;
+  box-sizing: border-box;
 
 }
 .app_container_top{

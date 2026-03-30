@@ -445,9 +445,8 @@ $header-h: $header-height;
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 16px 16px 0;
-  box-sizing: border-box;
   @include scrollbar;
+  background: #F0F3F6;
 }
 
 .nav-icon_last {
