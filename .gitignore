@@ -26,3 +26,6 @@ pnpm-debug.log*
 # 缓存
 .cache/
 .parcel-cache/
+
+# Electron 打包输出
+release/

@@ -10,7 +10,9 @@
     "build:stage": "vue-cli-service build --mode staging",
     "lint": "vue-cli-service lint",
     "electron:serve": "cross-env NODE_ENV=development electron .",
-    "electron:build": "vue-cli-service build --mode production && electron-builder build --win"
+    "electron:build": "vue-cli-service build --mode production && electron-builder build --win",
+    "electron:build:mac": "vue-cli-service build --mode production && electron-builder build --mac",
+    "electron:build:all": "vue-cli-service build --mode production && electron-builder build --win --mac"
   },
   "dependencies": {
     "axios": "^1.6.8",
@@ -37,7 +39,7 @@
     "productName": "立升直播",
     "copyright": "Copyright © 2024 立升",
     "directories": {
-      "output": "C:/Users/12721/Desktop/lisheng-dist"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
@@ -60,6 +62,22 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "立升直播"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "pkg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "public/favicon.ico"
+    },
+    "pkg": {
+      "installLocation": "/Applications"
     }
   },
   "browserslist": [
