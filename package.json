@@ -74,7 +74,7 @@
         }
       ],
       "category": "public.app-category.utilities",
-      "icon": "public/favicon.ico"
+      "identity": null
     },
     "pkg": {
       "installLocation": "/Applications"
