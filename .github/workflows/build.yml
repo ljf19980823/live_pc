@@ -52,30 +52,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Patch electron-builder pkg unlink bug
-        run: |
-          node -e "
-          const fs = require('fs');
-          const pkgFile = 'node_modules/app-builder-lib/out/targets/pkg.js';
-          let content = fs.readFileSync(pkgFile, 'utf8');
-          const patched = content.replace(
-            /await \(0, promises_1\.unlink\)\(this\.outFile\)/g,
-            'await (0, promises_1.unlink)(this.outFile).catch(() => {})'
-          );
-          if (content !== patched) {
-            fs.writeFileSync(pkgFile, patched);
-            console.log('Patched successfully');
-          } else {
-            const patched2 = content.replace(
-              /unlink\(this\.outFile\)/g,
-              'unlink(this.outFile).catch(() => {})'
-            );
-            fs.writeFileSync(pkgFile, patched2);
-            console.log('Applied fallback patch');
-          }
-          "
-
-      - name: Build macOS PKG
+      - name: Build macOS DMG
         run: npm run electron:build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,6 +61,6 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-pkg
-          path: release/*.pkg
+          name: macos-dmg
+          path: release/*.dmg
           if-no-files-found: warn
