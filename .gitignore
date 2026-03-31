@@ -29,3 +29,4 @@ pnpm-debug.log*
 
 # Electron 打包输出
 release/
+dist_electron/
