@@ -10,7 +10,7 @@
         <span class="logo-name">立升直播</span>
       </div> -->
      
-      <!-- 菜单列表 -->
+      <!-- 菜单列表 --> 
       <nav class="sidebar-nav">
         <div
           v-for="item in menuList"
