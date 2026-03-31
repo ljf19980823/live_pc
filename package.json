@@ -37,7 +37,7 @@
     "productName": "立升直播",
     "copyright": "Copyright © 2024 立升",
     "directories": {
-      "output": "dist_electron"
+      "output": "C:/Users/12721/Desktop/lisheng-dist"
     },
     "files": [
       "dist/**/*",
