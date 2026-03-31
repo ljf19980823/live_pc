@@ -52,3 +52,26 @@ input, textarea, button {
 img, a {
   -webkit-touch-callout: none;
 }
+
+// 全局滚动条美化
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
