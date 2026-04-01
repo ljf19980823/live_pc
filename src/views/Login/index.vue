@@ -1,5 +1,40 @@
 <template>
-  <div class="login-page">
+  <div class="app_container">
+    <img src="@/assets/images/login/logo.png" class="app_container_logo"  alt="">
+    <div class="app_container_mess">
+      <div class="app_container_mess_top">
+        <div class="app_container_mess_top_input">
+          <div class="app_container_mess_top_input_input">
+            <input type="text" placeholder="请输入账号名/账号ID">
+          </div>
+          <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
+        </div>
+        <div class="app_container_mess_top_input">
+          <div class="app_container_mess_top_input_input">
+            <input type="text" placeholder="请输入登入密码">
+          </div>
+          <img  class="app_container_mess_top_input_input_icon" src="@/assets/images/login/password_yes.png" alt="">
+        </div>
+      </div>
+      <div class="app_container_mess_tips">
+        <div class="app_container_mess_tips_left">
+          <img src="@/assets/images/login/check_no.png" class="app_container_mess_tips_left_icon" alt="">
+          <div class="app_container_mess_tips_left_text">记住密码</div>
+        </div>
+        <div class="app_container_mess_tips_right">忘记密码？</div>
+      </div>
+      <div class="app_container_mess_btn"  @click="handleLogin">{{ loading ? '登录中...' : '登 录' }}</div>
+      <div class="app_container_mess_last">
+        <div class="app_container_mess_last_left">邀请码加入课堂</div>
+        <div class="app_container_mess_last_right">
+          <div class="">扫码登录</div>
+          <div class="app_container_mess_last_right_sx"></div>
+          <div class="">手机号登入</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- <div class="login-page">
     <div class="login-box">
       <div class="login-header">
         <h1 class="login-title">立升直播</h1>
@@ -43,7 +78,7 @@
         </el-button>
       </el-form>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script>
@@ -105,54 +140,160 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.login-page {
-  @include flex-center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1D2035 0%, #2C3E6B 100%);
+.app_container{
+  position: relative;
+  top: -100px;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  // padding-top: 96px;
+  box-sizing: border-box;
+  background: url('../../assets/images/login/bg.png') no-repeat;
+  background-size: 100% 100%;
 }
-
-.login-box {
-  width: 420px;
-  padding: 40px;
-  background: $bg-white;
-  border-radius: $border-radius-lg;
-  box-shadow: $shadow-lg;
-
-  @include mobile {
-    width: 100%;
-    min-height: 100vh;
-    border-radius: 0;
-    padding: 60px 24px 24px;
-  }
+.app_container_logo{
+  width: 128px;
+  height: 140px;
 }
-
-.login-header {
-  text-align: center;
-  margin-bottom: 32px;
+.app_container_mess{
+  width: 300px;
+  margin-top: 42px;
 }
-
-.login-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: $color-primary;
-  margin: 0 0 8px;
-}
-
-.login-subtitle {
-  font-size: 14px;
-  color: $text-secondary;
-  margin: 0;
-}
-
-.login-form {
-  .el-form-item { margin-bottom: 20px; }
-}
-
-.login-btn {
+.app_container_mess_top{
   width: 100%;
-  height: 44px;
-  font-size: 16px;
-  letter-spacing: 2px;
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 35px;
+}
+.app_container_mess_top_input{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #D9D9D9;
+  gap: 10px;
+}
+.app_container_mess_top_input_input{
+  flex: 1;
+  width: 0;
+  
+}
+.app_container_mess_top_input_input input{
+  width: 100%;
+  font-weight: 400;
+font-size: 14px;
+color: #333333;
+border: none!important;
+background: transparent!important;
+}
+.app_container_mess_top_input_input_icon{
+  width: 20px;
+  height: 14px;
+}
+.app_container_mess_top_input_input_icon2{
+  width: 16px;
+  height: 8px;
+}
+.app_container_mess_tips{
+  margin-top: 19px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.app_container_mess_tips_left{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+.app_container_mess_tips_left_icon{
+  width: 16px;
+  height: 16px; 
+}
+.app_container_mess_tips_left_text{
+  font-weight: 400;
+font-size: 14px;
+color: #333333;
+}
+.app_container_mess_tips_right{
+  font-weight: 400;
+font-size: 14px;
+color: #333333;
+}
+.app_container_mess_btn{
+  margin-top: 29px;
+  width: 100%;
+  height: 42px;
+background: #0049FF;
+border-radius: 12px 12px 12px 12px;
+display: flex;
+justify-content: center;
+align-items: center;
+font-size: 16px;
+color: #FFFFFF;
+font-weight: bold;
+
+}
+.app_container_mess_last{
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.app_container_mess_last_left{
+  font-weight: 400;
+font-size: 14px;
+color: #0049FF;
+}
+.app_container_mess_last_right{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+font-size: 14px;
+color: #0049FF;
+}
+.app_container_mess_last_right_sx{
+  width: 1px;
+height: 16px;
+background: #D9D9D9;
+}
+
+
+::placeholder { /* 标准语法 */
+    color: #999!important;
+    font-size: 14px!important;
+}
+
+/* Chrome/Safari/Edge */
+::-webkit-input-placeholder {
+     color: #999!important;
+    font-size: 14px!important;
+}
+
+/* Firefox 4-18 */
+:-moz-placeholder {
+     color: #999!important;
+    font-size: 14px!important;
+}
+
+/* Firefox 19+ */
+::-moz-placeholder {
+    color: #999!important;
+    font-size: 14px!important;
+}
+
+/* IE 10-11 */
+:-ms-input-placeholder {
+    color: #999!important;
+    font-size: 14px!important;
 }
 </style>
