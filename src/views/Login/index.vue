@@ -24,13 +24,46 @@
           </div>
           <div class="app_container_mess_tips_right" @click="handleForget()">忘记密码？</div>
         </div>
-        <div class="app_container_mess_btn"  @click="handleLogin">{{ loading ? '登录中...' : '登 录' }}</div>
+        <div class="app_container_mess_btn"  @click="handleMock">{{ loading ? '登录中...' : '登 录' }}</div>
         <div class="app_container_mess_last">
           <div class="app_container_mess_last_left">邀请码加入课堂</div>
           <div class="app_container_mess_last_right">
             <div class="">扫码登录</div>
             <div class="app_container_mess_last_right_sx"></div>
             <div class="">手机号登入</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mask" v-if="showMask">
+      <div class="mask_con">
+        <div class="mask_con_con">
+          <img src="@/assets/images/login/close.png" class="mask_con_con_top_close" alt="">
+          <div class="mask_con_con_top">请选择</div>
+          <div class="mask_con_con_list">
+            <div class="mask_con_con_list_detail" @click="handleLogin()">
+              <img src="@/assets/images/class/such.png" class="mask_con_con_list_detail_img" alt="">
+              <div class="mask_con_con_list_detail_mess">
+                <div class="mask_con_con_list_detail_mess_name">立升教育</div>
+                <div class="mask_con_con_list_detail_mess_last">
+                  <div class="mask_con_con_list_detail_mess_last_tag">老师</div>
+                  <div class="mask_con_con_list_detail_mess_last_name">超级无敌霸王龙3232</div>
+                </div>
+              </div>
+              <div class="mask_con_con_list_detail_btn">进入</div>
+            </div>
+            <div class="mask_con_con_list_detail" @click="handleLogin()">
+              <img src="@/assets/images/class/such.png" class="mask_con_con_list_detail_img" alt="">
+              <div class="mask_con_con_list_detail_mess">
+                <div class="mask_con_con_list_detail_mess_name">立升教育</div>
+                <div class="mask_con_con_list_detail_mess_last">
+                  <div class="mask_con_con_list_detail_mess_last_tag2">学生</div>
+                  <div class="mask_con_con_list_detail_mess_last_name">超级无敌霸王龙3232</div>
+                </div>
+              </div>
+              <div class="mask_con_con_list_detail_btn">进入</div>
+            </div>
           </div>
         </div>
       </div>
@@ -113,10 +146,14 @@ export default {
           { required: true, message: '请输入密码', trigger: 'blur' },
           { min: 6, message: '密码长度不少于 6 位', trigger: 'blur' }
         ]
-      }
+      },
+      showMask:false
     }
   },
   methods: {
+    handleMock(){
+      this.showMask = true
+    },
     handleLogin() {
        setToken('mock-token-dev')
           this.$store.commit('user/SET_TOKEN', 'mock-token-dev')
@@ -288,7 +325,122 @@ color: #0049FF;
 height: 16px;
 background: #D9D9D9;
 }
-
+.mask{
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(51, 51, 51, 0.60);
+}
+.mask_con{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.mask_con_con{
+  width: 406px;
+background: #FFFFFF;
+border-radius: 16px 16px 16px 16px;
+position: relative;
+padding: 18px 16px 31px 16px;
+box-sizing: border-box;
+}
+.mask_con_con_top{
+  font-weight: bold;
+font-size: 16px;
+color: #333333;
+}
+.mask_con_con_list{
+  width: 100%;
+  margin-top: 17px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+}
+.mask_con_con_list_detail{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 18px 13px 16px;
+  box-sizing: border-box;
+  background: #F3F4F8;
+border-radius: 8px 8px 8px 8px;
+cursor: pointer;
+}
+.mask_con_con_list_detail_img{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.mask_con_con_list_detail_mess{
+  flex: 1;
+  width: 0;
+}
+.mask_con_con_list_detail_btn{
+  font-weight: bold;
+font-size: 16px;
+color: #0049FF;
+cursor: pointer;
+}
+.mask_con_con_list_detail_mess_name{
+  font-weight: bold;
+  word-break: break-all;
+  line-height: 22px;
+font-size: 16px;
+color: #333333;
+}
+.mask_con_con_list_detail_mess_last{
+  margin-top: 11px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+.mask_con_con_list_detail_mess_last_tag{
+  width: 39px;
+height: 21px;
+background: #CAD9FF;
+border-radius: 4px 4px 4px 4px;
+font-size: 12px;
+color: #0049FF;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+.mask_con_con_list_detail_mess_last_tag2{
+  width: 39px;
+height: 21px;
+background: #CEFFD3;
+border-radius: 4px 4px 4px 4px;
+font-size: 12px;
+color: #11B623;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+.mask_con_con_list_detail_mess_last_name{
+  font-weight: 400;
+font-size: 14px;
+color: #666666;
+word-break: break-all;
+line-height: 22px;
+}
+.mask_con_con_top_close{
+  cursor: pointer;
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  width: 14px;
+  height: 14px;
+}
 
 ::placeholder { /* 标准语法 */
     color: #999!important;
@@ -318,4 +470,6 @@ background: #D9D9D9;
     color: #999!important;
     font-size: 14px!important;
 }
+
+
 </style>
