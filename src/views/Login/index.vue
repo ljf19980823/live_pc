@@ -1,35 +1,37 @@
 <template>
   <div class="app_container">
-    <img src="@/assets/images/login/logo.png" class="app_container_logo"  alt="">
-    <div class="app_container_mess">
-      <div class="app_container_mess_top">
-        <div class="app_container_mess_top_input">
-          <div class="app_container_mess_top_input_input">
-            <input type="text" placeholder="请输入账号名/账号ID">
+    <div class="app_container_box">
+      <img src="@/assets/images/login/logo.png" class="app_container_logo"  alt="">
+      <div class="app_container_mess">
+        <div class="app_container_mess_top">
+          <div class="app_container_mess_top_input">
+            <div class="app_container_mess_top_input_input">
+              <input type="text" placeholder="请输入账号名/账号ID">
+            </div>
+            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
           </div>
-          <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
-        </div>
-        <div class="app_container_mess_top_input">
-          <div class="app_container_mess_top_input_input">
-            <input type="text" placeholder="请输入登入密码">
+          <div class="app_container_mess_top_input">
+            <div class="app_container_mess_top_input_input">
+              <input type="text" placeholder="请输入登入密码">
+            </div>
+            <img  class="app_container_mess_top_input_input_icon" src="@/assets/images/login/password_yes.png" alt="">
           </div>
-          <img  class="app_container_mess_top_input_input_icon" src="@/assets/images/login/password_yes.png" alt="">
         </div>
-      </div>
-      <div class="app_container_mess_tips">
-        <div class="app_container_mess_tips_left">
-          <img src="@/assets/images/login/check_no.png" class="app_container_mess_tips_left_icon" alt="">
-          <div class="app_container_mess_tips_left_text">记住密码</div>
+        <div class="app_container_mess_tips">
+          <div class="app_container_mess_tips_left">
+            <img src="@/assets/images/login/check_no.png" class="app_container_mess_tips_left_icon" alt="">
+            <div class="app_container_mess_tips_left_text">记住密码</div>
+          </div>
+          <div class="app_container_mess_tips_right" @click="handleForget()">忘记密码？</div>
         </div>
-        <div class="app_container_mess_tips_right">忘记密码？</div>
-      </div>
-      <div class="app_container_mess_btn"  @click="handleLogin">{{ loading ? '登录中...' : '登 录' }}</div>
-      <div class="app_container_mess_last">
-        <div class="app_container_mess_last_left">邀请码加入课堂</div>
-        <div class="app_container_mess_last_right">
-          <div class="">扫码登录</div>
-          <div class="app_container_mess_last_right_sx"></div>
-          <div class="">手机号登入</div>
+        <div class="app_container_mess_btn"  @click="handleLogin">{{ loading ? '登录中...' : '登 录' }}</div>
+        <div class="app_container_mess_last">
+          <div class="app_container_mess_last_left">邀请码加入课堂</div>
+          <div class="app_container_mess_last_right">
+            <div class="">扫码登录</div>
+            <div class="app_container_mess_last_right_sx"></div>
+            <div class="">手机号登入</div>
+          </div>
         </div>
       </div>
     </div>
@@ -116,13 +118,7 @@ export default {
   },
   methods: {
     handleLogin() {
-      this.$refs.loginForm.validate(valid => {
-        if (!valid) return
-        this.loading = true
-
-        // ── Mock 登录：跳过接口，直接写入 token 和用户信息 ──
-        setTimeout(() => {
-          setToken('mock-token-dev')
+       setToken('mock-token-dev')
           this.$store.commit('user/SET_TOKEN', 'mock-token-dev')
           this.$store.commit('user/SET_USER_INFO', MOCK_USER)
           this.$store.commit('user/SET_ROLES', MOCK_USER.roles)
@@ -132,8 +128,27 @@ export default {
           const redirect = this.$route.query.redirect || '/'
           this.$router.push(redirect)
           this.$message.success('登录成功')
-        }, 300)
-      })
+      // this.$refs.loginForm.validate(valid => {
+      //   if (!valid) return
+      //   this.loading = true
+
+      //   // ── Mock 登录：跳过接口，直接写入 token 和用户信息 ──
+      //   setTimeout(() => {
+      //     setToken('mock-token-dev')
+      //     this.$store.commit('user/SET_TOKEN', 'mock-token-dev')
+      //     this.$store.commit('user/SET_USER_INFO', MOCK_USER)
+      //     this.$store.commit('user/SET_ROLES', MOCK_USER.roles)
+      //     setUserInfo(MOCK_USER)
+
+      //     this.loading = false
+      //     const redirect = this.$route.query.redirect || '/'
+      //     this.$router.push(redirect)
+      //     this.$message.success('登录成功')
+      //   }, 300)
+      // })
+    },
+    handleForget(){
+      this.$router.push('/forget')
     }
   }
 }
@@ -141,18 +156,24 @@ export default {
 
 <style lang="scss" scoped>
 .app_container{
-  position: relative;
-  top: -100px;
+  
   width: 100vw;
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
+  
   // padding-top: 96px;
   box-sizing: border-box;
   background: url('../../assets/images/login/bg.png') no-repeat;
   background-size: 100% 100%;
+}
+.app_container_box{
+  position: relative;
+  top: -100px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 .app_container_logo{
   width: 128px;
@@ -226,6 +247,7 @@ color: #333333;
   font-weight: 400;
 font-size: 14px;
 color: #333333;
+cursor: pointer;
 }
 .app_container_mess_btn{
   margin-top: 29px;
