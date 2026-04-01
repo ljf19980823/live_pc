@@ -391,7 +391,7 @@ box-sizing: border-box;
   gap: 16px;
 }
 .app_container_box_right_last_list_detail{
-  width: 195px;
+  width: 193px;
 background: #FFFFFF;
 box-shadow: 0px 0px 8px 0px rgba(0,73,255,0.1);
 border-radius: 8px 8px 8px 8px;
