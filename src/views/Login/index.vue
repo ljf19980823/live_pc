@@ -1,191 +1,348 @@
 <template>
   <div class="app_container">
     <div class="app_container_box">
-      <img src="@/assets/images/login/logo.png" class="app_container_logo"  alt="">
-      <div class="app_container_mess">
+      <img src="@/assets/images/login/logo.png" class="app_container_logo" alt="">
+      <div class="app_container_mess" v-if="loginType=='1'">
         <div class="app_container_mess_top">
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
-              <input type="text" placeholder="请输入账号名/账号ID">
+              <input
+                v-model="form.userName"
+                type="text"
+                placeholder="请输入账号名/账号ID"
+                @keyup.enter="handleLogin"
+              >
             </div>
             <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
           </div>
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
-              <input type="text" placeholder="请输入登入密码">
+              <input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="请输入登录密码"
+                @keyup.enter="handleLogin"
+              >
             </div>
-            <img  class="app_container_mess_top_input_input_icon" src="@/assets/images/login/password_yes.png" alt="">
+            <img
+              class="app_container_mess_top_input_input_icon pwd-toggle"
+              :src="showPassword ? require('@/assets/images/login/password_no.png') : require('@/assets/images/login/password_yes.png')"
+              @click="showPassword = !showPassword"
+              alt=""
+            >
           </div>
         </div>
         <div class="app_container_mess_tips">
-          <div class="app_container_mess_tips_left">
-            <img src="@/assets/images/login/check_no.png" class="app_container_mess_tips_left_icon" alt="">
+          <div class="app_container_mess_tips_left" @click="toggleRemember">
+            <img
+              :src="rememberPwd ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
+              class="app_container_mess_tips_left_icon"
+              alt=""
+            >
             <div class="app_container_mess_tips_left_text">记住密码</div>
           </div>
-          <div class="app_container_mess_tips_right" @click="handleForget()">忘记密码？</div>
+          <div class="app_container_mess_tips_right" @click="handleForget">忘记密码？</div>
         </div>
-        <div class="app_container_mess_btn"  @click="handleMock">{{ loading ? '登录中...' : '登 录' }}</div>
+        <div
+          class="app_container_mess_btn"
+          :class="{ 'btn-disabled': loading }"
+          @click="handleLogin"
+        >
+          {{ loading ? '登录中...' : '登 录' }}
+        </div>
         <div class="app_container_mess_last">
           <div class="app_container_mess_last_left">邀请码加入课堂</div>
           <div class="app_container_mess_last_right">
-            <div class="">扫码登录</div>
+            <div>扫码登录</div>
             <div class="app_container_mess_last_right_sx"></div>
-            <div class="">手机号登入</div>
+            <div style="cursor:pointer" @click="handlePhoneLogin()">手机号登录</div>
+          </div>
+        </div>
+      </div>
+      <div class="app_container_mess" v-if="loginType=='2'">
+        <div class="app_container_mess_top" style="gap:28px">
+          <div class="app_container_mess_top_input">
+            <div class="app_container_mess_top_input_input">
+              <input
+                v-model="form.userName"
+                type="text"
+                placeholder="请输入手机号"
+                @keyup.enter="handleLogin"
+              >
+            </div>
+            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
+          </div>
+          <div class="app_container_mess_top_input">
+            <div class="app_container_mess_top_input_input">
+              <input
+                v-model="form.password"
+                type="text"
+                placeholder="请输入验证码"
+                @keyup.enter="handleLogin"
+              >
+            </div>
+            <div class="code_box">获取验证码</div>
+          </div>
+        </div>
+        <div class="app_container_mess_tips">
+          <div class="app_container_mess_tips_left" @click="toggleRemember">
+            <img
+              :src="rememberPwd ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
+              class="app_container_mess_tips_left_icon"
+              alt=""
+            >
+            <div class="app_container_mess_tips_left_text">记住手机号</div>
+          </div>
+          
+        </div>
+        <div
+          class="app_container_mess_btn"
+          :class="{ 'btn-disabled': loading }"
+          @click="handleLogin"
+        >
+          {{ loading ? '登录中...' : '登 录' }}
+        </div>
+        <div class="app_container_mess_last" style="    justify-content: flex-end;">
+         
+          <div class="app_container_mess_last_right">
+           
+            <div style="cursor:pointer" @click="handleUserLogin()">用户名登录</div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- 多用户选择弹窗 -->
     <div class="mask" v-if="showMask">
       <div class="mask_con">
         <div class="mask_con_con">
-          <img src="@/assets/images/login/close.png" class="mask_con_con_top_close" alt="">
-          <div class="mask_con_con_top">请选择</div>
+          <img
+            src="@/assets/images/login/close.png"
+            class="mask_con_con_top_close"
+            @click="showMask = false"
+            alt=""
+          >
+          <div class="mask_con_con_top">请选择登录身份</div>
           <div class="mask_con_con_list">
-            <div class="mask_con_con_list_detail" @click="handleLogin()">
-              <img src="@/assets/images/class/such.png" class="mask_con_con_list_detail_img" alt="">
+            <div
+              v-for="(item, index) in eduUserList"
+              :key="index"
+              class="mask_con_con_list_detail"
+              :class="{ 'item-loading': chooseLoading && currentChooseIndex === index }"
+              @click="handleChooseLogin(item, index)"
+            >
+              <img
+                :src="item.profilePicture || require('@/assets/images/class/such.png')"
+                class="mask_con_con_list_detail_img"
+                alt=""
+                @error="onAvatarError"
+              >
               <div class="mask_con_con_list_detail_mess">
-                <div class="mask_con_con_list_detail_mess_name">立升教育</div>
+                <div class="mask_con_con_list_detail_mess_name">
+                  {{ item.institutionName || item.school || '立升教育' }}
+                </div>
                 <div class="mask_con_con_list_detail_mess_last">
-                  <div class="mask_con_con_list_detail_mess_last_tag">老师</div>
-                  <div class="mask_con_con_list_detail_mess_last_name">超级无敌霸王龙3232</div>
+                  <div :class="getRoleTagClass(item.role)">{{ getRoleLabel(item.role) }}</div>
+                  <div class="mask_con_con_list_detail_mess_last_name">
+                    {{ item.realName || item.userName }}
+                  </div>
                 </div>
               </div>
-              <div class="mask_con_con_list_detail_btn">进入</div>
-            </div>
-            <div class="mask_con_con_list_detail" @click="handleLogin()">
-              <img src="@/assets/images/class/such.png" class="mask_con_con_list_detail_img" alt="">
-              <div class="mask_con_con_list_detail_mess">
-                <div class="mask_con_con_list_detail_mess_name">立升教育</div>
-                <div class="mask_con_con_list_detail_mess_last">
-                  <div class="mask_con_con_list_detail_mess_last_tag2">学生</div>
-                  <div class="mask_con_con_list_detail_mess_last_name">超级无敌霸王龙3232</div>
-                </div>
+              <div class="mask_con_con_list_detail_btn">
+                <span v-if="chooseLoading && currentChooseIndex === index">登录中...</span>
+                <span v-else>进入</span>
               </div>
-              <div class="mask_con_con_list_detail_btn">进入</div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <!-- <div class="login-page">
-    <div class="login-box">
-      <div class="login-header">
-        <h1 class="login-title">立升直播</h1>
-        <p class="login-subtitle">直播管理平台</p>
-      </div>
-
-      <el-form
-        ref="loginForm"
-        :model="form"
-        :rules="rules"
-        class="login-form"
-        @keyup.enter.native="handleLogin"
-      >
-        <el-form-item prop="username">
-          <el-input
-            v-model="form.username"
-            placeholder="请输入账号"
-            prefix-icon="el-icon-user"
-            clearable
-          />
-        </el-form-item>
-
-        <el-form-item prop="password">
-          <el-input
-            v-model="form.password"
-            type="password"
-            placeholder="请输入密码"
-            prefix-icon="el-icon-lock"
-            show-password
-            clearable
-          />
-        </el-form-item>
-
-        <el-button
-          type="primary"
-          :loading="loading"
-          class="login-btn"
-          @click="handleLogin"
-        >
-          {{ loading ? '登录中...' : '登 录' }}
-        </el-button>
-      </el-form>
-    </div>
-  </div> -->
 </template>
 
 <script>
+import { ssoLogin, chooseLogin } from '@/api'
 import { setToken, setUserInfo } from '@/utils/auth'
 
-// TODO: 联调时删除此 mock 数据，改为真实接口登录
-const MOCK_USER = {
-  id: 1,
-  name: '管理员',
-  nickname: '管理员',
-  phone: '13800000000',
-  email: 'admin@lisheng.com',
-  avatar: '',
-  roles: ['admin'],
-  createdAt: '2024-01-01'
-}
+const REMEMBER_KEY = 'lisheng_remember_pwd'
 
 export default {
   name: 'Login',
   data() {
     return {
       loading: false,
+      chooseLoading: false,
+      currentChooseIndex: -1,
+      showPassword: false,
+      rememberPwd: false,
+      showMask: false,
+      eduUserList: [],
       form: {
-        username: '',
+        userName: '',
         password: ''
       },
-      rules: {
-        username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-        password: [
-          { required: true, message: '请输入密码', trigger: 'blur' },
-          { min: 6, message: '密码长度不少于 6 位', trigger: 'blur' }
-        ]
-      },
-      showMask:false
+      loginType:"1"
     }
   },
+  created() {
+    this.loadRemembered()
+  },
   methods: {
-    handleMock(){
-      this.showMask = true
+    loadRemembered() {
+      try {
+        const saved = localStorage.getItem(REMEMBER_KEY)
+        if (saved) {
+          const { userName, password } = JSON.parse(saved)
+          this.form.userName = userName || ''
+          this.form.password = password || ''
+          this.rememberPwd = true
+        }
+      } catch {
+        // ignore
+      }
     },
-    handleLogin() {
-       setToken('mock-token-dev')
-          this.$store.commit('user/SET_TOKEN', 'mock-token-dev')
-          this.$store.commit('user/SET_USER_INFO', MOCK_USER)
-          this.$store.commit('user/SET_ROLES', MOCK_USER.roles)
-          setUserInfo(MOCK_USER)
 
-          this.loading = false
-          const redirect = this.$route.query.redirect || '/'
-          this.$router.push(redirect)
+    toggleRemember() {
+      this.rememberPwd = !this.rememberPwd
+      if (!this.rememberPwd) {
+        localStorage.removeItem(REMEMBER_KEY)
+      }
+    },
+
+    getRoleLabel(role) {
+      const map = {
+        TEACHER: '老师',
+        STUDENT: '学生',
+        ADMIN: '管理员',
+        PARENT: '家长'
+      }
+      return map[role] || role || '学生'
+    },
+
+    getRoleTagClass(role) {
+      const teacherRoles = ['TEACHER', 'ADMIN']
+      return teacherRoles.includes(role)
+        ? 'mask_con_con_list_detail_mess_last_tag'
+        : 'mask_con_con_list_detail_mess_last_tag2'
+    },
+
+    onAvatarError(e) {
+      e.target.src = require('@/assets/images/class/such.png')
+    },
+
+    async handleLogin() {
+      if (this.loading) return
+      if (!this.form.userName.trim()) {
+        this.$message.warning('请输入账号名/账号ID')
+        return
+      }
+      if (!this.form.password) {
+        this.$message.warning('请输入登录密码')
+        return
+      }
+
+      this.loading = true
+      try {
+        const res = await ssoLogin({
+          userName: this.form.userName.trim(),
+          password: this.form.password
+        })
+
+        if (this.rememberPwd) {
+          localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+            userName: this.form.userName.trim(),
+            password: this.form.password
+          }))
+        } else {
+          localStorage.removeItem(REMEMBER_KEY)
+        }
+
+        const data = res.data || {}
+        const list = Array.isArray(data.eduUserList) ? data.eduUserList : []
+
+        if (list.length > 1) {
+          // 多用户：展示身份选择弹窗，token 由用户选择后再保存
+          this.eduUserList = list
+          this.showMask = true
+        } else {
+          // 单用户：直接完成登录
+          this.saveLoginData(data)
           this.$message.success('登录成功')
-      // this.$refs.loginForm.validate(valid => {
-      //   if (!valid) return
-      //   this.loading = true
-
-      //   // ── Mock 登录：跳过接口，直接写入 token 和用户信息 ──
-      //   setTimeout(() => {
-      //     setToken('mock-token-dev')
-      //     this.$store.commit('user/SET_TOKEN', 'mock-token-dev')
-      //     this.$store.commit('user/SET_USER_INFO', MOCK_USER)
-      //     this.$store.commit('user/SET_ROLES', MOCK_USER.roles)
-      //     setUserInfo(MOCK_USER)
-
-      //     this.loading = false
-      //     const redirect = this.$route.query.redirect || '/'
-      //     this.$router.push(redirect)
-      //     this.$message.success('登录成功')
-      //   }, 300)
-      // })
+          this.navigateAfterLogin()
+        }
+      } catch (err) {
+        // 错误已由 request.js 拦截器统一处理
+      } finally {
+        this.loading = false
+      }
     },
-    handleForget(){
+
+    async handleChooseLogin(item, index) {
+      if (this.chooseLoading) return
+      this.chooseLoading = true
+      this.currentChooseIndex = index
+      try {
+        // 先用选中用户自己的 token 写入 store 和 localStorage，供 chooseLogin 请求头鉴权
+        setToken(item.token)
+        this.$store.commit('user/SET_TOKEN', item.token)
+        const res = await chooseLogin({
+          role: item.role,
+          userId: item.userId
+        })
+        const data = res.data || {}
+        this.saveLoginData(data)
+        this.showMask = false
+        this.$message.success('登录成功')
+        this.navigateAfterLogin()
+      } catch (err) {
+        // 错误已由 request.js 拦截器统一处理
+      } finally {
+        this.chooseLoading = false
+        this.currentChooseIndex = -1
+      }
+    },
+
+    saveLoginData(data) {
+      const token = data.token || ''
+      const userInfo = {
+        token: data.token,
+        tokenHead: data.tokenHead,
+        role: data.role,
+        userId: data.userId,
+        userName: data.userName,
+        realName: data.realName,
+        profilePicture: data.profilePicture,
+        phone: data.phone,
+        sex: data.sex,
+        email: data.email,
+        school: data.school,
+        grade: data.grade,
+        gradeName: data.gradeName,
+        address: data.address,
+        institutionId: data.institutionId,
+        institutionName: data.institutionName,
+        campusId: data.campusId
+      }
+      setToken(token)
+      setUserInfo(userInfo)
+      this.$store.commit('user/SET_TOKEN', token)
+      this.$store.commit('user/SET_USER_INFO', userInfo)
+      this.$store.commit('user/SET_ROLES', data.role ? [data.role] : [])
+    },
+
+    navigateAfterLogin() {
+      const redirect = this.$route.query.redirect || '/'
+      this.$router.push(redirect)
+    },
+
+    handleForget() {
       this.$router.push('/forget')
+    },
+    handlePhoneLogin(){
+      this.loginType = '2'
+    },
+    handleUserLogin(){
+      this.loginType = '1'
     }
   }
 }
@@ -270,6 +427,8 @@ background: transparent!important;
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  user-select: none;
 }
 .app_container_mess_tips_left_icon{
   width: 16px;
@@ -290,15 +449,24 @@ cursor: pointer;
   margin-top: 29px;
   width: 100%;
   height: 42px;
-background: #0049FF;
-border-radius: 12px 12px 12px 12px;
-display: flex;
-justify-content: center;
-align-items: center;
-font-size: 16px;
-color: #FFFFFF;
-font-weight: bold;
-
+  background: #0049FF;
+  border-radius: 12px 12px 12px 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  color: #FFFFFF;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+  &:active {
+    opacity: 0.85;
+  }
+  &.btn-disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 }
 .app_container_mess_last{
   margin-top: 16px;
@@ -372,8 +540,12 @@ color: #333333;
   padding: 13px 18px 13px 16px;
   box-sizing: border-box;
   background: #F3F4F8;
-border-radius: 8px 8px 8px 8px;
-cursor: pointer;
+  border-radius: 8px 8px 8px 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover {
+    background: #E0E6FF;
+  }
 }
 .mask_con_con_list_detail_img{
   width: 56px;
@@ -440,6 +612,19 @@ line-height: 22px;
   top: 20px;
   width: 14px;
   height: 14px;
+  &:hover {
+    opacity: 0.7;
+  }
+}
+.pwd-toggle {
+  cursor: pointer;
+  &:hover {
+    opacity: 0.7;
+  }
+}
+.item-loading {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 ::placeholder { /* 标准语法 */
@@ -471,5 +656,19 @@ line-height: 22px;
     font-size: 14px!important;
 }
 
-
+.code_box{
+  width: 84px;
+  height: 25px;
+  background: #CAD9FF;
+  border-radius: 4px 4px 4px 4px;
+  font-weight: 400;
+font-size: 14px;
+color: #FFFFFF;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+.code_box_active{
+  background: #0049FF!important;
+}
 </style>

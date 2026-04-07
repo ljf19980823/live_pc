@@ -38,7 +38,7 @@
           :class="{ active: activeMenu === '/profile' }"
           @click="goTo('/profile')"
         >
-          <img src="@/assets/images/head.png" class="nav-icon_img" alt="">
+          <img :src="avatar || require('@/assets/images/head.png')" class="nav-icon_img" alt="头像">
           <span class="nav-icon_last-label">{{ userName || '设置' }}</span>
         </div>
       </div>

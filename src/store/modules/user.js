@@ -4,7 +4,7 @@ import { getToken, setToken, clearAuth, setUserInfo, getUserInfo as getStoredUse
 const state = {
   token: getToken(),
   userInfo: getStoredUserInfo() || {},
-  roles: []
+  role: ''
 }
 
 const mutations = {
@@ -14,13 +14,13 @@ const mutations = {
   SET_USER_INFO(state, userInfo) {
     state.userInfo = userInfo
   },
-  SET_ROLES(state, roles) {
-    state.roles = roles
+  SET_ROLE(state, role) {
+    state.role = role
   },
   RESET(state) {
     state.token = ''
     state.userInfo = {}
-    state.roles = []
+    state.role = ''
   }
 }
 
@@ -39,7 +39,7 @@ const actions = {
     const res = await getUserInfo()
     const info = res.data || res
     commit('SET_USER_INFO', info)
-    commit('SET_ROLES', info.roles || [])
+    commit('SET_ROLE', info.role || '')
     setUserInfo(info)
     return info
   },
@@ -65,9 +65,9 @@ const getters = {
   token: state => state.token,
   userInfo: state => state.userInfo,
   userId: state => state.userInfo?.id,
-  userName: state => state.userInfo?.name || state.userInfo?.nickname,
-  avatar: state => state.userInfo?.avatar,
-  roles: state => state.roles,
+  userName: state => state.userInfo?.userName,
+  avatar: state => state.userInfo?.profilePicture,
+  role: state => state.role,
   isLoggedIn: state => !!state.token
 }
 

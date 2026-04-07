@@ -20,7 +20,7 @@ module.exports = defineConfig({
     // target 需要填写实际后端服务地址
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://47.92.30.163:8085',
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
       }
