@@ -13,7 +13,7 @@
                 @keyup.enter="handleLogin"
               >
             </div>
-            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
+            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
           </div>
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
@@ -70,7 +70,7 @@
                 @keyup.enter="handleCodeLogin"
               >
             </div>
-            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
+            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
           </div>
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
@@ -564,11 +564,11 @@ background: transparent!important;
 }
 .app_container_mess_top_input_input_icon{
   width: 20px;
-  height: 14px;
+  height: 16px;
 }
 .app_container_mess_top_input_input_icon2{
-  width: 16px;
-  height: 8px;
+  width: 20px;
+  height: 16px;
 }
 .app_container_mess_tips{
   margin-top: 19px;
