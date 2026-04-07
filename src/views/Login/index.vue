@@ -51,9 +51,9 @@
           {{ loading ? '登录中...' : '登 录' }}
         </div>
         <div class="app_container_mess_last">
-          <div class="app_container_mess_last_left">邀请码加入课堂</div>
+          <!-- <div class="app_container_mess_last_left" @click="showInviteMask=true">邀请码加入课堂</div> -->
           <div class="app_container_mess_last_right">
-            <div>扫码登录</div>
+            <div style="cursor:pointer"  @click="handleCodeLogin()">扫码登录</div>
             <div class="app_container_mess_last_right_sx"></div>
             <div style="cursor:pointer" @click="handlePhoneLogin()">手机号登录</div>
           </div>
@@ -160,6 +160,30 @@
         </div>
       </div>
     </div>
+
+    <!-- 邀请码加入弹窗 -->
+    <div class="mask" v-if="showInviteMask">
+       <div class="mask_con">
+          <div class="inviteCode_box">
+             <img
+            src="@/assets/images/login/close.png"
+            class="mask_con_con_top_close"
+            @click="showInviteMask = false"
+            alt=""
+          >
+            <div class="inviteCode_box_title">邀请码加入课堂</div>
+            <div class="inviteCode_box_con">
+              <div class="inviteCode_box_con_input">
+                <input type="text" placeholder="请输入邀请码">
+              </div>
+              <div class="inviteCode_box_con_input">
+                <input type="text" placeholder="请输入昵称">
+              </div>
+            </div>
+            <div class="inviteCode_box_btn">加入课堂</div>
+          </div>
+       </div>
+    </div>
   </div>
 </template>
 
@@ -194,7 +218,8 @@ export default {
         phone: '',
         code: ''
       },
-      loginType: '1'
+      loginType: '1',
+      showInviteMask:false
     }
   },
   created() {
@@ -470,6 +495,9 @@ export default {
     },
     handleUserLogin() {
       this.loginType = '1'
+    },
+    handleCodeLogin(){
+      this.$router.push('/codeLogin')
     }
   }
 }
@@ -598,12 +626,13 @@ cursor: pointer;
 .app_container_mess_last{
   margin-top: 16px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
 }
 .app_container_mess_last_left{
   font-weight: 400;
 font-size: 14px;
+cursor: pointer;
 color: #0049FF;
 }
 .app_container_mess_last_right{
@@ -798,5 +827,62 @@ align-items: center;
 }
 .code_box_active{
   background: #0049FF!important;
+}
+
+.inviteCode_box{
+  width: 406px;
+  height: 287px;
+  border-radius: 16px;
+  background: #F3F4F8;
+  position: relative;
+}
+.inviteCode_box_title{
+  width: 100%;
+  height: 48px;
+  text-align: center;
+  padding-top: 18px;
+  box-sizing: border-box;
+  font-weight: bold;
+font-size: 16px;
+color: #333333;
+background: #ffffff;
+border-radius: 16px 16px 0 0;
+}
+.inviteCode_box_con{
+  width: 100%;
+  padding: 16px 11px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+}
+.inviteCode_box_con_input{
+  width: 100%;
+  height: 56px;
+background: #FFFFFF;
+border-radius: 8px 8px 8px 8px;
+}
+.inviteCode_box_con_input input{
+  width: 100%;
+  height: 100%;
+  padding: 0 13px;
+  box-sizing: border-box;
+  font-size: 16px;
+color: #333333;
+}
+.inviteCode_box_btn{
+  width: 226px;
+  height: 44px;
+  margin: 11px auto 0;
+  background: #0049FF;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center; 
+  font-weight: bold;
+  cursor: pointer;
+font-size: 16px;
+color: #FFFFFF;
 }
 </style>
