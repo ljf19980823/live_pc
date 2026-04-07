@@ -37,5 +37,8 @@ export const updateUserInfo = data => put('/user/info', data)
 // 修改密码
 export const changePassword = data => put('/user/password', data)
 
+// 重置密码
+export const resetPassword = data => post('/edu/sso/resetPassword', data)
+
 // 刷新 Token
 export const refreshToken = data => post('/user/token/refresh', data)

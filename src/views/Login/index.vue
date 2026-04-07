@@ -288,8 +288,11 @@ export default {
           // 多用户：展示身份选择弹窗，token 由用户选择后再保存
           this.eduUserList = list
           this.showMask = true
+        } else if (list.length === 1) {
+          // 单用户：默认取第一个用户自动登录
+          await this.handleChooseLogin(list[0], 0)
         } else {
-          // 单用户：直接完成登录
+          // 无用户列表：直接完成登录
           this.saveLoginData(data)
           this.$message.success('登录成功')
           this.navigateAfterLogin()
@@ -440,9 +443,14 @@ export default {
         const list = Array.isArray(data.eduUserList) ? data.eduUserList : []
 
         if (list.length > 1) {
+          // 多用户：展示身份选择弹窗，token 由用户选择后再保存
           this.eduUserList = list
           this.showMask = true
+        } else if (list.length === 1) {
+          // 单用户：默认取第一个用户自动登录
+          await this.handleChooseLogin(list[0], 0)
         } else {
+          // 无用户列表：直接完成登录
           this.saveLoginData(data)
           this.$message.success('登录成功')
           this.navigateAfterLogin()
