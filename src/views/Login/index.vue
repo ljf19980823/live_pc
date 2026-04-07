@@ -53,7 +53,7 @@
         <div class="app_container_mess_last">
           <!-- <div class="app_container_mess_last_left" @click="showInviteMask=true">邀请码加入课堂</div> -->
           <div class="app_container_mess_last_right">
-            <div style="cursor:pointer"  @click="handleCodeLogin()">扫码登录</div>
+            <div style="cursor:pointer"  @click="handleCodeLoginPath()">扫码登录</div>
             <div class="app_container_mess_last_right_sx"></div>
             <div style="cursor:pointer" @click="handlePhoneLogin()">手机号登录</div>
           </div>
@@ -496,7 +496,7 @@ export default {
     handleUserLogin() {
       this.loginType = '1'
     },
-    handleCodeLogin(){
+    handleCodeLoginPath(){
       this.$router.push('/codeLogin')
     }
   }
