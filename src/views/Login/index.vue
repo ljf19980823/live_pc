@@ -64,10 +64,10 @@
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
               <input
-                v-model="form.userName"
+                v-model="phoneForm.phone"
                 type="text"
                 placeholder="请输入手机号"
-                @keyup.enter="handleLogin"
+                @keyup.enter="handleCodeLogin"
               >
             </div>
             <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/xl.png" alt="">
@@ -75,37 +75,40 @@
           <div class="app_container_mess_top_input">
             <div class="app_container_mess_top_input_input">
               <input
-                v-model="form.password"
+                v-model="phoneForm.code"
                 type="text"
                 placeholder="请输入验证码"
-                @keyup.enter="handleLogin"
+                @keyup.enter="handleCodeLogin"
               >
             </div>
-            <div class="code_box">获取验证码</div>
+            <div
+              class="code_box"
+              :class="{ 'code_box_active': countdown === 0 && !sendCodeLoading && isPhoneValid }"
+              @click="handleSendCode"
+            >
+              {{ sendCodeLoading ? '发送中...' : countdown > 0 ? `${countdown}s后重发` : '获取验证码' }}
+            </div>
           </div>
         </div>
         <div class="app_container_mess_tips">
-          <div class="app_container_mess_tips_left" @click="toggleRemember">
+          <div class="app_container_mess_tips_left" @click="toggleRememberPhone">
             <img
-              :src="rememberPwd ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
+              :src="rememberPhone ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
               class="app_container_mess_tips_left_icon"
               alt=""
             >
             <div class="app_container_mess_tips_left_text">记住手机号</div>
           </div>
-          
         </div>
         <div
           class="app_container_mess_btn"
-          :class="{ 'btn-disabled': loading }"
-          @click="handleLogin"
+          :class="{ 'btn-disabled': codeLoginLoading }"
+          @click="handleCodeLogin"
         >
-          {{ loading ? '登录中...' : '登 录' }}
+          {{ codeLoginLoading ? '登录中...' : '登 录' }}
         </div>
-        <div class="app_container_mess_last" style="    justify-content: flex-end;">
-         
+        <div class="app_container_mess_last" style="justify-content: flex-end;">
           <div class="app_container_mess_last_right">
-           
             <div style="cursor:pointer" @click="handleUserLogin()">用户名登录</div>
           </div>
         </div>
@@ -161,31 +164,52 @@
 </template>
 
 <script>
-import { ssoLogin, chooseLogin } from '@/api'
+import { ssoLogin, chooseLogin, sendCode, codeLogin } from '@/api'
 import { setToken, setUserInfo } from '@/utils/auth'
 
 const REMEMBER_KEY = 'lisheng_remember_pwd'
+const REMEMBER_PHONE_KEY = 'lisheng_remember_phone'
 
 export default {
   name: 'Login',
   data() {
     return {
       loading: false,
+      codeLoginLoading: false,
+      sendCodeLoading: false,
+      countdown: 0,
+      countdownTimer: null,
       chooseLoading: false,
       currentChooseIndex: -1,
       showPassword: false,
       rememberPwd: false,
+      rememberPhone: false,
       showMask: false,
       eduUserList: [],
       form: {
         userName: '',
         password: ''
       },
-      loginType:"1"
+      phoneForm: {
+        phone: '',
+        code: ''
+      },
+      loginType: '1'
     }
   },
   created() {
     this.loadRemembered()
+    this.loadRememberedPhone()
+  },
+  computed: {
+    isPhoneValid() {
+      return /^1[3-9]\d{9}$/.test(this.phoneForm.phone.trim())
+    }
+  },
+  beforeDestroy() {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer)
+    }
   },
   methods: {
     loadRemembered() {
@@ -291,11 +315,13 @@ export default {
         })
         const data = res.data || {}
         this.saveLoginData(data)
-        this.showMask = false
-        this.$message.success('登录成功')
+         this.$message.success('登录成功')
         this.navigateAfterLogin()
+        // this.showMask = false
+       
       } catch (err) {
         // 错误已由 request.js 拦截器统一处理
+        this.showMask = false
       } finally {
         this.chooseLoading = false
         this.currentChooseIndex = -1
@@ -332,16 +358,109 @@ export default {
 
     navigateAfterLogin() {
       const redirect = this.$route.query.redirect || '/'
+      console.log(redirect,'路透')
       this.$router.push(redirect)
+    },
+
+    loadRememberedPhone() {
+      try {
+        const saved = localStorage.getItem(REMEMBER_PHONE_KEY)
+        if (saved) {
+          const { phone } = JSON.parse(saved)
+          this.phoneForm.phone = phone || ''
+          this.rememberPhone = true
+        }
+      } catch {
+        // ignore
+      }
+    },
+
+    toggleRememberPhone() {
+      this.rememberPhone = !this.rememberPhone
+      if (!this.rememberPhone) {
+        localStorage.removeItem(REMEMBER_PHONE_KEY)
+      }
+    },
+
+    async handleSendCode() {
+      if (this.countdown > 0 || this.sendCodeLoading) return
+      if (!this.phoneForm.phone.trim()) {
+        this.$message.warning('请输入手机号')
+        return
+      }
+      if (!this.isPhoneValid) {
+        this.$message.warning('请输入正确的手机号')
+        return
+      }
+      this.sendCodeLoading = true
+      try {
+        await sendCode({ phone: this.phoneForm.phone.trim(), type: 1 })
+        this.$message.success('验证码已发送')
+        this.countdown = 60
+        this.countdownTimer = setInterval(() => {
+          this.countdown--
+          if (this.countdown <= 0) {
+            clearInterval(this.countdownTimer)
+            this.countdownTimer = null
+          }
+        }, 1000)
+      } catch {
+        // ignore
+      } finally {
+        this.sendCodeLoading = false
+      }
+    },
+
+    async handleCodeLogin() {
+      if (this.codeLoginLoading) return
+      if (!this.phoneForm.phone.trim()) {
+        this.$message.warning('请输入手机号')
+        return
+      }
+      if (!this.phoneForm.code.trim()) {
+        this.$message.warning('请输入验证码')
+        return
+      }
+      this.codeLoginLoading = true
+      try {
+        const res = await codeLogin({
+          phone: this.phoneForm.phone.trim(),
+          code: this.phoneForm.code.trim()
+        })
+
+        if (this.rememberPhone) {
+          localStorage.setItem(REMEMBER_PHONE_KEY, JSON.stringify({
+            phone: this.phoneForm.phone.trim()
+          }))
+        } else {
+          localStorage.removeItem(REMEMBER_PHONE_KEY)
+        }
+
+        const data = res.data || {}
+        const list = Array.isArray(data.eduUserList) ? data.eduUserList : []
+
+        if (list.length > 1) {
+          this.eduUserList = list
+          this.showMask = true
+        } else {
+          this.saveLoginData(data)
+          this.$message.success('登录成功')
+          this.navigateAfterLogin()
+        }
+      } catch {
+        // ignore
+      } finally {
+        this.codeLoginLoading = false
+      }
     },
 
     handleForget() {
       this.$router.push('/forget')
     },
-    handlePhoneLogin(){
+    handlePhoneLogin() {
       this.loginType = '2'
     },
-    handleUserLogin(){
+    handleUserLogin() {
       this.loginType = '1'
     }
   }
@@ -657,6 +776,7 @@ line-height: 22px;
 }
 
 .code_box{
+  cursor:pointer;
   width: 84px;
   height: 25px;
   background: #CAD9FF;

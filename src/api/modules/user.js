@@ -13,6 +13,12 @@ export const ssoLogin = data => post('/edu/sso/login', data)
 // SSO 多用户选择登录
 export const chooseLogin = data => post('/edu/sso/chooseLogin', data)
 
+// 发送手机验证码
+export const sendCode = data => post('/edu/sso/sendCode', data)
+
+// 手机验证码登录
+export const codeLogin = data => post('/edu/sso/codeLogin', data)
+
 // 手机号验证码登录
 export const loginByPhone = data => post('/user/login/phone', data)
 
