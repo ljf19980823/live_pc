@@ -11,7 +11,7 @@
         </div>
         <div class="app_container_last_left_list">
           <div class="app_container_last_left_list_detail" v-for="(item,index) in 6" :key="index">
-            <img src="@/assets/images/head.png" class="app_container_last_left_list_detail_img" alt="">
+            <!-- <img src="@/assets/images/head.png" class="app_container_last_left_list_detail_img" alt=""> -->
             <div class="app_container_last_left_list_detail_mess">
               <div class="app_container_last_left_list_detail_mess_top">
                 <div class="app_container_last_left_list_detail_mess_top_name">管理员</div>
@@ -120,7 +120,7 @@ color: #333333;
   justify-content: flex-start;
   align-items: center;
   gap: 11px;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 .app_container_last_left_list_detail_img{
   width: 48px;

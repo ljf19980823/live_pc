@@ -53,9 +53,15 @@
                 </div>
                 <div
                     class="app_container_box_btn"
-                    :class="{ 'app_container_box_btn_active': isPasswordValid && newPassword === newPassword2 && newPassword2.length > 0 }"
-                    @click="handleResetPassword()"
-                >完成</div>
+                    :class="{
+                        'app_container_box_btn_active': isPasswordValid && newPassword === newPassword2 && newPassword2.length > 0,
+                        'app_container_box_btn_loading': resetLoading
+                    }"
+                    @click="!resetLoading && handleResetPassword()"
+                >
+                    <i v-if="resetLoading" class="el-icon-loading" style="margin-right:6px;font-size:16px;"></i>
+                    {{ resetLoading ? '提交中...' : '完成' }}
+                </div>
             </div>
         </div>
      </div>
@@ -71,7 +77,8 @@ export default {
             newPassword:"",
             newPassword2:'',
             countdown: 0,
-            countdownTimer: null
+            countdownTimer: null,
+            resetLoading: false
         }
     },
     computed: {
@@ -138,6 +145,8 @@ export default {
                 this.$message.warning('两次输入的密码不一致')
                 return
             }
+            if (this.resetLoading) return
+            this.resetLoading = true
             try {
                 await resetPassword({
                     phone: this.phone,
@@ -147,7 +156,9 @@ export default {
                 this.$message.success('密码重置成功')
                 this.$router.push('/login')
             } catch (e) {
-             console.log(e)
+                console.log(e)
+            } finally {
+                this.resetLoading = false
             }
         }
     }
@@ -236,6 +247,11 @@ cursor: pointer;
 }
 .app_container_box_btn_active{
     background:#0049FF!important
+}
+.app_container_box_btn_loading{
+    cursor: not-allowed;
+    opacity: 0.7;
+    pointer-events: none;
 }
 ::v-deep .el-input__inner{
     background: transparent!important;
