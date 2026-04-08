@@ -6,3 +6,5 @@
 export * from './modules/user'
 export * from './modules/live'
 export * from './modules/common'
+export * from './modules/teacher'
+export * from './modules/student'

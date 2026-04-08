@@ -10,14 +10,14 @@
           <img src="@/assets/images/home/right.png" class="app_container_last_left_top_icon" alt="">
         </div>
         <div class="app_container_last_left_list">
-          <div class="app_container_last_left_list_detail" v-for="(item,index) in 6" :key="index">
+          <div class="app_container_last_left_list_detail" v-for="(item,index) in messageList" :key="item.id || index">
             <!-- <img src="@/assets/images/head.png" class="app_container_last_left_list_detail_img" alt=""> -->
             <div class="app_container_last_left_list_detail_mess">
               <div class="app_container_last_left_list_detail_mess_top">
-                <div class="app_container_last_left_list_detail_mess_top_name">管理员</div>
-                <div class="app_container_last_left_list_detail_mess_top_time">2026-03.29</div>
+                <div class="app_container_last_left_list_detail_mess_top_name">{{ item.sendPersonName }}</div>
+                <div class="app_container_last_left_list_detail_mess_top_time">{{ item.sendTime }}</div>
               </div>
-              <div class="app_container_last_left_list_detail_mess_content">生活不必急于求成，慢慢来，每一步都算数。愿你眼里有光，心中有爱，日子清欢，万事顺遂。生活就像一场温柔我是的撒的旅行，不必追赶别人的脚步</div>
+              <div class="app_container_last_left_list_detail_mess_content">{{ item.content }}</div>
             </div>
           </div>
         </div>
@@ -33,15 +33,28 @@
   </div>
 </template>
 <script>
+import { getTeacherNoticeList } from '@/api'
+
 export default {
   data () {
     return {
-      
+      messageList: []
     }
-  }, 
-  methods:{
-    toMessage(){
+  },
+  created () {
+    this.fetchMessageList()
+  },
+  methods: {
+    toMessage () {
       this.$router.push('/message')
+    },
+    async fetchMessageList () {
+      try {
+        const res = await getTeacherNoticeList({type:"1"})
+         this.messageList = res.data || []
+      } catch (e) {
+        console.error('获取消息列表失败', e)
+      }
     }
   }
 }
