@@ -114,8 +114,49 @@ export default {
       // 一级菜单静态配置
       // icon：未选中图片；activeIcon：选中图片
       // 图片放在 src/assets/icons/menu/ 目录下，替换为实际文件即可
-      hoveredMenu: null,
-      menuList: [
+      hoveredMenu: null
+    }
+  },
+  computed: {
+    ...mapGetters('app', ['isMobile']),
+    ...mapGetters('user', ['userName', 'avatar', 'role']),
+
+    menuList() {
+      if (this.role === 'STUDENT') {
+        return [
+          {
+            path: '/student/home',
+            title: '首页',
+            icon: require('@/assets/icons/menu/home.png'),
+            activeIcon: require('@/assets/icons/menu/home-active.png')
+          },
+          {
+            path: '/student/class',
+            title: '班级',
+            icon: require('@/assets/icons/menu/class.png'),
+            activeIcon: require('@/assets/icons/menu/class-active.png')
+          },
+          {
+            path: '/student/live-class',
+            title: '实时课堂',
+            icon: require('@/assets/icons/menu/live-class.png'),
+            activeIcon: require('@/assets/icons/menu/live-class-active.png')
+          },
+          {
+            path: '/student/resources',
+            title: '资料中心',
+            icon: require('@/assets/icons/menu/resources.png'),
+            activeIcon: require('@/assets/icons/menu/resources-active.png')
+          },
+          {
+            path: '/student/message',
+            title: '消息',
+            icon: require('@/assets/icons/menu/message.png'),
+            activeIcon: require('@/assets/icons/menu/message-active.png')
+          }
+        ]
+      }
+      return [
         {
           path: '/home',
           title: '首页',
@@ -147,11 +188,7 @@ export default {
           activeIcon: require('@/assets/icons/menu/message-active.png')
         }
       ]
-    }
-  },
-  computed: {
-    ...mapGetters('app', ['isMobile']),
-    ...mapGetters('user', ['userName', 'avatar']),
+    },
 
     activeMenu() {
       return this.$route.path

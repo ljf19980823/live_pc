@@ -42,43 +42,86 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/home',
+    // 根据角色动态决定首页：学生 → /student/home，其他 → /home
+    redirect: () => {
+      const role = store.getters['user/role']
+      console.log('[Router redirect] user/role =', role)
+      return role === 'STUDENT' ? '/student/home' : '/home'
+    },
     children: [
+      // ── 教师端 ──
       {
         path: 'home',
         name: 'Home',
         component: () => import('@/views/Home/index.vue'),
-        meta: { title: '首页', icon: 'el-icon-s-home', keepAlive: true }
+        meta: { title: '首页', icon: 'el-icon-s-home', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'class',
         name: 'Class',
         component: () => import('@/views/Class/index.vue'),
-        meta: { title: '班级', icon: 'el-icon-office-building', keepAlive: true }
+        meta: { title: '班级', icon: 'el-icon-office-building', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'live-class',
         name: 'LiveClass',
         component: () => import('@/views/LiveClass/index.vue'),
-        meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', keepAlive: true }
+        meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'resources',
         name: 'Resources',
         component: () => import('@/views/Resources/index.vue'),
-        meta: { title: '资料中心', icon: 'el-icon-folder-opened', keepAlive: true }
+        meta: { title: '资料中心', icon: 'el-icon-folder-opened', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'message',
         name: 'Message',
         component: () => import('@/views/Message/index.vue'),
-        meta: { title: '消息', icon: 'el-icon-chat-dot-round', keepAlive: true }
+        meta: { title: '消息', icon: 'el-icon-chat-dot-round', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile/index.vue'),
         meta: { title: '个人中心', hidden: true }
+      },
+      // ── 学生端 ──
+      {
+        path: 'student/home',
+        name: 'StudentHome',
+        component: () => import('@/views/Student/Home/index.vue'),
+        meta: { title: '首页', icon: 'el-icon-s-home', keepAlive: true, roles: ['student'] }
+      },
+      {
+        path: 'student/class',
+        name: 'StudentClass',
+        component: () => import('@/views/Student/Class/index.vue'),
+        meta: { title: '班级', icon: 'el-icon-office-building', keepAlive: true, roles: ['student'] }
+      },
+      {
+        path: 'student/live-class',
+        name: 'StudentLiveClass',
+        component: () => import('@/views/Student/LiveClass/index.vue'),
+        meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', keepAlive: true, roles: ['student'] }
+      },
+      {
+        path: 'student/resources',
+        name: 'StudentResources',
+        component: () => import('@/views/Student/Resources/index.vue'),
+        meta: { title: '资料中心', icon: 'el-icon-folder-opened', keepAlive: true, roles: ['student'] }
+      },
+      {
+        path: 'student/message',
+        name: 'StudentMessage',
+        component: () => import('@/views/Student/Message/index.vue'),
+        meta: { title: '消息', icon: 'el-icon-chat-dot-round', keepAlive: true, roles: ['student'] }
+      },
+      {
+        path: 'student/profile',
+        name: 'StudentProfile',
+        component: () => import('@/views/Profile/index.vue'),
+        meta: { title: '个人中心', hidden: true, roles: ['student'] }
       }
     ]
   },
@@ -119,6 +162,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (token) {
     if (to.path === '/login') {
+      // 已登录，回到根路由，由 redirect 函数按角色分流
       next('/')
     } else {
       // 已登录但 store 中没有用户信息，尝试拉取（接口未就绪时用本地缓存兜底）
@@ -127,7 +171,6 @@ router.beforeEach(async (to, from, next) => {
           await store.dispatch('user/fetchUserInfo')
         } catch {
           // TODO: 联调时改为强制退出：resetToken + redirect to login
-          // 开发阶段接口未就绪，直接放行（本地已有 mock 用户信息）
           console.warn('[Router] fetchUserInfo 失败，使用本地缓存继续（开发模式）')
         }
       }

@@ -381,13 +381,17 @@ export default {
       setUserInfo(userInfo)
       this.$store.commit('user/SET_TOKEN', token)
       this.$store.commit('user/SET_USER_INFO', userInfo)
-      this.$store.commit('user/SET_ROLES', data.role ? [data.role] : [])
+      this.$store.commit('user/SET_ROLE', data.role ? data.role : '')
     },
 
     navigateAfterLogin() {
-      const redirect = this.$route.query.redirect || '/'
-      console.log(redirect,'路透')
-      this.$router.push(redirect)
+      const role = this.$store.getters['user/role']
+      const redirect = this.$route.query.redirect
+      if (redirect && redirect !== '/') {
+        this.$router.push(redirect)
+      } else {
+        this.$router.push(role === 'STUDENT' ? '/student/home' : '/home')
+      }
     },
 
     loadRememberedPhone() {

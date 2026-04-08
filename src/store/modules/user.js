@@ -15,6 +15,7 @@ const mutations = {
     state.userInfo = userInfo
   },
   SET_ROLE(state, role) {
+    console.log(role,'角色看看')
     state.role = role
   },
   RESET(state) {
