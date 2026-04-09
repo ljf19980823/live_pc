@@ -38,6 +38,7 @@
     "appId": "com.lisheng.live.pc",
     "productName": "立升直播",
     "copyright": "Copyright © 2024 立升",
+    "icon": "build/icon",
     "directories": {
       "output": "release"
     },
@@ -48,6 +49,7 @@
       "package.json"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -64,6 +66,7 @@
       "shortcutName": "立升直播"
     },
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -77,6 +80,7 @@
       "identity": null
     },
     "dmg": {
+      "icon": "build/icon.icns",
       "contents": [
         { "x": 130, "y": 220 },
         { "x": 410, "y": 220, "type": "link", "path": "/Applications" }

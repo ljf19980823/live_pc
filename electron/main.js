@@ -280,6 +280,10 @@ function stopScreenGuard () {
 
 // ─── 创建主窗口 ──────────────────────────────────────────────────────────
 function createWindow () {
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, '../build/icon.ico')
+    : path.join(__dirname, '../build/icon.icns')
+
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -287,6 +291,7 @@ function createWindow () {
     minHeight: 720,
     show: false,
     title: '立升直播',
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
