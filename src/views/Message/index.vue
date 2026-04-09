@@ -1,7 +1,11 @@
 <template>
   <div class="page-placeholder">
+    <!-- 隐藏的文件输入 -->
+    <input ref="imageInput" type="file" accept="image/*" multiple style="display:none" @change="onImageFileChange">
+    <input ref="fileInput" type="file" multiple style="display:none" @change="onFileChange">
+
     <div class="app_top">
-      <div class="app_top_left" @click="showDialog = true">
+      <div class="app_top_left" @click="openSendDialog">
         <div class="app_top_left_text">消息</div>
         <img src="@/assets/images/home/add.png" class="app_top_left_icon" alt="">
       </div>
@@ -71,88 +75,157 @@
 
 
     <!-- 添加消息弹窗 -->
-    <DialogCustome :visible="showDialog" title="发消息" @cancel="onDialogCancel"  @confirm="onDialogConfirm">
+    <DialogCustome :visible="showDialog" title="发消息" @cancel="onDialogCancel" @confirm="onDialogConfirm">
       <div class="dialog_con">
-        <div class="dialog_con_top" @click="handleChooseReceive()"> 
+        <div class="dialog_con_top" @click.self="handleChooseReceive">
           <div class="dialog_con_top_left">
-            <!-- <div class="dialog_con_top_left_empty">接收班级</div> -->
-            <div class="dialog_con_top_left_detail" v-for="(item,index) in 10" :key="index">
-              <div class="dialog_con_top_left_detail_name">大霸王龙</div>
-              <img src="@/assets/images/message/close.png" class="dialog_con_top_left_detail_close" alt="">
+            <div class="dialog_con_top_left_empty" v-if="selectedRecipients.length === 0">接收人</div>
+            <div
+              class="dialog_con_top_left_detail"
+              v-for="(item, index) in selectedRecipients"
+              :key="item.id"
+            >
+              <div class="dialog_con_top_left_detail_name">{{ item.name }}</div>
+              <img
+                src="@/assets/images/message/close.png"
+                class="dialog_con_top_left_detail_close"
+                alt=""
+                @click.stop="removeRecipient(index)"
+              >
             </div>
-            
           </div>
-          <img src="@/assets/images/message/add.png" class="dialog_con_top_btn" alt="">
+          <img src="@/assets/images/message/add.png" class="dialog_con_top_btn" alt="" @click="handleChooseReceive">
         </div>
         <div class="dialog_con_last">
           <div class="dialog_con_last_con">
-           <el-input
-           class="my-input"
-            type="textarea"
-            :rows="5"
-            style="width:100%"
-            placeholder="消息内容"
-            v-model="messageContent">
-          </el-input>
-          <div class="dialog_con_last_con_other">
-            <div class="dialog_con_last_con_other_img">
-              <img src="@/assets/images/message/such.png" class="dialog_con_last_con_other_img_img" alt="">
-              <img src="@/assets/images/message/close.png" class="dialog_con_last_con_other_img_close" alt="">
-            </div>
-            <div class="dialog_con_last_con_other_file">
-              <img src="@/assets/images/message/icon.png" class="dialog_con_last_con_other_file_fm" alt="">
-              <div class="dialog_con_last_con_other_file_mess">
-                <div class="dialog_con_last_con_other_file_mess_title">使用说明.docx</div>
-                <div class="dialog_con_last_con_other_file_mess_size">13KB</div>
+            <el-input
+              class="my-input"
+              type="textarea"
+              :rows="5"
+              style="width:100%"
+              placeholder="消息内容"
+              v-model="messageContent"
+            ></el-input>
+            <div class="dialog_con_last_con_other" v-if="selectedImages.length > 0 || selectedFiles.length > 0">
+              <div
+                class="dialog_con_last_con_other_img"
+                v-for="(img, index) in selectedImages"
+                :key="'img_' + index"
+              >
+                <img :src="img.url" class="dialog_con_last_con_other_img_img" alt="">
+                <img
+                  src="@/assets/images/message/close.png"
+                  class="dialog_con_last_con_other_img_close"
+                  alt=""
+                  @click="removeImage(index)"
+                >
               </div>
-              <img src="@/assets/images/message/close.png" class="dialog_con_last_con_other_img_close" alt="">
+              <div
+                class="dialog_con_last_con_other_file"
+                v-for="(file, index) in selectedFiles"
+                :key="'file_' + index"
+              >
+                <img src="@/assets/images/message/icon.png" class="dialog_con_last_con_other_file_fm" alt="">
+                <div class="dialog_con_last_con_other_file_mess">
+                  <div class="dialog_con_last_con_other_file_mess_title">{{ file.name }}</div>
+                  <div class="dialog_con_last_con_other_file_mess_size">{{ file.size }}</div>
+                </div>
+                <img
+                  src="@/assets/images/message/close.png"
+                  class="dialog_con_last_con_other_img_close"
+                  alt=""
+                  @click="removeFile(index)"
+                >
+              </div>
             </div>
-          </div>
           </div>
           <div class="dialog_con_last_btn">
-            <img src="@/assets/images/message/fileIcon.png" class="dialog_con_last_btn_file" alt="">
-            <img src="@/assets/images/message/imgIcon.png" class="dialog_con_last_btn_img" alt="">
+            <img src="@/assets/images/message/fileIcon.png" class="dialog_con_last_btn_file" alt="" @click="uploadFile">
+            <img src="@/assets/images/message/imgIcon.png" class="dialog_con_last_btn_img" alt="" @click="uploadImage">
           </div>
         </div>
       </div>
-      <!-- 自定义弹窗内容 -->
     </DialogCustome>
 
     <!-- 选择接收人弹窗 -->
-     <DialogCustome width="676px" height="585px" :visible="showDialogReceive" title="选择接收人" @cancel="onDialogCancelReceive"  @confirm="onDialogConfirmReceive">
+    <DialogCustome
+      width="676px"
+      height="585px"
+      :visible="showDialogReceive"
+      title="选择接收人"
+      @cancel="onDialogCancelReceive"
+      @confirm="onDialogConfirmReceive"
+    >
       <div class="receive_tc_box">
         <div class="receive_tc_box_left">
           <div class="receive_tc_box_left_top">
-            <div class="receive_tc_box_left_top_detail receive_tc_box_left_top_detail_active">老师</div>
-            <div class="receive_tc_box_left_top_detail">学生</div>
+            <div
+              :class="['receive_tc_box_left_top_detail', receiveActiveTab === 'teacher' ? 'receive_tc_box_left_top_detail_active' : '']"
+              @click="receiveActiveTab = 'teacher'"
+            >老师</div>
+            <div
+              :class="['receive_tc_box_left_top_detail', receiveActiveTab === 'student' ? 'receive_tc_box_left_top_detail_active' : '']"
+              @click="receiveActiveTab = 'student'"
+            >学生</div>
           </div>
           <div class="receive_tc_box_left_list">
-            <div class="receive_tc_box_left_list_detail" v-for="(item,index) in 3" :key="index">
-              <div class="receive_tc_box_left_list_detail_class">
-                <img src="@/assets/images/message/xl_no.png" alt="" class="receive_tc_box_left_list_detail_class_xl">
+            <div
+              class="receive_tc_box_left_list_detail"
+              v-for="classItem in currentReceiveClasses"
+              :key="classItem.id"
+            >
+              <div class="receive_tc_box_left_list_detail_class" @click="toggleClassExpand(classItem)">
+                <img
+                  :src="classItem.expanded ? require('@/assets/images/message/xl_yes.png') : require('@/assets/images/message/xl_no.png')"
+                  alt=""
+                  class="receive_tc_box_left_list_detail_class_xl"
+                >
                 <img src="@/assets/images/message/tag.png" alt="" class="receive_tc_box_left_list_detail_class_tag">
-                <div class="receive_tc_box_left_list_detail_class_title">铂金班</div>
-                <img src="@/assets/images/message/choose_no.png" alt="" class="receive_tc_box_left_list_detail_class_choose">
+                <div class="receive_tc_box_left_list_detail_class_title">{{ classItem.name }}</div>
+                <img
+                  :src="isClassAllSelected(classItem) ? require('@/assets/images/message/choose_yes.png') : require('@/assets/images/message/choose_no.png')"
+                  alt=""
+                  class="receive_tc_box_left_list_detail_class_choose"
+                  @click.stop="toggleClassSelect(classItem)"
+                >
               </div>
-              <div class="receive_tc_box_left_list_detail_second">
-                <div class="receive_tc_box_left_list_detail_second_detail" v-for="(item2,index2) in 3" :key="index2">
+              <div class="receive_tc_box_left_list_detail_second" v-if="classItem.expanded">
+                <div
+                  class="receive_tc_box_left_list_detail_second_detail"
+                  v-for="member in classItem.members"
+                  :key="member.id"
+                  @click="toggleMemberSelect(member)"
+                >
                   <img src="@/assets/images/message/such.png" class="receive_tc_box_left_list_detail_second_detail_fm" alt="">
-                  <div class="receive_tc_box_left_list_detail_second_detail_name">立升老师-霸王龙</div>
-                  <img src="@/assets/images/message/choose_yes.png" alt="" class="receive_tc_box_left_list_detail_class_choose">
+                  <div class="receive_tc_box_left_list_detail_second_detail_name">{{ member.name }}</div>
+                  <img
+                    :src="isMemberSelected(member) ? require('@/assets/images/message/choose_yes.png') : require('@/assets/images/message/choose_no.png')"
+                    alt=""
+                    class="receive_tc_box_left_list_detail_class_choose"
+                  >
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="receive_tc_box_right">
-          <div class="receive_tc_box_right_top">已选择<span>1</span>人</div> 
+          <div class="receive_tc_box_right_top">已选择<span> {{ tempSelectedRecipients.length }} </span>人</div>
           <div class="receive_tc_box_right_list">
-            <div class="receive_tc_box_right_list_detail" v-for="(item,index) in 3" :key="index">
+            <div
+              class="receive_tc_box_right_list_detail"
+              v-for="member in tempSelectedRecipients"
+              :key="member.id"
+            >
               <img src="@/assets/images/message/such.png" class="receive_tc_box_right_list_detail_head" alt="">
-              <div class="receive_tc_box_right_list_detail_title">立升老师-霸王龙</div>
-              <img src="@/assets/images/message/close.png" class="receive_tc_box_right_list_detail_close" alt="">
+              <div class="receive_tc_box_right_list_detail_title">{{ member.name }}</div>
+              <img
+                src="@/assets/images/message/close.png"
+                class="receive_tc_box_right_list_detail_close"
+                alt=""
+                @click="removeTempRecipient(member)"
+              >
             </div>
-          </div> 
+          </div>
         </div>
       </div>
     </DialogCustome>
@@ -170,6 +243,78 @@ export default {
       messageContent: '',
       activeTab: 'sent',
       currentDetail: null,
+
+      // 发消息弹窗
+      selectedRecipients: [],
+      tempSelectedRecipients: [],
+      selectedImages: [],
+      selectedFiles: [],
+
+      // 选择接收人弹窗
+      receiveActiveTab: 'teacher',
+      teacherClasses: [
+        {
+          id: 1,
+          name: '铂金班',
+          expanded: true,
+          members: [
+            { id: 101, name: '立升老师-王明' },
+            { id: 102, name: '立升老师-李华' },
+            { id: 103, name: '立升老师-张伟' }
+          ]
+        },
+        {
+          id: 2,
+          name: '黄金班',
+          expanded: false,
+          members: [
+            { id: 201, name: '立升老师-陈杰' },
+            { id: 202, name: '立升老师-刘明' },
+            { id: 203, name: '立升老师-赵磊' }
+          ]
+        },
+        {
+          id: 3,
+          name: '钻石班',
+          expanded: false,
+          members: [
+            { id: 301, name: '立升老师-孙倩' },
+            { id: 302, name: '立升老师-周杰' }
+          ]
+        }
+      ],
+      studentClasses: [
+        {
+          id: 1,
+          name: '铂金班',
+          expanded: true,
+          members: [
+            { id: 1001, name: '铂金班-小明' },
+            { id: 1002, name: '铂金班-小红' },
+            { id: 1003, name: '铂金班-小华' }
+          ]
+        },
+        {
+          id: 2,
+          name: '黄金班',
+          expanded: false,
+          members: [
+            { id: 2001, name: '黄金班-小李' },
+            { id: 2002, name: '黄金班-小张' },
+            { id: 2003, name: '黄金班-小刘' }
+          ]
+        },
+        {
+          id: 3,
+          name: '钻石班',
+          expanded: false,
+          members: [
+            { id: 3001, name: '钻石班-小王' },
+            { id: 3002, name: '钻石班-小陈' }
+          ]
+        }
+      ],
+
       sentMessages: [
         {
           id: 1,
@@ -272,6 +417,9 @@ export default {
   computed: {
     currentList() {
       return this.activeTab === 'sent' ? this.sentMessages : this.receivedMessages
+    },
+    currentReceiveClasses() {
+      return this.receiveActiveTab === 'teacher' ? this.teacherClasses : this.studentClasses
     }
   },
   methods: {
@@ -284,20 +432,130 @@ export default {
       this.currentDetail = item
       this.showDetail = true
     },
+
+    // 发消息弹窗
+    openSendDialog() {
+      this.showDialog = true
+    },
     onDialogCancel() {
       this.showDialog = false
     },
     onDialogConfirm() {
+      if (this.selectedRecipients.length === 0) {
+        this.$message({ message: '请选择接收人', type: 'warning' })
+        return
+      }
+      if (!this.messageContent.trim()) {
+        this.$message({ message: '请输入消息内容', type: 'warning' })
+        return
+      }
+      const today = new Date()
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const newMsg = {
+        id: Date.now(),
+        sender: '管理员',
+        time: dateStr,
+        content: this.messageContent.trim(),
+        attachCount: this.selectedImages.length + this.selectedFiles.length,
+        hasImage: this.selectedImages.length > 0,
+        files: this.selectedFiles.map(f => ({ name: f.name, size: f.size }))
+      }
+      this.sentMessages.unshift(newMsg)
+      this.resetSendDialog()
       this.showDialog = false
+      this.$message({ message: '发送成功', type: 'success' })
+    },
+    resetSendDialog() {
+      this.messageContent = ''
+      this.selectedRecipients = []
+      this.selectedImages = []
+      this.selectedFiles = []
+    },
+
+    // 接收人相关
+    handleChooseReceive() {
+      this.tempSelectedRecipients = this.selectedRecipients.map(r => ({ ...r }))
+      this.showDialogReceive = true
+    },
+    removeRecipient(index) {
+      this.selectedRecipients.splice(index, 1)
     },
     onDialogCancelReceive() {
       this.showDialogReceive = false
     },
     onDialogConfirmReceive() {
+      this.selectedRecipients = this.tempSelectedRecipients.map(r => ({ ...r }))
       this.showDialogReceive = false
     },
-    handleChooseReceive() {
-      this.showDialogReceive = true
+
+    // 接收人弹窗内部操作
+    toggleClassExpand(classItem) {
+      classItem.expanded = !classItem.expanded
+    },
+    isMemberSelected(member) {
+      return this.tempSelectedRecipients.some(r => r.id === member.id)
+    },
+    isClassAllSelected(classItem) {
+      return classItem.members.length > 0 && classItem.members.every(m => this.isMemberSelected(m))
+    },
+    toggleClassSelect(classItem) {
+      const allSelected = this.isClassAllSelected(classItem)
+      if (allSelected) {
+        classItem.members.forEach(member => {
+          const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
+          if (idx !== -1) this.tempSelectedRecipients.splice(idx, 1)
+        })
+      } else {
+        classItem.members.forEach(member => {
+          if (!this.isMemberSelected(member)) {
+            this.tempSelectedRecipients.push({ id: member.id, name: member.name })
+          }
+        })
+      }
+    },
+    toggleMemberSelect(member) {
+      const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
+      if (idx === -1) {
+        this.tempSelectedRecipients.push({ id: member.id, name: member.name })
+      } else {
+        this.tempSelectedRecipients.splice(idx, 1)
+      }
+    },
+    removeTempRecipient(member) {
+      const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
+      if (idx !== -1) this.tempSelectedRecipients.splice(idx, 1)
+    },
+
+    // 图片上传
+    uploadImage() {
+      this.$refs.imageInput.click()
+    },
+    onImageFileChange(e) {
+      Array.from(e.target.files).forEach(file => {
+        const url = URL.createObjectURL(file)
+        this.selectedImages.push({ name: file.name, url })
+      })
+      e.target.value = ''
+    },
+    removeImage(index) {
+      this.selectedImages.splice(index, 1)
+    },
+
+    // 文件上传
+    uploadFile() {
+      this.$refs.fileInput.click()
+    },
+    onFileChange(e) {
+      Array.from(e.target.files).forEach(file => {
+        const size = file.size > 1024 * 1024
+          ? (file.size / (1024 * 1024)).toFixed(1) + 'MB'
+          : Math.ceil(file.size / 1024) + 'KB'
+        this.selectedFiles.push({ name: file.name, size })
+      })
+      e.target.value = ''
+    },
+    removeFile(index) {
+      this.selectedFiles.splice(index, 1)
     }
   }
 }
@@ -563,6 +821,7 @@ margin-top: 5px;
 
 
 
+
 .dialog_con{
   width: 100%;
 }
@@ -586,12 +845,14 @@ margin-top: 5px;
   justify-content: flex-start;
   gap: 16px;
   align-items: center;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .dialog_con_top_btn{
   width: 16px;
   height: 16px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .dialog_con_top_left_detail{
   height: 32px;
@@ -679,6 +940,7 @@ color: #999999;
   width: 100%;
   height: 100%;
   border-radius: 4px 4px 4px 4px;
+  object-fit: cover;
 }
 .dialog_con_last_con_other_img_close{
   position: absolute;
@@ -759,6 +1021,7 @@ color: #333333;
 display: flex;
 justify-content: center;
 align-items: center;
+cursor: pointer;
 }
 .receive_tc_box_left_top_detail_active{
   background: #0049FF!important;
@@ -800,6 +1063,7 @@ align-items: center;
 .receive_tc_box_left_list_detail_class_choose{
   width: 16px;
   height: 16px;
+  cursor: pointer;
 }
 .receive_tc_box_left_list_detail_class_title{
   margin-right: 10px;
@@ -855,19 +1119,23 @@ color: #333333;
   flex-direction: column;
   justify-content: flex-start;
   gap: 12px ;
-  padding: 8px 17px;
+  padding: 8px 0;
   box-sizing: border-box;
 }
 .receive_tc_box_right_top{
   font-weight: 400;
 font-size: 14px;
 color: #333333;
+  padding: 0px 17px;
+  box-sizing: border-box;
 }
 .receive_tc_box_right_top span{
   font-size: 20px;
   font-weight: bold;
 }
 .receive_tc_box_right_list{
+   padding: 0px 17px;
+  box-sizing: border-box;
   flex: 1;
   height: 0;
   overflow: auto;
