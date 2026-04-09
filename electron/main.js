@@ -5,29 +5,31 @@ const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow
 let screenGuardInterval = null
+// 连续检测到威胁的次数，需达到阈值才显示警告（防止瞬时误报）
+let consecutiveDetections = 0
+const DETECTION_THRESHOLD = 2
 
 // ─── 需要检测的录屏软件进程名 ─────────────────────────────────────────────
+// 注意：gamebar.exe / gamebarpresencewriter.exe 是 Windows 系统后台常驻进程，
+// 不代表用户正在录屏，故不纳入检测名单，避免误报。
 const RECORDER_PROCESSES_WIN = [
-  'obs64.exe', 'obs32.exe', 'obs.exe',        // OBS Studio
-  'bdcam.exe',                                  // Bandicam 班迪录屏
-  'fraps.exe',                                  // Fraps
-  'camrecorder.exe', 'camtasia.exe',           // Camtasia
-  'snagit32.exe', 'snagit64.exe',              // SnagIt
-  'sharex.exe',                                 // ShareX
-  'xsplit.broadcaster.exe',                    // XSplit
-  'gamebar.exe', 'gamebarpresencewriter.exe',  // Windows 游戏录制
-  'loom.exe',                                   // Loom
-  'flashbackrecorder.exe',                     // FlashBack
-  'debut.exe',                                  // Debut Video Capture
-  'icecreamscreenrecorder.exe',                // IceCream
-  'screenpresso.exe',                           // Screenpresso
-  'captura.exe',                                // Captura
-  'ezvid.exe',                                  // Ezvid
-  'screencastify.exe',
-  'wondersharefreevideoeditor.exe',
-  'action.exe',                                 // Action! 录屏
-  'd3dgear.exe',                                // D3DGear
-  'mirilisaction.exe',                          // Mirillis Action
+  'obs64.exe', 'obs32.exe', 'obs.exe',   // OBS Studio
+  'bdcam.exe',                             // Bandicam 班迪录屏
+  'fraps.exe',                             // Fraps
+  'camrecorder.exe', 'camtasia.exe',      // Camtasia
+  'snagit32.exe', 'snagit64.exe',         // SnagIt
+  'sharex.exe',                            // ShareX
+  'xsplit.broadcaster.exe',               // XSplit
+  'loom.exe',                              // Loom
+  'flashbackrecorder.exe',                // FlashBack
+  'debut.exe',                             // Debut Video Capture
+  'icecreamscreenrecorder.exe',           // IceCream
+  'screenpresso.exe',                      // Screenpresso
+  'captura.exe',                           // Captura
+  'ezvid.exe',                             // Ezvid
+  'action.exe',                            // Action! 录屏
+  'd3dgear.exe',                           // D3DGear
+  'mirilisaction.exe',                     // Mirillis Action
 ]
 
 const RECORDER_PROCESSES_MAC = [
@@ -98,24 +100,37 @@ async function checkScreenGuard () {
     let detectedRecorder = null
     let detectedVM = null
 
+    // 使用精确匹配，避免系统后台进程触发误报
     for (const p of recorderList) {
-      if (processes.some(proc => proc === p.toLowerCase() || proc.startsWith(p.toLowerCase().replace('.exe', '')))) {
+      if (processes.includes(p.toLowerCase())) {
         detectedRecorder = p
         break
       }
     }
 
     for (const p of vmList) {
-      if (processes.some(proc => proc === p.toLowerCase() || proc.startsWith(p.toLowerCase().replace('.exe', '')))) {
+      if (processes.includes(p.toLowerCase())) {
         detectedVM = p
         break
       }
     }
 
+    const threatFound = !!(detectedRecorder || detectedVM)
+
+    if (threatFound) {
+      // 累计连续检测次数，达到阈值才真正报警（防瞬时误报）
+      consecutiveDetections = Math.min(consecutiveDetections + 1, DETECTION_THRESHOLD)
+    } else {
+      // 未检测到威胁：立即重置计数，同时通知渲染层清除遮罩
+      consecutiveDetections = 0
+    }
+
+    const shouldAlert = consecutiveDetections >= DETECTION_THRESHOLD
+
     mainWindow.webContents.send('screen-guard-change', {
-      isRecording: !!detectedRecorder,
-      isVM: !!detectedVM,
-      detected: !!(detectedRecorder || detectedVM)
+      isRecording: shouldAlert ? !!detectedRecorder : false,
+      isVM: shouldAlert ? !!detectedVM : false,
+      detected: shouldAlert
     })
   } catch (e) {
     // 检测失败时静默处理，不影响主功能
