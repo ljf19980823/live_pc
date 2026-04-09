@@ -13,23 +13,26 @@ const DETECTION_THRESHOLD = 2
 // 注意：gamebar.exe / gamebarpresencewriter.exe 是 Windows 系统后台常驻进程，
 // 不代表用户正在录屏，故不纳入检测名单，避免误报。
 const RECORDER_PROCESSES_WIN = [
-  'obs64.exe', 'obs32.exe', 'obs.exe',   // OBS Studio
-  'bdcam.exe',                             // Bandicam 班迪录屏
-  'fraps.exe',                             // Fraps
-  'camrecorder.exe', 'camtasia.exe',      // Camtasia
-  'snagit32.exe', 'snagit64.exe',         // SnagIt
-  'sharex.exe',                            // ShareX
-  'xsplit.broadcaster.exe',               // XSplit
-  'loom.exe',                              // Loom
-  'flashbackrecorder.exe',                // FlashBack
-  'debut.exe',                             // Debut Video Capture
-  'icecreamscreenrecorder.exe',           // IceCream
-  'screenpresso.exe',                      // Screenpresso
-  'captura.exe',                           // Captura
-  'ezvid.exe',                             // Ezvid
-  'action.exe',                            // Action! 录屏
-  'd3dgear.exe',                           // D3DGear
-  'mirilisaction.exe',                     // Mirillis Action
+  'obs64.exe', 'obs32.exe', 'obs.exe',        // OBS Studio
+  'bdcam.exe',                                  // Bandicam 班迪录屏
+  'fraps.exe',                                  // Fraps
+  'camrecorder.exe', 'camtasia.exe',           // Camtasia
+  'snagit32.exe', 'snagit64.exe',              // SnagIt
+  'sharex.exe',                                 // ShareX
+  'xsplit.broadcaster.exe',                    // XSplit
+  'gamebar.exe', 'gamebarpresencewriter.exe',  // Windows 游戏录制
+  'loom.exe',                                   // Loom
+  'flashbackrecorder.exe',                     // FlashBack
+  'debut.exe',                                  // Debut Video Capture
+  'icecreamscreenrecorder.exe',                // IceCream
+  'screenpresso.exe',                           // Screenpresso
+  'captura.exe',                                // Captura
+  'ezvid.exe',                                  // Ezvid
+  'screencastify.exe',
+  'wondersharefreevideoeditor.exe',
+  'action.exe',                                 // Action! 录屏
+  'd3dgear.exe',                                // D3DGear
+  'mirilisaction.exe',                          // Mirillis Action
 ]
 
 const RECORDER_PROCESSES_MAC = [
