@@ -20,6 +20,7 @@
               <div class="app_container_last_left_list_detail_mess_content">{{ item.content }}</div>
             </div>
           </div>
+          <EmptyState description="暂无消息数据" v-if="messageList.length==0"/>
         </div>
       </div>
       <div class="app_container_last_right">

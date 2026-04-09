@@ -6,8 +6,9 @@ import Vue from 'vue'
 import Pagination from './Pagination/index.vue'
 import SvgIcon from './SvgIcon/index.vue'
 import EmptyState from './EmptyState/index.vue'
+import DialogCustome from './DialogCustome/index.vue'
 
-const components = { Pagination, SvgIcon, EmptyState }
+const components = { Pagination, SvgIcon, EmptyState ,DialogCustome}
 
 Object.keys(components).forEach(name => {
   Vue.component(name, components[name])
