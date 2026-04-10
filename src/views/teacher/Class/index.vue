@@ -47,7 +47,7 @@
               <input ref="searchInput" v-model="leftSearchText" type="text" :placeholder="searchType === 'class' ? '搜索班级' : '搜索学生'">
             </div>
           </div>
-          <div class="app_container_box_left_search_box_topBox_cancel" @click="isOpenSearch=false">取消</div>
+          <div class="app_container_box_left_search_box_topBox_cancel" @click="cancelSearch">取消</div>
         </div>
         <div class="app_container_box_left_search_box_choose">
           <div
@@ -82,16 +82,19 @@
         <div class="search_tips" v-if="!leftSearchText &&searchType === 'class'">输入关键词查找班级</div>
         <div class="search_tips" v-if="!leftSearchText &&searchType === 'student'">输入学生姓名/用户名/手机号查找学生所在班级</div>
         <template v-if="leftSearchText">
-        <div
-          class="app_container_box_left_list_detail2"
-        
-          v-for="(item, index) in searchList"
-          :key="index"
-       
-        >
-          <div class="app_container_box_left_list_detail_title"><span class="app_container_box_left_list_detail_title_textCompare">铂金</span>班</div>
-          <div class="app_container_box_left_list_detail_count" v-if="searchType === 'student'"><span class="app_container_box_left_list_detail_title_textCompare">图图</span>老师</div>
-        </div>
+          <div
+            class="app_container_box_left_list_detail2"
+            v-for="(item, index) in searchList"
+            :key="index"
+          >
+            <template v-if="searchType === 'class'">
+              <div class="app_container_box_left_list_detail_title" v-html="highlightKeyword(item.name, leftSearchText)"></div>
+            </template>
+            <template v-else>
+              <div class="app_container_box_left_list_detail_title">{{ item.className }}</div>
+              <div class="app_container_box_left_list_detail_count" v-html="highlightKeyword(item.studentName, leftSearchText)"></div>
+            </template>
+          </div>
         </template>
         <EmptyState v-if="leftSearchText && searchList.length === 0" description="无搜素结果" />
       </div>
@@ -269,7 +272,6 @@ export default {
           ]
         },
       ],
-      searchList:[],
       leftSearchText:''
     }
   },
@@ -282,6 +284,25 @@ export default {
     },
     courseList() {
       return this.currentClass ? this.currentClass.courses : []
+    },
+    searchList() {
+      if (!this.leftSearchText) return []
+      const keyword = this.leftSearchText.toLowerCase()
+      if (this.searchType === 'class') {
+        return this.classList
+          .filter(item => item.name.toLowerCase().includes(keyword))
+          .map(item => ({ name: item.name, count: item.count }))
+      } else {
+        const results = []
+        this.classList.forEach(cls => {
+          cls.students.forEach(stu => {
+            if (stu.name.toLowerCase().includes(keyword)) {
+              results.push({ studentName: stu.name, className: cls.name })
+            }
+          })
+        })
+        return results
+      }
     }
   },
   methods:{
@@ -294,6 +315,17 @@ export default {
     selectClass(index) {
       this.selectedClassIndex = index
       this.rightTab = 'student'
+    },
+    cancelSearch() {
+      this.isOpenSearch = false
+      this.leftSearchText = ''
+      this.searchType = 'class'
+    },
+    highlightKeyword(text, keyword) {
+      if (!keyword || !text) return text
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const reg = new RegExp(`(${escaped})`, 'gi')
+      return text.replace(reg, '<span style="color:#0049FF;">$1</span>')
     }
   }
 }
