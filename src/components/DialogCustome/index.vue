@@ -2,13 +2,14 @@
   <div class="mask" v-if="visible" @click.self="handleCancel">
      <div class="mask_con">
        <div class="masl_con_dialog" :style="{ width: width, height: height }">
+           <img src="@/assets/images/close.png" class="dialog_close" alt="" @click="handleClose">
            <div class="masl_con_dialog_top">{{ title }}</div>
            <div class="masl_con_dialog_center">
              <slot></slot>
            </div>
            <div class="masl_con_dialog_last" v-if="showCancel || showConfirm">
-               <div class="masl_con_dialog_last_cancel" v-if="showCancel" @click="handleCancel">取消</div>
-               <div class="masl_con_dialog_last_cobfirm" v-if="showConfirm" @click="handleConfirm">确定</div>
+              <div class="masl_con_dialog_last_cancel" v-if="showCancel" @click="handleCancel">{{ cancelText }}</div>
+              <div class="masl_con_dialog_last_cobfirm" v-if="showConfirm" @click="handleConfirm">{{ confirmText }}</div>
            </div>
        </div>
      </div>
@@ -43,6 +44,14 @@ export default {
     showConfirm: {
       type: Boolean,
       default: true
+    },
+    cancelText: {
+      type: String,
+      default: '取消'
+    },
+    confirmText: {
+      type: String,
+      default: '确定'
     }
   },
   methods: {
@@ -51,7 +60,10 @@ export default {
     },
     handleConfirm() {
       this.$emit('confirm')
-    }
+    },
+    handleClose() {
+      this.$emit('close')
+    },
   }
 }
 </script>
@@ -76,7 +88,7 @@ export default {
   align-items: center;
 }
 .masl_con_dialog{
-    
+    position: relative;
     background: #F3F4F8;
     border-radius: 16px;
     display: flex;
@@ -136,5 +148,13 @@ color: #0049FF;
 border-left: 1px solid #F3F4F8;
 box-sizing: border-box;
 cursor: pointer;
+}
+.dialog_close{
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  top: -30px;
+  right: -30px;
+  cursor: pointer;
 }
 </style>

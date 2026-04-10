@@ -75,9 +75,9 @@
 
 
     <!-- 添加消息弹窗 -->
-    <DialogCustome :visible="showDialog" title="发消息" @cancel="onDialogCancel" @confirm="onDialogConfirm">
+    <DialogCustome :visible="showDialog" title="发消息" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
       <div class="dialog_con">
-        <div class="dialog_con_top" @click.self="handleChooseReceive">
+        <div class="dialog_con_top" @click="handleChooseReceive">
           <div class="dialog_con_top_left">
             <div class="dialog_con_top_left_empty" v-if="selectedRecipients.length === 0">接收人</div>
             <div
@@ -155,6 +155,7 @@
       title="选择接收人"
       @cancel="onDialogCancelReceive"
       @confirm="onDialogConfirmReceive"
+      @close="onDialogCancelReceive"
     >
       <div class="receive_tc_box">
         <div class="receive_tc_box_left">
