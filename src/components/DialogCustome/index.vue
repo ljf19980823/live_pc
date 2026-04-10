@@ -78,7 +78,7 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(51, 51, 51, 0.60);
-//   z-index: 1000000;
+  z-index: 1000000;
 }
 .mask_con{
   width: 100%;

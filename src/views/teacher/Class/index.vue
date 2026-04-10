@@ -311,6 +311,8 @@
       </div>
     </DialogCustome>
 
+    <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" @close="showStudentDetail = false" />
+
     <!-- 设置别名弹窗 -->
   <el-dialog v-model="aliasDialogVisible" title="设置别名" width="400px" :append-to-body="true">
     <el-input v-model="aliasInput" placeholder="请输入班级别名" maxlength="30" show-word-limit clearable />
@@ -332,6 +334,8 @@ export default {
       year:'',
       liveStatus:'1',
       isOpenSearch: false,
+      showStudentDetail: false,
+      currentStudentId: null,
       searchType: 'class',
       rightTab: 'student',
       selectedClassIndex: 0,
@@ -538,7 +542,8 @@ export default {
       if (command === 'resetPassword') {
         this.showResetPasswordDialog = true
       } else if (command === 'studentDetail') {
-        this.$message.info(`查看学生详情：${student.name}`)
+        this.currentStudentId = student.id
+        this.showStudentDetail = true
       }
     },
     handleSortCommand(command) {
