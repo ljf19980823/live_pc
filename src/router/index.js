@@ -53,31 +53,31 @@ const routes = [
       {
         path: 'home',
         name: 'Home',
-        component: () => import('@/views/Home/index.vue'),
+        component: () => import('@/views/teacher/Home/index.vue'),
         meta: { title: '首页', icon: 'el-icon-s-home', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'class',
         name: 'Class',
-        component: () => import('@/views/Class/index.vue'),
+        component: () => import('@/views/teacher/Class/index.vue'),
         meta: { title: '班级', icon: 'el-icon-office-building', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'live-class',
         name: 'LiveClass',
-        component: () => import('@/views/LiveClass/index.vue'),
+        component: () => import('@/views/teacher/LiveClass/index.vue'),
         meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'resources',
         name: 'Resources',
-        component: () => import('@/views/Resources/index.vue'),
+        component: () => import('@/views/teacher/Resources/index.vue'),
         meta: { title: '资料中心', icon: 'el-icon-folder-opened', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'message',
         name: 'Message',
-        component: () => import('@/views/Message/index.vue'),
+        component: () => import('@/views/teacher/Message/index.vue'),
         meta: { title: '消息', icon: 'el-icon-chat-dot-round', keepAlive: true, roles: ['teacher'] }
       },
       {

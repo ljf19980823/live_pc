@@ -85,12 +85,16 @@
           </div>
         </div>
       </div>
+      <!-- 学生tab列表 -->
       <div class="app_container_box_right_last">
         <div class="app_container_box_right_last_top">
-          <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
-          <div class="app_container_box_left_search_box_top_input">
-            <input type="text" placeholder="姓名/用户名/手机号">
+          <div class="app_container_box_right_last_top_search">
+            <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
+            <div class="app_container_box_left_search_box_top_input">
+              <input type="text" placeholder="姓名/用户名/手机号">
+            </div>
           </div>
+          <div class="app_container_box_right_last_top_num">共1个学生</div>
         </div>
         <div class="app_container_box_right_last_list">
           <div class="app_container_box_right_last_list_detail" v-for="(item,index) in 10" :key="index">
@@ -105,6 +109,31 @@
           </div>
         </div>
       </div>
+      <!-- 课程tab列表 -->
+      <!-- <div class="app_container_box_right_last">
+        <div class="app_container_box_right_last_top">
+          <div class="app_container_box_right_last_top_search">
+            <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
+            <div class="app_container_box_left_search_box_top_input">
+              <input type="text" placeholder="搜索课程">
+            </div>
+          </div>
+          <div class="app_container_box_right_last_top_num">共1个课程</div>
+        </div>
+        <div class="app_container_box_right_last_list">
+          <div class="app_container_box_right_last_list_detailCourse" v-for="(item,index) in 10" :key="index">
+              <img src="@/assets/images/class/such.png" class="app_container_box_right_last_list_detailCourse_fm" alt="">
+              <div class="app_container_box_right_last_list_detailCourse_name">立升备课-管理学</div>
+              <div class="app_container_box_right_last_list_detailCourse_task">8个学习任务</div>
+              <div class="app_container_box_right_last_list_detailCourse_jd">
+                <div class="app_container_box_right_last_list_detailCourse_jd_box">
+                  <div class="app_container_box_right_last_list_detailCourse_jd_box_now" style="width:20%"></div>
+                </div>
+                <div class="app_container_box_right_last_list_detailCourse_jd_num">0%</div>
+              </div>
+          </div>
+        </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -366,18 +395,31 @@ color: #666666;
   padding: 20px;
   box-sizing: border-box;
 }
-.app_container_box_right_last_top{
-  width: 268px;
- display: flex;
-  justify-content: flex-start;
+.app_container_box_right_last_top_search{
+  display: flex;
+  justify-content:flex-start;
   align-items: center;
-  height: 36px;
-background: #FFFFFF;
+   width: 268px;
+   height:36px;
+   background: #FFFFFF;
 border-radius: 28px 28px 28px 28px;
 border: 1px solid #999999;
 gap: 8px;
 padding: 0 14px;
 box-sizing: border-box;
+}
+.app_container_box_right_last_top{
+ width: 100%;
+ display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+
+}
+.app_container_box_right_last_top_num{
+font-weight: 400;
+font-size: 14px;
+color: #666666;
 }
 .app_container_box_right_last_list{
   width: 100%;
@@ -449,5 +491,67 @@ line-height: 36px;
 font-weight: 400;
 font-size: 14px;
 color: #666666;
+}
+
+.app_container_box_right_last_list_detailCourse{
+  width: 190px;
+background: #FFFFFF;
+padding: 6px;
+box-sizing: border-box;
+box-shadow: 0px 0px 8px 0px rgba(0,73,255,0.1);
+border-radius: 8px 8px 8px 8px;
+display: flex;
+flex-direction: column;
+justify-content: flex-start;
+}
+.app_container_box_right_last_list_detailCourse_fm{
+  width: 100%;
+  height: 108px;
+  border-radius: 4px 4px 4px 4px;
+}
+.app_container_box_right_last_list_detailCourse_name{
+font-weight: 400;
+font-size: 14px;
+color: #333333;
+width: 100%;
+margin-top: 10px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.app_container_box_right_last_list_detailCourse_task{
+  margin-top: 8px;
+  font-weight: 400;
+font-size: 12px;
+color: #666666;
+}
+.app_container_box_right_last_list_detailCourse_jd{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.app_container_box_right_last_list_detailCourse_jd_box{
+  flex: 1;
+  width: 0;
+  background: #F3F4F8;
+  height: 4px;
+  border-radius: 2px;
+}
+.app_container_box_right_last_list_detailCourse_jd_box_now{
+  border-radius: 2px;
+  height: 4px;
+  background: #71A0FF;
+}
+.app_container_box_right_last_list_detailCourse_jd_num{
+  width: 34px;
+  text-align: center;
+  font-size: 400;
+  color:#666666 ;
+  font-size: 12px;
+  
+
 }
 </style>
