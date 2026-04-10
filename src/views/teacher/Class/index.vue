@@ -3,7 +3,7 @@
     <div class="app_container_box_left">
       <div class="app_container_box_left_top">
         <div class="app_top_left_text">我的班级</div>
-        <img src="@/assets/images/home/add.png" class="app_top_left_icon" alt="">
+        <img src="@/assets/images/home/add.png" @click="handleAddClass()" class="app_top_left_icon" alt="">
       </div>
       <div class="app_container_box_left_search_box" v-if="isOpenSearch == false">
         <div class="app_container_box_left_search_box_top" @click="openSearch()">
@@ -143,7 +143,7 @@
             <div class="app_container_box_right_top_top_tag">剩余{{ currentClass.remainDays }}天</div>
           </div>
           <div class="app_container_box_right_top_top_right">
-            <img src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
+            <img @click="handleToAnnouncement()" src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
             <el-dropdown trigger="click" @command="handleOptionsCommand">
               <img src="@/assets/images/class/options.png" class="app_container_box_right_top_top_right_options" alt="">
               <template #dropdown>
@@ -187,7 +187,15 @@
         <div class="app_container_box_right_last_list">
           <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index">
             <div class="app_container_box_right_last_list_detail_top">
-              <img src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
+              <el-dropdown trigger="click" @command="(cmd) => handleStudentOptionsCommand(cmd, item)">
+                <img src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
+                    <el-dropdown-item command="studentDetail">学生详情</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <div class="app_container_box_right_last_list_detail_top_mess">
                 <img src="@/assets/images/class/such.png" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
                 <div class="app_container_box_right_last_list_detail_top_mess_mess">{{ item.name }}</div>
@@ -226,6 +234,82 @@
       </div>
       </template>
     </div>
+    <!-- 重置密码弹窗 -->
+    <DialogCustome width="616px" height="366px" :visible="showResetPasswordDialog" confirmText="确定并复制密码" title="重置密码" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
+      <div class="dialog_box">
+        <div class="dialog_box_con">
+          <img src="@/assets/images/class/pass.png" class="dialog_box_con_icon" alt="">
+          <div class="dialog_box_con_title">输入密码</div>
+          <div class="dialog_box_con_sx"></div>
+          <div class="dialog_box_con_input">
+            <el-input v-model="resetPasswordValue" style="width:100%" placeholder="8-20位，必须包含数字和大小写字母" @input="resetPasswordValue = resetPasswordValue.replace(/[^\x00-\x7F]/g, '')"></el-input>
+          </div>
+          <div class="dialog_box_con_btn" @click="generatePassword">自动生成</div>
+          
+        </div>
+      </div>
+    </DialogCustome>
+
+    <!-- 新建班级弹窗 -->
+    <DialogCustome
+      width="616px"
+      height="366px"
+      :visible="showAddClassDialog"
+      :confirmText="addClassStep === 1 ? '下一步' : '创建'"
+      :cancelText="addClassStep === 1 ? '取消' : '上一步'"
+      title="创建新班级"
+      @cancel="onDialogCancelAdd"
+      @confirm="onDialogConfirmAdd"
+      @close="onDialogCloseAdd"
+    >
+      <!-- 第一步 -->
+      <div class="dialog_box2" v-if="addClassStep === 1">
+        <div class="dialog_box_con2">
+          <el-input style="width:100%" placeholder="请输入班级名称" v-model="newClassName"></el-input>
+        </div>
+        <div class="dialog_box_con2">
+          <el-input
+            type="textarea"
+            :rows="3"
+            placeholder="请输入班级描述"
+            maxlength="25"
+            show-word-limit
+            v-model="newClassDesc">
+          </el-input>
+        </div>
+      </div>
+      <!-- 第二步 -->
+      <div class="dialog_box2" v-if="addClassStep === 2">
+        <div class="dialog_box_con">
+          <img src="@/assets/images/class/rl_icon.png" class="dialog_box_con_icon2" alt="">
+          <div class="dialog_box_con_title">起始时间 <span class="required-star">*</span></div>
+          <div class="dialog_box_con_sx"></div>
+          <div class="dialog_box_con_date">
+            <el-date-picker
+              v-model="newClassStartDate"
+              type="date"
+              placeholder="请选择"
+              style="width:100%"
+              @change="onStartDateChange"
+            />
+          </div>
+        </div>
+        <div class="dialog_box_con">
+          <img src="@/assets/images/class/rl_icon.png" class="dialog_box_con_icon2" alt="">
+          <div class="dialog_box_con_title">结束时间 <span class="required-star">*</span></div>
+          <div class="dialog_box_con_sx"></div>
+          <div class="dialog_box_con_date">
+            <el-date-picker
+              v-model="newClassEndDate"
+              type="date"
+              :disabled-date="disabledEndDate"
+              placeholder="请选择"
+              style="width:100%"
+            />
+          </div>
+        </div>
+      </div>
+    </DialogCustome>
 
     <!-- 设置别名弹窗 -->
   <el-dialog v-model="aliasDialogVisible" title="设置别名" width="400px" :append-to-body="true">
@@ -336,7 +420,15 @@ export default {
       rightCourseSearch: '',
       sortType: '',
       aliasDialogVisible: false,
-      aliasInput: ''
+      aliasInput: '',
+      showResetPasswordDialog:false,
+      resetPasswordValue: '',
+      showAddClassDialog:false,
+      addClassStep: 1,
+      newClassName: '',
+      newClassDesc: '',
+      newClassStartDate: new Date(),
+      newClassEndDate: new Date()
     }
   },
   computed: {
@@ -442,6 +534,13 @@ export default {
       this.aliasDialogVisible = false
       this.$message.success('别名设置成功')
     },
+    handleStudentOptionsCommand(command, student) {
+      if (command === 'resetPassword') {
+        this.showResetPasswordDialog = true
+      } else if (command === 'studentDetail') {
+        this.$message.info(`查看学生详情：${student.name}`)
+      }
+    },
     handleSortCommand(command) {
       this.sortType = command
       const list = [...this.classList]
@@ -456,6 +555,112 @@ export default {
       }
       this.classList = list
       this.selectedClassIndex = 0
+    },
+    handleToAnnouncement(){
+      this.$router.push('/announcement')
+    },
+     onDialogCancel() {
+      this.showResetPasswordDialog = false
+      this.resetPasswordValue = ''
+    },
+    generatePassword() {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      const lower = 'abcdefghijklmnopqrstuvwxyz'
+      const digits = '0123456789'
+      const all = upper + lower + digits
+      let pwd = [
+        upper[Math.floor(Math.random() * upper.length)],
+        lower[Math.floor(Math.random() * lower.length)],
+        digits[Math.floor(Math.random() * digits.length)],
+      ]
+      for (let i = 3; i < 8; i++) {
+        pwd.push(all[Math.floor(Math.random() * all.length)])
+      }
+      pwd = pwd.sort(() => Math.random() - 0.5)
+      this.resetPasswordValue = pwd.join('')
+    },
+    async onDialogConfirm() {
+      if (!this.resetPasswordValue) {
+        this.$message.warning('请先输入或自动生成密码')
+        return
+      }
+      // 模拟接口调用
+      await new Promise(resolve => setTimeout(resolve, 300))
+      const text = `您的新密码为${this.resetPasswordValue}`
+      try {
+        await navigator.clipboard.writeText(text)
+        this.$message.success('密码已复制到剪贴板')
+      } catch {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        this.$message.success('密码已复制到剪贴板')
+      }
+      this.showResetPasswordDialog = false
+      this.resetPasswordValue = ''
+    },
+    handleAddClass(){
+      this.showAddClassDialog = true
+    },
+    onDialogCancelAdd(){
+      if (this.addClassStep === 2) {
+        this.addClassStep = 1
+      } else {
+        this._resetAddClassDialog()
+      }
+    },
+    onDialogConfirmAdd(){
+      if (this.addClassStep === 1) {
+        if (!this.newClassName.trim()) {
+          this.$message.warning('请输入班级名称')
+          return
+        }
+        this.addClassStep = 2
+      } else {
+        if (!this.newClassStartDate) {
+          this.$message.warning('请选择起始时间')
+          return
+        }
+        if (!this.newClassEndDate) {
+          this.$message.warning('请选择结束时间')
+          return
+        }
+        if (this.newClassEndDate <= this.newClassStartDate) {
+          this.$message.warning('结束时间必须大于起始时间')
+          return
+        }
+        const fmt = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''
+        const startDate = fmt(this.newClassStartDate)
+        const endDate = fmt(this.newClassEndDate)
+        console.log('创建班级', { name: this.newClassName, desc: this.newClassDesc, startDate, endDate })
+        this.$message.success('班级创建成功')
+        this._resetAddClassDialog()
+      }
+    },
+    onStartDateChange(val) {
+      if (this.newClassEndDate && val && this.newClassEndDate <= val) {
+        this.newClassEndDate = null
+      }
+    },
+    disabledEndDate(date) {
+      if (!this.newClassStartDate) return false
+      const start = new Date(this.newClassStartDate)
+      start.setHours(0, 0, 0, 0)
+      return date.getTime() <= start.getTime()
+    },
+    onDialogCloseAdd(){
+      this._resetAddClassDialog()
+    },
+    _resetAddClassDialog(){
+      this.showAddClassDialog = false
+      this.addClassStep = 1
+      this.newClassName = ''
+      this.newClassDesc = ''
+      this.newClassStartDate = new Date()
+      this.newClassEndDate = new Date()
     }
   }
 }
@@ -809,6 +1014,7 @@ justify-content: space-between;
 .app_container_box_right_last_list_detail_top_options{
   width: 20px;
   height: 4px;
+  cursor: pointer;
 }
 .app_container_box_right_last_list_detail_top_mess{
   width: 100%;
@@ -978,5 +1184,165 @@ color: #666666;
 
 .app_container_box_left_list_detail_title_textCompare{
   color: #0049FF;
+}
+.dialog_box{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.dialog_box2{
+   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+}
+.dialog_box_con{
+  width: 100%;
+  height: 63px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 0 17px 0 29px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dialog_box_con2{
+   width: 100%;
+  
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 20px 17px 20px 29px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dialog_box_con_icon{
+  width: 13px;
+  height: 16.5px;
+}
+.dialog_box_con_icon2{
+  width: 18px;
+  height: 18px
+}
+.dialog_box_con_title{
+  font-weight: 400;
+font-size: 16px;
+color: #999999;
+margin-left: 10px;
+}
+.dialog_box_con_sx{
+  margin: 0 16px;
+  background: #999999;
+  width: 1px;
+  height: 29px;
+}
+.dialog_box_con_btn{
+  width: 88px;
+height: 36px;
+border-radius: 4px 4px 4px 4px;
+border: 1px solid #0049FF;
+display: flex;
+justify-content: center;
+align-items: center;
+cursor: pointer;
+color: #0049FF;
+font-size: 16px;
+}
+.dialog_box_con_input{
+  flex: 1;
+  width: 0;
+}
+
+.dialog_box_con_input :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+}
+.dialog_box_con_input :deep(.el-input__inner) {
+  color: #333333;
+  font-size: 16px;
+  padding-left: 0!important;
+}
+.dialog_box_con_input :deep(.el-input__suffix) {
+  color: #999999;
+}
+.dialog_box_con_input ::v-deep .el-input__inner::placeholder {
+  color: #999999!important;
+  font-size:16px!important
+}
+
+
+
+
+.dialog_box_con2 :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+}
+.dialog_box_con2 :deep(.el-input__inner) {
+  color: #333333;
+  font-size: 16px;
+  padding: 0!important;
+}
+.dialog_box_con2 :deep(.el-input__suffix) {
+  color: #999999;
+}
+.dialog_box_con2 ::v-deep .el-input__inner::placeholder {
+  color: #999999!important;
+  font-size:16px!important
+}
+.dialog_box_con2 :deep(.el-textarea__inner) {
+  color: #333333;
+  font-size: 16px;
+  padding: 0!important;
+  border: none!important;
+}
+.dialog_box_con2 ::v-deep .el-textarea__inner::placeholder {
+  color: #999999!important;
+  font-size:16px!important
+}
+.dialog_box_con_date{
+  font-weight: 400;
+  font-size: 16px;
+  color: #333333;
+  flex: 1;
+  width: 0;
+}
+.dialog_box_con_date :deep(.el-date-editor) {
+  width: 100% !important;
+  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.dialog_box_con_date :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0;
+}
+.dialog_box_con_date :deep(.el-input__inner) {
+  color: #333333;
+  font-size: 16px;
+  padding: 0 !important;
+}
+.dialog_box_con_date ::v-deep .el-input__inner::placeholder {
+  color: #999999!important;
+  font-size:16px!important
+}
+.required-star {
+  color: #FF2E00;
+  margin-left: 2px;
+}
+.dialog_box_con_date :deep(.el-input__prefix) {
+  display: none!important;
 }
 </style>

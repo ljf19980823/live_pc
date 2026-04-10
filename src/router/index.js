@@ -40,6 +40,12 @@ const routes = [
     meta: { title: '登录', requireAuth: false, hidden: true }
   },
   {
+    path: '/announcement',
+    name: 'Announcement',
+    component: () => import('@/views/Announcement/index.vue'),
+    meta: { title: '公告', icon: 'el-icon-chat-dot-round', keepAlive: true }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
     // 根据角色动态决定首页：学生 → /student/home，其他 → /home
@@ -86,6 +92,7 @@ const routes = [
         component: () => import('@/views/Profile/index.vue'),
         meta: { title: '个人中心', hidden: true }
       },
+       
       // ── 学生端 ──
       {
         path: 'student/home',
@@ -122,7 +129,8 @@ const routes = [
         name: 'StudentProfile',
         component: () => import('@/views/Profile/index.vue'),
         meta: { title: '个人中心', hidden: true, roles: ['student'] }
-      }
+      },
+
     ]
   },
   {
