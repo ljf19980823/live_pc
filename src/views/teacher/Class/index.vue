@@ -86,6 +86,7 @@
             class="app_container_box_left_list_detail2"
             v-for="(item, index) in searchList"
             :key="index"
+            @click="selectSearchResult(item)"
           >
             <template v-if="searchType === 'class'">
               <div class="app_container_box_left_list_detail_title" v-html="highlightKeyword(item.name, leftSearchText)"></div>
@@ -138,13 +139,13 @@
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <input type="text" placeholder="姓名/用户名/手机号">
+              <input type="text" v-model="rightStudentSearch" placeholder="姓名/用户名/手机号">
             </div>
           </div>
-          <div class="app_container_box_right_last_top_num">共{{ studentList.length }}个学生</div>
+          <div class="app_container_box_right_last_top_num">共{{ filteredStudentList.length }}个学生</div>
         </div>
         <div class="app_container_box_right_last_list">
-          <div class="app_container_box_right_last_list_detail" v-for="(item, index) in studentList" :key="index">
+          <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index">
             <div class="app_container_box_right_last_list_detail_top">
               <img src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
               <div class="app_container_box_right_last_list_detail_top_mess">
@@ -154,6 +155,7 @@
             </div>
             <div class="app_container_box_right_last_list_detail_last">进班日期：{{ item.joinDate }}</div>
           </div>
+          <EmptyState v-if="filteredStudentList.length === 0" :description="rightStudentSearch ? '无搜索结果' : '暂无学生数据'" style="width: 100%;" />
         </div>
       </div>
       <!-- 课程tab列表 -->
@@ -162,13 +164,13 @@
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <input type="text" placeholder="搜索课程">
+              <input type="text" v-model="rightCourseSearch" placeholder="搜索课程">
             </div>
           </div>
-          <div class="app_container_box_right_last_top_num">共{{ courseList.length }}个课程</div>
+          <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
         </div>
         <div class="app_container_box_right_last_list">
-          <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in courseList" :key="index">
+          <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index">
             <img src="@/assets/images/class/such.png" class="app_container_box_right_last_list_detailCourse_fm" alt="">
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
             <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }}个学习任务</div>
@@ -179,6 +181,7 @@
               <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ item.progress }}%</div>
             </div>
           </div>
+          <EmptyState v-if="filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
       </div>
       </template>
@@ -272,7 +275,9 @@ export default {
           ]
         },
       ],
-      leftSearchText:''
+      leftSearchText: '',
+      rightStudentSearch: '',
+      rightCourseSearch: ''
     }
   },
   computed: {
@@ -303,6 +308,16 @@ export default {
         })
         return results
       }
+    },
+    filteredStudentList() {
+      if (!this.rightStudentSearch) return this.studentList
+      const keyword = this.rightStudentSearch.toLowerCase()
+      return this.studentList.filter(item => item.name.toLowerCase().includes(keyword))
+    },
+    filteredCourseList() {
+      if (!this.rightCourseSearch) return this.courseList
+      const keyword = this.rightCourseSearch.toLowerCase()
+      return this.courseList.filter(item => item.name.toLowerCase().includes(keyword))
     }
   },
   methods:{
@@ -315,6 +330,26 @@ export default {
     selectClass(index) {
       this.selectedClassIndex = index
       this.rightTab = 'student'
+      this.rightStudentSearch = ''
+      this.rightCourseSearch = ''
+    },
+    selectSearchResult(item) {
+      const keyword = this.leftSearchText
+      if (this.searchType === 'class') {
+        const idx = this.classList.findIndex(cls => cls.name === item.name)
+        if (idx !== -1) this.selectedClassIndex = idx
+        this.rightStudentSearch = ''
+        this.rightCourseSearch = ''
+      } else {
+        const idx = this.classList.findIndex(cls => cls.name === item.className)
+        if (idx !== -1) this.selectedClassIndex = idx
+        this.rightTab = 'student'
+        this.rightStudentSearch = keyword
+        this.rightCourseSearch = ''
+      }
+      this.isOpenSearch = false
+      this.leftSearchText = ''
+      this.searchType = 'class'
     },
     cancelSearch() {
       this.isOpenSearch = false
