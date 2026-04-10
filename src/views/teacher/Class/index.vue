@@ -15,9 +15,29 @@
         <div class="app_container_box_left_search_box_center">
           <div class="app_container_box_left_search_box_center_left">
               <el-select
-            v-model="liveStatus"
-            placeholder="请选择状态"
+            v-model="year"
+            placeholder="请选择年份"
             clearable
+            style="width: 100%;"
+          >
+            <el-option
+            
+              key=""
+              label="全部"
+              value=""
+            />
+             <el-option
+            
+              key="2026"
+              label="2026"
+              value="2026"
+            />
+          </el-select>
+          </div>
+          <div class="app_container_box_left_search_box_center_left">
+              <el-select
+            v-model="liveStatus"
+            placeholder="状态"
             style="width: 100%;"
           >
             <el-option
@@ -34,9 +54,19 @@
             />
           </el-select>
           </div>
-          <div class="app_container_box_left_search_box_center_right">
-            <img src="@/assets/images/class/sx.png" class="app_container_box_left_search_box_center_right_img" alt="">
-          </div>
+          <el-dropdown trigger="click" @command="handleSortCommand">
+            <div class="app_container_box_left_search_box_center_right">
+              <img src="@/assets/images/class/sx.png" class="app_container_box_left_search_box_center_right_img" alt="">
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="name_asc" :class="{ 'sort-active': sortType === 'name_asc' }">班级名称 A-Z</el-dropdown-item>
+                <el-dropdown-item command="name_desc" :class="{ 'sort-active': sortType === 'name_desc' }">班级名称 Z-A</el-dropdown-item>
+                <el-dropdown-item command="time_asc" :class="{ 'sort-active': sortType === 'time_asc' }">创建时间升序</el-dropdown-item>
+                <el-dropdown-item command="time_desc" :class="{ 'sort-active': sortType === 'time_desc' }">创建时间降序</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
       <div  class="app_container_box_left_search_box" v-if="isOpenSearch==true">
@@ -44,7 +74,7 @@
            <div class="app_container_box_left_search_box_topBox_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <input ref="searchInput" v-model="leftSearchText" type="text" :placeholder="searchType === 'class' ? '搜索班级' : '搜索学生'">
+              <el-input ref="searchInput" v-model="leftSearchText" :placeholder="searchType === 'class' ? '搜索班级' : '搜索学生'" clearable />
             </div>
           </div>
           <div class="app_container_box_left_search_box_topBox_cancel" @click="cancelSearch">取消</div>
@@ -70,8 +100,8 @@
           :key="index"
           @click="selectClass(index)"
         >
-          <img v-if="selectedClassIndex === index" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
-          <div class="app_container_box_left_list_detail_title">{{ item.name }}</div>
+          <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
+          <div class="app_container_box_left_list_detail_title">{{  item.name }}</div>
           <div class="app_container_box_left_list_detail_count">{{ item.count }}人</div>
         </div>
         <EmptyState v-if="classList.length === 0" description="暂无班级数据" />
@@ -109,12 +139,22 @@
       <div class="app_container_box_right_top">
         <div class="app_container_box_right_top_top">
           <div class="app_container_box_right_top_top_left">
-            <div class="app_container_box_right_top_top_name">{{ currentClass.name }}</div>
+            <div class="app_container_box_right_top_top_name">{{ currentClass.alias || currentClass.name }}</div>
             <div class="app_container_box_right_top_top_tag">剩余{{ currentClass.remainDays }}天</div>
           </div>
           <div class="app_container_box_right_top_top_right">
             <img src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
-            <img src="@/assets/images/class/options.png" class="app_container_box_right_top_top_right_options" alt="">
+            <el-dropdown trigger="click" @command="handleOptionsCommand">
+              <img src="@/assets/images/class/options.png" class="app_container_box_right_top_top_right_options" alt="">
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="pin">
+                    {{ currentClass.pinned ? '取消置顶' : '置顶' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="alias">设置别名</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
         <div class="app_container_box_right_top_mess">
@@ -139,7 +179,7 @@
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <input type="text" v-model="rightStudentSearch" placeholder="姓名/用户名/手机号">
+              <el-input v-model="rightStudentSearch" placeholder="姓名/用户名/手机号" clearable />
             </div>
           </div>
           <div class="app_container_box_right_last_top_num">共{{ filteredStudentList.length }}个学生</div>
@@ -164,7 +204,7 @@
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <input type="text" v-model="rightCourseSearch" placeholder="搜索课程">
+              <el-input v-model="rightCourseSearch" placeholder="搜索课程" clearable />
             </div>
           </div>
           <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
@@ -186,7 +226,18 @@
       </div>
       </template>
     </div>
+
+    <!-- 设置别名弹窗 -->
+  <el-dialog v-model="aliasDialogVisible" title="设置别名" width="400px" :append-to-body="true">
+    <el-input v-model="aliasInput" placeholder="请输入班级别名" maxlength="30" show-word-limit clearable />
+    <template #footer>
+      <el-button @click="aliasDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="confirmAlias">确定</el-button>
+    </template>
+  </el-dialog>
   </div>
+
+  
 </template>
 
 <script>
@@ -194,7 +245,8 @@ export default {
   name: 'Class' ,
   data(){
     return {
-      liveStatus:'',
+      year:'',
+      liveStatus:'1',
       isOpenSearch: false,
       searchType: 'class',
       rightTab: 'student',
@@ -202,6 +254,7 @@ export default {
       classList: [
         {
           name: '中国近现代史',
+          pinned: false,
           count: 657,
           remainDays: 30,
           startDate: '2025-06-09',
@@ -223,6 +276,7 @@ export default {
         },
         {
           name: '管理学精讲班',
+          pinned: false,
           count: 312,
           remainDays: 120,
           startDate: '2025-09-01',
@@ -241,6 +295,7 @@ export default {
         },
         {
           name: '马原理强化班',
+          pinned: false,
           count: 98,
           remainDays: 5,
           startDate: '2024-12-01',
@@ -257,6 +312,7 @@ export default {
         },
         {
           name: '思想道德提升班',
+          pinned: false,
           count: 455,
           remainDays: 200,
           startDate: '2025-10-15',
@@ -277,7 +333,10 @@ export default {
       ],
       leftSearchText: '',
       rightStudentSearch: '',
-      rightCourseSearch: ''
+      rightCourseSearch: '',
+      sortType: '',
+      aliasDialogVisible: false,
+      aliasInput: ''
     }
   },
   computed: {
@@ -361,6 +420,42 @@ export default {
       const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const reg = new RegExp(`(${escaped})`, 'gi')
       return text.replace(reg, '<span style="color:#0049FF;">$1</span>')
+    },
+    handleOptionsCommand(command) {
+      if (command === 'pin') {
+        const cls = this.classList[this.selectedClassIndex]
+        cls.pinned = !cls.pinned
+        const pinnedList = this.classList.filter(item => item.pinned)
+        const unpinnedList = this.classList.filter(item => !item.pinned)
+        const newList = [...pinnedList, ...unpinnedList]
+        const currentName = cls.name
+        this.classList = newList
+        this.selectedClassIndex = newList.findIndex(item => item.name === currentName)
+        this.$message.success(cls.pinned ? '已置顶' : '已取消置顶')
+      } else if (command === 'alias') {
+        this.aliasInput = this.classList[this.selectedClassIndex].alias || ''
+        this.aliasDialogVisible = true
+      }
+    },
+    confirmAlias() {
+      this.classList[this.selectedClassIndex].alias = this.aliasInput
+      this.aliasDialogVisible = false
+      this.$message.success('别名设置成功')
+    },
+    handleSortCommand(command) {
+      this.sortType = command
+      const list = [...this.classList]
+      if (command === 'name_asc') {
+        list.sort((a, b) => a.name.localeCompare(b.name))
+      } else if (command === 'name_desc') {
+        list.sort((a, b) => b.name.localeCompare(a.name))
+      } else if (command === 'time_asc') {
+        list.sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+      } else if (command === 'time_desc') {
+        list.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+      }
+      this.classList = list
+      this.selectedClassIndex = 0
     }
   }
 }
@@ -433,10 +528,19 @@ color: #D9D9D9;
   flex: 1;
   width: 0;
 }
-.app_container_box_left_search_box_top_input input{
-  width: 100%;
+.app_container_box_left_search_box_top_input :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+}
+.app_container_box_left_search_box_top_input :deep(.el-input__inner) {
   color: #333333;
   font-size: 14px;
+  padding-left: 0!important;
+}
+.app_container_box_left_search_box_top_input :deep(.el-input__suffix) {
+  color: #999999;
 }
 .app_container_box_left_search_box_center{
   width: 100%;
@@ -460,10 +564,15 @@ border: 1px solid #999999;
 display: flex;
 justify-content: center;
 align-items: center;
+  cursor: pointer;
 }
 .app_container_box_left_search_box_center_right_img{
   width: 16px;
   height: 16px;
+}
+.sort-active {
+  color: #0049FF !important;
+  font-weight: 600;
 }
 .app_container_box_left_list{
   margin-top: 20px;
@@ -593,6 +702,7 @@ box-sizing: border-box;
 .app_container_box_right_top_top_right_options{
   width: 20px;
   height: 4px;
+  cursor: pointer;
 }
 .app_container_box_right_top_mess{
   margin-top: 22px;
