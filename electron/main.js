@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, dialog } = require('electron')
+const { app, BrowserWindow, shell, ipcMain } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const isDev = process.env.NODE_ENV === 'development'
@@ -278,6 +278,58 @@ function stopScreenGuard () {
   }
 }
 
+// ─── 自定义退出确认弹窗 ───────────────────────────────────────────────────
+function showExitConfirmDialog () {
+  const confirmWin = new BrowserWindow({
+    width: 300,
+    height: 160,
+    parent: mainWindow,
+    modal: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    frame: false,
+    show: false,
+    transparent: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'confirm-dialog-preload.js')
+    }
+  })
+
+  confirmWin.loadFile(path.join(__dirname, 'confirm-dialog.html'))
+
+  confirmWin.once('ready-to-show', () => {
+    confirmWin.show()
+  })
+
+  const cleanup = () => {
+    ipcMain.removeListener('exit-dialog-confirm', onConfirm)
+    ipcMain.removeListener('exit-dialog-cancel', onCancel)
+    if (!confirmWin.isDestroyed()) confirmWin.destroy()
+  }
+
+  const onConfirm = () => {
+    cleanup()
+    stopScreenGuard()
+    mainWindow.destroy()
+  }
+
+  const onCancel = () => {
+    cleanup()
+  }
+
+  ipcMain.once('exit-dialog-confirm', onConfirm)
+  ipcMain.once('exit-dialog-cancel', onCancel)
+
+  confirmWin.on('closed', () => {
+    ipcMain.removeListener('exit-dialog-confirm', onConfirm)
+    ipcMain.removeListener('exit-dialog-cancel', onCancel)
+  })
+}
+
 // ─── 创建主窗口 ──────────────────────────────────────────────────────────
 function createWindow () {
   const iconPath = process.platform === 'win32'
@@ -331,18 +383,7 @@ function createWindow () {
 
   mainWindow.on('close', (event) => {
     event.preventDefault()
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'question',
-      buttons: ['确认退出', '取消'],
-      defaultId: 1,
-      cancelId: 1,
-      title: '退出确认',
-      message: '确认退出当前应用程序？'
-    })
-    if (choice === 0) {
-      stopScreenGuard()
-      mainWindow.destroy()
-    }
+    showExitConfirmDialog()
   })
 
   mainWindow.on('closed', () => {

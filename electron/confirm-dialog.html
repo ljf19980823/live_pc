@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>提示</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .card {
+      width: 280px;
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+
+    .body {
+      padding: 20px 16px 16px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 10px;
+    }
+
+    .message {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .divider-h {
+      height: 1px;
+      background: #e5e5e5;
+    }
+
+    .buttons {
+      display: flex;
+      height: 48px;
+    }
+
+    .btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      outline: none;
+    }
+
+    .btn:active {
+      background: #f0f0f0;
+    }
+
+    .divider-v {
+      width: 1px;
+      background: #e5e5e5;
+      flex-shrink: 0;
+    }
+
+    .btn-cancel {
+      color: #666;
+    }
+
+    .btn-confirm {
+      color: #576cec;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="body">
+      <div class="title">提示</div>
+      <div class="message">是否确认退出当前应用程序？</div>
+    </div>
+    <div class="divider-h"></div>
+    <div class="buttons">
+      <button class="btn btn-cancel" id="cancelBtn">取消</button>
+      <div class="divider-v"></div>
+      <button class="btn btn-confirm" id="confirmBtn">确定</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      window.dialogAPI.cancel()
+    })
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+      window.dialogAPI.confirm()
+    })
+  </script>
+</body>
+</html>
