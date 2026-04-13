@@ -280,9 +280,10 @@ function stopScreenGuard () {
 
 // ─── 自定义退出确认弹窗 ───────────────────────────────────────────────────
 function showExitConfirmDialog () {
+  const [winWidth, winHeight] = mainWindow.getSize()
   const confirmWin = new BrowserWindow({
-    width: 300,
-    height: 160,
+    width: winWidth,
+    height: winHeight,
     parent: mainWindow,
     modal: true,
     resizable: false,
