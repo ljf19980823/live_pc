@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, dialog } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const isDev = process.env.NODE_ENV === 'development'
@@ -329,8 +329,23 @@ function createWindow () {
     return { action: 'allow' }
   })
 
+  mainWindow.on('close', (event) => {
+    event.preventDefault()
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'question',
+      buttons: ['确认退出', '取消'],
+      defaultId: 1,
+      cancelId: 1,
+      title: '退出确认',
+      message: '确认退出当前应用程序？'
+    })
+    if (choice === 0) {
+      stopScreenGuard()
+      mainWindow.destroy()
+    }
+  })
+
   mainWindow.on('closed', () => {
-    stopScreenGuard()
     mainWindow = null
   })
 }
