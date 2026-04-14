@@ -124,7 +124,7 @@
     </DialogCustome>
 
           <!-- 分享弹窗 -->
-    <DialogCustome width="616px" :showConfirm="false" :showCancel="false" height="449px" :visible="shareDialogVisible" title="分享"  @cancel="onDialogCancelShare" @confirm="onDialogCancelShare">
+    <DialogCustome width="616px" :showClose="true" :showConfirm="false" :showCancel="false" height="449px" :visible="shareDialogVisible" title="分享"  @close="onDialogCancelShare" >
       <div class="dialog_box2">
         <div class="dialog_box2_share_text">微信/QQ扫一扫，立即分享</div>
         <img ref="shareQrImg" src="@/assets/images/codeSuch.png" class="dialog_box2_share_img" crossorigin="anonymous" alt="">
