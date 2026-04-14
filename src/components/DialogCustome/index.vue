@@ -2,7 +2,7 @@
   <div class="mask" v-if="visible" @click.self="handleCancel">
      <div class="mask_con">
        <div class="masl_con_dialog" :style="{ width: width, height: height }">
-           <img src="@/assets/images/close.png" class="dialog_close" alt="" @click="handleClose">
+           <img src="@/assets/images/close.png" v-if="showClose" class="dialog_close" alt="" @click="handleClose">
            <div class="masl_con_dialog_top">{{ title }}</div>
            <div class="masl_con_dialog_center">
              <slot></slot>
@@ -41,6 +41,11 @@ export default {
       type: Boolean,
       default: true
     },
+    
+    showClose: {
+      type: Boolean,
+      default: false
+    },
     showConfirm: {
       type: Boolean,
       default: true
@@ -78,7 +83,7 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(51, 51, 51, 0.60);
-  z-index: 1000000;
+  z-index: 1022;
 }
 .mask_con{
   width: 100%;

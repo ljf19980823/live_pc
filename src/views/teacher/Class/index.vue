@@ -254,6 +254,7 @@
     <DialogCustome
       width="616px"
       height="366px"
+      :showClose='true'
       :visible="showAddClassDialog"
       :confirmText="addClassStep === 1 ? '下一步' : '创建'"
       :cancelText="addClassStep === 1 ? '取消' : '上一步'"
@@ -313,14 +314,25 @@
 
     <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" @close="showStudentDetail = false" />
 
-    <!-- 设置别名弹窗 -->
-  <el-dialog v-model="aliasDialogVisible" title="设置别名" width="400px" :append-to-body="true">
-    <el-input v-model="aliasInput" placeholder="请输入班级别名" maxlength="30" show-word-limit clearable />
-    <template #footer>
-      <el-button @click="aliasDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmAlias">确定</el-button>
-    </template>
-  </el-dialog>
+
+
+  <!-- 设置别名弹窗 -->
+    <DialogCustome width="616px" height="318px" :visible="aliasDialogVisible" title="设置别名"  @cancel="onDialogCancelAlias" @confirm="onDialogConfirmAlias">
+      <div class="dialog_box2">
+        <div class="dialog_box_con">
+          
+          <div class="dialog_box_con_input">
+            <el-input v-model="aliasInput" style="width:100%" placeholder="班级别名仅自己可见" maxlength="20" show-word-limit></el-input>
+          </div>
+       
+        </div>
+        <div class="dialog_box_con_alias_tip">
+          班级名称：{{ currentClass && currentClass.name }} <span class="dialog_box_con_alias_tip_btn" @click="aliasInput = currentClass && currentClass.name">填入</span>
+        </div>
+          
+      </div>
+    </DialogCustome>
+
   </div>
 
   
@@ -532,6 +544,16 @@ export default {
         this.aliasInput = this.classList[this.selectedClassIndex].alias || ''
         this.aliasDialogVisible = true
       }
+    },
+    onDialogCancelAlias() {
+      this.aliasDialogVisible = false
+      this.aliasInput = ''
+    },
+    onDialogConfirmAlias() {
+      this.classList[this.selectedClassIndex].alias = this.aliasInput.trim() || ''
+      this.aliasDialogVisible = false
+      this.$message.success(this.aliasInput.trim() ? '别名设置成功' : '别名已清除')
+      this.aliasInput = ''
     },
     confirmAlias() {
       this.classList[this.selectedClassIndex].alias = this.aliasInput
@@ -1349,5 +1371,21 @@ font-size: 16px;
 }
 .dialog_box_con_date :deep(.el-input__prefix) {
   display: none!important;
+}
+.dialog_box_con_alias_tip{
+  font-weight: 400;
+font-size: 16px;
+color: #999999;
+margin-top: 8px;
+align-self: flex-start;
+padding:0 29px;
+box-sizing: border-box;
+}
+.dialog_box_con_alias_tip_btn{
+  cursor: pointer;
+  padding-left: 16px;
+  font-weight: 400;
+font-size: 16px;
+color: #0049FF;
 }
 </style>
