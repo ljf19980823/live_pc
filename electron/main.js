@@ -280,10 +280,12 @@ function stopScreenGuard () {
 
 // ─── 自定义退出确认弹窗 ───────────────────────────────────────────────────
 function showExitConfirmDialog () {
-  const [winWidth, winHeight] = mainWindow.getSize()
+  const bounds = mainWindow.getBounds()
   const confirmWin = new BrowserWindow({
-    width: winWidth,
-    height: winHeight,
+    width: bounds.width,
+    height: bounds.height,
+    x: bounds.x,
+    y: bounds.y,
     parent: mainWindow,
     modal: true,
     resizable: false,
@@ -302,11 +304,22 @@ function showExitConfirmDialog () {
 
   confirmWin.loadFile(path.join(__dirname, 'confirm-dialog.html'))
 
+  // 主窗口移动或缩放时同步更新弹窗的位置和尺寸
+  const syncBounds = () => {
+    if (!confirmWin.isDestroyed()) {
+      confirmWin.setBounds(mainWindow.getBounds())
+    }
+  }
+  mainWindow.on('move', syncBounds)
+  mainWindow.on('resize', syncBounds)
+
   confirmWin.once('ready-to-show', () => {
     confirmWin.show()
   })
 
   const cleanup = () => {
+    mainWindow.removeListener('move', syncBounds)
+    mainWindow.removeListener('resize', syncBounds)
     ipcMain.removeListener('exit-dialog-confirm', onConfirm)
     ipcMain.removeListener('exit-dialog-cancel', onCancel)
     if (!confirmWin.isDestroyed()) confirmWin.destroy()
@@ -326,6 +339,8 @@ function showExitConfirmDialog () {
   ipcMain.once('exit-dialog-cancel', onCancel)
 
   confirmWin.on('closed', () => {
+    mainWindow.removeListener('move', syncBounds)
+    mainWindow.removeListener('resize', syncBounds)
     ipcMain.removeListener('exit-dialog-confirm', onConfirm)
     ipcMain.removeListener('exit-dialog-cancel', onCancel)
   })
