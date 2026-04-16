@@ -118,14 +118,12 @@
                   <div class="mask_con_dialog_container2_con">
                     <div class="mask_con_dialog_container2_con_top">
                       <div class="mask_con_dialog_container2_con_top_left">
-                        <div class="mask_con_dialog_container2_con_top_left_detail">
-                          <div class="mask_con_dialog_container2_con_top_left_detail_text">近一个月</div>
-                          <img src="@/assets/images/student/xl.png" class="mask_con_dialog_container2_con_top_left_detail_xl" alt="">
-                        </div>
-                        <div class="mask_con_dialog_container2_con_top_left_detail">
-                          <div class="mask_con_dialog_container2_con_top_left_detail_text">全部老师</div>
-                          <img src="@/assets/images/student/xl.png" class="mask_con_dialog_container2_con_top_left_detail_xl" alt="">
-                        </div>
+                        <el-select v-model="detailTimeRange" class="mask_con_dialog_container2_con_top_left_select" size="mini" popper-class="detail-filter-popper">
+                          <el-option v-for="item in timeRangeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                        </el-select>
+                        <el-select v-model="detailTeacher" class="mask_con_dialog_container2_con_top_left_select" size="mini" popper-class="detail-filter-popper">
+                          <el-option v-for="item in teacherOptions" :key="item.value" :label="item.label" :value="item.value" />
+                        </el-select>
                       </div>
                       <div class="mask_con_dialog_container2_con_top_time">更新时间：04-16  10:05</div>
                     </div>
@@ -206,28 +204,32 @@
                     </div>
                     <div class="mask_con_dialog_container2_con_white">
                       <div class="mask_con_dialog_container2_con_white_title">历史课堂</div>
-                      <div class="mask_con_dialog_container2_con_white_con">
-                        <div class="masl_con_dialog_con_xq_detail_center_detail">
-                          <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看时长</div>
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                              0  <span>分钟</span>
-                            </div>
+                        <div class="mask_con_dialog_container2_con_white_con">
+                          <div class="masl_con_dialog_con_xq_detail_center_detail">
+                            <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看时长</div>
+                              <div class="masl_con_dialog_con_xq_detail_center_detail_num">
+                                0  <span>分钟</span>
+                              </div>
+                          </div>
+                          <div class="masl_con_dialog_con_xq_detail_center_detail">
+                              <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看数量</div>
+                              <div class="masl_con_dialog_con_xq_detail_center_detail_num">
+                                0  <span>/ 3</span>
+                              </div>
+                            
+                          </div>
+                          <div class="masl_con_dialog_con_xq_detail_center_detail">
+                              <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看中</div>
+                              <div class="masl_con_dialog_con_xq_detail_center_detail_num">
+                                0
+                              </div>
+                          </div>
+                        
                         </div>
-                        <div class="masl_con_dialog_con_xq_detail_center_detail">
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看数量</div>
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                              0  <span>/ 3</span>
-                            </div>
-                          
+                 <!-- 折线图 -->
+                        <div class="chart_container">
+                          <div ref="lineChart" class="line_chart"></div>
                         </div>
-                        <div class="masl_con_dialog_con_xq_detail_center_detail">
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看中</div>
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                              0  
-                        </div>
-
-                        </div>
-                      </div>
                     </div>
                     <div class="mask_con_dialog_container2_con_white">
                       <div class="mask_con_dialog_container2_con_white_title">课堂细明</div>
@@ -284,6 +286,7 @@
 </template>
 <script>
 import DialogCustome from '@/components/DialogCustome/index.vue'
+import * as echarts from 'echarts'
 
 export default {
   name: 'StudentDetail',
@@ -306,7 +309,55 @@ export default {
       savedAlias: '我是无敌霸王龙',
       shareDialogVisible: false,
       shareLink: 'http:sajhdakshkajdhakhdakssadadasda',
-      showDetail:false
+      showDetail:false,
+      lineChartInstance: null,
+      detailTimeRange: 'week1',
+      timeRangeOptions: [
+        { label: '近1周', value: 'week1' },
+        { label: '近2周', value: 'week2' },
+        { label: '近1月', value: 'month1' },
+        { label: '近3月', value: 'month3' },
+        { label: '近半年', value: 'halfYear' },
+        { label: '近1年', value: 'year1' }
+      ],
+      detailTeacher: 'all',
+      teacherOptions: [
+        { label: '全部老师', value: 'all' },
+        { label: '思雅', value: 'siya' }
+      ]
+    }
+  },
+  mounted() {
+    this.$nextTick(() => {
+      if (this.showDetail) {
+        this.initLineChart()
+      }
+    })
+  },
+  beforeDestroy() {
+    if (this.lineChartInstance) {
+      this.lineChartInstance.dispose()
+      this.lineChartInstance = null
+    }
+  },
+  watch: {
+    showDetail(val) {
+      if (val) {
+        this.$nextTick(() => {
+          this.initLineChart()
+        })
+      } else {
+        if (this.lineChartInstance) {
+          this.lineChartInstance.dispose()
+          this.lineChartInstance = null
+        }
+      }
+    },
+    visible(val) {
+      if (!val && this.lineChartInstance) {
+        this.lineChartInstance.dispose()
+        this.lineChartInstance = null
+      }
     }
   },
   computed: {
@@ -404,6 +455,79 @@ export default {
     },
     handleClass(){
       this.showDetail = true
+    },
+    initLineChart() {
+      const chartDom = this.$refs.lineChart
+      if (!chartDom) return
+
+      this.lineChartInstance = echarts.init(chartDom)
+
+      const option = {
+        grid: {
+          top: '15%',
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: ['课次1'],
+          axisLine: {
+            lineStyle: {
+              color: '#999999'
+            }
+          },
+          axisLabel: {
+            color: '#666666',
+            fontSize: 12
+          },
+          axisTick: {
+            show: false
+          }
+        },
+        yAxis: {
+          type: 'value',
+          min: 0,
+          max: 1,
+          interval: 0.2,
+          axisLine: {
+            show: false
+          },
+          axisTick: {
+            show: false
+          },
+          axisLabel: {
+            color: '#999999',
+            fontSize: 12
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#E5E5E5',
+              type: 'dashed'
+            }
+          }
+        },
+        series: [
+          {
+            data: [0],
+            type: 'line',
+            symbol: 'circle',
+            symbolSize: 8,
+            lineStyle: {
+              color: '#409EFF',
+              width: 2
+            },
+            itemStyle: {
+              color: '#409EFF',
+              borderColor: '#fff',
+              borderWidth: 2
+            }
+          }
+        ]
+      }
+
+      this.lineChartInstance.setOption(option)
     }
   }
 }
@@ -876,6 +1000,21 @@ white-space: nowrap;
  width: 13px;
  height: 9px; 
 }
+.mask_con_dialog_container2_con_top_left_select{
+  width: 90px;
+}
+::v-deep .mask_con_dialog_container2_con_top_left_select .el-input__inner{
+  height: 28px;
+  line-height: 28px;
+  font-size: 13px;
+  color: #333333;
+  border-radius: 4px;
+  padding-right: 24px;
+}
+::v-deep .mask_con_dialog_container2_con_top_left_select .el-input__suffix{
+  display: flex;
+  align-items: center;
+}
 .mask_con_dialog_container2_con_top_time{
 font-weight: 400;
 font-size: 12px;
@@ -954,5 +1093,18 @@ color: #999999;
 }
 .mask_con_dialog_container2_con_white_con2_detail_mess_mess_text span{
   color: #0049FF;
+}
+
+/* 折线图样式 */
+.chart_container{
+  width: 100%;
+  padding: 16px 0;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 8px;
+}
+.line_chart{
+  width: 100%;
+  height: 200px;
 }
 </style>
