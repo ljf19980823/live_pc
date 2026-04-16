@@ -185,10 +185,10 @@
           <div class="app_container_box_right_last_top_num">共{{ filteredStudentList.length }}个学生</div>
         </div>
         <div class="app_container_box_right_last_list">
-          <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index">
+          <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index" @click="handleStudentDetail(item)">
             <div class="app_container_box_right_last_list_detail_top">
               <el-dropdown trigger="click" @command="(cmd) => handleStudentOptionsCommand(cmd, item)">
-                <img src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
+                <img  @click.stop src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
@@ -567,6 +567,10 @@ export default {
         this.currentStudentId = student.id
         this.showStudentDetail = true
       }
+    },
+    handleStudentDetail(student){
+       this.currentStudentId = student.id
+        this.showStudentDetail = true
     },
     handleSortCommand(command) {
       this.sortType = command
