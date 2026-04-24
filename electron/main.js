@@ -1,7 +1,21 @@
 const { app, BrowserWindow, shell, ipcMain } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
+const https = require('https')
+const http = require('http')
+const fs = require('fs')
+const os = require('os')
 const isDev = process.env.NODE_ENV === 'development'
+
+// ─── 版本检查接口地址（请修改为实际的版本检查 API）────────────────────────────
+// 接口需返回 JSON，格式示例：
+// {
+//   "version": "2.0.0",
+//   "win_download_url": "https://example.com/setup-2.0.0.exe",
+//   "mac_download_url": "https://example.com/app-2.0.0.dmg",
+//   "description": "更快、更稳定的2.0客户端"
+// }
+const VERSION_CHECK_URL = 'https://your-api.com/api/app/version'
 
 let mainWindow
 let screenGuardInterval = null
@@ -406,6 +420,123 @@ function createWindow () {
     mainWindow = null
   })
 }
+
+// ─── 版本更新：工具函数 ───────────────────────────────────────────────────────
+/**
+ * 带进度回调的文件下载，自动跟随 301/302 重定向
+ * @param {string} url 下载地址
+ * @param {string} destPath 本地保存路径
+ * @param {function} onProgress 进度回调(0-100)
+ * @returns {Promise<string>} 保存路径
+ */
+function downloadFileWithProgress (url, destPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const doRequest = (reqUrl) => {
+      const mod = reqUrl.startsWith('https') ? https : http
+      mod.get(reqUrl, (response) => {
+        // 跟随重定向
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          doRequest(response.headers.location)
+          return
+        }
+        if (response.statusCode !== 200) {
+          reject(new Error(`下载失败，状态码: ${response.statusCode}`))
+          return
+        }
+
+        const totalLength = parseInt(response.headers['content-length'] || '0', 10)
+        let downloaded = 0
+        const file = fs.createWriteStream(destPath)
+
+        response.on('data', (chunk) => {
+          downloaded += chunk.length
+          file.write(chunk)
+          if (totalLength > 0) {
+            onProgress(Math.min(99, Math.round((downloaded / totalLength) * 100)))
+          }
+        })
+
+        response.on('end', () => {
+          file.close(() => {
+            onProgress(100)
+            resolve(destPath)
+          })
+        })
+
+        response.on('error', (err) => {
+          file.close()
+          fs.unlink(destPath, () => {})
+          reject(err)
+        })
+      }).on('error', reject)
+    }
+
+    doRequest(url)
+  })
+}
+
+// ─── 获取当前应用版本 ─────────────────────────────────────────────────────────
+ipcMain.handle('get-app-version', () => app.getVersion())
+
+// ─── 检查是否有新版本 ─────────────────────────────────────────────────────────
+ipcMain.handle('check-for-update', async () => {
+  try {
+    const currentVersion = app.getVersion()
+    // Node.js 18+ 内置 fetch；若运行环境不支持请改用 https.get
+    const res = await fetch(VERSION_CHECK_URL, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return { hasUpdate: false }
+
+    const json = await res.json()
+    // 兼容不同接口返回格式：根层或 data 层
+    const data = json.data ?? json
+    const latestVersion = data.version
+    const winUrl = data.win_download_url
+    const macUrl = data.mac_download_url
+    const description = data.description || '更快、更稳定的新版本'
+
+    if (!latestVersion || latestVersion === currentVersion) {
+      return { hasUpdate: false }
+    }
+
+    const downloadUrl = process.platform === 'win32' ? winUrl : macUrl
+    return { hasUpdate: true, version: latestVersion, downloadUrl, description }
+  } catch (e) {
+    return { hasUpdate: false, error: e.message }
+  }
+})
+
+// ─── 下载更新包（带进度推送）─────────────────────────────────────────────────
+ipcMain.on('download-update', async (event, downloadUrl) => {
+  const ext = process.platform === 'win32' ? '.exe' : '.dmg'
+  const tempPath = path.join(os.tmpdir(), `lisheng-update${ext}`)
+
+  // 若旧缓存文件存在先删除
+  if (fs.existsSync(tempPath)) {
+    try { fs.unlinkSync(tempPath) } catch (_) {}
+  }
+
+  try {
+    await downloadFileWithProgress(downloadUrl, tempPath, (progress) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('update-download-progress', progress)
+      }
+    })
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('update-download-complete', tempPath)
+    }
+  } catch (err) {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('update-download-error', err.message)
+    }
+  }
+})
+
+// ─── 打开安装包并退出应用 ─────────────────────────────────────────────────────
+ipcMain.on('install-update', (event, filePath) => {
+  shell.openPath(filePath).then(() => {
+    setTimeout(() => app.quit(), 1500)
+  })
+})
 
 app.whenReady().then(() => {
   createWindow()

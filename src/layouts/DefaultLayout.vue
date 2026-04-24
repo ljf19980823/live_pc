@@ -268,7 +268,7 @@ $header-h: $header-height;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #EBEEF5;
+  // border-right: 1px solid #EBEEF5;
   z-index: $z-fixed;
   @include scrollbar(4px, #e4e7ed);
 }
