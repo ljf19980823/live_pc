@@ -95,7 +95,7 @@
           >找学生</div>
         </div>
       </div>
-      <div class="app_container_box_left_list" v-if="isOpenSearch==false" v-loading="classListLoading">
+      <div ref="leftClassList" class="app_container_box_left_list" v-if="isOpenSearch==false" v-loading="classListLoading">
         <div
           class="app_container_box_left_list_detail"
           :class="{ 'app_container_box_left_list_detail_active': selectedClassIndex === index }"
@@ -485,7 +485,20 @@ export default {
       this.classListLoading = true
       try {
         const res = await getClassList(params)
-        const list = (res.data || res.rows || []).map(item => this._mapClassItem(item))
+        let list = (res.data || res.rows || []).map(item => this._mapClassItem(item))
+
+        // 当前过滤条件下找不到目标班级，自动切换到另一个状态重新查询
+        if (this.selectedClassId && this.liveStatus && list.findIndex(c => c.classId === this.selectedClassId) === -1) {
+          const oppositeStatus = this.liveStatus === '未过期' ? '已过期' : '未过期'
+          const resOther = await getClassList({ status: oppositeStatus, sortBy: params.sortBy })
+          const otherList = (resOther.data || resOther.rows || []).map(item => this._mapClassItem(item))
+          const idxInOther = otherList.findIndex(c => c.classId === this.selectedClassId)
+          if (idxInOther !== -1) {
+            this.liveStatus = oppositeStatus
+            list = otherList
+          }
+        }
+
         this.classList = list
         if (this.selectedClassId) {
           const idx = list.findIndex(c => c.classId === this.selectedClassId)
@@ -499,10 +512,25 @@ export default {
           this.fetchClassDetail(this.selectedClassId)
           this.fetchStudentList()
         }
+        this.$nextTick(() => { this.scrollToSelectedClass() })
       } catch (e) {
         console.error(e)
       } finally {
         this.classListLoading = false
+      }
+    },
+    scrollToSelectedClass() {
+      const container = this.$refs.leftClassList
+      if (!container) return
+      const items = container.querySelectorAll('.app_container_box_left_list_detail')
+      const target = items[this.selectedClassIndex]
+      if (!target) return
+      const containerTop = container.scrollTop
+      const containerBottom = containerTop + container.clientHeight
+      const itemTop = target.offsetTop
+      const itemBottom = itemTop + target.offsetHeight
+      if (itemTop < containerTop || itemBottom > containerBottom) {
+        container.scrollTo({ top: itemTop - container.clientHeight / 2 + target.offsetHeight / 2, behavior: 'smooth' })
       }
     },
     async fetchClassDetail(classId) {
@@ -700,7 +728,7 @@ export default {
       this.fetchClassList()
     },
     handleToAnnouncement() {
-      this.$router.push('/announcement')
+      this.$router.push({ path: '/announcement', query: { classId: this.selectedClassId } })
     },
     onDialogCancel() {
       this.showResetPasswordDialog = false

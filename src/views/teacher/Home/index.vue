@@ -134,7 +134,8 @@ export default {
 .app_container_last_left{
   background: #ffffff;
   border-radius: 12px;
-  width:72%;
+  flex:1;
+  width:0;
   height: 100%;
   display: flex;
   flex-direction: column;

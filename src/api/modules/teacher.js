@@ -21,3 +21,6 @@ export const getClassCourses = (classId, params) => get(`/edu/class/${classId}/c
 
 // 搜索学生（跨班级）
 export const searchStudents = params => get('/edu/class/searchStudents', params)
+
+// 获取班级公告列表
+export const getClassNotices = classId => get(`/edu/class/${classId}/notices`)
