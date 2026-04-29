@@ -315,7 +315,7 @@
       </div>
     </DialogCustome>
 
-    <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" @close="showStudentDetail = false" />
+    <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" :classId="selectedClassId" @close="showStudentDetail = false" />
 
 
 

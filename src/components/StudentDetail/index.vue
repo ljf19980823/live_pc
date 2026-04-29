@@ -8,29 +8,30 @@
                       <img src="@/assets/images/student/share.png" class="masl_con_dialog_top_share" alt="" @click.stop="openShareDialog">
                   </div>
                   <div class="masl_con_dialog_con">
-                      <div class="masl_con_dialog_con_basic">
-                          <div class="masl_con_dialog_con_basic_top">
-                              <img src="@/assets/images/class/such.png" class="masl_con_dialog_con_basic_top_fm" alt="">
-                              <div class="masl_con_dialog_con_basic_top_title">霸王龙</div>
+                  <div class="masl_con_dialog_con_basic">
+                      <div class="masl_con_dialog_con_basic_top">
+                          <img :src="studentInfo.profilePicture || require('@/assets/images/class/such.png')" class="masl_con_dialog_con_basic_top_fm" alt="">
+                          <div class="masl_con_dialog_con_basic_top_title">{{ studentInfo.realName || studentInfo.userName || '-' }}</div>
+                      </div>
+                      <div class="masl_con_dialog_con_basic_last">
+                          <div class="masl_con_dialog_con_basic_last_detail">
+                              <img src="@/assets/images/student/jb.png" class="masl_con_dialog_con_basic_last_detail_icon" alt="">
+                              <div class="masl_con_dialog_con_basic_last_detail_title">{{ studentInfo.joinTime ? studentInfo.joinTime + '进班' : '-' }}</div>
                           </div>
-                          <div class="masl_con_dialog_con_basic_last">
-                              <div class="masl_con_dialog_con_basic_last_detail">
-                                  <img src="@/assets/images/student/jb.png" class="masl_con_dialog_con_basic_last_detail_icon" alt="">
-                                  <div class="masl_con_dialog_con_basic_last_detail_title">2026-02-06进班</div>
-                              </div>
-                              <div class="masl_con_dialog_con_basic_last_detail" style="cursor:pointer;" @click="openAliasDialog">
-                                  <img src="@/assets/images/student/bz.png" class="masl_con_dialog_con_basic_last_detail_icon" alt="">
-                                  <div class="masl_con_dialog_con_basic_last_detail_title">{{ aliasDisplay }}</div>
-                              </div>
+                          <div class="masl_con_dialog_con_basic_last_detail" style="cursor:pointer;" @click="openAliasDialog">
+                              <img src="@/assets/images/student/bz.png" class="masl_con_dialog_con_basic_last_detail_icon" alt="">
+                              <div class="masl_con_dialog_con_basic_last_detail_title">{{ aliasDisplay }}</div>
                           </div>
                       </div>
+                  </div>
                       <div class="masl_con_dialog_con_xq">
                           <div class="masl_con_dialog_con_xq_title">学情数据</div>
                           <div class="masl_con_dialog_con_xq_top">
-                              <div class="masl_con_dialog_con_xq_top_left">更新时间：03-31  10:06</div>
+                              <div class="masl_con_dialog_con_xq_top_left">更新时间：{{ updateTime }}</div>
                               <div class="masl_con_dialog_con_xq_top_right">
-                                  <div class="masl_con_dialog_con_xq_top_right_text">近 1 月</div>
-                                  <img src="@/assets/images/student/xl.png" class="masl_con_dialog_con_xq_top_right_xl" alt="">
+                                  <el-select v-model="selectedType" size="mini" style="width:88px" popper-class="detail-filter-popper" @change="fetchStudentDetail">
+                                    <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                  </el-select>
                               </div>
                           </div>
                           <div class="masl_con_dialog_con_xq_detail">
@@ -48,28 +49,24 @@
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">出勤次数</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        0  <span>/ 3</span>
+                                        {{ studentInfo.attendCnt || 0 }}  <span>/ {{ studentInfo.attendSum || 0 }}</span>
                                       </div>
-                                      <div class="masl_con_dialog_con_xq_detail_center_detail_last">出勤率 0%</div>
+                                      <div class="masl_con_dialog_con_xq_detail_center_detail_last">出勤率 {{ attendanceRate }}</div>
                                   </div>
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">上课时长</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        56  <span>分钟</span>
+                                        {{ studentInfo.classDuration  }} 
                                       </div>
                                     
                                   </div>
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看历史课堂时长</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        0  <span>分钟</span>
+                                        {{ studentInfo.viewHistoryClass }}  
                                       </div>
 
                                   </div>
-                              </div>
-                              <div class="masl_con_dialog_con_xq_detail_last">
-                                  <img src="@/assets/images/student/tips.png" class="masl_con_dialog_con_xq_detail_last_icon" alt="">
-                                  <div class="masl_con_dialog_con_xq_detail_last_text">有3节课的在线时长低于开课时长的80%</div>
                               </div>
                           </div>
                           <div class="masl_con_dialog_con_xq_detail">
@@ -84,21 +81,21 @@
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">学完任务数</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        0  <span>/ 3</span>
+                                        {{ studentInfo.taskCnt || 0 }}  <span>/ {{ studentInfo.taskSum || 0 }}</span>
                                       </div>
                                     
                                   </div>
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">学习时长</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        56  <span>分钟</span>
+                                        {{ studentInfo.studyDuration  }}
                                       </div>
                                     
                                   </div>
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_title">进度</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
-                                        0  <span>%</span>
+                                        {{ studentInfo.progress || 0 }}  <span>%</span>
                                       </div>
 
                                   </div>
@@ -287,6 +284,7 @@
 <script>
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import * as echarts from 'echarts'
+import { getStudentDetail, saveStudentNote } from '@/api/modules/teacher'
 
 export default {
   name: 'StudentDetail',
@@ -299,6 +297,10 @@ export default {
     studentId: {
       type: [String, Number],
       default: null
+    },
+    classId: {
+      type: [String, Number],
+      default: null
     }
   },
   emits: ['close'],
@@ -306,25 +308,35 @@ export default {
     return {
       aliasDialogVisible: false,
       aliasInput: '',
-      savedAlias: '我是无敌霸王龙',
+      savedAlias: '',
       shareDialogVisible: false,
-      shareLink: 'http:sajhdakshkajdhakhdakssadadasda',
-      showDetail:false,
+      shareLink: '',
+      showDetail: false,
       lineChartInstance: null,
-      detailTimeRange: 'week1',
+      detailTimeRange: '1',
       timeRangeOptions: [
-        { label: '近1周', value: 'week1' },
-        { label: '近2周', value: 'week2' },
-        { label: '近1月', value: 'month1' },
-        { label: '近3月', value: 'month3' },
-        { label: '近半年', value: 'halfYear' },
-        { label: '近1年', value: 'year1' }
+        { label: '近1周', value: '1' },
+        { label: '近2周', value: '2' },
+        { label: '近1月', value: '3' },
+        { label: '近3月', value: '4' },
+        { label: '近半年', value: '5' },
+        { label: '近1年', value: '6' }
+      ],
+      selectedType: '3',
+      typeOptions: [
+        { label: '近1周', value: '1' },
+        { label: '近2周', value: '2' },
+        { label: '近1月', value: '3' },
+        { label: '近3月', value: '4' },
+        { label: '近半年', value: '5' },
+        { label: '近1年', value: '6' }
       ],
       detailTeacher: 'all',
       teacherOptions: [
-        { label: '全部老师', value: 'all' },
-        { label: '思雅', value: 'siya' }
-      ]
+        { label: '全部老师', value: 'all' }
+      ],
+      studentInfo: {},
+      updateTime: '-'
     }
   },
   mounted() {
@@ -354,29 +366,67 @@ export default {
       }
     },
     visible(val) {
-      if (!val && this.lineChartInstance) {
-        this.lineChartInstance.dispose()
-        this.lineChartInstance = null
+      if (val) {
+        this.fetchStudentDetail()
+      } else {
+        if (this.lineChartInstance) {
+          this.lineChartInstance.dispose()
+          this.lineChartInstance = null
+        }
+        this.showDetail = false
+        this.studentInfo = {}
       }
     }
   },
   computed: {
     aliasDisplay() {
       return this.savedAlias || '添加备注'
+    },
+    attendanceRate() {
+      const cnt = Number(this.studentInfo.attendCnt) || 0
+      const sum = Number(this.studentInfo.attendSum) || 0
+      if (!sum) return '0%'
+      return Math.round((cnt / sum) * 100) + '%'
     }
   },
   methods: {
+    async fetchStudentDetail() {
+      if (!this.classId || !this.studentId) return
+      try {
+        const res = await getStudentDetail(this.classId, this.studentId, { type: this.selectedType })
+        const data = res.data || res || {}
+        this.studentInfo = data
+        this.savedAlias = data.remark || ''
+        const now = new Date()
+        const mm = String(now.getMonth() + 1).padStart(2, '0')
+        const dd = String(now.getDate()).padStart(2, '0')
+        const hh = String(now.getHours()).padStart(2, '0')
+        const mi = String(now.getMinutes()).padStart(2, '0')
+        this.updateTime = `${mm}-${dd}  ${hh}:${mi}`
+      } catch (e) {
+        console.error('获取学生详情失败', e)
+      }
+    },
     openAliasDialog() {
-      this.aliasInput = this.savedAlias
+      this.aliasInput = this.studentInfo.remark || ''
       this.aliasDialogVisible = true
     },
     onDialogCancelAlias() {
       this.aliasDialogVisible = false
       this.aliasInput = ''
     },
-    onDialogConfirmAlias() {
-      this.savedAlias = this.aliasInput
-      this.aliasDialogVisible = false
+    async onDialogConfirmAlias() {
+      if (!this.classId || !this.studentId) return
+      try {
+        await saveStudentNote(this.classId, this.studentId, this.aliasInput)
+        this.savedAlias = this.aliasInput
+        this.studentInfo = { ...this.studentInfo, remark: this.aliasInput }
+        this.$message.success('备注保存成功')
+      } catch (e) {
+        this.$message.error('备注保存失败，请重试')
+      } finally {
+        this.aliasDialogVisible = false
+      }
     },
     openShareDialog() {
       this.shareDialogVisible = true

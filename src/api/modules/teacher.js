@@ -30,3 +30,9 @@ export const toggleClassTop = classId => post(`/edu/class/${classId}/top`)
 
 // 设置班级别名
 export const setClassAlias = (classId, alias) => post(`/edu/class/${classId}/alias`, {}, { params: { alias } })
+
+// 获取学生详情
+export const getStudentDetail = (classId, studentId, params) => get(`/edu/class/${classId}/students/${studentId}`, params)
+
+// 添加/更新学生备注
+export const saveStudentNote = (classId, studentId, content) => post(`/edu/class/${classId}/students/${studentId}/note`, { content })
