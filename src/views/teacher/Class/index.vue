@@ -141,10 +141,10 @@
             <img src="@/assets/images/student/back.png" class="cdetail-back-icon" alt="" />
             <span class="cdetail-back-text">{{ selectedCourse ? selectedCourse.name : '' }}</span>
           </div>
-          <div class="cdetail-task-count">{{ courseDetailMock.taskCount }}个学习任务</div>
+          <div class="cdetail-task-count">{{ courseDetail.taskCount }}个学习任务</div>
         </div>
-        <div class="cdetail-list">
-          <template v-for="(item, idx) in courseDetailMock.items">
+        <div class="cdetail-list" v-loading="courseDetailLoading">
+          <template v-for="(item, idx) in courseDetail.items">
             <!-- 直播课 -->
             <div v-if="item.type === 'live'" class="cdi-card"  :key="idx">
               <div class="cdi-main">
@@ -152,18 +152,18 @@
                 <div class="cdi-info">
                   <div class="cdi-name">{{ item.title }}</div>
                   <div class="cdi-status-row">
-                    <template v-if="item.status === 'ended'">
-                      <div class="cdi-status-text">已结束</div>
+                    <template v-if="item.isFinish == 1">
+                      <div class="cdi-status-text">{{ item.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                     </template>
-                    <template v-else-if="item.status === 'streaming'">
-                      <div class="cdi-status-text">已直播 <span class="yzb_text">{{ item.streamedMinutes }}</span> 分钟</div>
+                    <template v-else-if="item.isStart == 1">
+                      <div class="cdi-status-text">已直播 <span class="yzb_text">{{ item.liveMin }}</span> </div>
                       <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                     </template>
-                    <template v-else-if="item.status === 'upcoming'">
-                      <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ item.countdownMinutes }}</span> 分钟</div>
+                    <template v-else-if="item.isStart == 2">
+                      <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ item.liveMin }}</span> </div>
                      <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                     </template>
-                     <span class="cdi-date-row">{{ item.date }}&nbsp;&nbsp;{{ item.timeStart }} - {{ item.timeEnd }}</span>
+                     <span class="cdi-date-row">{{ item.date }}&nbsp;&nbsp;{{ item.timeStart }}{{ item.timeEnd ? ' - ' + item.timeEnd : '' }}</span>
                   </div>
                  
                 </div>
@@ -174,8 +174,8 @@
               </div>
             </div>
 
-            <!-- PDF / 文件 -->
-            <div v-else-if="item.type === 'pdf'" class="cdi-card" :key="idx">
+            <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
+            <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx" @click="handleResourceClick(item)">
               <div class="cdi-main">
                 <img src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                 <div class="cdi-info">
@@ -184,12 +184,11 @@
                     <span class="cdi-file-meta">{{ item.size }}</span>
                     <span class="cdi-file-meta">{{ item.date }}</span>
                     <img v-if="item.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
-                   
                   </div>
                 </div>
               </div>
-              <div class="cdi-actions">
-                <img  src="@/assets/images/class/percent.png" class="percentImg" alt="">
+              <div class="cdi-actions" @click.stop>
+                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                 <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
               </div>
             </div>
@@ -197,13 +196,15 @@
             <!-- 分组标题 -->
             <div v-else-if="item.type === 'group'" class="cdi-group-header" @click="toggleGroup(item)" :key="idx">
               <div class="cdi-group-left">
-               
                 <div class="cdi-group-toggle-icon">
                   <img v-if="item.expanded" src="@/assets/images/class/xl.png" class="xlIcon" alt="">
                   <img v-else src="@/assets/images/class/ss.png" class="xlIcon" alt="">
-                 
                 </div>
                 <span class="cdi-group-title">{{ item.title }}</span>
+              </div>
+              <div class="cdi-actions" @click.stop>
+                <el-progress type="circle" :percentage="Math.round(parseFloat(item.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
               </div>
             </div>
 
@@ -220,29 +221,34 @@
                     </div>
                     <span class="cdi-group-title">{{ child.title }}</span>
                   </div>
+                  <div class="cdi-actions" @click.stop>
+                    <el-progress type="circle" :percentage="Math.round(parseFloat(child.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                    <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  </div>
                 </div>
                 <!-- 二级分组展开后的三级内容 -->
                 <template v-if="child.type === 'group' && child.expanded">
                   <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
-                    class="cdi-card cdi-card-in-group cdi-card-in-subgroup">
+                    class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
+                    @click="grandchild.type === 'resource' ? handleResourceClick(grandchild) : undefined">
                     <div class="cdi-main">
                       <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                       <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                       <div class="cdi-info">
                         <div class="cdi-name">{{ grandchild.title }}</div>
                         <div v-if="grandchild.type === 'live'" class="cdi-status-row">
-                          <template v-if="grandchild.status === 'ended'">
-                            <div class="cdi-status-text">已结束</div>
+                          <template v-if="grandchild.isFinish == 1">
+                            <div class="cdi-status-text">{{ grandchild.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                           </template>
-                          <template v-else-if="grandchild.status === 'streaming'">
-                            <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.streamedMinutes }}</span> 分钟</div>
+                          <template v-else-if="grandchild.isStart == 1">
+                            <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.liveMin }}</span> </div>
                             <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                           </template>
-                          <template v-else-if="grandchild.status === 'upcoming'">
-                            <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.countdownMinutes }}</span> 分钟</div>
+                          <template v-else-if="grandchild.isStart == 2">
+                            <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.liveMin }}</span> </div>
                             <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                           </template>
-                          <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }} - {{ grandchild.timeEnd }}</span>
+                          <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }}{{ grandchild.timeEnd ? ' - ' + grandchild.timeEnd : '' }}</span>
                         </div>
                         <div v-else class="cdi-file-row">
                           <span class="cdi-file-meta">{{ grandchild.size }}</span>
@@ -251,34 +257,33 @@
                         </div>
                       </div>
                     </div>
-                    <div class="cdi-actions">
-                      <el-progress v-if="grandchild.type === 'live'" type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                      <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
-                     
+                    <div class="cdi-actions" @click.stop>
+                      <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                       <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                     </div>
                   </div>
                 </template>
-                <!-- 一级分组下的普通内容（pdf / live） -->
-                <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group">
+                <!-- 一级分组下的普通内容（resource / live） -->
+                <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group"
+                  @click="child.type === 'resource' ? handleResourceClick(child) : undefined">
                   <div class="cdi-main">
                     <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                     <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                     <div class="cdi-info">
                       <div class="cdi-name">{{ child.title }}</div>
                       <div v-if="child.type === 'live'" class="cdi-status-row">
-                        <template v-if="child.status === 'ended'">
-                          <div class="cdi-status-text">已结束</div>
+                        <template v-if="child.isFinish == 1">
+                          <div class="cdi-status-text">{{ child.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                         </template>
-                        <template v-else-if="child.status === 'streaming'">
-                          <div class="cdi-status-text">已直播 <span class="yzb_text">{{ child.streamedMinutes }}</span> 分钟</div>
+                        <template v-else-if="child.isStart == 1">
+                          <div class="cdi-status-text">已直播 <span class="yzb_text">{{ child.liveMin }}</span> </div>
                           <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                         </template>
-                        <template v-else-if="child.status === 'upcoming'">
-                          <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ child.countdownMinutes }}</span> 分钟</div>
+                        <template v-else-if="child.isStart == 2">
+                          <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ child.liveMin }}</span> </div>
                           <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                         </template>
-                        <span class="cdi-date-row">{{ child.date }}&nbsp;&nbsp;{{ child.timeStart }} - {{ child.timeEnd }}</span>
+                        <span class="cdi-date-row">{{ child.date }}&nbsp;&nbsp;{{ child.timeStart }}{{ child.timeEnd ? ' - ' + child.timeEnd : '' }}</span>
                       </div>
                       <div v-else class="cdi-file-row">
                         <span class="cdi-file-meta">{{ child.size }}</span>
@@ -287,9 +292,8 @@
                       </div>
                     </div>
                   </div>
-                  <div class="cdi-actions">
-                    <el-progress v-if="child.type === 'live'" type="circle" :percentage="child.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                    <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
+                  <div class="cdi-actions" @click.stop>
+                    <el-progress type="circle" :percentage="child.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                     <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   </div>
                 </div>
@@ -511,7 +515,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail } from '@/api'
 
 export default { 
   name: 'Class',
@@ -551,61 +555,10 @@ export default {
       createClassLoading: false,
       rightView: 'default',
       selectedCourse: null,
-      courseDetailMock: {
-        taskCount: 4,
-        items: [
-          {
-            type: 'live', title: '管理学备课', status: 'ended',
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 50
-          },
-          {
-            type: 'live', title: '管理学备课', status: 'streaming', streamedMinutes: 8,
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 100
-          },
-          {
-            type: 'live', title: '管理学备课', status: 'upcoming', countdownMinutes: 8,
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 67
-          },
-          {
-            type: 'pdf', title: '大学语文.pdf', size: '136MB',
-            date: '2024-05-06', isRecent: true, completed: true
-          },
-          {
-            type: 'group', title: '《钻金班课程》', expanded: true,
-            children: [
-              {
-                type: 'pdf', title: '大学语文.pdf', size: '136MB',
-                date: '2024-05-06', isRecent: true, completed: true
-              },
-              {
-                type: 'live', title: '管理学导论', status: 'ended',
-                date: '2024-05-07', timeStart: '09:00', timeEnd: '11:00', progress: 100
-              },
-              {
-                type: 'group', title: '第一章：基础理论', expanded: false,
-                children: [
-                  {
-                    type: 'live', title: '基础理论导论课', status: 'ended',
-                    date: '2024-05-08', timeStart: '08:00', timeEnd: '10:00', progress: 80
-                  },
-                  {
-                    type: 'pdf', title: '基础理论讲义.pdf', size: '56MB',
-                    date: '2024-05-08', isRecent: false, completed: false
-                  }
-                ]
-              },
-              {
-                type: 'group', title: '第二章：进阶实战', expanded: true,
-                children: [
-                  {
-                    type: 'pdf', title: '进阶实战练习题.pdf', size: '28MB',
-                    date: '2024-05-10', isRecent: true, completed: false
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+      courseDetailLoading: false,
+      courseDetail: {
+        taskCount: 0,
+        items: []
       }
     }
   },
@@ -1076,9 +1029,92 @@ export default {
       this.newClassStartDate = new Date()
       this.newClassEndDate = new Date()
     },
+    handleResourceClick(item) {
+      const videoTypes = ['3', '4']
+      const imageTypes = ['5']
+      const audioTypes = ['6']
+      const docTypes = ['7']
+      if (videoTypes.includes(item.nodeType)) {
+        this.$emit('playVideo', item)
+      } else if (imageTypes.includes(item.nodeType)) {
+        this.$emit('previewImage', item)
+      } else if (audioTypes.includes(item.nodeType)) {
+        this.$emit('playAudio', item)
+      } else if (docTypes.includes(item.nodeType)) {
+        this.$emit('previewDoc', item)
+      }
+    },
     handleCourseClick(item) {
       this.selectedCourse = item
       this.rightView = 'courseDetail'
+      this.fetchCourseDetail(item.id)
+    },
+    _mapDetailNode(node) {
+      if (node.type === '1') {
+        return {
+          type: 'group',
+          nodeType: node.type,
+          title: node.name || '',
+          percent: node.percent || '0',
+          expanded: false,
+          children: (node.children || []).map(child => this._mapDetailNode(child))
+        }
+      } else if (node.type === '2') {
+        const live = node.liveInfo || {}
+        const startTime = live.startTime || ''
+        let date = '', timeStart = ''
+        if (startTime) {
+          const parts = startTime.split(' ')
+          date = parts[0] || ''
+          timeStart = (parts[1] || '').substring(0, 5)
+        }
+        return {
+          type: 'live',
+          nodeType: node.type,
+          title: node.name || live.name || '',
+          isFinish: live.isFinish,
+          isStart: live.isStart,
+          liveStatus: live.status || '',
+          liveMin:live.liveMin,
+          date,
+          timeStart,
+          timeEnd: '',
+          progress: Math.round(parseFloat(node.percent)) || 0,
+          isRecent: live.isRecentStudy === '1'
+        }
+      } else {
+        // 3=历史课程 4=视频 5=图片 6=音频 7=资料
+        const res = node.resource || node.historyLesson || {}
+        const sizeStr = res.size ? `${res.size}${res.unit || ''}` : ''
+        return {
+          type: 'resource',
+          nodeType: node.type,
+          title: node.name || res.name || res.fileName || '',
+          size: sizeStr,
+          date: '',
+          isRecent: res.isRecentStudy === '1',
+          progress: Math.round(parseFloat(node.percent)) || 0
+        }
+      }
+    },
+    async fetchCourseDetail(courseId) {
+      if (!courseId) return
+      this.courseDetailLoading = true
+      try {
+        const params = { courseId }
+        if (this.selectedClassId) params.classId = this.selectedClassId
+        const res = await getCourseDetail(params)
+        const data = res.data || {}
+        this.courseDetail = {
+          taskCount: data.totalLessons || 0,
+          items: (data.detailTree || []).map(node => this._mapDetailNode(node))
+        }
+      } catch (e) {
+        console.error(e)
+        this.courseDetail = { taskCount: 0, items: [] }
+      } finally {
+        this.courseDetailLoading = false
+      }
     },
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
@@ -1833,7 +1869,7 @@ color: #0049FF;
   width: 100%;
   background: #FFFFFF;
   border-radius: 4px;
-  padding: 14px 21px 14px 16px ;
+  padding: 14px 16px 14px 16px ;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;

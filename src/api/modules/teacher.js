@@ -45,3 +45,6 @@ export const getHistoryList = params => get('/edu/history/list', params)
 
 // 创建班级
 export const createClass = params => post('/edu/class/create', params)
+
+// 获取课程详情（目录树）
+export const getCourseDetail = params => get('/edu/course/detail', params)
