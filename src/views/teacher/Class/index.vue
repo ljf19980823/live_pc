@@ -261,6 +261,7 @@
       :visible="showAddClassDialog"
       :confirmText="addClassStep === 1 ? '下一步' : '创建'"
       :cancelText="addClassStep === 1 ? '取消' : '上一步'"
+      :confirmLoading="createClassLoading"
       title="创建新班级"
       @cancel="onDialogCancelAdd"
       @confirm="onDialogConfirmAdd"
@@ -342,7 +343,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass } from '@/api'
 
 export default { 
   name: 'Class',
@@ -378,7 +379,8 @@ export default {
       newClassName: '',
       newClassDesc: '',
       newClassStartDate: new Date(),
-      newClassEndDate: new Date()
+      newClassEndDate: new Date(),
+      createClassLoading: false
     }
   },
   watch: {
@@ -783,7 +785,7 @@ export default {
         this._resetAddClassDialog()
       }
     },
-    onDialogConfirmAdd() {
+    async onDialogConfirmAdd() {
       if (this.addClassStep === 1) {
         if (!this.newClassName.trim()) {
           this.$message.warning('请输入班级名称')
@@ -803,12 +805,27 @@ export default {
           this.$message.warning('结束时间必须大于起始时间')
           return
         }
-        const fmt = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''
-        const startDate = fmt(this.newClassStartDate)
-        const endDate = fmt(this.newClassEndDate)
-        console.log('创建班级', { name: this.newClassName, desc: this.newClassDesc, startDate, endDate })
-        this.$message.success('班级创建成功')
-        this._resetAddClassDialog()
+        const fmt = d => {
+          if (!d) return ''
+          const date = d instanceof Date ? d : new Date(d)
+          return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+        }
+        this.createClassLoading = true
+        try {
+          await createClass({
+            className: this.newClassName.trim(),
+            beginTime: fmt(this.newClassStartDate),
+            endTime: fmt(this.newClassEndDate),
+            describe: this.newClassDesc
+          })
+          this.$message.success('班级创建成功')
+          this._resetAddClassDialog()
+          await this.fetchClassList()
+        } catch (e) {
+          // 错误由请求拦截器统一提示
+        } finally {
+          this.createClassLoading = false
+        }
       }
     },
     onStartDateChange(val) {

@@ -9,7 +9,10 @@
            </div>
            <div class="masl_con_dialog_last" v-if="showCancel || showConfirm">
               <div class="masl_con_dialog_last_cancel" v-if="showCancel" @click="handleCancel">{{ cancelText }}</div>
-              <div class="masl_con_dialog_last_cobfirm" v-if="showConfirm" @click="handleConfirm">{{ confirmText }}</div>
+              <div class="masl_con_dialog_last_cobfirm" :class="{ 'is-loading': confirmLoading }" v-if="showConfirm" @click="!confirmLoading && handleConfirm()">
+                <span v-if="confirmLoading" class="loading-spinner"></span>
+                {{ confirmText }}
+              </div>
            </div>
        </div>
      </div>
@@ -57,6 +60,10 @@ export default {
     confirmText: {
       type: String,
       default: '确定'
+    },
+    confirmLoading: {
+      type: Boolean,
+      default: false
     }
   },
   methods: {
@@ -161,5 +168,23 @@ cursor: pointer;
   top: -30px;
   right: -30px;
   cursor: pointer;
+}
+.masl_con_dialog_last_cobfirm.is-loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #0049FF;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
