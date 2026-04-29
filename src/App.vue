@@ -1,6 +1,8 @@
 <template>
   <div id="app">
-    <router-view />
+    <keep-alive include="DefaultLayout">
+      <router-view />
+    </keep-alive>
 
     <!-- 防录屏 / 防虚拟机遮罩层 -->
     <transition name="screen-guard-fade">

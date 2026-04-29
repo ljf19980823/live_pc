@@ -104,7 +104,7 @@
           @click="selectClass(index)"
         >
           <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
-          <div class="app_container_box_left_list_detail_title">{{  item.name }}</div>
+          <div class="app_container_box_left_list_detail_title">{{ item.alias || item.name }}</div>
           <div class="app_container_box_left_list_detail_count">{{ item.count }}人</div>
         </div>
         <EmptyState v-if="!classListLoading && classList.length === 0" description="暂无班级数据" />
@@ -342,7 +342,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias } from '@/api'
 
 export default { 
   name: 'Class',
@@ -680,17 +680,16 @@ export default {
       const reg = new RegExp(`(${escaped})`, 'gi')
       return text.replace(reg, '<span style="color:#0049FF;">$1</span>')
     },
-    handleOptionsCommand(command) {
+    async handleOptionsCommand(command) {
       if (command === 'pin') {
         const cls = this.classList[this.selectedClassIndex]
-        cls.pinned = !cls.pinned
-        const pinnedList = this.classList.filter(item => item.pinned)
-        const unpinnedList = this.classList.filter(item => !item.pinned)
-        const newList = [...pinnedList, ...unpinnedList]
-        const currentId = cls.classId
-        this.classList = newList
-        this.selectedClassIndex = newList.findIndex(item => item.classId === currentId)
-        this.$message.success(cls.pinned ? '已置顶' : '已取消置顶')
+        try {
+          await toggleClassTop(cls.classId)
+          this.$message.success(cls.pinned ? '已取消置顶' : '已置顶')
+          await this.fetchClassList()
+        } catch (e) {
+          // 接口失败时不更新本地状态，错误由拦截器统一提示
+        }
       } else if (command === 'alias') {
         this.aliasInput = this.classList[this.selectedClassIndex].alias || ''
         this.aliasDialogVisible = true
@@ -700,16 +699,18 @@ export default {
       this.aliasDialogVisible = false
       this.aliasInput = ''
     },
-    onDialogConfirmAlias() {
-      this.classList[this.selectedClassIndex].alias = this.aliasInput.trim() || ''
-      this.aliasDialogVisible = false
-      this.$message.success(this.aliasInput.trim() ? '别名设置成功' : '别名已清除')
-      this.aliasInput = ''
-    },
-    confirmAlias() {
-      this.classList[this.selectedClassIndex].alias = this.aliasInput
-      this.aliasDialogVisible = false
-      this.$message.success('别名设置成功')
+    async onDialogConfirmAlias() {
+      const cls = this.classList[this.selectedClassIndex]
+      const alias = this.aliasInput.trim()
+      try {
+        await setClassAlias(cls.classId, alias)
+        cls.alias = alias
+        this.aliasDialogVisible = false
+        this.$message.success(alias ? '别名设置成功' : '别名已清除')
+        this.aliasInput = ''
+      } catch (e) {
+        // 接口失败时保持弹窗打开，错误由拦截器统一提示
+      }
     },
     handleStudentOptionsCommand(command, student) {
       if (command === 'resetPassword') {

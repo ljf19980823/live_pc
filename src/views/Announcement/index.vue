@@ -109,7 +109,7 @@ export default {
       if (window.history.length > 1) {
         this.$router.go(-1)
       } else {
-        this.$router.back()
+        this.$router.push('/')
       }
     },
     handleDetail(item) {

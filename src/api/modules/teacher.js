@@ -1,4 +1,4 @@
-import { get } from '@/utils/request'
+import { get, post } from '@/utils/request'
 
 /**
  * 教师端接口
@@ -24,3 +24,9 @@ export const searchStudents = params => get('/edu/class/searchStudents', params)
 
 // 获取班级公告列表
 export const getClassNotices = classId => get(`/edu/class/${classId}/notices`)
+
+// 班级置顶 / 取消置顶
+export const toggleClassTop = classId => post(`/edu/class/${classId}/top`)
+
+// 设置班级别名
+export const setClassAlias = (classId, alias) => post(`/edu/class/${classId}/alias`, {}, { params: { alias } })
