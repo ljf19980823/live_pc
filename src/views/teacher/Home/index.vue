@@ -1,7 +1,17 @@
 <template>
   <div class="app_container">
     <div class="app_container_top">
-      <img src="@/assets/images/such.png" class="app_container_top_img" alt="">
+      <el-carousel
+        height="100%"
+        :autoplay="false"
+        arrow="always"
+        indicator-position="outside"
+        class="app_container_top_carousel"
+      >
+        <el-carousel-item v-for="(item, index) in carouselList" :key="index">
+          <img :src="item.url" class="app_container_top_img" alt="">
+        </el-carousel-item>
+      </el-carousel>
     </div>
     <div class="app_container_last">
       <div class="app_container_last_left">
@@ -23,7 +33,7 @@
           <EmptyState description="暂无消息数据" v-if="messageList.length==0"/>
         </div>
       </div>
-      <div class="app_container_last_right">
+      <div class="app_container_last_right" v-if="isAdd">
         <img class="app_container_last_right_icon" src="@/assets/images/home/such.png" alt="">
         <div class="app_container_last_right_last">
           <div class="app_container_last_right_last_title">新建实时课堂</div>
@@ -34,16 +44,25 @@
   </div>
 </template>
 <script>
-import { getTeacherNoticeList } from '@/api'
+import { mapGetters } from 'vuex'
+import { getTeacherNoticeList, getCarouselList } from '@/api'
 
 export default {
   data () {
     return {
-      messageList: []
+      messageList: [],
+      carouselList: []
+    }
+  },
+  computed: {
+    ...mapGetters('user', ['userInfo']),
+    isAdd () {
+      return this.userInfo?.isAdd === 1
     }
   },
   created () {
     this.fetchMessageList()
+    this.fetchCarouselList()
   },
   methods: {
     toMessage () {
@@ -55,6 +74,14 @@ export default {
          this.messageList = res.data || []
       } catch (e) {
         console.error('获取消息列表失败', e)
+      }
+    },
+    async fetchCarouselList () {
+      try {
+        const res = await getCarouselList()
+        this.carouselList = res.data || []
+      } catch (e) {
+        console.error('获取轮播图失败', e)
       }
     }
   }
@@ -76,10 +103,26 @@ export default {
   width: 100%;
   height: 36.8%;
   border-radius:12px;
+  overflow: hidden;
+}
+.app_container_top_carousel{
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+}
+.app_container_top_carousel :deep(.el-carousel__container) {
+  height: 100%;
+}
+.app_container_top_carousel :deep(.el-carousel__indicators--outside) {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .app_container_top_img{
   width: 100%;
   height: 100%;
+  border-radius: 12px;
 }
 .app_container_last{
   flex: 1;

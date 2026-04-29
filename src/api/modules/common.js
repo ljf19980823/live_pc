@@ -18,3 +18,6 @@ export const getRegionData = params => get('/common/region', params)
 
 // 发送通知
 export const sendNotice = data => post('/common/notice', data)
+
+// 获取轮播图列表
+export const getCarouselList = () => get('/edu/carousel/list')

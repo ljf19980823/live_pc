@@ -13,7 +13,7 @@
           </div>
         </div>
         <div class="app_container_box_left_search_box_center">
-          <div class="app_container_box_left_search_box_center_left">
+          <!-- <div class="app_container_box_left_search_box_center_left">
               <el-select
             v-model="year"
             placeholder="请选择年份"
@@ -33,7 +33,7 @@
               value="2026"
             />
           </el-select>
-          </div>
+          </div> -->
           <div class="app_container_box_left_search_box_center_left">
               <el-select
             v-model="liveStatus"
@@ -41,16 +41,19 @@
             style="width: 100%;"
           >
             <el-option
-            
-              key="1"
+              key=""
+              label="全部"
+              value=""
+            />
+            <el-option
+              key="未过期"
               label="未过期"
-              value="1"
+              value="未过期"
             />
              <el-option
-            
-              key="2"
+              key="已过期"
               label="已过期"
-              value="2"
+              value="已过期"
             />
           </el-select>
           </div>
@@ -92,7 +95,7 @@
           >找学生</div>
         </div>
       </div>
-      <div class="app_container_box_left_list" v-if="isOpenSearch==false">
+      <div class="app_container_box_left_list" v-if="isOpenSearch==false" v-loading="classListLoading">
         <div
           class="app_container_box_left_list_detail"
           :class="{ 'app_container_box_left_list_detail_active': selectedClassIndex === index }"
@@ -104,7 +107,7 @@
           <div class="app_container_box_left_list_detail_title">{{  item.name }}</div>
           <div class="app_container_box_left_list_detail_count">{{ item.count }}人</div>
         </div>
-        <EmptyState v-if="classList.length === 0" description="暂无班级数据" />
+        <EmptyState v-if="!classListLoading && classList.length === 0" description="暂无班级数据" />
       </div>
 
       <!-- 查询时的左边列表 -->
@@ -132,7 +135,7 @@
     </div>
     <div class="app_container_box_right">
       <!-- 无班级时空状态 -->
-      <div v-if="classList.length === 0" class="app_container_box_right_empty">
+      <div v-if="!classListLoading && classList.length === 0" class="app_container_box_right_empty">
         <EmptyState description="暂无班级，请先创建班级" />
       </div>
       <template v-if="classList.length > 0">
@@ -184,7 +187,7 @@
           </div>
           <div class="app_container_box_right_last_top_num">共{{ filteredStudentList.length }}个学生</div>
         </div>
-        <div class="app_container_box_right_last_list">
+        <div class="app_container_box_right_last_list" v-loading="studentListLoading">
           <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index" @click="handleStudentDetail(item)">
             <div class="app_container_box_right_last_list_detail_top">
               <el-dropdown trigger="click" @command="(cmd) => handleStudentOptionsCommand(cmd, item)">
@@ -197,13 +200,13 @@
                 </template>
               </el-dropdown>
               <div class="app_container_box_right_last_list_detail_top_mess">
-                <img src="@/assets/images/class/such.png" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
+                <img :src="item.avatar || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
                 <div class="app_container_box_right_last_list_detail_top_mess_mess">{{ item.name }}</div>
               </div>
             </div>
-            <div class="app_container_box_right_last_list_detail_last">进班日期：{{ item.joinDate }}</div>
+            <div class="app_container_box_right_last_list_detail_last">进班日期：{{ item.joinDate ? item.joinDate.slice(0, 10) : '' }}</div>
           </div>
-          <EmptyState v-if="filteredStudentList.length === 0" :description="rightStudentSearch ? '无搜索结果' : '暂无学生数据'" style="width: 100%;" />
+          <EmptyState v-if="!studentListLoading && filteredStudentList.length === 0" :description="rightStudentSearch ? '无搜索结果' : '暂无学生数据'" style="width: 100%;" />
         </div>
       </div>
       <!-- 课程tab列表 -->
@@ -217,19 +220,19 @@
           </div>
           <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
         </div>
-        <div class="app_container_box_right_last_list">
+        <div class="app_container_box_right_last_list" v-loading="courseListLoading">
           <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index">
-            <img src="@/assets/images/class/such.png" class="app_container_box_right_last_list_detailCourse_fm" alt="">
+            <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
             <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }}个学习任务</div>
             <div class="app_container_box_right_last_list_detailCourse_jd">
               <div class="app_container_box_right_last_list_detailCourse_jd_box">
-                <div class="app_container_box_right_last_list_detailCourse_jd_box_now" :style="{ width: item.progress + '%' }"></div>
+                <div class="app_container_box_right_last_list_detailCourse_jd_box_now" :style="{ width: Math.round(item.progress) + '%' }"></div>
               </div>
-              <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ item.progress }}%</div>
+              <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ Math.round(item.progress) }}%</div>
             </div>
           </div>
-          <EmptyState v-if="filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
+          <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
       </div>
       </template>
@@ -339,107 +342,38 @@
 </template>
 
 <script>
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents } from '@/api'
+
 export default { 
-  name: 'Class' ,
-  data(){
+  name: 'Class',
+  data() {
     return {
-      year:'',
-      liveStatus:'1',
+      year: '',
+      liveStatus: '未过期',
       isOpenSearch: false,
       showStudentDetail: false,
       currentStudentId: null,
       searchType: 'class',
       rightTab: 'student',
       selectedClassIndex: 0,
-      classList: [
-        {
-          name: '中国近现代史',
-          pinned: false,
-          count: 657,
-          remainDays: 30,
-          startDate: '2025-06-09',
-          endDate: '2026-03-30',
-          source: '后台创建',
-          students: [
-            { name: '张伟', joinDate: '2025-03-26' },
-            { name: '李娜娜', joinDate: '2025-04-01' },
-            { name: '王小明', joinDate: '2025-04-10' },
-            { name: '刘晓燕', joinDate: '2025-05-15' },
-            { name: '陈思远', joinDate: '2025-06-02' },
-            { name: '赵雨涵', joinDate: '2025-06-18' },
-          ],
-          courses: [
-            { name: '立升备课-中国近现代史', taskCount: 12, progress: 55 },
-            { name: '立升备课-马克思主义基本原理', taskCount: 10, progress: 80 },
-            { name: '立升备课-大学语文', taskCount: 7, progress: 100 },
-          ]
-        },
-        {
-          name: '管理学精讲班',
-          pinned: false,
-          count: 312,
-          remainDays: 120,
-          startDate: '2025-09-01',
-          endDate: '2026-06-30',
-          source: '教师创建',
-          students: [
-            { name: '孙浩然', joinDate: '2025-07-07' },
-            { name: '周婷婷', joinDate: '2025-08-20' },
-            { name: '吴思琪', joinDate: '2025-09-01' },
-            { name: '郑凯文', joinDate: '2025-09-05' },
-          ],
-          courses: [
-            { name: '立升备课-管理学', taskCount: 8, progress: 20 },
-            { name: '立升备课-思想道德与法治', taskCount: 9, progress: 40 },
-          ]
-        },
-        {
-          name: '马原理强化班',
-          pinned: false,
-          count: 98,
-          remainDays: 5,
-          startDate: '2024-12-01',
-          endDate: '2025-06-01',
-          source: '后台创建',
-          students: [
-            { name: '王芳', joinDate: '2024-12-01' },
-            { name: '李强', joinDate: '2024-12-10' },
-          ],
-          courses: [
-            { name: '立升备课-马克思主义基本原理', taskCount: 10, progress: 80 },
-            { name: '立升备课-毛泽东思想概论', taskCount: 6, progress: 0 },
-          ]
-        },
-        {
-          name: '思想道德提升班',
-          pinned: false,
-          count: 455,
-          remainDays: 200,
-          startDate: '2025-10-15',
-          endDate: '2026-09-15',
-          source: '教师创建',
-          students: [
-            { name: '刘浩宇', joinDate: '2025-10-15' },
-            { name: '陈晓雪', joinDate: '2025-10-20' },
-            { name: '杨帆', joinDate: '2025-11-01' },
-            { name: '黄晨曦', joinDate: '2025-11-08' },
-            { name: '林子涵', joinDate: '2025-11-20' },
-          ],
-          courses: [
-            { name: '立升备课-思想道德与法治', taskCount: 9, progress: 40 },
-            { name: '立升备课-大学语文', taskCount: 7, progress: 100 },
-          ]
-        },
-      ],
+      selectedClassId: null,
+      classList: [],
+      studentList: [],
+      courseList: [],
+      classListLoading: false,
+      studentListLoading: false,
+      courseListLoading: false,
+      searchClassList: [],
+      searchStudentList: [],
       leftSearchText: '',
       rightStudentSearch: '',
       rightCourseSearch: '',
-      sortType: '',
+      sortType: 'name_asc',
       aliasDialogVisible: false,
       aliasInput: '',
-      showResetPasswordDialog:false,
+      showResetPasswordDialog: false,
       resetPasswordValue: '',
-      showAddClassDialog:false,
+      showAddClassDialog: false,
       addClassStep: 1,
       newClassName: '',
       newClassDesc: '',
@@ -447,48 +381,232 @@ export default {
       newClassEndDate: new Date()
     }
   },
+  watch: {
+    liveStatus() {
+      this.fetchClassList()
+    },
+    rightTab(val) {
+      if (val === 'student') this.fetchStudentList()
+      else if (val === 'course') this.fetchCourseList()
+    },
+    rightStudentSearch(val) {
+      clearTimeout(this._studentSearchTimer)
+      this._studentSearchTimer = setTimeout(() => {
+        this.fetchStudentList(val)
+      }, 300)
+    },
+    rightCourseSearch(val) {
+      clearTimeout(this._courseSearchTimer)
+      this._courseSearchTimer = setTimeout(() => {
+        this.fetchCourseList(val)
+      }, 300)
+    },
+    leftSearchText(val) {
+      clearTimeout(this._leftSearchTimer)
+      this._leftSearchTimer = setTimeout(() => {
+        if (!this.isOpenSearch) return
+        if (this.searchType === 'class') {
+          if (val) {
+            this.fetchClassSearch(val)
+          } else {
+            this.searchClassList = []
+          }
+        } else {
+          if (val) {
+            this.fetchStudentSearch(val)
+          } else {
+            this.searchStudentList = []
+          }
+        }
+      }, 300)
+    },
+    searchType(val) {
+      if (!this.leftSearchText) {
+        this.searchClassList = []
+        this.searchStudentList = []
+        return
+      }
+      if (val === 'class') {
+        this.searchStudentList = []
+        this.fetchClassSearch(this.leftSearchText)
+      } else {
+        this.searchClassList = []
+        this.fetchStudentSearch(this.leftSearchText)
+      }
+    }
+  },
   computed: {
     currentClass() {
-      return this.classList[this.selectedClassIndex]
-    },
-    studentList() {
-      return this.currentClass ? this.currentClass.students : []
-    },
-    courseList() {
-      return this.currentClass ? this.currentClass.courses : []
+      return this.classList[this.selectedClassIndex] || null
     },
     searchList() {
       if (!this.leftSearchText) return []
-      const keyword = this.leftSearchText.toLowerCase()
       if (this.searchType === 'class') {
-        return this.classList
-          .filter(item => item.name.toLowerCase().includes(keyword))
-          .map(item => ({ name: item.name, count: item.count }))
-      } else {
-        const results = []
-        this.classList.forEach(cls => {
-          cls.students.forEach(stu => {
-            if (stu.name.toLowerCase().includes(keyword)) {
-              results.push({ studentName: stu.name, className: cls.name })
-            }
-          })
-        })
-        return results
+        return this.searchClassList
       }
+      return this.searchStudentList
     },
     filteredStudentList() {
-      if (!this.rightStudentSearch) return this.studentList
-      const keyword = this.rightStudentSearch.toLowerCase()
-      return this.studentList.filter(item => item.name.toLowerCase().includes(keyword))
+      return this.studentList
     },
     filteredCourseList() {
-      if (!this.rightCourseSearch) return this.courseList
-      const keyword = this.rightCourseSearch.toLowerCase()
-      return this.courseList.filter(item => item.name.toLowerCase().includes(keyword))
+      return this.courseList
     }
   },
-  methods:{
-    openSearch(){
+  mounted() {
+    this.fetchClassList()
+  },
+  methods: {
+    _mapClassItem(item) {
+      const sourceMap = { '1': '后台管理', '0': '教师自主' }
+      return {
+        classId: item.classId,
+        name: item.className || '',
+        alias: item.classAlias || '',
+        count: item.studentCount || 0,
+        pinned: item.isTop === 1,
+        remainDays: item.remainDay || 0,
+        startDate: item.beginTime || '',
+        endDate: item.endTime || '',
+        source: sourceMap[item.classMode] || '',
+        status: item.status || ''
+      }
+    },
+    async fetchClassList() {
+      const sortMap = {
+        'name_asc': 'classNameAsc',
+        'name_desc': 'classNameDesc',
+        'time_asc': 'createTimeAsc',
+        'time_desc': 'createTimeDesc'
+      }
+      const params = {}
+      if (this.liveStatus) params.status = this.liveStatus
+      if (this.sortType) params.sortBy = sortMap[this.sortType] || this.sortType
+      this.classListLoading = true
+      try {
+        const res = await getClassList(params)
+        const list = (res.data || res.rows || []).map(item => this._mapClassItem(item))
+        this.classList = list
+        if (this.selectedClassId) {
+          const idx = list.findIndex(c => c.classId === this.selectedClassId)
+          this.selectedClassIndex = idx !== -1 ? idx : 0
+          if (idx === -1 && list.length > 0) this.selectedClassId = list[0].classId
+        } else {
+          this.selectedClassIndex = 0
+          if (list.length > 0) this.selectedClassId = list[0].classId
+        }
+        if (this.selectedClassId) {
+          this.fetchClassDetail(this.selectedClassId)
+          this.fetchStudentList()
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.classListLoading = false
+      }
+    },
+    async fetchClassDetail(classId) {
+      try {
+        const res = await getClassDetail(classId)
+        const detail = res.data || {}
+        const idx = this.classList.findIndex(c => c.classId === classId)
+        if (idx !== -1) {
+          const sourceMap = { '1': '后台管理', '0': '教师自主' }
+          this.classList.splice(idx, 1, {
+            ...this.classList[idx],
+            name: detail.className || this.classList[idx].name,
+            alias: detail.classAlias || this.classList[idx].alias,
+            count: detail.studentCount || this.classList[idx].count,
+            pinned: detail.isTop === 1,
+            remainDays: detail.remainDay || this.classList[idx].remainDays,
+            startDate: detail.beginTime || this.classList[idx].startDate,
+            endDate: detail.endTime || this.classList[idx].endDate,
+            source: sourceMap[detail.classMode] || this.classList[idx].source,
+            status: detail.status || this.classList[idx].status,
+            describe: detail.describe || '',
+            isSelfCreate: detail.isSelfCreate,
+            allowRemove: detail.allowRemove,
+            isAllowInvite: detail.isAllowInvite
+          })
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    async fetchStudentList(keyword) {
+      if (!this.selectedClassId) return
+      this.studentListLoading = true
+      try {
+        const params = {}
+        if (keyword) params.keyword = keyword
+        const res = await getClassStudents(this.selectedClassId, params)
+        this.studentList = (res.data || res.rows || []).map(item => ({
+          id: item.studentId,
+          name: item.realName || item.userName || '',
+          userName: item.userName || '',
+          phone: item.phone || '',
+          avatar: item.profilePicture || '',
+          joinDate: item.joinTime || '',
+          joinDesc: item.joinDesc || '',
+          remark: item.remark || '',
+          accountType: item.accountType
+        }))
+      } catch (e) {
+        console.error(e)
+        this.studentList = []
+      } finally {
+        this.studentListLoading = false
+      }
+    },
+    async fetchCourseList(keyword) {
+      if (!this.selectedClassId) return
+      this.courseListLoading = true
+      try {
+        const params = {}
+        if (keyword) params.keyword = keyword
+        const res = await getClassCourses(this.selectedClassId, params)
+        this.courseList = (res.data || res.rows || []).map(item => ({
+          id: item.courseId,
+          name: item.name || '',
+          cover: item.cover || '',
+          taskCount: item.totalLessons || 0,
+          progress: item.progressPercent || 0
+        }))
+      } catch (e) {
+        console.error(e)
+        this.courseList = []
+      } finally {
+        this.courseListLoading = false
+      }
+    },
+    async fetchClassSearch(keyword) {
+      try {
+        const res = await getClassList({ keyword })
+        this.searchClassList = (res.data || res.rows || []).map(item => ({
+          classId: item.classId,
+          name: item.className || '',
+          count: item.studentCount || 0
+        }))
+      } catch (e) {
+        console.error(e)
+        this.searchClassList = []
+      }
+    },
+    async fetchStudentSearch(keyword) {
+      try {
+        const res = await searchStudents({ keyword })
+        this.searchStudentList = (res.data || res.rows || []).map(item => ({
+          classId: item.classId,
+          className: item.className || item.classAlias || '',
+          studentName: item.realName || item.userName || '',
+          studentId: item.studentId
+        }))
+      } catch (e) {
+        console.error(e)
+        this.searchStudentList = []
+      }
+    },
+    openSearch() {
       this.isOpenSearch = true
       this.$nextTick(() => {
         this.$refs.searchInput && this.$refs.searchInput.focus()
@@ -496,32 +614,37 @@ export default {
     },
     selectClass(index) {
       this.selectedClassIndex = index
-      this.rightTab = 'student'
+      this.selectedClassId = this.classList[index]?.classId || null
       this.rightStudentSearch = ''
       this.rightCourseSearch = ''
+      this.studentList = []
+      this.courseList = []
+      if (this.selectedClassId) {
+        this.fetchClassDetail(this.selectedClassId)
+      }
+      if (this.rightTab === 'student') {
+        this.fetchStudentList()
+      } else {
+        this.rightTab = 'student'
+      }
     },
     selectSearchResult(item) {
-      const keyword = this.leftSearchText
-      if (this.searchType === 'class') {
-        const idx = this.classList.findIndex(cls => cls.name === item.name)
-        if (idx !== -1) this.selectedClassIndex = idx
-        this.rightStudentSearch = ''
-        this.rightCourseSearch = ''
-      } else {
-        const idx = this.classList.findIndex(cls => cls.name === item.className)
-        if (idx !== -1) this.selectedClassIndex = idx
-        this.rightTab = 'student'
-        this.rightStudentSearch = keyword
-        this.rightCourseSearch = ''
-      }
+      this.selectedClassId = item.classId
+      this.rightStudentSearch = ''
+      this.rightCourseSearch = ''
       this.isOpenSearch = false
       this.leftSearchText = ''
       this.searchType = 'class'
+      this.searchClassList = []
+      this.searchStudentList = []
+      this.fetchClassList()
     },
     cancelSearch() {
       this.isOpenSearch = false
       this.leftSearchText = ''
       this.searchType = 'class'
+      this.searchClassList = []
+      this.searchStudentList = []
     },
     highlightKeyword(text, keyword) {
       if (!keyword || !text) return text
@@ -536,9 +659,9 @@ export default {
         const pinnedList = this.classList.filter(item => item.pinned)
         const unpinnedList = this.classList.filter(item => !item.pinned)
         const newList = [...pinnedList, ...unpinnedList]
-        const currentName = cls.name
+        const currentId = cls.classId
         this.classList = newList
-        this.selectedClassIndex = newList.findIndex(item => item.name === currentName)
+        this.selectedClassIndex = newList.findIndex(item => item.classId === currentId)
         this.$message.success(cls.pinned ? '已置顶' : '已取消置顶')
       } else if (command === 'alias') {
         this.aliasInput = this.classList[this.selectedClassIndex].alias || ''
@@ -568,29 +691,18 @@ export default {
         this.showStudentDetail = true
       }
     },
-    handleStudentDetail(student){
-       this.currentStudentId = student.id
-        this.showStudentDetail = true
+    handleStudentDetail(student) {
+      this.currentStudentId = student.id
+      this.showStudentDetail = true
     },
     handleSortCommand(command) {
       this.sortType = command
-      const list = [...this.classList]
-      if (command === 'name_asc') {
-        list.sort((a, b) => a.name.localeCompare(b.name))
-      } else if (command === 'name_desc') {
-        list.sort((a, b) => b.name.localeCompare(a.name))
-      } else if (command === 'time_asc') {
-        list.sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-      } else if (command === 'time_desc') {
-        list.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-      }
-      this.classList = list
-      this.selectedClassIndex = 0
+      this.fetchClassList()
     },
-    handleToAnnouncement(){
+    handleToAnnouncement() {
       this.$router.push('/announcement')
     },
-     onDialogCancel() {
+    onDialogCancel() {
       this.showResetPasswordDialog = false
       this.resetPasswordValue = ''
     },
@@ -615,7 +727,6 @@ export default {
         this.$message.warning('请先输入或自动生成密码')
         return
       }
-      // 模拟接口调用
       await new Promise(resolve => setTimeout(resolve, 300))
       const text = `您的新密码为${this.resetPasswordValue}`
       try {
@@ -633,17 +744,17 @@ export default {
       this.showResetPasswordDialog = false
       this.resetPasswordValue = ''
     },
-    handleAddClass(){
+    handleAddClass() {
       this.showAddClassDialog = true
     },
-    onDialogCancelAdd(){
+    onDialogCancelAdd() {
       if (this.addClassStep === 2) {
         this.addClassStep = 1
       } else {
         this._resetAddClassDialog()
       }
     },
-    onDialogConfirmAdd(){
+    onDialogConfirmAdd() {
       if (this.addClassStep === 1) {
         if (!this.newClassName.trim()) {
           this.$message.warning('请输入班级名称')
@@ -682,10 +793,10 @@ export default {
       start.setHours(0, 0, 0, 0)
       return date.getTime() <= start.getTime()
     },
-    onDialogCloseAdd(){
+    onDialogCloseAdd() {
       this._resetAddClassDialog()
     },
-    _resetAddClassDialog(){
+    _resetAddClassDialog() {
       this.showAddClassDialog = false
       this.addClassStep = 1
       this.newClassName = ''
