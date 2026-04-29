@@ -222,28 +222,116 @@
 
             <!-- 分组子项 -->
             <template v-if="item.type === 'group' && item.expanded">
-              <div v-for="(child, ci) in item.children" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group">
-                <div class="cdi-main">
-                  <img src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
-                  <div class="cdi-info">
-                    <div class="cdi-name">{{ child.title }}</div>
-                    <div class="cdi-file-row">
-                      <span class="cdi-file-meta">{{ child.size }}</span>
-                      <span class="cdi-file-meta">{{ child.date }}</span>
-                      <img v-if="child.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+              <template v-for="(child, ci) in item.children">
+                <!-- 二级分组标题 -->
+                <div v-if="child.type === 'group'" :key="`subgroup-${idx}-${ci}`"
+                  class="cdi-group-header cdi-sub-group-header" @click.stop="toggleGroup(child)">
+                  <div class="cdi-group-left">
+                    <div class="cdi-group-toggle-icon">
+                      <img v-if="child.expanded" src="@/assets/images/class/xl.png" class="xlIcon" alt="">
+                      <img v-else src="@/assets/images/class/ss.png" class="xlIcon" alt="">
+                    </div>
+                    <span class="cdi-group-title">{{ child.title }}</span>
+                  </div>
+                </div>
+                <!-- 二级分组展开后的三级内容 -->
+                <template v-if="child.type === 'group' && child.expanded">
+                  <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
+                    class="cdi-card cdi-card-in-group cdi-card-in-subgroup">
+                    <div class="cdi-main">
+                      <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                      <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                      <div class="cdi-info">
+                        <div class="cdi-name">{{ grandchild.title }}</div>
+                        <div v-if="grandchild.type === 'live'" class="cdi-status-row">
+                          <template v-if="grandchild.status === 'ended'">
+                            <div class="cdi-status-text">已结束</div>
+                          </template>
+                          <template v-else-if="grandchild.status === 'streaming'">
+                            <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.streamedMinutes }}</span> 分钟</div>
+                            <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
+                          </template>
+                          <template v-else-if="grandchild.status === 'upcoming'">
+                            <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.countdownMinutes }}</span> 分钟</div>
+                            <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
+                          </template>
+                          <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }} - {{ grandchild.timeEnd }}</span>
+                        </div>
+                        <div v-else class="cdi-file-row">
+                          <span class="cdi-file-meta">{{ grandchild.size }}</span>
+                          <span class="cdi-file-meta">{{ grandchild.date }}</span>
+                          <img v-if="grandchild.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cdi-actions">
+                      <div v-if="grandchild.type === 'live'" class="cdi-progress-wrap">
+                        <svg width="42" height="42" viewBox="0 0 42 42">
+                          <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
+                          <circle v-if="grandchild.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
+                            :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - grandchild.progress / 100)"
+                            stroke-linecap="round" transform="rotate(-90 21 21)"/>
+                          <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ grandchild.progress }}%</text>
+                        </svg>
+                      </div>
+                      <div v-else class="cdi-check-circle">
+                        <svg width="34" height="34" viewBox="0 0 34 34">
+                          <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
+                          <polyline v-if="grandchild.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                      <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                     </div>
                   </div>
-                </div>
-                <div class="cdi-actions">
-                  <div class="cdi-check-circle">
-                    <svg width="34" height="34" viewBox="0 0 34 34">
-                      <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
-                      <polyline v-if="child.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                </template>
+                <!-- 一级分组下的普通内容（pdf / live） -->
+                <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group">
+                  <div class="cdi-main">
+                    <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                    <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                    <div class="cdi-info">
+                      <div class="cdi-name">{{ child.title }}</div>
+                      <div v-if="child.type === 'live'" class="cdi-status-row">
+                        <template v-if="child.status === 'ended'">
+                          <div class="cdi-status-text">已结束</div>
+                        </template>
+                        <template v-else-if="child.status === 'streaming'">
+                          <div class="cdi-status-text">已直播 <span class="yzb_text">{{ child.streamedMinutes }}</span> 分钟</div>
+                          <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
+                        </template>
+                        <template v-else-if="child.status === 'upcoming'">
+                          <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ child.countdownMinutes }}</span> 分钟</div>
+                          <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
+                        </template>
+                        <span class="cdi-date-row">{{ child.date }}&nbsp;&nbsp;{{ child.timeStart }} - {{ child.timeEnd }}</span>
+                      </div>
+                      <div v-else class="cdi-file-row">
+                        <span class="cdi-file-meta">{{ child.size }}</span>
+                        <span class="cdi-file-meta">{{ child.date }}</span>
+                        <img v-if="child.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                      </div>
+                    </div>
                   </div>
-                   <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  <div class="cdi-actions">
+                    <div v-if="child.type === 'live'" class="cdi-progress-wrap">
+                      <svg width="42" height="42" viewBox="0 0 42 42">
+                        <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
+                        <circle v-if="child.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
+                          :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - child.progress / 100)"
+                          stroke-linecap="round" transform="rotate(-90 21 21)"/>
+                        <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ child.progress }}%</text>
+                      </svg>
+                    </div>
+                    <div v-else class="cdi-check-circle">
+                      <svg width="34" height="34" viewBox="0 0 34 34">
+                        <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
+                        <polyline v-if="child.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  </div>
                 </div>
-              </div>
+              </template>
             </template>
           </template>
         </div>
@@ -526,6 +614,32 @@ export default {
               {
                 type: 'pdf', title: '大学语文.pdf', size: '136MB',
                 date: '2024-05-06', isRecent: true, completed: true
+              },
+              {
+                type: 'live', title: '管理学导论', status: 'ended',
+                date: '2024-05-07', timeStart: '09:00', timeEnd: '11:00', progress: 100
+              },
+              {
+                type: 'group', title: '第一章：基础理论', expanded: false,
+                children: [
+                  {
+                    type: 'live', title: '基础理论导论课', status: 'ended',
+                    date: '2024-05-08', timeStart: '08:00', timeEnd: '10:00', progress: 80
+                  },
+                  {
+                    type: 'pdf', title: '基础理论讲义.pdf', size: '56MB',
+                    date: '2024-05-08', isRecent: false, completed: false
+                  }
+                ]
+              },
+              {
+                type: 'group', title: '第二章：进阶实战', expanded: true,
+                children: [
+                  {
+                    type: 'pdf', title: '进阶实战练习题.pdf', size: '28MB',
+                    date: '2024-05-10', isRecent: true, completed: false
+                  }
+                ]
               }
             ]
           }
@@ -1767,6 +1881,13 @@ color: #0049FF;
 .cdi-card-in-group {
   background: rgba(202, 217, 255, 0.20);
   padding-left: 36px;
+}
+.cdi-sub-group-header {
+  padding-left: 36px!important;
+
+}
+.cdi-card-in-subgroup {
+  padding-left: 72px;
 }
 .cdi-main {
   display: flex;
