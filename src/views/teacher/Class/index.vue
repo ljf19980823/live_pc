@@ -169,7 +169,7 @@
                 </div>
               </div>
               <div class="cdi-actions">
-                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="3"></el-progress>
+                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                 <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
               </div>
             </div>
@@ -252,7 +252,7 @@
                       </div>
                     </div>
                     <div class="cdi-actions">
-                      <el-progress v-if="grandchild.type === 'live'" type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="3"></el-progress>
+                      <el-progress v-if="grandchild.type === 'live'" type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                       <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
                      
                       <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
@@ -288,7 +288,7 @@
                     </div>
                   </div>
                   <div class="cdi-actions">
-                    <el-progress v-if="child.type === 'live'" type="circle" :percentage="child.progress" :width="36" :stroke-width="3"></el-progress>
+                    <el-progress v-if="child.type === 'live'" type="circle" :percentage="child.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
                     <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
                     <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   </div>
@@ -556,15 +556,15 @@ export default {
         items: [
           {
             type: 'live', title: '管理学备课', status: 'ended',
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 0
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 50
           },
           {
             type: 'live', title: '管理学备课', status: 'streaming', streamedMinutes: 8,
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 25
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 100
           },
           {
             type: 'live', title: '管理学备课', status: 'upcoming', countdownMinutes: 8,
-            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 0
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 67
           },
           {
             type: 'pdf', title: '大学语文.pdf', size: '136MB',
