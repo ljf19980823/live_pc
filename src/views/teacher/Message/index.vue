@@ -29,7 +29,7 @@
       <div class="app_last_right" v-if="showDetail == false">
         <EmptyState v-if="currentList.length === 0" description="暂无消息" />
         <div class="app_last_right_detail" @click="handleDetail(item)" v-for="(item) in currentList" :key="item.id">
-          <img src="@/assets/images/message/such.png" class="app_last_right_detail_img" alt="">
+          <!-- <img src="@/assets/images/message/such.png" class="app_last_right_detail_img" alt=""> -->
           <div class="app_last_right_detail_mess">
             <div class="app_last_right_detail_mess_top">
               <div class="app_last_right_detail_mess_top_left">
@@ -234,6 +234,8 @@
 </template>
 
 <script>
+import { getTeacherNoticeList } from '@/api/modules/teacher'
+
 export default {
   name: 'Message',
   data() {
@@ -244,6 +246,8 @@ export default {
       messageContent: '',
       activeTab: 'sent',
       currentDetail: null,
+      keyword: '',
+      loading: false,
 
       // 发消息弹窗
       selectedRecipients: [],
@@ -316,103 +320,8 @@ export default {
         }
       ],
 
-      sentMessages: [
-        {
-          id: 1,
-          sender: '管理员',
-          time: '2026-03-29',
-          content: '生活就像一场温柔的旅行，不必追赶别人的脚步，也不必焦虑尚未到来的明天。认真对待每一件小事，珍惜身边的温暖，把平凡的日子过得热气腾腾。愿你在忙碌中不忘热爱，在疲惫时仍有期待，眼里有星光，心中有方向，所遇皆温柔，所行皆坦途。',
-          attachCount: 1,
-          hasImage: true,
-          files: [{ name: '使用说明.docx', size: '13KB' }]
-        },
-        {
-          id: 2,
-          sender: '张老师',
-          time: '2026-03-28',
-          content: '明天上午9点有一个重要的线上直播课，请提前做好准备，检查好设备和网络连接，确保直播顺利进行。',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        },
-        {
-          id: 3,
-          sender: '李老师',
-          time: '2026-03-27',
-          content: '本周课程安排已更新，请各位同学及时查看课程表，合理安排学习时间，有疑问请及时联系助教老师。',
-          attachCount: 2,
-          hasImage: true,
-          files: [
-            { name: '课程表.xlsx', size: '25KB' },
-            { name: '学习资料.pdf', size: '128KB' }
-          ]
-        },
-        {
-          id: 4,
-          sender: '王助教',
-          time: '2026-03-26',
-          content: '关于下周考试的通知，请各位同学认真复习第一章到第五章的内容，重点掌握核心知识点，做到融会贯通。',
-          attachCount: 1,
-          hasImage: false,
-          files: [{ name: '复习提纲.docx', size: '45KB' }]
-        },
-        {
-          id: 5,
-          sender: '教务处',
-          time: '2026-03-25',
-          content: '五一假期放假通知：2026年5月1日至5月5日放假，5月6日正常上课。请各位同学提前做好安排，祝大家节日快乐！',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        }
-      ],
-      receivedMessages: [
-        {
-          id: 1,
-          sender: '铂金班-小明',
-          time: '2026-03-29',
-          content: '老师好，我想请假明天的直播课，因为临时有事，能否课后给我补发录播视频？谢谢老师！',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        },
-        {
-          id: 2,
-          sender: '黄金班-小红',
-          time: '2026-03-28',
-          content: '老师，我在学习第三章的时候遇到了一个问题，不太理解那个知识点，方便的话能详细解释一下吗？',
-          attachCount: 1,
-          hasImage: true,
-          files: [{ name: '问题截图.png', size: '56KB' }]
-        },
-        {
-          id: 3,
-          sender: '钻石班-小华',
-          time: '2026-03-27',
-          content: '感谢老师精彩的直播课！今天的内容很实用，特别是实战环节让我受益匪浅，期待下次的课程！',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        },
-        {
-          id: 4,
-          sender: '铂金班-小李',
-          time: '2026-03-26',
-          content: '老师您好，关于上次布置的作业，我完成了但是提交系统一直显示错误，麻烦看一下是什么问题。',
-          attachCount: 1,
-          hasImage: false,
-          files: [{ name: '作业文件.zip', size: '2.3MB' }]
-        },
-        {
-          id: 5,
-          sender: '黄金班-小张',
-          time: '2026-03-25',
-          content: '老师，我对课程内容非常感兴趣，想了解一下是否有进阶课程或者推荐的学习资料，请问在哪里可以找到？',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        }
-      ]
+      sentMessages: [],
+      receivedMessages: []
     }
   },
   computed: {
@@ -423,11 +332,44 @@ export default {
       return this.receiveActiveTab === 'teacher' ? this.teacherClasses : this.studentClasses
     }
   },
+  mounted() {
+    this.fetchMessages()
+  },
   methods: {
+    async fetchMessages() {
+      this.loading = true
+      try {
+        const type = this.activeTab === 'sent' ? '2' : '1'
+        const params = { type }
+        if (this.keyword) params.keyword = this.keyword
+        const res = await getTeacherNoticeList(params)
+        const list = (res.data || []).map(item => ({
+          id: item.id,
+          itemId: item.itemId,
+          sender: item.sendPersonName || item.sendPerson || '',
+          sendPerson: item.sendPerson,
+          time: item.sendTime || '',
+          content: item.content || '',
+          attachCount: 0,
+          hasImage: false,
+          files: []
+        }))
+        if (this.activeTab === 'sent') {
+          this.sentMessages = list
+        } else {
+          this.receivedMessages = list
+        }
+      } catch (e) {
+        // 请求失败不做额外处理
+      } finally {
+        this.loading = false
+      }
+    },
     switchTab(tab) {
       this.activeTab = tab
       this.showDetail = false
       this.currentDetail = null
+      this.fetchMessages()
     },
     handleDetail(item) {
       this.currentDetail = item
