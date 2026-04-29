@@ -490,6 +490,56 @@
 
     <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" :classId="selectedClassId" @close="showStudentDetail = false" />
 
+    <!-- 视频播放弹窗 -->
+    <el-dialog
+      :title="currentResourceTitle"
+      :visible.sync="showVideoDialog"
+      width="800px"
+      :append-to-body="true"
+      @close="closeVideoDialog"
+    >
+      <video
+        v-if="showVideoDialog"
+        :src="currentVideoUrl"
+        controls
+        autoplay
+        style="width:100%;max-height:480px;background:#000;display:block;"
+      ></video>
+    </el-dialog>
+
+    <!-- 音频播放弹窗 -->
+    <el-dialog
+      :title="currentResourceTitle"
+      :visible.sync="showAudioDialog"
+      width="480px"
+      :append-to-body="true"
+      @close="closeAudioDialog"
+    >
+      <audio
+        v-if="showAudioDialog"
+        :src="currentAudioUrl"
+        controls
+        autoplay
+        style="width:100%;margin:16px 0;display:block;"
+      ></audio>
+    </el-dialog>
+
+    <!-- 图片预览弹窗 -->
+    <el-dialog
+      :title="currentResourceTitle"
+      :visible.sync="showImageDialog"
+      width="800px"
+      :append-to-body="true"
+      @close="closeImageDialog"
+    >
+      <img
+        v-if="showImageDialog"
+        :src="currentImageUrl"
+        style="width:100%;max-height:600px;object-fit:contain;display:block;"
+        alt=""
+      />
+    </el-dialog>
+
 
 
   <!-- 设置别名弹窗 -->
@@ -559,7 +609,14 @@ export default {
       courseDetail: {
         taskCount: 0,
         items: []
-      }
+      },
+      showVideoDialog: false,
+      currentVideoUrl: '',
+      showAudioDialog: false,
+      currentAudioUrl: '',
+      showImageDialog: false,
+      currentImageUrl: '',
+      currentResourceTitle: ''
     }
   },
   watch: {
@@ -1030,19 +1087,41 @@ export default {
       this.newClassEndDate = new Date()
     },
     handleResourceClick(item) {
+      const url = item.resourceUrl
+      if (!url) {
+        this.$message.warning('资源地址不存在')
+        return
+      }
       const videoTypes = ['3', '4']
       const imageTypes = ['5']
       const audioTypes = ['6']
-      const docTypes = ['7']
       if (videoTypes.includes(item.nodeType)) {
-        this.$emit('playVideo', item)
+        this.currentResourceTitle = item.title || '视频播放'
+        this.currentVideoUrl = url
+        this.showVideoDialog = true
       } else if (imageTypes.includes(item.nodeType)) {
-        this.$emit('previewImage', item)
+        this.currentResourceTitle = item.title || '图片预览'
+        this.currentImageUrl = url
+        this.showImageDialog = true
       } else if (audioTypes.includes(item.nodeType)) {
-        this.$emit('playAudio', item)
-      } else if (docTypes.includes(item.nodeType)) {
-        this.$emit('previewDoc', item)
+        this.currentResourceTitle = item.title || '音频播放'
+        this.currentAudioUrl = url
+        this.showAudioDialog = true
+      } else {
+        window.open(url, '_blank')
       }
+    },
+    closeVideoDialog() {
+      this.showVideoDialog = false
+      this.currentVideoUrl = ''
+    },
+    closeAudioDialog() {
+      this.showAudioDialog = false
+      this.currentAudioUrl = ''
+    },
+    closeImageDialog() {
+      this.showImageDialog = false
+      this.currentImageUrl = ''
     },
     handleCourseClick(item) {
       this.selectedCourse = item
@@ -1093,7 +1172,8 @@ export default {
           size: sizeStr,
           date: '',
           isRecent: res.isRecentStudy === '1',
-          progress: Math.round(parseFloat(node.percent)) || 0
+          progress: Math.round(parseFloat(node.percent)) || 0,
+          resourceUrl: res.resourceUrl || res.url || ''
         }
       }
     },
@@ -1876,8 +1956,11 @@ color: #0049FF;
   align-items:center;
   gap: 8px;
 }
+.cdi-card:hover{
+  background: rgba(202, 217, 255, 0.20)!important;
+}
 .cdi-card-in-group {
-  background: rgba(202, 217, 255, 0.20);
+  // background: rgba(202, 217, 255, 0.20);
   padding-left: 36px;
 }
 .cdi-sub-group-header {
