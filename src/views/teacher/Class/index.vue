@@ -1942,6 +1942,9 @@ color: #333333;
   gap: 10px;
   flex-shrink: 0;
 }
+.cdi-actions ::v-deep .el-progress__text {
+  font-size: 10px !important;
+}
 .cdi-progress-wrap {
   width: 42px;
   height: 42px;
