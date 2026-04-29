@@ -169,15 +169,7 @@
                 </div>
               </div>
               <div class="cdi-actions">
-                <div class="cdi-progress-wrap">
-                  <svg width="42" height="42" viewBox="0 0 42 42">
-                    <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
-                    <circle v-if="item.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
-                      :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - item.progress / 100)"
-                      stroke-linecap="round" transform="rotate(-90 21 21)"/>
-                    <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ item.progress }}%</text>
-                  </svg>
-                </div>
+                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="3"></el-progress>
                 <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
               </div>
             </div>
@@ -197,12 +189,7 @@
                 </div>
               </div>
               <div class="cdi-actions">
-                <div class="cdi-check-circle">
-                  <svg width="34" height="34" viewBox="0 0 34 34">
-                    <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
-                    <polyline v-if="item.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
+                <img  src="@/assets/images/class/percent.png" class="percentImg" alt="">
                 <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
               </div>
             </div>
@@ -265,21 +252,9 @@
                       </div>
                     </div>
                     <div class="cdi-actions">
-                      <div v-if="grandchild.type === 'live'" class="cdi-progress-wrap">
-                        <svg width="42" height="42" viewBox="0 0 42 42">
-                          <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
-                          <circle v-if="grandchild.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
-                            :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - grandchild.progress / 100)"
-                            stroke-linecap="round" transform="rotate(-90 21 21)"/>
-                          <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ grandchild.progress }}%</text>
-                        </svg>
-                      </div>
-                      <div v-else class="cdi-check-circle">
-                        <svg width="34" height="34" viewBox="0 0 34 34">
-                          <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
-                          <polyline v-if="grandchild.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </div>
+                      <el-progress v-if="grandchild.type === 'live'" type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="3"></el-progress>
+                      <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
+                     
                       <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                     </div>
                   </div>
@@ -313,21 +288,8 @@
                     </div>
                   </div>
                   <div class="cdi-actions">
-                    <div v-if="child.type === 'live'" class="cdi-progress-wrap">
-                      <svg width="42" height="42" viewBox="0 0 42 42">
-                        <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
-                        <circle v-if="child.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
-                          :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - child.progress / 100)"
-                          stroke-linecap="round" transform="rotate(-90 21 21)"/>
-                        <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ child.progress }}%</text>
-                      </svg>
-                    </div>
-                    <div v-else class="cdi-check-circle">
-                      <svg width="34" height="34" viewBox="0 0 34 34">
-                        <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
-                        <polyline v-if="child.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
+                    <el-progress v-if="child.type === 'live'" type="circle" :percentage="child.progress" :width="36" :stroke-width="3"></el-progress>
+                    <img  v-else src="@/assets/images/class/percent.png" class="percentImg" alt="">
                     <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   </div>
                 </div>
@@ -2062,5 +2024,9 @@ color: #333333;
 .xlIcon{
   width: 15px;
   height: 15px;
+}
+.percentImg{
+  width: 36px;
+  height: 36px;
 }
 </style>
