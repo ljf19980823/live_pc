@@ -134,6 +134,123 @@
       </div>
     </div>
     <div class="app_container_box_right">
+      <!-- 课程详情视图 -->
+      <template v-if="rightView === 'courseDetail'">
+        <div class="cdetail-header">
+          <div class="cdetail-header-back" @click="rightView = 'default'">
+            <img src="@/assets/images/student/back.png" class="cdetail-back-icon" alt="" />
+            <span class="cdetail-back-text">{{ selectedCourse ? selectedCourse.name : '' }}</span>
+          </div>
+          <div class="cdetail-task-count">{{ courseDetailMock.taskCount }}个学习任务</div>
+        </div>
+        <div class="cdetail-list">
+          <template v-for="(item, idx) in courseDetailMock.items">
+            <!-- 直播课 -->
+            <div v-if="item.type === 'live'" class="cdi-card"  :key="idx">
+              <div class="cdi-main">
+                <img src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                <div class="cdi-info">
+                  <div class="cdi-name">{{ item.title }}</div>
+                  <div class="cdi-status-row">
+                    <template v-if="item.status === 'ended'">
+                      <div class="cdi-status-text">已结束</div>
+                    </template>
+                    <template v-else-if="item.status === 'streaming'">
+                      <div class="cdi-status-text">已直播 <span class="yzb_text">{{ item.streamedMinutes }}</span> 分钟</div>
+                      <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
+                    </template>
+                    <template v-else-if="item.status === 'upcoming'">
+                      <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ item.countdownMinutes }}</span> 分钟</div>
+                     <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
+                    </template>
+                     <span class="cdi-date-row">{{ item.date }}&nbsp;&nbsp;{{ item.timeStart }} - {{ item.timeEnd }}</span>
+                  </div>
+                 
+                </div>
+              </div>
+              <div class="cdi-actions">
+                <div class="cdi-progress-wrap">
+                  <svg width="42" height="42" viewBox="0 0 42 42">
+                    <circle cx="21" cy="21" r="17" fill="none" stroke="#F3F4F8" stroke-width="3"/>
+                    <circle v-if="item.progress > 0" cx="21" cy="21" r="17" fill="none" stroke="#71A0FF" stroke-width="3"
+                      :stroke-dasharray="106.81" :stroke-dashoffset="106.81 * (1 - item.progress / 100)"
+                      stroke-linecap="round" transform="rotate(-90 21 21)"/>
+                    <text x="21" y="25" text-anchor="middle" font-size="9" fill="#666666">{{ item.progress }}%</text>
+                  </svg>
+                </div>
+                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+              </div>
+            </div>
+
+            <!-- PDF / 文件 -->
+            <div v-else-if="item.type === 'pdf'" class="cdi-card" :key="idx">
+              <div class="cdi-main">
+                <img src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                <div class="cdi-info">
+                  <div class="cdi-name">{{ item.title }}</div>
+                  <div class="cdi-file-row">
+                    <span class="cdi-file-meta">{{ item.size }}</span>
+                    <span class="cdi-file-meta">{{ item.date }}</span>
+                    <img v-if="item.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                   
+                  </div>
+                </div>
+              </div>
+              <div class="cdi-actions">
+                <div class="cdi-check-circle">
+                  <svg width="34" height="34" viewBox="0 0 34 34">
+                    <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
+                    <polyline v-if="item.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+              </div>
+            </div>
+
+            <!-- 分组标题 -->
+            <div v-else-if="item.type === 'group'" class="cdi-group-header" @click="toggleGroup(item)" :key="idx">
+              <div class="cdi-group-left">
+               
+                <div class="cdi-group-toggle-icon">
+                  <img v-if="item.expanded" src="@/assets/images/class/xl.png" class="xlIcon" alt="">
+                  <img v-else src="@/assets/images/class/ss.png" class="xlIcon" alt="">
+                 
+                </div>
+                <span class="cdi-group-title">{{ item.title }}</span>
+              </div>
+            </div>
+
+            <!-- 分组子项 -->
+            <template v-if="item.type === 'group' && item.expanded">
+              <div v-for="(child, ci) in item.children" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group">
+                <div class="cdi-main">
+                  <img src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                  <div class="cdi-info">
+                    <div class="cdi-name">{{ child.title }}</div>
+                    <div class="cdi-file-row">
+                      <span class="cdi-file-meta">{{ child.size }}</span>
+                      <span class="cdi-file-meta">{{ child.date }}</span>
+                      <img v-if="child.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                    </div>
+                  </div>
+                </div>
+                <div class="cdi-actions">
+                  <div class="cdi-check-circle">
+                    <svg width="34" height="34" viewBox="0 0 34 34">
+                      <circle cx="17" cy="17" r="15" fill="none" stroke="#71A0FF" stroke-width="2"/>
+                      <polyline v-if="child.completed" points="11,17 15,21 23,13" fill="none" stroke="#71A0FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                   <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                </div>
+              </div>
+            </template>
+          </template>
+        </div>
+      </template>
+
+      <!-- 默认视图 -->
+      <template v-else>
       <!-- 无班级时空状态 -->
       <div v-if="!classListLoading && classList.length === 0" class="app_container_box_right_empty">
         <EmptyState description="暂无班级，请先创建班级" />
@@ -221,7 +338,7 @@
           <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
         </div>
         <div class="app_container_box_right_last_list" v-loading="courseListLoading">
-          <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index">
+          <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index" @click="handleCourseClick(item)" style="cursor:pointer;">
             <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
             <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }}个学习任务</div>
@@ -235,6 +352,7 @@
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
       </div>
+      </template>
       </template>
     </div>
     <!-- 重置密码弹窗 -->
@@ -380,7 +498,39 @@ export default {
       newClassDesc: '',
       newClassStartDate: new Date(),
       newClassEndDate: new Date(),
-      createClassLoading: false
+      createClassLoading: false,
+      rightView: 'default',
+      selectedCourse: null,
+      courseDetailMock: {
+        taskCount: 4,
+        items: [
+          {
+            type: 'live', title: '管理学备课', status: 'ended',
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 0
+          },
+          {
+            type: 'live', title: '管理学备课', status: 'streaming', streamedMinutes: 8,
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 25
+          },
+          {
+            type: 'live', title: '管理学备课', status: 'upcoming', countdownMinutes: 8,
+            date: '2024-05-06', timeStart: '08:05', timeEnd: '13:36', progress: 0
+          },
+          {
+            type: 'pdf', title: '大学语文.pdf', size: '136MB',
+            date: '2024-05-06', isRecent: true, completed: true
+          },
+          {
+            type: 'group', title: '《钻金班课程》', expanded: true,
+            children: [
+              {
+                type: 'pdf', title: '大学语文.pdf', size: '136MB',
+                date: '2024-05-06', isRecent: true, completed: true
+              }
+            ]
+          }
+        ]
+      }
     }
   },
   watch: {
@@ -849,6 +999,13 @@ export default {
       this.newClassDesc = ''
       this.newClassStartDate = new Date()
       this.newClassEndDate = new Date()
+    },
+    handleCourseClick(item) {
+      this.selectedCourse = item
+      this.rightView = 'courseDetail'
+    },
+    toggleGroup(item) {
+      this.$set(item, 'expanded', !item.expanded)
     }
   }
 }
@@ -1033,6 +1190,7 @@ margin-top: 9px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  overflow: hidden;
 }
 .app_container_box_right_empty{
   flex: 1;
@@ -1548,5 +1706,240 @@ box-sizing: border-box;
   font-weight: 400;
 font-size: 16px;
 color: #0049FF;
+}
+
+/* ===== 课程详情视图样式 ===== */
+.cdetail-header {
+  width: 100%;
+  height: 68px;
+  background: #FFFFFF;
+  // border-left: 1px solid #F3F4F8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px 0 24px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.cdetail-header-back {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+.cdetail-back-icon {
+  width: 7px;
+  height: 14px;
+}
+.cdetail-back-text {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333333;
+}
+.cdetail-task-count {
+  font-size: 14px;
+  color: #666666 ;
+}
+.cdetail-list {
+  flex: 1;
+  height: 0;
+  overflow-y: auto;
+  background: #F0F3F6;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 通用卡片 */
+.cdi-card {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 4px;
+  padding: 14px 21px 14px 16px ;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 8px;
+}
+.cdi-card-in-group {
+  background: rgba(202, 217, 255, 0.20);
+  padding-left: 36px;
+}
+.cdi-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  width: 0;
+}
+.cdi-type-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.cdi-info {
+  flex: 1;
+  width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cdi-name {
+  font-weight: 500;
+font-size: 16px;
+color: #333333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cdi-status-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.cdi-status-text {
+  font-weight: 400;
+  font-size: 14px;
+  color: #666666;
+}
+.cdi-status-text b {
+  color: #FF6B00;
+  font-weight: 600;
+}
+.cdi-date-row {
+  font-size: 13px;
+  color: #999999;
+}
+.cdi-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cdi-file-meta {
+  font-size: 13px;
+  color: #999999;
+}
+
+/* 徽标 */
+.cdi-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  border-radius: 11px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.cdi-badge-live {
+  background: #E8FFF3;
+  border: 1px solid #00B578;
+  color: #00B578;
+}
+.cdi-badge-upcoming {
+  background: #F3F4F8;
+  border: 1px solid #CCCCCC;
+  color: #999999;
+}
+.cdi-badge-recent {
+  background: #E8EEFF;
+  color: #0049FF;
+  border: 1px solid #C0CFFF;
+}
+
+/* 右侧操作区 */
+.cdi-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.cdi-progress-wrap {
+  width: 42px;
+  height: 42px;
+}
+.cdi-check-circle {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cdi-options-dot {
+  width: 36px;
+  height: 36px;
+}
+
+/* 分组标题行 */
+.cdi-group-header {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 4px;
+  // box-shadow: 0px 0px 8px 0px rgba(0, 73, 255, 0.08);
+  padding: 14px 16px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.cdi-group-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cdi-group-arrow-icon {
+  width: 20px;
+  height: 20px;
+  background: #E8EEFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cdi-group-toggle-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cdi-group-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333333;
+}
+.zbzClass{
+  width: 88px;
+  height: 26px;
+}
+.zbwksClass{
+  width: 114px;
+  height: 26px;
+}
+.yzb_text{
+  color: #0EB520;
+  font-size: 20px;
+  font-weight: bold; 
+}
+.jlzb_text{
+  color: #FF2E00;
+  font-size: 20px;
+  font-weight: bold;
+}
+.zjxxIcon{
+  width: 82px;
+  height: 26px;
+}
+.xlIcon{
+  width: 15px;
+  height: 15px;
 }
 </style>
