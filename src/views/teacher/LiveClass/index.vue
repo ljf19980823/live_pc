@@ -37,36 +37,39 @@
     </transition>
 
       <div class="placeholder_last_top">
-        <div class="placeholder_last_top_total">共有{{ liveCourses.length }}节课</div>
+        <div class="placeholder_last_top_total">共有 {{ liveCourses.length }} 节课</div>
         <div class="placeholder_last_top_btn">查看课表</div>
-        <img src="@/assets/images/liveClass/refresh.png" class="placeholder_last_top_sx" alt="">
+        <img src="@/assets/images/liveClass/refresh.png" class="placeholder_last_top_sx" alt="" @click="fetchLiveList">
       </div>
-      <div class="placeholder_last_table">
-        <div class="placeholder_last_table_detail" v-for="(item, index) in liveCourses" :key="index">
-          <img :src="item.statusImg" class="placeholder_last_table_detail_statusImg" alt="">
-          <div class="placeholder_last_table_detail_top">
-            <div class="placeholder_last_table_detail_top_top">
-              <div class="placeholder_last_table_detail_top_top_title">{{ item.title }}</div>
-              <div class="placeholder_last_table_detail_top_top_xq">
-                <div class="placeholder_last_table_detail_top_top_xq_text">详情</div>
-                <img src="@/assets/images/liveClass/xq_icon.png" class="placeholder_last_table_detail_top_top_xq_icon" alt="">
+      <div class="placeholder_last_table" v-loading="liveLoading">
+        <template v-if="!liveLoading">
+          <div class="placeholder_last_table_detail" v-for="(item, index) in liveCourses" :key="index">
+            <img :src="item.statusImg" class="placeholder_last_table_detail_statusImg" alt="">
+            <div class="placeholder_last_table_detail_top">
+              <div class="placeholder_last_table_detail_top_top">
+                <div class="placeholder_last_table_detail_top_top_title">{{ item.title }}</div>
+                <div class="placeholder_last_table_detail_top_top_xq">
+                  <div class="placeholder_last_table_detail_top_top_xq_text">详情</div>
+                  <img src="@/assets/images/liveClass/xq_icon.png" class="placeholder_last_table_detail_top_top_xq_icon" alt="">
+                </div>
+              </div>
+              <div class="placeholder_last_table_detail_top_last">
+                <div class="placeholder_last_table_detail_top_last_time">{{ item.time }}</div>
+                <div class="placeholder_last_table_detail_top_last_leve" v-if="item.status === 'living'">
+                  已直播 <span class="placeholder_last_table_detail_top_last_leve_yj">{{ item.minutes }}</span> 分钟
+                </div>
+                <div class="placeholder_last_table_detail_top_last_leve" v-else>
+                  距离直播还有 <span class="placeholder_last_table_detail_top_last_leve_jl">{{ item.minutes }}</span> 分钟
+                </div>
               </div>
             </div>
-            <div class="placeholder_last_table_detail_top_last">
-              <div class="placeholder_last_table_detail_top_last_time">{{ item.time }}</div>
-              <div class="placeholder_last_table_detail_top_last_leve" v-if="item.status === 'living'">
-                已直播 <span class="placeholder_last_table_detail_top_last_leve_yj">{{ item.minutes }}</span> 分钟
-              </div>
-              <div class="placeholder_last_table_detail_top_last_leve" v-else>
-                距离直播还有 <span class="placeholder_last_table_detail_top_last_leve_jl">{{ item.minutes }}</span> 分钟
-              </div>
-            </div>
+            <div
+              class="placeholder_last_table_detail_last"
+              :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
+            >进入直播</div>
           </div>
-          <div
-            class="placeholder_last_table_detail_last"
-            :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
-          >进入直播</div>
-        </div>
+          <empty-state v-if="liveCourses.length === 0" description="暂无直播课堂" />
+        </template>
       </div>
     </div>
 
@@ -94,6 +97,7 @@
               v-model="selectedClass"
               placeholder="选择班级"
               size="mini"
+              filterable
               class="ls_class_select"
               clearable
             >
@@ -107,30 +111,41 @@
           </div>
           <div class="ls_top_left_search">
             <div class="ls_top_left_search_sx"></div>
-            <div class="ls_top_left_search_box">
-              <img src="@/assets/images/liveClass/search.png" class="ls_top_left_time_icon" alt="">
-              <div class="ls_top_left_search_box_input">
-                <input type="text" placeholder="搜索课程" v-model="searchKeyword">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索课程"
+              clearable
+              size="mini"
+              class="ls_search_input"
+            >
+              <img
+                slot="prefix"
+                src="@/assets/images/liveClass/search.png"
+                class="ls_top_left_time_icon ls_search_prefix_icon"
+                alt=""
+              >
+            </el-input>
+          </div>
+        </div>
+        <div class="ls_top_right">共{{ historyCourses.length }}节课</div>
+      </div>
+      <div class="ls_last" v-loading="historyLoading">
+        <template v-if="!historyLoading">
+          <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index">
+            <div class="ls_last_detail_options">
+              <div class="ls_last_detail_options_box">
+                <img src="@/assets/images/liveClass/options.png" class="ls_last_detail_options_box_img" alt="">
               </div>
             </div>
-          </div>
-        </div>
-        <div class="ls_top_right">共{{ filteredHistoryCourses.length }}节课</div>
-      </div>
-      <div class="ls_last">
-        <div class="ls_last_detail" v-for="(item, index) in filteredHistoryCourses" :key="index">
-          <div class="ls_last_detail_options">
-            <div class="ls_last_detail_options_box">
-              <img src="@/assets/images/liveClass/options.png" class="ls_last_detail_options_box_img" alt="">
+            <img :src="item.cover || require('@/assets/images/such.png')" class="ls_last_detail_img" alt="">
+            <div class="ls_last_detail_center">
+              <div class="ls_last_detail_title">{{ item.name }}</div>
+              <div class="ls_last_detail_time">{{ formatDuration(item.duration) }}</div>
             </div>
+            <div class="ls_last_detail_last">{{ item.teacherName }} · {{ formatDate(item.generationTime) }}</div>
           </div>
-          <img src="@/assets/images/such.png" class="ls_last_detail_img" alt="">
-          <div class="ls_last_detail_center">
-            <div class="ls_last_detail_title">{{ item.title }}</div>
-            <div class="ls_last_detail_time">{{ item.duration }}</div>
-          </div>
-          <div class="ls_last_detail_last">{{ item.teacher }} · {{ item.date }}</div>
-        </div>
+          <empty-state v-if="historyCourses.length === 0" description="暂无历史课堂" />
+        </template>
       </div>
     </div>
 
@@ -221,11 +236,15 @@
 </template>
 
 <script>
+import { getLiveList, getHistoryList, getClassList } from '@/api/modules/teacher'
+import EmptyState from '@/components/EmptyState/index.vue'
+
 export default {
   name: 'LiveClass',
+  components: { EmptyState },
   data() {
     return {
-    hasUpdate: false,
+      hasUpdate: false,
       bannerDismissed: false,
       updateInfo: {
         version: '',
@@ -240,102 +259,150 @@ export default {
       downloadError: '',
       downloadedFilePath: '',
 
-      // 移除 IPC 监听器的清理函数
       _removeProgress: null,
       _removeComplete: null,
       _removeError: null,
-
-
-
 
       activeTab: 'live',
       dateRange: null,
       selectedClass: '',
       searchKeyword: '',
-      classList: [
-        { value: '1', label: '卓越班' },
-        { value: '2', label: '精英班' },
-        { value: '3', label: '提高班' },
-        { value: '4', label: '基础班' },
-        { value: '5', label: '冲刺班' },
-      ],
-      liveCourses: [
-        {
-          title: '给我报名个卓越班',
-          time: '今天 11:31 - 16:31',
-          status: 'living',
-          minutes: 7,
-          statusImg: require('@/assets/images/liveClass/zzzb.png'),
-        },
-        {
-          title: '高中数学专题讲解',
-          time: '今天 14:00 - 16:00',
-          status: 'soon',
-          minutes: 15,
-          statusImg: require('@/assets/images/liveClass/jjks.png'),
-        },
-        {
-          title: '语文写作技巧提升',
-          time: '明天 09:00 - 11:00',
-          status: 'soon',
-          minutes: 30,
-          statusImg: require('@/assets/images/liveClass/jjks.png'),
-        },
-        {
-          title: '英语听力强化训练',
-          time: '明天 14:00 - 16:00',
-          status: 'soon',
-          minutes: 55,
-          statusImg: require('@/assets/images/liveClass/jjks.png'),
-        },
-      ],
-      historyCourses: [
-        { title: '立升备课-管理学', duration: '05:56', teacher: '思雅', date: '04-21', fullDate: '2026-04-21', classValue: '1' },
-        { title: '高中物理力学精讲', duration: '43:12', teacher: '李明', date: '04-20', fullDate: '2026-04-20', classValue: '2' },
-        { title: '化学有机物专题', duration: '51:08', teacher: '王芳', date: '04-19', fullDate: '2026-04-19', classValue: '3' },
-        { title: '数学函数专项训练', duration: '38:45', teacher: '张伟', date: '04-18', fullDate: '2026-04-18', classValue: '1' },
-        { title: '英语阅读理解技巧', duration: '29:33', teacher: '刘洋', date: '04-17', fullDate: '2026-04-17', classValue: '4' },
-        { title: '语文古诗词赏析', duration: '44:21', teacher: '陈静', date: '04-16', fullDate: '2026-04-16', classValue: '5' },
-        { title: '政治时事热点分析', duration: '35:50', teacher: '赵磊', date: '04-15', fullDate: '2026-04-15', classValue: '2' },
-        { title: '历史近现代史专题', duration: '48:15', teacher: '孙丽', date: '04-14', fullDate: '2026-04-14', classValue: '3' },
-        { title: '地理气候与环境', duration: '32:47', teacher: '周勇', date: '04-13', fullDate: '2026-04-13', classValue: '4' },
-        { title: '生物细胞分裂讲解', duration: '41:20', teacher: '吴婷', date: '04-12', fullDate: '2026-04-12', classValue: '1' },
-        { title: '物理电磁感应专题', duration: '39:05', teacher: '李明', date: '04-10', fullDate: '2026-04-10', classValue: '2' },
-        { title: '数学立体几何讲解', duration: '46:33', teacher: '张伟', date: '04-08', fullDate: '2026-04-08', classValue: '1' },
-        { title: '英语语法专项突破', duration: '27:18', teacher: '刘洋', date: '04-05', fullDate: '2026-04-05', classValue: '5' },
-        { title: '语文现代文阅读', duration: '52:40', teacher: '陈静', date: '04-03', fullDate: '2026-04-03', classValue: '3' },
-        { title: '化学电化学专题', duration: '44:55', teacher: '王芳', date: '04-01', fullDate: '2026-04-01', classValue: '4' },
-      ],
+      classList: [],
+      liveCourses: [],
+      historyCourses: [],
+      liveLoading: false,
+      historyLoading: false,
+      _searchTimer: null,
     }
   },
-  computed: {
-    filteredHistoryCourses() {
-      return this.historyCourses.filter(item => {
-        const matchClass = !this.selectedClass || item.classValue === this.selectedClass
-        const matchSearch = !this.searchKeyword || item.title.includes(this.searchKeyword)
-        let matchDate = true
-        if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0] && this.dateRange[1]) {
-          const itemDate = new Date(item.fullDate)
-          const startDate = new Date(this.dateRange[0])
-          const endDate = new Date(this.dateRange[1])
-          endDate.setHours(23, 59, 59, 999)
-          matchDate = itemDate >= startDate && itemDate <= endDate
-        }
-        return matchClass && matchSearch && matchDate
-      })
+  watch: {
+    activeTab(val) {
+      if (val === 'history') {
+       
+        this.fetchHistoryList()
+      } else {
+        this.fetchLiveList()
+      }
+    },
+    dateRange() {
+      this.fetchHistoryList()
+    },
+    selectedClass() {
+      this.fetchHistoryList()
+    },
+    searchKeyword() {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => this.fetchHistoryList(), 400)
     },
   },
-  mounted () {
+  mounted() {
     this.checkUpdate()
+    this.fetchLiveList()
+     this.fetchClassList()
   },
-
-  beforeDestroy () {
+  beforeDestroy() {
     this.removeIpcListeners()
+    clearTimeout(this._searchTimer)
   },
-
   methods: {
+    // ── 实时课堂接口 ────────────────────────────────────────────────────
+    async fetchLiveList() {
+      this.liveLoading = true
+      try {
+        const res = await getLiveList()
+        const list = res.data || res || []
+        this.liveCourses = list.map(item => {
+          const isLiving = item.isStart === '1' && item.isFinish !== '1'
+          return {
+            ...item,
+            title: item.name,
+            time: this.formatTimeRange(item.startTime, item.endTime),
+            status: isLiving ? 'living' : 'soon',
+            minutes: item.liveMin,
+            statusImg: isLiving
+              ? require('@/assets/images/liveClass/zzzb.png')
+              : require('@/assets/images/liveClass/jjks.png'),
+          }
+        })
+      } catch (_) {} finally {
+        this.liveLoading = false
+      }
+    },
+
+    // ── 历史课堂接口 ────────────────────────────────────────────────────
+    async fetchHistoryList() {
+      const params = {}
+      if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0]) {
+        params.startDate = this.dateRange[0]
+        params.endDate = this.dateRange[1]
+      }
+      if (this.selectedClass) params.classId = this.selectedClass
+      if (this.searchKeyword) params.keyword = this.searchKeyword
+      this.historyLoading = true
+      try {
+        const res = await getHistoryList(params)
+        this.historyCourses = res.data || res || []
+      } catch (_) {} finally {
+        this.historyLoading = false
+      }
+    },
+
+    // ── 班级列表接口 ────────────────────────────────────────────────────
+    async fetchClassList() {
+      if (this.classList.length) return
+      try {
+        const res = await getClassList()
+        const list = res.data || res || []
+        this.classList = list.map(item => ({
+          value: item.classId,
+          label:item.classAlias?item.classAlias: item.className,
+        }))
+      } catch (_) {}
+    },
+
+    // ── 工具方法 ─────────────────────────────────────────────────────────
+    formatTimeRange(startTime, endTime) {
+      if (!startTime) return ''
+      const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      const todayStr = new Date().toISOString().substring(0, 10)
+
+      const formatDateLabel = (dateStr, hideYear = false) => {
+        if (dateStr === todayStr) return '今天'
+        const d = new Date(dateStr)
+        const label = hideYear ? dateStr.substring(5) : dateStr
+        return `${label}(${WEEK[d.getDay()]})`
+      }
+
+      const startDateStr = startTime.substring(0, 10)
+      const startHM = startTime.substring(11, 16)
+
+      if (!endTime) return `${formatDateLabel(startDateStr)} ${startHM}`
+
+      const endDateStr = endTime.substring(0, 10)
+      const endHM = endTime.substring(11, 16)
+
+      if (startDateStr === endDateStr) {
+        return `${formatDateLabel(startDateStr)} ${startHM} - ${endHM}`
+      }
+      return `${formatDateLabel(startDateStr)} ${startHM} - ${formatDateLabel(endDateStr, true)} ${endHM}`
+    },
+
+    formatDate(dateStr) {
+      if (!dateStr) return ''
+      return dateStr.substring(5, 10)
+    },
+
+    formatDuration(seconds) {
+      const s = parseInt(seconds, 10)
+      if (!s || s < 0) return '00:00:00'
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const sec = s % 60
+      return [h, m, sec].map(v => String(v).padStart(2, '0')).join(':')
+    },
+
     // ── 检查版本更新 ────────────────────────────────────────────────────
-    async checkUpdate () {
+    async checkUpdate() {
       if (!window.electronAPI?.checkForUpdate) return
       try {
         const result = await window.electronAPI.checkForUpdate()
@@ -347,69 +414,56 @@ export default {
           }
           this.hasUpdate = true
         }
-      } catch (_) {
-        // 静默处理，不影响主功能
-      }
+      } catch (_) {}
     },
 
-    // ── 打开升级弹窗 ────────────────────────────────────────────────────
-    openUpdateDialog () {
+    openUpdateDialog() {
       this.dialogVisible = true
     },
 
-    // ── 关闭弹窗（点击"下次再说"） ──────────────────────────────────────
-    closeDialog () {
-      if (this.downloading) return // 下载中不允许关闭
+    closeDialog() {
+      if (this.downloading) return
       this.dialogVisible = false
-      this.bannerDismissed = false // 关闭弹窗后横幅仍保留
+      this.bannerDismissed = false
       this.downloadError = ''
     },
 
-    // ── 点击遮罩层 ──────────────────────────────────────────────────────
-    onOverlayClick () {
+    onOverlayClick() {
       if (!this.downloading && !this.downloaded) {
         this.closeDialog()
       }
     },
 
-    // ── 开始下载 ─────────────────────────────────────────────────────────
-    startDownload () {
+    startDownload() {
       if (!window.electronAPI?.downloadUpdate) return
       if (!this.updateInfo.downloadUrl) {
         this.downloadError = '暂无下载地址，请稍后重试'
         return
       }
-
       this.downloading = true
       this.downloadProgress = 0
       this.downloadError = ''
       this.downloaded = false
-
       this.registerIpcListeners()
       window.electronAPI.downloadUpdate(this.updateInfo.downloadUrl)
     },
 
-    // ── 注册下载进度监听 ─────────────────────────────────────────────────
-    registerIpcListeners () {
+    registerIpcListeners() {
       this.removeIpcListeners()
-
       if (window.electronAPI?.onUpdateProgress) {
         this._removeProgress = window.electronAPI.onUpdateProgress((progress) => {
           this.downloadProgress = progress
         })
       }
-
       if (window.electronAPI?.onUpdateComplete) {
         this._removeComplete = window.electronAPI.onUpdateComplete((filePath) => {
           this.downloading = false
           this.downloaded = true
           this.downloadedFilePath = filePath
           this.downloadProgress = 100
-          // 延迟 1.5s 后自动安装
           setTimeout(() => this.installUpdate(), 1500)
         })
       }
-
       if (window.electronAPI?.onUpdateError) {
         this._removeError = window.electronAPI.onUpdateError((error) => {
           this.downloading = false
@@ -418,19 +472,17 @@ export default {
       }
     },
 
-    // ── 移除 IPC 监听 ────────────────────────────────────────────────────
-    removeIpcListeners () {
+    removeIpcListeners() {
       if (this._removeProgress) { this._removeProgress(); this._removeProgress = null }
       if (this._removeComplete) { this._removeComplete(); this._removeComplete = null }
       if (this._removeError) { this._removeError(); this._removeError = null }
     },
 
-    // ── 安装更新（打开安装包 & 退出应用）────────────────────────────────
-    installUpdate () {
+    installUpdate() {
       if (window.electronAPI?.installUpdate && this.downloadedFilePath) {
         window.electronAPI.installUpdate(this.downloadedFilePath)
       }
-    }
+    },
   }
 }
 </script>
@@ -571,6 +623,7 @@ export default {
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 19px;
+  min-height: 120px;
 }
 .placeholder_last_table_detail {
   position: relative;
@@ -622,8 +675,9 @@ export default {
 .placeholder_last_table_detail_top_last {
   width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 .placeholder_last_table_detail_top_last_time {
   font-weight: 400;
@@ -633,6 +687,9 @@ export default {
 .placeholder_last_table_detail_top_last_leve {
   color: #333333;
   font-size: 14px;
+  width: 100%;
+  text-align: left;
+  margin-top: 4px;
 }
 .placeholder_last_table_detail_top_last_leve_yj {
   color: #0049ff;
@@ -729,7 +786,7 @@ export default {
   padding: 3px 0 3px 21px;
   box-sizing: border-box;
   border-left: 1px solid #d9d9d9;
-  width: 180px;
+  // width: 180px;
 }
 .ls_top_left_search_sx {
   width: 1px;
@@ -755,17 +812,32 @@ export default {
   box-sizing: border-box;
   gap: 8px;
 }
-.ls_top_left_search_box_input {
-  flex: 1;
-  width: 0;
+.ls_search_input {
+  width: 268px;
+  ::v-deep .el-input__inner {
+    border-radius: 28px;
+    border-color: #d9d9d9;
+    font-size: 14px;
+    color: #333333;
+    padding-left: 30px;
+    &:focus {
+      border-color: #0049ff;
+    }
+  }
+  ::v-deep .el-input__prefix {
+    left: 10px;
+    display: flex;
+    align-items: center;
+  }
+  ::v-deep .el-input__suffix {
+    right: 8px;
+    display: flex;
+    align-items: center;
+  }
 }
-.ls_top_left_search_box_input input {
-  width: 100%;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #333333;
-  background: transparent;
+.ls_search_prefix_icon {
+  width: 14px;
+  height: 14px;
 }
 .ls_last {
   width: 100%;
@@ -774,6 +846,7 @@ export default {
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 20px;
+  min-height: 120px;
 }
 .ls_last_detail {
   padding: 6px 5px 11px 5px;
@@ -888,20 +961,17 @@ export default {
 }
 
 .ls_class_select {
-  flex: 1;
-  width: 0;
+  width: 150px;
+  // flex: 1;
+  // width: 0;
   ::v-deep .el-input__inner {
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    height: auto;
-    line-height: normal;
+   
     font-size: 14px;
     color: #333333;
     background: transparent;
   }
   ::v-deep .el-input__suffix {
-    right: 0;
+    // right: 0;
   }
   ::v-deep .el-input {
     font-size: 14px;

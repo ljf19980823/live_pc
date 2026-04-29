@@ -36,3 +36,9 @@ export const getStudentDetail = (classId, studentId, params) => get(`/edu/class/
 
 // 添加/更新学生备注
 export const saveStudentNote = (classId, studentId, content) => post(`/edu/class/${classId}/students/${studentId}/note`, { content })
+
+// 获取实时课堂列表
+export const getLiveList = params => get('/edu/live/list', params)
+
+// 获取历史课堂列表
+export const getHistoryList = params => get('/edu/history/list', params)
