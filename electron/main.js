@@ -367,8 +367,8 @@ function createWindow () {
     : path.join(__dirname, '../build/icon.icns')
 
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: 1280,
+    height: 720,
     minWidth: 1280,
     minHeight: 720,
     show: false,
