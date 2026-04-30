@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const https = require('https')
@@ -539,6 +539,7 @@ ipcMain.on('install-update', (event, filePath) => {
 })
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
   createWindow()
 
   app.on('activate', () => {

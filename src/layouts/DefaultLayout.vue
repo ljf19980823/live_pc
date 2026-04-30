@@ -252,8 +252,8 @@ $header-h: $header-height;
   display: flex;
   width: 100%;
   height: 100vh;
-  min-width: 1280px;
-  min-height: 720px;
+  // min-width: 1280px;
+  // min-height: 720px;
   overflow: hidden;
   background: $bg-base;
 }
