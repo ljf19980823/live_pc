@@ -48,3 +48,12 @@ export const createClass = params => post('/edu/class/create', params)
 
 // 获取课程详情（目录树）
 export const getCourseDetail = params => get('/edu/course/detail', params)
+
+// 重置学生密码
+export const resetStudentPassword = data => post('/edu/class/students/resetPassword', data)
+
+// 获取课时学习进度列表
+export const getLessonProgress = params => get('/edu/course/lesson/progress', params)
+
+// 获取课程维度学习进度列表（班级内所有学生对该课程的进度）
+export const getCourseProgress = (courseId, classId) => get(`/edu/course/${courseId}/class/${classId}/students/progress`)

@@ -170,7 +170,14 @@
               </div>
               <div class="cdi-actions">
                 <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
+                  <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </div>
 
@@ -189,7 +196,14 @@
               </div>
               <div class="cdi-actions" @click.stop>
                 <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
+                  <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </div>
 
@@ -204,7 +218,14 @@
               </div>
               <div class="cdi-actions" @click.stop>
                 <el-progress type="circle" :percentage="Math.round(parseFloat(item.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
+                  <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </div>
 
@@ -222,8 +243,15 @@
                     <span class="cdi-group-title">{{ child.title }}</span>
                   </div>
                   <div class="cdi-actions" @click.stop>
-                    <el-progress type="circle" :percentage="Math.round(parseFloat(child.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                    <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                <el-progress type="circle" :percentage="Math.round(parseFloat(child.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, child)">
+                  <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
                   </div>
                 </div>
                 <!-- 二级分组展开后的三级内容 -->
@@ -259,7 +287,14 @@
                     </div>
                     <div class="cdi-actions" @click.stop>
                       <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                      <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                      <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, grandchild)">
+                        <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
                     </div>
                   </div>
                 </template>
@@ -294,7 +329,14 @@
                   </div>
                   <div class="cdi-actions" @click.stop>
                     <el-progress type="circle" :percentage="child.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
-                    <img src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                    <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, child)">
+                      <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
                   </div>
                 </div>
               </template>
@@ -362,7 +404,7 @@
           <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index" @click="handleStudentDetail(item)">
             <div class="app_container_box_right_last_list_detail_top">
               <el-dropdown trigger="click" @command="(cmd) => handleStudentOptionsCommand(cmd, item)">
-                <img  @click.stop src="@/assets/images/class/options.png" class="app_container_box_right_last_list_detail_top_options" alt="">
+                <img  @click.stop src="@/assets/images/class/options2.png" class="app_container_box_right_last_list_detail_top_options" alt="">
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
@@ -402,6 +444,18 @@
               </div>
               <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ Math.round(item.progress) }}%</div>
             </div>
+            <div class="app_container_box_right_last_list_detailCourse_options" @click.stop>
+              <el-dropdown trigger="click" @command="(cmd) => handleCourseOptionsCommand(cmd, item)">
+                <div class="app_container_box_right_last_list_detailCourse_options_box">
+                  <img src="@/assets/images/class/options3.png" class="app_container_box_right_last_list_detailCourse_options_icon" alt="">
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </div>
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
@@ -410,7 +464,7 @@
       </template>
     </div>
     <!-- 重置密码弹窗 -->
-    <DialogCustome width="616px" height="366px" :visible="showResetPasswordDialog" confirmText="确定并复制密码" title="重置密码" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
+    <DialogCustome width="616px" height="366px" :visible="showResetPasswordDialog" confirmText="确定并复制密码" title="重置密码" :confirmLoading="resetPasswordLoading" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
       <div class="dialog_box">
         <div class="dialog_box_con">
           <img src="@/assets/images/class/pass.png" class="dialog_box_con_icon" alt="">
@@ -565,7 +619,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail, resetStudentPassword } from '@/api'
 
 export default { 
   name: 'Class',
@@ -596,6 +650,7 @@ export default {
       aliasInput: '',
       showResetPasswordDialog: false,
       resetPasswordValue: '',
+      resetPasswordLoading: false,
       showAddClassDialog: false,
       addClassStep: 1,
       newClassName: '',
@@ -952,10 +1007,35 @@ export default {
     },
     handleStudentOptionsCommand(command, student) {
       if (command === 'resetPassword') {
+        this.currentStudentId = student.id
         this.showResetPasswordDialog = true
       } else if (command === 'studentDetail') {
         this.currentStudentId = student.id
         this.showStudentDetail = true
+      }
+    },
+    handleContentOptionsCommand(command, item) {
+      if (command === 'learningProgress') {
+        this.$router.push({
+          path: '/learningProgress',
+          query: {
+            classId: this.selectedClassId,
+            courseId: this.selectedCourse ? this.selectedCourse.id : '',
+            lessonId: item.id
+          }
+        })
+      }
+    },
+    handleCourseOptionsCommand(command, item) {
+      if (command === 'learningProgress') {
+        this.$router.push({
+          path: '/learningProgress',
+          query: {
+            type: 'course',
+            classId: this.selectedClassId,
+            courseId: item.id
+          }
+        })
       }
     },
     handleStudentDetail(student) {
@@ -994,22 +1074,31 @@ export default {
         this.$message.warning('请先输入或自动生成密码')
         return
       }
-      await new Promise(resolve => setTimeout(resolve, 300))
-      const text = `您的新密码为${this.resetPasswordValue}`
+      this.resetPasswordLoading = true
       try {
-        await navigator.clipboard.writeText(text)
-        this.$message.success('密码已复制到剪贴板')
-      } catch {
-        const ta = document.createElement('textarea')
-        ta.value = text
-        document.body.appendChild(ta)
-        ta.select()
-        document.execCommand('copy')
-        document.body.removeChild(ta)
-        this.$message.success('密码已复制到剪贴板')
+        await resetStudentPassword({
+          classId: this.selectedClassId,
+          studentId: this.currentStudentId,
+          password: this.resetPasswordValue,
+        })
+        const text = `您的新密码为${this.resetPasswordValue}`
+        try {
+          await navigator.clipboard.writeText(text)
+          this.$message.success('密码重置成功，已复制到剪贴板')
+        } catch {
+          const ta = document.createElement('textarea')
+          ta.value = text
+          document.body.appendChild(ta)
+          ta.select()
+          document.execCommand('copy')
+          document.body.removeChild(ta)
+          this.$message.success('密码重置成功，已复制到剪贴板')
+        }
+        this.showResetPasswordDialog = false
+        this.resetPasswordValue = ''
+      } finally {
+        this.resetPasswordLoading = false
       }
-      this.showResetPasswordDialog = false
-      this.resetPasswordValue = ''
     },
     handleAddClass() {
       this.showAddClassDialog = true
@@ -1131,6 +1220,7 @@ export default {
     _mapDetailNode(node) {
       if (node.type === '1') {
         return {
+          id: node.id || node.lessonId || '',
           type: 'group',
           nodeType: node.type,
           title: node.name || '',
@@ -1148,6 +1238,7 @@ export default {
           timeStart = (parts[1] || '').substring(0, 5)
         }
         return {
+          id: node.id || node.lessonId || '',
           type: 'live',
           nodeType: node.type,
           title: node.name || live.name || '',
@@ -1166,6 +1257,7 @@ export default {
         const res = node.resource || node.historyLesson || {}
         const sizeStr = res.size ? `${res.size}${res.unit || ''}` : ''
         return {
+          id: node.id || node.lessonId || '',
           type: 'resource',
           nodeType: node.type,
           title: node.name || res.name || res.fileName || '',
@@ -1541,17 +1633,16 @@ flex-direction: column;
 justify-content: space-between;
 }
 .app_container_box_right_last_list_detail_top{
-  padding: 15px;
+  padding: 0 15px 15px 15px;
   box-sizing: border-box;
   display: inline-flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-end;
-  gap: 5px;
 }
 .app_container_box_right_last_list_detail_top_options{
-  width: 20px;
-  height: 4px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
 }
 .app_container_box_right_last_list_detail_top_mess{
@@ -1603,6 +1694,26 @@ border-radius: 8px 8px 8px 8px;
 display: flex;
 flex-direction: column;
 justify-content: flex-start;
+position: relative;
+}
+.app_container_box_right_last_list_detailCourse_options{
+  position: absolute;
+  top: 13px;
+  right: 13px;
+}
+.app_container_box_right_last_list_detailCourse_options_box{
+  width: 34px;
+height: 12px;
+background: #0049FF;
+border-radius: 7px 7px 7px 7px;
+display: flex;
+justify-content: center;
+align-items: center;
+cursor: pointer;
+}
+.app_container_box_right_last_list_detailCourse_options_icon{
+  width: 20px;
+  height: 4px;
 }
 .app_container_box_right_last_list_detailCourse_fm{
   width: 100%;
@@ -2078,6 +2189,7 @@ color: #333333;
 .cdi-options-dot {
   width: 36px;
   height: 36px;
+  cursor: pointer;
 }
 
 /* 分组标题行 */

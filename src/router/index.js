@@ -46,6 +46,12 @@ const routes = [
     meta: { title: '公告', icon: 'el-icon-chat-dot-round', keepAlive: true }
   },
   {
+    path: '/learningProgress',
+    name: 'LearningProgress',
+    component: () => import('@/views/LearningProgress/index.vue'),
+    meta: { title: '学习进度', icon: 'el-icon-chat-dot-round', keepAlive: true }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
     // 根据角色动态决定首页：学生 → /student/home，其他 → /home
