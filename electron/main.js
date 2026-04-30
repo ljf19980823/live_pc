@@ -367,9 +367,9 @@ function createWindow () {
     : path.join(__dirname, '../build/icon.icns')
 
   mainWindow = new BrowserWindow({
-    width: 1280,
+    width: 1320,
     height: 720,
-    minWidth: 1280,
+    minWidth: 1320, //1280
     minHeight: 720,
     show: false,
     title: '立升直播',

@@ -261,7 +261,8 @@ $header-h: $header-height;
 // ─── 侧边栏 ───────────────────────────────────────────────────
 .layout-sidebar {
   width: $nav-width;
-  padding: 50px 16px 45px;
+  // padding: 119px 16px 45px;
+  padding: 70px 16px 45px;
   box-sizing: border-box;
   height: 100%;
   background: #F0F3F6;
