@@ -38,7 +38,7 @@
 
       <div class="placeholder_last_top">
         <div class="placeholder_last_top_total">共有 {{ liveCourses.length }} 节课</div>
-        <div class="placeholder_last_top_btn">查看课表</div>
+        <div class="placeholder_last_top_btn" @click="openSchedule">查看课表</div>
         <img src="@/assets/images/liveClass/refresh.png" class="placeholder_last_top_sx" alt="" @click="fetchLiveList">
       </div>
       <div class="placeholder_last_table" v-loading="liveLoading">
@@ -348,6 +348,91 @@
       </div>
     </div>
     </transition>
+
+    <!-- 课表 -->
+    <transition name="mask-fade">
+      <div class="mask" v-if="showSchedule">
+        <div class="mask_con">
+          <div class="schedule-panel create-class-dialog">
+            <div class="masl_con_dialog_top">
+              <img src="@/assets/images/liveClass/backIcon.png" class="masl_con_dialog_top_back" alt="" @click="showSchedule = false">
+              <div>课表</div>
+            </div>
+            <div class="schedule-body">
+              <div class="schedule-body_box">
+                <!-- 日历 -->
+                <div class="schedule-calendar">
+                  <div class="schedule-cal-header">
+                    <div class="schedule-cal-nav-box">
+                      <i class="el-icon-arrow-left schedule-cal-nav" @click="prevScheduleMonth"></i>
+                    </div>
+                    <div class="schedule-cal-selects">
+                      <el-select v-model="scheduleMonth" size="mini" class="schedule-cal-select-month" :clearable="false">
+                        <el-option v-for="(m, i) in monthNames" :key="i" :label="m" :value="i" />
+                      </el-select>
+                      <el-select v-model="scheduleYear" size="mini" class="schedule-cal-select-year" :clearable="false">
+                        <el-option v-for="y in yearRange" :key="y" :label="y + ''" :value="y" />
+                      </el-select>
+                    </div>
+                    <div class="schedule-cal-nav-box">
+                      <i class="el-icon-arrow-right schedule-cal-nav" @click="nextScheduleMonth"></i>
+                    </div>
+                  </div>
+                  <div class="schedule-cal-weekdays">
+                    <div v-for="d in weekDays" :key="d" class="schedule-cal-weekday">{{ d }}</div>
+                  </div>
+                  <div class="schedule-cal-grid">
+                    <div
+                      v-for="(cell, idx) in calendarCells"
+                      :key="idx"
+                      class="schedule-cal-cell"
+                      :class="{
+                        'is-other-month': !cell.currentMonth,
+                        'is-today': cell.isToday,
+                        'is-selected': cell.dateStr === scheduleSelectedDate,
+                        'has-class': cell.hasClass
+                      }"
+                      @click="cell.currentMonth && selectScheduleDate(cell.dateStr)"
+                    >
+                      {{ cell.day }}
+                      <span v-if="cell.hasClass && cell.currentMonth" class="schedule-cal-dot"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 课程列表 -->
+                <div class="schedule-list" v-if="scheduleSelectedDate">
+                  <div class="schedule-list-title">
+                    {{ scheduleSelectedDateLabel }}（共{{ scheduleCoursesForDate.length }}节）
+                  </div>
+                  <div class="schedule-timeline" v-if="scheduleCoursesForDate.length > 0">
+                    <div
+                      v-for="(course, idx) in scheduleCoursesForDate"
+                      :key="idx"
+                      class="schedule-timeline-item"
+                    >
+                      <div class="schedule-timeline-left">
+                        <div class="schedule-timeline-dot">
+                          <div class="schedule-timeline-dot_white"></div>
+                        </div>
+                        <div class="schedule-timeline-line" v-if="idx < scheduleCoursesForDate.length - 1"></div>
+                      </div>
+                      <div class="schedule-timeline-content">
+                        <div class="schedule-timeline-time">{{ course.startTime }}-{{ course.endTime }}</div>
+                        <div class="schedule-timeline-name">{{ course.name }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="schedule-empty" v-else>
+                    <div class="schedule-empty-text">暂无课程</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -398,7 +483,15 @@ export default {
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
       recordMode: 0,
       recordModeOptions: ['无头像录制', '录老师头像', '录制课堂', '仅录老师头像'],
-      createClassId: ''
+      createClassId: '',
+
+      showSchedule: false,
+      scheduleYear: new Date().getFullYear(),
+      scheduleMonth: new Date().getMonth(),
+      scheduleSelectedDate: '',
+      weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+      monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+      scheduleMockData: {}
     }
   },
   watch: {
@@ -451,6 +544,75 @@ export default {
     clearTimeout(this._searchTimer)
   },
   computed: {
+    yearRange() {
+      const cur = new Date().getFullYear()
+      const arr = []
+      for (let y = cur - 3; y <= cur + 5; y++) arr.push(y)
+      return arr
+    },
+    scheduleDataByDate() {
+      const map = {}
+      const allCourses = [...(this.liveCourses || []), ...(this.historyCourses || [])]
+      allCourses.forEach(item => {
+        const st = item.startTime || item.time || ''
+        if (!st) return
+        const dateStr = st.substring(0, 10)
+        if (!map[dateStr]) map[dateStr] = []
+        const timeStart = st.length >= 16 ? st.substring(11, 16) : ''
+        const et = item.endTime || ''
+        const timeEnd = et.length >= 16 ? et.substring(11, 16) : ''
+        map[dateStr].push({
+          startTime: timeStart,
+          endTime: timeEnd,
+          name: item.title || item.name || ''
+        })
+      })
+      // merge mock data
+      Object.keys(this.scheduleMockData).forEach(d => {
+        if (!map[d]) map[d] = []
+        map[d].push(...this.scheduleMockData[d])
+      })
+      return map
+    },
+    calendarCells() {
+      const pad = n => String(n).padStart(2, '0')
+      const year = this.scheduleYear
+      const month = this.scheduleMonth
+      const firstDayOfWeek = new Date(year, month, 1).getDay()
+      const daysInMonth = new Date(year, month + 1, 0).getDate()
+      const daysInPrevMonth = new Date(year, month, 0).getDate()
+      const today = new Date()
+      const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+      const cells = []
+
+      for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+        const d = daysInPrevMonth - i
+        const pm = month === 0 ? 12 : month
+        const py = month === 0 ? year - 1 : year
+        cells.push({ day: d, dateStr: `${py}-${pad(pm)}-${pad(d)}`, currentMonth: false, isToday: false, hasClass: false })
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`
+        cells.push({ day: d, dateStr, currentMonth: true, isToday: dateStr === todayStr, hasClass: !!(this.scheduleDataByDate[dateStr]?.length) })
+      }
+      const remaining = 42 - cells.length
+      for (let d = 1; d <= remaining; d++) {
+        const nm = month === 11 ? 1 : month + 2
+        const ny = month === 11 ? year + 1 : year
+        cells.push({ day: d, dateStr: `${ny}-${pad(nm)}-${pad(d)}`, currentMonth: false, isToday: false, hasClass: false })
+      }
+      return cells
+    },
+    scheduleCoursesForDate() {
+      if (!this.scheduleSelectedDate) return []
+      return this.scheduleDataByDate[this.scheduleSelectedDate] || []
+    },
+    scheduleSelectedDateLabel() {
+      if (!this.scheduleSelectedDate) return ''
+      const parts = this.scheduleSelectedDate.split('-')
+      return `${parseInt(parts[1])}月${parseInt(parts[2])}日`
+    },
+
     startTimePickerOptions() {
       const now = new Date()
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -540,6 +702,70 @@ export default {
         this.fetchLiveList()
       } catch (e) {
         this.$message.error(e?.message || '创建失败，请重试')
+      }
+    },
+
+    openSchedule() {
+      const now = new Date()
+      this.scheduleYear = now.getFullYear()
+      this.scheduleMonth = now.getMonth()
+      const pad = n => String(n).padStart(2, '0')
+      const y = now.getFullYear()
+      const m = pad(now.getMonth() + 1)
+      this.scheduleSelectedDate = `${y}-${m}-${pad(now.getDate())}`
+
+      // mock 数据：10 条，分布在当月不同日期
+      const offsets = [0, 1, 3, 5, 7, 8, 10, 12, 15, 18]
+      const names = [
+        '数学基础课堂', '英语口语课堂', '物理实验课堂', '化学专题课堂',
+        '语文写作课堂', '历史文化课堂', '地理探索课堂', '生物科学课堂',
+        '政治理论课堂', '艺术鉴赏课堂'
+      ]
+      const times = [
+        ['09:00', '10:30'], ['10:45', '12:15'], ['14:00', '15:30'],
+        ['15:45', '17:15'], ['19:00', '20:30'], ['08:30', '10:00'],
+        ['13:00', '14:40'], ['16:00', '17:40'], ['18:30', '20:00'], ['20:15', '21:45']
+      ]
+      const mockData = {}
+      offsets.forEach((offset, idx) => {
+        const d = new Date(y, now.getMonth(), now.getDate() + offset)
+        // 保持在当月范围内
+        if (d.getMonth() !== now.getMonth()) return
+        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+        if (!mockData[dateStr]) mockData[dateStr] = []
+        mockData[dateStr].push({
+          startTime: times[idx][0],
+          endTime: times[idx][1],
+          name: names[idx]
+        })
+        // 第 3、7 条额外再插一节到同一天，模拟多节课
+        if (idx === 2) {
+          mockData[dateStr].push({ startTime: '16:00', endTime: '17:30', name: '物理习题课堂' })
+        }
+        if (idx === 6) {
+          mockData[dateStr].push({ startTime: '15:00', endTime: '16:30', name: '地理图文课堂' })
+        }
+      })
+      this.scheduleMockData = mockData
+      this.showSchedule = true
+    },
+    selectScheduleDate(dateStr) {
+      this.scheduleSelectedDate = dateStr
+    },
+    prevScheduleMonth() {
+      if (this.scheduleMonth === 0) {
+        this.scheduleMonth = 11
+        this.scheduleYear -= 1
+      } else {
+        this.scheduleMonth -= 1
+      }
+    },
+    nextScheduleMonth() {
+      if (this.scheduleMonth === 11) {
+        this.scheduleMonth = 0
+        this.scheduleYear += 1
+      } else {
+        this.scheduleMonth += 1
       }
     },
 
@@ -1683,5 +1909,225 @@ align-items: center;
 font-weight: bold;
 font-size: 14px;
 color: #FFFFFF
+}
+
+/* ── 课表面板 ───────────────────────────────────────────────── */
+.schedule-panel {
+  width: 632px;
+  height: 100%;
+  background: #F3F4F8;
+  border-radius: 8px 0 0 8px;
+  display: flex;
+  flex-direction: column;
+}
+.schedule-body {
+  height: 0;
+  flex: 1;
+  padding: 20px 16px;
+border-radius: 8px 8px 8px 8px;
+}
+.schedule-body_box{
+    overflow-y: auto;
+  height: 100%;
+  background: #FFFFFF;
+border-radius: 8px 8px 8px 8px;
+padding: 43px 30px 30px;
+box-sizing: border-box;
+}
+/* 日历整体卡片 */
+.schedule-calendar {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  border-radius: 16px 16px 16px 16px;
+border: 1px solid #F3F4F8;
+}
+
+/* 日历头部 */
+.schedule-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.schedule-cal-selects {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+.schedule-cal-select-month {
+  width: 90px !important;
+}
+.schedule-cal-select-year {
+  width: 82px !important;
+}
+.schedule-cal-nav-box {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.schedule-cal-nav-box:hover {
+  background: #f0f0f0;
+}
+.schedule-cal-nav {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 星期行 */
+.schedule-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+}
+.schedule-cal-weekday {
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+  padding: 4px 0;
+}
+
+/* 日期格子 */
+.schedule-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px 0;
+}
+.schedule-cal-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+  user-select: none;
+}
+.schedule-cal-cell:hover:not(.is-other-month) {
+  background: #EEF2FF;
+}
+.schedule-cal-cell.is-other-month {
+  color: #ccc;
+  cursor: default;
+}
+.schedule-cal-cell.is-today {
+  background: #0049FF;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 8px;
+}
+.schedule-cal-cell.is-today:hover {
+  background: #0049FF;
+}
+.schedule-cal-cell.is-selected:not(.is-today) {
+  background: #EEF2FF;
+  color: #0049FF;
+  font-weight: bold;
+}
+.schedule-cal-cell.has-class:not(.is-today) {
+  background: #F0F0F0;
+  border-radius: 8px;
+}
+.schedule-cal-cell.has-class.is-selected:not(.is-today) {
+  background: #EEF2FF;
+}
+.schedule-cal-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #0049FF;
+}
+.schedule-cal-cell.is-today .schedule-cal-dot {
+  background: #fff;
+}
+
+/* 课程列表 */
+.schedule-list {
+  margin-top: 60px;
+}
+.schedule-list-title {
+ font-size: 16px;
+ color: #333333;
+  margin-bottom: 16px;
+}
+.schedule-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.schedule-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 0;
+}
+.schedule-timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // padding-top: 10px;
+}
+.schedule-timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #71A0FF;
+  flex-shrink: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.schedule-timeline-dot_white{
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+}
+.schedule-timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: #0049FF;
+  margin: 2px 0;
+}
+.schedule-timeline-content {
+  flex: 1;
+  background: #F3F4F8;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+.schedule-timeline-time {
+  font-size: 14px;
+  color: #666666;
+  margin-bottom: 12px;
+}
+.schedule-timeline-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 400;
+}
+.schedule-empty {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+.schedule-empty-text {
+  font-size: 14px;
+  color: #999;
 }
 </style>
