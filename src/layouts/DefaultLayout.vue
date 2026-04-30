@@ -262,7 +262,7 @@ $header-h: $header-height;
 .layout-sidebar {
   width: $nav-width;
   // padding: 119px 16px 45px;
-  padding: 70px 16px 45px;
+  padding: 60px 16px 45px;
   box-sizing: border-box;
   height: 100%;
   background: #F0F3F6;

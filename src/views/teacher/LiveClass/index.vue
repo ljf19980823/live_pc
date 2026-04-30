@@ -15,7 +15,7 @@
             <img src="@/assets/images/liveClass/bk_icon.png" class="page_top_right_fixed_bk_icon" alt="">
             <div class="page_top_right_fixed_bk_text">备课</div>
           </div>
-          <div class="page_top_right_fixed_add">
+          <div class="page_top_right_fixed_add" @click="showCreateClass = true">
             <img src="@/assets/images/liveClass/add_icon.png" class="page_top_right_fixed_add_icon" alt="">
             <div class="page_top_right_fixed_add_text">新建课堂</div>
           </div>
@@ -66,7 +66,11 @@
             <div
               class="placeholder_last_table_detail_last"
               :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
-            >进入直播</div>
+            >进入直播
+              
+              <img src="@/assets/images/liveClass/no_del.png" style="cursor:not-allowed" v-if="item.status == 'living'" class="placeholder_last_table_detail_last_del" alt="">
+              <img src="@/assets/images/liveClass/yes_del.png" style="cursor:pointer" v-else class="placeholder_last_table_detail_last_del" alt="">
+            </div>
           </div>
           <empty-state v-if="liveCourses.length === 0" description="暂无直播课堂" />
         </template>
@@ -232,11 +236,123 @@
         </div>
       </div>
     </transition>
+
+
+    <!-- 新建课堂 -->
+    <transition name="mask-fade">
+    <div class="mask" v-if="showCreateClass">
+      <div class="mask_con"  >
+          <div class="masl_con_dialog create-class-dialog" >
+            <div class="masl_con_dialog_top" @click="showCreateClass = false">
+              <img src="@/assets/images/liveClass/backIcon.png" class="masl_con_dialog_top_back" alt="" @click="showCreateClass = false">
+              <div>新建课堂</div>
+            </div>
+            <div class="masl_con_dialog_last">
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_detail">
+                  <el-input style="width:100%" placeholder="输入课堂名称" v-model="name"  maxlength="40"
+            show-word-limit></el-input>
+                </div>
+                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <div class="masl_con_dialog_last_shadow_detail">
+                  <el-input  style="width:100%" placeholder="输入描述信息" v-model="instr"   maxlength="40"
+            show-word-limit></el-input>
+                </div>
+              </div>
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_top">
+                  <div class="masl_con_dialog_last_shadow_top_detail">
+                    <img src="@/assets/images/liveClass/timeIcon.png" class="masl_con_dialog_last_shadow_top_detail_icon" alt="">
+                    <el-date-picker
+                      v-model="classStartTime"
+                      type="datetime"
+                      placeholder="选择上课时间"
+                      format="yyyy-MM-dd HH:mm"
+                      value-format="yyyy-MM-dd HH:mm"
+                      :clearable="false"
+                      class="class-time-picker"
+                      :picker-options="startTimePickerOptions"
+                    />
+                  </div>
+                  <div class="masl_con_dialog_last_shadow_top_detail">
+                    <div class="masl_con_dialog_last_shadow_top_detail_text">上课时长:</div>
+                    <el-select v-model="classDuration" class="class-duration-select" :clearable="false">
+                      <el-option
+                        v-for="item in durationOptions"
+                        :key="item"
+                        :label="item + '分钟'"
+                        :value="item"
+                      />
+                    </el-select>
+                  </div>
+                </div>
+                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <div class="masl_con_dialog_last_shadow_second">
+                  <div class="masl_con_dialog_last_shadow_second_label">上课对象：</div>
+                  <div class="masl_con_dialog_last_shadow_second_choose">
+                    <div class="masl_con_dialog_last_shadow_second_choose_detail">
+                      <img src="@/assets/images/liveClass/yes.png" class="masl_con_dialog_last_shadow_second_choose_detail_no" alt="">
+                      <!-- <img src="@/assets/images/liveClass/no.png" class="masl_con_dialog_last_shadow_second_choose_detail_no" alt=""> -->
+                      <div class="masl_con_dialog_last_shadow_second_choose_detail_text">学生</div>
+                    </div>
+                     <div class="masl_con_dialog_last_shadow_second_choose_detail">
+                      <img src="@/assets/images/liveClass/disabled.png" class="masl_con_dialog_last_shadow_second_choose_detail_no" alt="">
+                      <div class="masl_con_dialog_last_shadow_second_choose_detail_text">老师</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <el-select
+                  v-model="createClassId"
+                  placeholder="选择班级"
+                  class="masl_con_dialog_last_shadow_third"
+                  clearable
+                  filterable
+                >
+                  <el-option
+                    v-for="cls in classList"
+                    :key="cls.value"
+                    :label="cls.label"
+                    :value="cls.value"
+                  />
+                </el-select>
+              </div>
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_four">
+                  <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
+                  <div class="masl_con_dialog_last_shadow_four_text">录制方式：</div> 
+                </div>
+                 <div class="masl_con_dialog_last_shadow_hx"></div>
+                 <div class="masl_con_dialog_last_shadow_five">
+                    <div
+                      v-for="(item, index) in recordModeOptions"
+                      :key="index"
+                      class="masl_con_dialog_last_shadow_second_choose_detail"
+                      @click="recordMode = index"
+                    >
+                      <img
+                        :src="recordMode === index ? require('@/assets/images/liveClass/yes.png') : require('@/assets/images/liveClass/no.png')"
+                        class="masl_con_dialog_last_shadow_second_choose_detail_no"
+                        alt=""
+                      >
+                      <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item }}</div>
+                    </div>
+                 </div>
+              </div>
+              <div class="masl_con_dialog_last_btn">
+                <div class="masl_con_dialog_last_btn_cancel" @click="showCreateClass = false">取消</div>
+                <div class="masl_con_dialog_last_btn_confirm" @click="handleCreateClass">确定</div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+    </transition>
   </div>
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 
 export default {
@@ -273,9 +389,39 @@ export default {
       liveLoading: false,
       historyLoading: false,
       _searchTimer: null,
+
+      name:'',
+      instr:'',
+      showCreateClass: false,
+      classStartTime: '',
+      classDuration: 240,
+      durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
+      recordMode: 0,
+      recordModeOptions: ['无头像录制', '录老师头像', '录制课堂', '仅录老师头像'],
+      createClassId: ''
     }
   },
   watch: {
+    showCreateClass(val) {
+      if (val) {
+        const now = new Date()
+        const pad = n => String(n).padStart(2, '0')
+        this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+        this.classDuration = 240
+        this.recordMode = 0
+        this.createClassId = ''
+        const userName = this.$store.getters['user/userName'] || ''
+        this.name = userName ? `${userName}的课堂` : ''
+        this.fetchClassList()
+      } else {
+        this.name = ''
+        this.instr = ''
+        this.classStartTime = ''
+        this.classDuration = 240
+        this.recordMode = 0
+        this.createClassId = ''
+      }
+    },
     activeTab(val) {
       if (val === 'history') {
        
@@ -303,6 +449,32 @@ export default {
   beforeDestroy() {
     this.removeIpcListeners()
     clearTimeout(this._searchTimer)
+  },
+  computed: {
+    startTimePickerOptions() {
+      const now = new Date()
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      return {
+        disabledDate(date) {
+          return date < todayStart
+        },
+        selectableRange: (() => {
+          const selected = this.classStartTime
+          if (!selected) return '00:00:00 - 23:59:59'
+          const selDate = new Date(selected.replace(' ', 'T'))
+          const isSameDay =
+            selDate.getFullYear() === now.getFullYear() &&
+            selDate.getMonth() === now.getMonth() &&
+            selDate.getDate() === now.getDate()
+          if (isSameDay) {
+            const h = String(now.getHours()).padStart(2, '0')
+            const m = String(now.getMinutes()).padStart(2, '0')
+            return `${h}:${m}:00 - 23:59:59`
+          }
+          return '00:00:00 - 23:59:59'
+        })()
+      }
+    }
   },
   methods: {
     // ── 实时课堂接口 ────────────────────────────────────────────────────
@@ -348,6 +520,29 @@ export default {
     },
 
     // ── 班级列表接口 ────────────────────────────────────────────────────
+    async handleCreateClass() {
+      if (!this.name || !this.name.trim()) {
+        this.$message.warning('请输入课堂名称')
+        return
+      }
+      try {
+        const params = {
+          name: this.name.trim(),
+          description: this.instr,
+          startTime: this.classStartTime,
+          duration: this.classDuration,
+          classId: this.createClassId,
+          recordMode: this.recordMode
+        }
+        await createLiveClass(params)
+        this.$message.success('课堂创建成功')
+        this.showCreateClass = false
+        this.fetchLiveList()
+      } catch (e) {
+        this.$message.error(e?.message || '创建失败，请重试')
+      }
+    },
+
     async fetchClassList() {
       if (this.classList.length) return
       try {
@@ -644,6 +839,7 @@ export default {
   right: 0;
 }
 .placeholder_last_table_detail_last {
+  position: relative;
   width: 100%;
   height: 43px;
   background: rgba(202, 217, 255, 0.2);
@@ -656,10 +852,18 @@ export default {
   font-size: 14px;
   color: #0049ff;
 }
+.placeholder_last_table_detail_last_del{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  width: 15px;
+  height: 16px;
+}
 .placeholder_last_table_detail_last_disable {
   font-weight: bold;
   font-size: 14px;
-  color: #666666 !important;
+  color: #999999 !important;
   cursor: not-allowed !important;
 }
 .placeholder_last_table_detail_top {
@@ -1203,5 +1407,281 @@ export default {
 
 ::v-deep .el-input--mini .el-input__icon{
   line-height: 1!important;
+}
+
+
+
+.class-time-picker {
+  width: 175px !important;
+}
+.class-time-picker .el-input__inner {
+  border: none;
+  background: transparent;
+  padding: 0;
+  height: 28px;
+  line-height: 28px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+.class-time-picker .el-input__prefix {
+  display: none;
+}
+.class-duration-select {
+  width: 110px !important;
+}
+.class-duration-select .el-input__inner {
+  border: none;
+  background: transparent;
+  padding: 0 20px 0 0;
+  height: 28px;
+  line-height: 28px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+
+.mask-fade-enter-active {
+  animation: maskFadeIn 0.35s ease;
+}
+.mask-fade-leave-active {
+  animation: maskFadeOut 0.35s ease;
+}
+@keyframes maskFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes maskFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.mask-fade-enter-active .create-class-dialog {
+  animation: slideInFromRight 0.35s ease;
+}
+.mask-fade-leave-active .create-class-dialog {
+  animation: slideOutToRight 0.35s ease;
+}
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes slideOutToRight {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+.mask{
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(51, 51, 51, 0.60);
+  z-index: 1022;
+  overflow: hidden;
+}
+.mask_con{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.masl_con_dialog{
+    width: 632px;
+    height: 100%;
+    position: relative;
+    background: #F3F4F8;
+    background-size: 100% 100%;
+    border-radius: 8px 0px 0px 8px;
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    
+}
+.masl_con_dialog_top{
+  padding: 18px 18px 32px 18px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  font-weight: bold;
+font-size: 18px;
+color: #333333;
+}
+.masl_con_dialog_top_back{
+  width: 7px;
+  height: 14px;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 18px;
+}
+.masl_con_dialog_last{
+  flex: 1;
+  width: 100%;
+  height: 0;
+  padding: 0 18px 18px 18px;
+  box-sizing: border-box;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 20px;
+}
+.masl_con_dialog_last_shadow{
+  width: 100%;
+  padding: 17px 22px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 8px 8px 8px 8px;
+ ::v-deep .el-input__inner {
+    padding:0 15px 0 0 !important;
+    font-size: 14px;
+    color: #333333;
+    background: transparent;
+  }
+  ::v-deep .el-input__icon{
+    display: none!important;
+  }
+}
+.masl_con_dialog_last_shadow_detail{
+  width: 100%;
+  
+}
+.masl_con_dialog_last_shadow_hx{
+  height: 1px;
+  width: 100%;
+background: #F3F4F8;
+margin: 13px 0;
+}
+.masl_con_dialog_last_shadow_top{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+.masl_con_dialog_last_shadow_top_detail{
+  width: 50%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+.masl_con_dialog_last_shadow_top_detail_icon{
+  width: 16px;
+  height: 16px;
+}
+.masl_con_dialog_last_shadow_top_detail_text{
+font-weight: 400;
+font-size: 14px;
+color: #333333;
+
+}
+.masl_con_dialog_last_shadow_second{
+  width: 100%;
+}
+.masl_con_dialog_last_shadow_second_label{
+  font-weight: 400;
+font-size: 14px;
+color: #333333;
+}
+.masl_con_dialog_last_shadow_second_choose{
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  gap: 87px;
+  align-items: center;
+  margin-top: 15px;
+}
+.masl_con_dialog_last_shadow_second_choose_detail{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.masl_con_dialog_last_shadow_second_choose_detail_no{
+  width: 16px;
+  height: 16px;
+}
+.masl_con_dialog_last_shadow_second_choose_detail_text{
+font-weight: 400;
+font-size: 14px;
+color: #333333;
+}
+.masl_con_dialog_last_shadow_third{
+  width: 100% !important;
+  font-weight: 400;
+  font-size: 14px;
+  color: #333333;
+}
+.masl_con_dialog_last_shadow_third .el-input__inner {
+  border: none;
+  background: transparent;
+  padding-left: 0;
+  font-size: 14px;
+  color: #333333;
+  height: 32px;
+  line-height: 32px;
+}
+.masl_con_dialog_last_shadow_four{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+.masl_con_dialog_last_shadow_four_icon{
+  width: 16px;
+  height: 16px;
+}
+.masl_con_dialog_last_shadow_four_text{
+  font-weight: 400;
+  font-size: 14px;
+  color: #333333;
+}
+.masl_con_dialog_last_shadow_five{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+}
+.masl_con_dialog_last_btn{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 21px;
+}
+.masl_con_dialog_last_btn_cancel{
+  width: 67px;
+height: 32px;
+border-radius: 4px 4px 4px 4px;
+border: 1px solid #999999;
+cursor: pointer;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #333333;
+font-size: 14px;
+font-weight: bold;
+}
+.masl_con_dialog_last_btn_confirm{
+  cursor: pointer;
+  width: 67px;
+height: 32px;
+background: #0049FF;
+border-radius: 4px 4px 4px 4px;
+display: flex;
+justify-content: center;
+align-items: center;
+font-weight: bold;
+font-size: 14px;
+color: #FFFFFF
 }
 </style>

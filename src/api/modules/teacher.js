@@ -52,6 +52,9 @@ export const getCourseDetail = params => get('/edu/course/detail', params)
 // 重置学生密码
 export const resetStudentPassword = data => post('/edu/class/students/resetPassword', data)
 
+// 创建课堂
+export const createLiveClass = params => post('/edu/live/create', params)
+
 // 获取课时学习进度列表
 export const getLessonProgress = params => get('/edu/course/lesson/progress', params)
 
