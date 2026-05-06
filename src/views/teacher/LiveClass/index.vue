@@ -804,9 +804,11 @@ export default {
 
     // ── 检查版本更新 ────────────────────────────────────────────────────
     async checkUpdate() {
+      console.log('开始检查更新')
       if (!window.electronAPI?.checkForUpdate) return
       try {
         const result = await window.electronAPI.checkForUpdate()
+        console.log('输出',result)
         if (result && result.hasUpdate) {
           this.updateInfo = {
             version: result.version || '新版本',
