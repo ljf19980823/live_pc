@@ -431,12 +431,44 @@ function createWindow () {
  */
 function downloadFileWithProgress (url, destPath, onProgress) {
   return new Promise((resolve, reject) => {
-    const doRequest = (reqUrl) => {
-      const mod = reqUrl.startsWith('https') ? https : http
-      mod.get(reqUrl, (response) => {
-        // 跟随重定向
-        if (response.statusCode === 301 || response.statusCode === 302) {
-          doRequest(response.headers.location)
+    /** 解析最终 href，并处理相对路径 / 协议相对 // / 大小写 HTTPS: */
+    const toAbsoluteHref = (reqUrl, baseHref) => {
+      const s = String(reqUrl).trim()
+      const base = baseHref || 'https://_/'
+      try {
+        return new URL(s, base).href
+      } catch {
+        throw new Error(`无效的下载地址: ${s}`)
+      }
+    }
+
+    const moduleForHref = (href) => {
+      const proto = new URL(href).protocol
+      if (proto === 'https:') return https
+      if (proto === 'http:') return http
+      throw new Error(`不支持的协议: ${proto}`)
+    }
+
+    const doRequest = (reqUrl, baseHref) => {
+      let href
+      try {
+        href = toAbsoluteHref(reqUrl, baseHref)
+      } catch (e) {
+        reject(e)
+        return
+      }
+
+      const mod = moduleForHref(href)
+      mod.get(href, (response) => {
+        const code = response.statusCode
+        // 跟随重定向（含相对 Location）
+        if (code === 301 || code === 302 || code === 303 || code === 307 || code === 308) {
+          const loc = response.headers.location
+          if (!loc) {
+            reject(new Error('重定向响应缺少 Location'))
+            return
+          }
+          doRequest(loc, href)
           return
         }
         if (response.statusCode !== 200) {
