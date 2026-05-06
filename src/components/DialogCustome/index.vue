@@ -4,10 +4,10 @@
        <div class="masl_con_dialog" :style="{ width: width, height: height }">
            <img src="@/assets/images/close.png" v-if="showClose" class="dialog_close" alt="" @click="handleClose">
            <div class="masl_con_dialog_top">{{ title }}</div>
-           <div class="masl_con_dialog_center">
+           <div class="masl_con_dialog_center"  :style="{ backgroundColor: bgColor }">
              <slot></slot>
            </div>
-           <div class="masl_con_dialog_last" v-if="showCancel || showConfirm">
+           <div class="masl_con_dialog_last" v-if="showCancel || showConfirm" >
               <div class="masl_con_dialog_last_cancel" v-if="showCancel" @click="handleCancel">{{ cancelText }}</div>
               <div class="masl_con_dialog_last_cobfirm" :class="{ 'is-loading': confirmLoading }" v-if="showConfirm" @click="!confirmLoading && handleConfirm()">
                 <span v-if="confirmLoading" class="loading-spinner"></span>
@@ -64,6 +64,10 @@ export default {
     confirmLoading: {
       type: Boolean,
       default: false
+    },
+    bgColor: {
+      type: String,
+      default: ''
     }
   },
   methods: {

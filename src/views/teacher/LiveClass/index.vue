@@ -48,7 +48,7 @@
             <div class="placeholder_last_table_detail_top">
               <div class="placeholder_last_table_detail_top_top">
                 <div class="placeholder_last_table_detail_top_top_title">{{ item.title }}</div>
-                <div class="placeholder_last_table_detail_top_top_xq">
+                <div class="placeholder_last_table_detail_top_top_xq" @click.stop="openDetail(item)">
                   <div class="placeholder_last_table_detail_top_top_xq_text">详情</div>
                   <img src="@/assets/images/liveClass/xq_icon.png" class="placeholder_last_table_detail_top_top_xq_icon" alt="">
                 </div>
@@ -433,16 +433,85 @@
         </div>
       </div>
     </transition>
+
+    <!-- 课程详情弹窗 -->
+    <dialog-custome
+      :visible="showDetailDialog"
+      title="直播详情"
+      width="490px"
+      height="596px"
+      :bg-color="'#FFFFFF'"
+      @close="onDialogCloseAdd"
+      :show-cancel="false"
+      :show-confirm="false"
+      :show-close="true"
+      @cancel="showDetailDialog = false"
+    >
+      <div class="cdc-wrap" v-if="selectedCourseItem">
+        <div class="cdc-liveTitle">{{selectedCourseItem.title}}</div>
+        <div class="cdc-info-row">
+          <span class="cdc-label">直播详情：</span>
+          <span class="cdc-value">{{ selectedCourseItem.description || '-' }}</span>
+        </div>
+        <div class="cdc-info-row">
+          <span class="cdc-label">主讲老师：</span>
+          <span class="cdc-value">{{ selectedCourseItem.teacherName || '-' }}</span>
+        </div>
+        <div class="cdc-info-row">
+          <span class="cdc-label">参与班级：</span>
+          <span class="cdc-value">{{ selectedCourseItem.className || '-' }}</span>
+        </div>
+
+        <div class="cdc-divider"></div>
+
+        <div class="cdc-share-header">
+          <span class="cdc-share-label">分享链接</span>
+          <el-switch v-model="detailShareEnabled" active-color="#0049FF"></el-switch>
+        </div>
+
+        <template v-if="detailShareEnabled">
+          <div class="cdc-share-url-row">
+            <div class="cdc-share-url">{{ selectedCourseItem.shareUrl || '' }}</div>
+           
+          <img  @click="copyShareLink" src="@/assets/images/liveClass/copy_icon.png" class="cdc-copy-icon" alt="" onerror="this.style.display='none'">
+       
+           
+          </div>
+          <div class="cdc-share-hint">分享直播链接，通过网页观看直播</div>
+          <div class="cdc-qr-wrap">
+            <img v-if="qrCodeUrl" :src="qrCodeUrl" class="cdc-qr-img" alt="二维码" />
+            <div v-else class="cdc-qr-placeholder"></div>
+          </div>
+          <div class="cdc-qr-hint">用微信/QQ扫码分享给任意学员</div>
+        </template>
+
+        <div class="cdc-bottom">
+          <div class="cdc-time-row">
+            <span class="cdc-time-text">{{ selectedCourseItem.time }}</span>
+            <span class="cdc-live-min" v-if="selectedCourseItem.status === 'living'">
+              已直播 <span class="cdc-min-num">{{ selectedCourseItem.minutes }}</span> 分钟
+            </span>
+          </div>
+          <div
+            class="cdc-enter-btn"
+            :class="{ 'cdc-enter-btn-disabled': selectedCourseItem.status !== 'living' }"
+            @click="enterLiveFromDetail"
+          >进入直播</div>
+        </div>
+      </div>
+    </dialog-custome>
+
   </div>
 </template>
 
 <script>
 import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
+import DialogCustome from '@/components/DialogCustome/index.vue'
 
 export default {
   name: 'LiveClass',
-  components: { EmptyState },
+  components: { EmptyState, DialogCustome },
   data() {
     return {
       hasUpdate: false,
@@ -484,6 +553,10 @@ export default {
       recordMode: 0,
       recordModeOptions: ['无头像录制', '录老师头像', '录制课堂', '仅录老师头像'],
       createClassId: '',
+
+      showDetailDialog: false,
+      selectedCourseItem: null,
+      detailShareEnabled: true,
 
       showSchedule: false,
       scheduleYear: new Date().getFullYear(),
@@ -617,6 +690,11 @@ export default {
       return `${parseInt(parts[1])}月${parseInt(parts[2])}日`
     },
 
+    qrCodeUrl() {
+      if (!this.selectedCourseItem || !this.selectedCourseItem.shareUrl) return ''
+      return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.selectedCourseItem.shareUrl)}&color=000000&bgcolor=ffffff&qzone=1`
+    },
+
     startTimePickerOptions() {
       const now = new Date()
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -643,6 +721,40 @@ export default {
     }
   },
   methods: {
+    // ── 课程详情弹窗 ────────────────────────────────────────────────────
+    openDetail(item) {
+      this.selectedCourseItem = item
+      this.detailShareEnabled = true
+      this.showDetailDialog = true
+    },
+    copyShareLink() {
+      const url = this.selectedCourseItem && this.selectedCourseItem.shareUrl
+      if (!url) return
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          this.$message.success('链接已复制')
+        }).catch(() => {
+          this._fallbackCopy(url)
+        })
+      } else {
+        this._fallbackCopy(url)
+      }
+    },
+    _fallbackCopy(text) {
+      const el = document.createElement('textarea')
+      el.value = text
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      this.$message.success('链接已复制')
+    },
+    enterLiveFromDetail() {
+      if (!this.selectedCourseItem || this.selectedCourseItem.status !== 'living') return
+      const id = this.selectedCourseItem.id
+      if (id) this.$router.push(`/live/room/${id}`)
+    },
+
     // ── 实时课堂接口 ────────────────────────────────────────────────────
     async fetchLiveList() {
       this.liveLoading = true
@@ -886,6 +998,9 @@ export default {
         window.electronAPI.installUpdate(this.downloadedFilePath)
       }
     },
+    onDialogCloseAdd(){
+      this.showDetailDialog = false
+    }
   }
 }
 </script>
@@ -2128,5 +2243,172 @@ border: 1px solid #F3F4F8;
 .schedule-empty-text {
   font-size: 14px;
   color: #999;
+}
+
+/* ── 课程详情弹窗内容 ──────────────────────────────────────────────────── */
+.cdc-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.cdc-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.cdc-label {
+  font-size: 14px;
+  color: #6A7282;
+  white-space: nowrap;
+}
+.cdc-value {
+  font-size: 14px;
+  color: #364153;
+  flex: 1;
+  width: 0;
+}
+.cdc-divider {
+  height: 1px;
+  background: #F3F4F8;
+  margin: 4px 0 16px;
+}
+.cdc-share-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.cdc-share-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #364153;
+}
+.cdc-share-url-row {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cdc-share-url {
+  flex: 1;
+  width: 0;
+  height: 38px;
+  font-size: 13px;
+  color: #333333;
+  padding: 0 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #F9FAFB;
+  border-radius: 10px;
+  border: 1px solid #E5E7EB;;
+}
+.cdc-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0049FF;
+  color: #ffffff;
+  font-size: 13px;
+  padding: 0 14px;
+  height: 40px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0 8px 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.cdc-copy-icon {
+  width: 80px;
+  height: 36px;
+  cursor: pointer;
+}
+.cdc-share-hint {
+  font-size: 12px;
+  color: #99A1AF;
+  margin-bottom: 8px;
+}
+.cdc-qr-wrap {
+  display: flex;
+  align-items: center;
+  margin: 0 auto ;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 144px;
+height: 144px;
+background: linear-gradient( 45deg, #F3F4F6 0%, #E5E7EB 100%);
+border-radius: 14px 14px 14px 14px;
+border: 1px solid #E5E7EB;
+}
+.cdc-qr-img {
+  width: 128px;
+  height: 128px;
+  border-radius: 10px 10px 10px 10px;
+  background: #1E2939;
+  display: block;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.cdc-qr-placeholder {
+  width: 128px;
+  height: 128px;
+  border-radius: 10px;
+  background: #1E2939;
+}
+.cdc-qr-hint {
+  font-size: 12px;
+  color: #99A1AF;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.cdc-bottom {
+  margin-top: auto;
+  padding-top: 12px;
+}
+.cdc-time-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.cdc-time-text {
+  font-size: 14px;
+  color: #6A7282;
+}
+.cdc-live-min {
+  font-size: 14px;
+  color: #364153;
+}
+.cdc-min-num {
+  color: #0049FF;
+  font-weight: bold;
+}
+.cdc-enter-btn {
+  width: 100%;
+ height: 44px;
+background: #0049FF;
+box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+border-radius: 14px 14px 14px 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  cursor: pointer;
+
+}
+.cdc-enter-btn-disabled {
+  background: #B0C4FF;
+  cursor: not-allowed;
+}
+.cdc-liveTitle{
+  font-weight: bold;
+font-size: 16px;
+color: #101828;
+margin-bottom: 12px;
 }
 </style>
