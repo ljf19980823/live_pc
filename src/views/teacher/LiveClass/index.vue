@@ -361,10 +361,10 @@
             <div class="schedule-body">
               <div class="schedule-body_box">
                 <!-- 日历 -->
-                <div class="schedule-calendar">
+                <div class="schedule-calendar" v-loading="scheduleLoading">
                   <div class="schedule-cal-header">
-                    <div class="schedule-cal-nav-box">
-                      <i class="el-icon-arrow-left schedule-cal-nav" @click="prevScheduleMonth"></i>
+                    <div class="schedule-cal-nav-box" @mousedown.prevent @click="prevScheduleMonth">
+                      <i class="el-icon-arrow-left schedule-cal-nav"></i>
                     </div>
                     <div class="schedule-cal-selects">
                       <el-select v-model="scheduleMonth" size="mini" class="schedule-cal-select-month" :clearable="false">
@@ -374,8 +374,8 @@
                         <el-option v-for="y in yearRange" :key="y" :label="y + ''" :value="y" />
                       </el-select>
                     </div>
-                    <div class="schedule-cal-nav-box">
-                      <i class="el-icon-arrow-right schedule-cal-nav" @click="nextScheduleMonth"></i>
+                    <div class="schedule-cal-nav-box" @mousedown.prevent @click="nextScheduleMonth">
+                      <i class="el-icon-arrow-right schedule-cal-nav"></i>
                     </div>
                   </div>
                   <div class="schedule-cal-weekdays">
@@ -394,7 +394,7 @@
                       }"
                       @click="cell.currentMonth && selectScheduleDate(cell.dateStr)"
                     >
-                      {{ cell.day }}
+                      <span class="schedule-cal-day-num">{{ cell.isToday ? '今' : cell.day }}</span>
                       <span v-if="cell.hasClass && cell.currentMonth" class="schedule-cal-dot"></span>
                     </div>
                   </div>
@@ -418,7 +418,7 @@
                         <div class="schedule-timeline-line" v-if="idx < scheduleCoursesForDate.length - 1"></div>
                       </div>
                       <div class="schedule-timeline-content">
-                        <div class="schedule-timeline-time">{{ course.startTime }}-{{ course.endTime }}</div>
+                        <div class="schedule-timeline-time">{{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}</div>
                         <div class="schedule-timeline-name">{{ course.name }}</div>
                       </div>
                     </div>
@@ -437,7 +437,7 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 
 export default {
@@ -491,10 +491,21 @@ export default {
       scheduleSelectedDate: '',
       weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
       monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
-      scheduleMockData: {}
+      scheduleApiData: [],
+      scheduleLoading: false
     }
   },
   watch: {
+    scheduleYear(val) {
+      if (this.showSchedule) {
+        this.fetchScheduleData(val, this.scheduleMonth + 1)
+      }
+    },
+    scheduleMonth(val) {
+      if (this.showSchedule) {
+        this.fetchScheduleData(this.scheduleYear, val + 1)
+      }
+    },
     showCreateClass(val) {
       if (val) {
         const now = new Date()
@@ -552,25 +563,18 @@ export default {
     },
     scheduleDataByDate() {
       const map = {}
-      const allCourses = [...(this.liveCourses || []), ...(this.historyCourses || [])]
-      allCourses.forEach(item => {
-        const st = item.startTime || item.time || ''
-        if (!st) return
-        const dateStr = st.substring(0, 10)
-        if (!map[dateStr]) map[dateStr] = []
-        const timeStart = st.length >= 16 ? st.substring(11, 16) : ''
-        const et = item.endTime || ''
-        const timeEnd = et.length >= 16 ? et.substring(11, 16) : ''
-        map[dateStr].push({
-          startTime: timeStart,
-          endTime: timeEnd,
-          name: item.title || item.name || ''
-        })
-      })
-      // merge mock data
-      Object.keys(this.scheduleMockData).forEach(d => {
-        if (!map[d]) map[d] = []
-        map[d].push(...this.scheduleMockData[d])
+      ;(this.scheduleApiData || []).forEach(item => {
+        const dateStr = item.date
+        if (!dateStr) return
+        map[dateStr] = (item.lives || []).map(live => ({
+          id: live.id,
+          name: live.name || '',
+          startTime: live.startTime ? live.startTime.substring(11, 16) : '',
+          endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+          status: live.status,
+          isStart: live.isStart,
+          isFinish: live.isFinish
+        }))
       })
       return map
     },
@@ -710,44 +714,20 @@ export default {
       this.scheduleYear = now.getFullYear()
       this.scheduleMonth = now.getMonth()
       const pad = n => String(n).padStart(2, '0')
-      const y = now.getFullYear()
-      const m = pad(now.getMonth() + 1)
-      this.scheduleSelectedDate = `${y}-${m}-${pad(now.getDate())}`
-
-      // mock 数据：10 条，分布在当月不同日期
-      const offsets = [0, 1, 3, 5, 7, 8, 10, 12, 15, 18]
-      const names = [
-        '数学基础课堂', '英语口语课堂', '物理实验课堂', '化学专题课堂',
-        '语文写作课堂', '历史文化课堂', '地理探索课堂', '生物科学课堂',
-        '政治理论课堂', '艺术鉴赏课堂'
-      ]
-      const times = [
-        ['09:00', '10:30'], ['10:45', '12:15'], ['14:00', '15:30'],
-        ['15:45', '17:15'], ['19:00', '20:30'], ['08:30', '10:00'],
-        ['13:00', '14:40'], ['16:00', '17:40'], ['18:30', '20:00'], ['20:15', '21:45']
-      ]
-      const mockData = {}
-      offsets.forEach((offset, idx) => {
-        const d = new Date(y, now.getMonth(), now.getDate() + offset)
-        // 保持在当月范围内
-        if (d.getMonth() !== now.getMonth()) return
-        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-        if (!mockData[dateStr]) mockData[dateStr] = []
-        mockData[dateStr].push({
-          startTime: times[idx][0],
-          endTime: times[idx][1],
-          name: names[idx]
-        })
-        // 第 3、7 条额外再插一节到同一天，模拟多节课
-        if (idx === 2) {
-          mockData[dateStr].push({ startTime: '16:00', endTime: '17:30', name: '物理习题课堂' })
-        }
-        if (idx === 6) {
-          mockData[dateStr].push({ startTime: '15:00', endTime: '16:30', name: '地理图文课堂' })
-        }
-      })
-      this.scheduleMockData = mockData
+      this.scheduleSelectedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
       this.showSchedule = true
+      this.fetchScheduleData(now.getFullYear(), now.getMonth() + 1)
+    },
+    async fetchScheduleData(year, month) {
+      this.scheduleLoading = true
+      try {
+        const res = await getScheduleList({ year: String(year), month: String(month) })
+        this.scheduleApiData = res.data || res || []
+      } catch (_) {
+        this.scheduleApiData = []
+      } finally {
+        this.scheduleLoading = false
+      }
     },
     selectScheduleDate(dateStr) {
       this.scheduleSelectedDate = dateStr
@@ -1923,7 +1903,7 @@ color: #FFFFFF
 .schedule-body {
   height: 0;
   flex: 1;
-  padding: 20px 16px;
+  padding: 0 16px 20px 16px;
 border-radius: 8px 8px 8px 8px;
 }
 .schedule-body_box{
@@ -1999,7 +1979,7 @@ border: 1px solid #F3F4F8;
 .schedule-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px 0;
+  gap: 2px 4px;
 }
 .schedule-cal-cell {
   position: relative;
@@ -2007,40 +1987,55 @@ border: 1px solid #F3F4F8;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 38px;
+  height: 36px;
   font-size: 14px;
   color: #333;
   cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.15s;
   user-select: none;
 }
-.schedule-cal-cell:hover:not(.is-other-month) {
+.schedule-cal-cell::before {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 0;
+}
+.schedule-cal-day-num {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+.schedule-cal-cell:hover:not(.is-other-month)::before {
   background: #EEF2FF;
 }
 .schedule-cal-cell.is-other-month {
   color: #ccc;
   cursor: default;
 }
-.schedule-cal-cell.is-today {
+.schedule-cal-cell.is-today::before {
   background: #0049FF;
+}
+.schedule-cal-cell.is-today {
   color: #fff;
   font-weight: bold;
-  border-radius: 8px;
 }
-.schedule-cal-cell.is-today:hover {
+.schedule-cal-cell.is-today:hover::before {
   background: #0049FF;
 }
-.schedule-cal-cell.is-selected:not(.is-today) {
+.schedule-cal-cell.is-selected:not(.is-today)::before {
   background: #EEF2FF;
+}
+.schedule-cal-cell.is-selected:not(.is-today) {
   color: #0049FF;
   font-weight: bold;
 }
-.schedule-cal-cell.has-class:not(.is-today) {
+.schedule-cal-cell.has-class:not(.is-today)::before {
   background: #F0F0F0;
-  border-radius: 8px;
 }
-.schedule-cal-cell.has-class.is-selected:not(.is-today) {
+.schedule-cal-cell.has-class.is-selected:not(.is-today)::before {
   background: #EEF2FF;
 }
 .schedule-cal-dot {
@@ -2050,6 +2045,7 @@ border: 1px solid #F3F4F8;
   height: 4px;
   border-radius: 50%;
   background: #0049FF;
+  z-index: 1;
 }
 .schedule-cal-cell.is-today .schedule-cal-dot {
   background: #fff;
@@ -2078,6 +2074,7 @@ border: 1px solid #F3F4F8;
   display: flex;
   flex-direction: column;
   align-items: center;
+  align-self: stretch;
   // padding-top: 10px;
 }
 .schedule-timeline-dot {
@@ -2098,10 +2095,10 @@ border: 1px solid #F3F4F8;
   border-radius: 50%;
 }
 .schedule-timeline-line {
-  width: 2px;
+  width: 1px;
   flex: 1;
   min-height: 24px;
-  background: #0049FF;
+  border-left: 1px dashed #71A0FF;
   margin: 2px 0;
 }
 .schedule-timeline-content {

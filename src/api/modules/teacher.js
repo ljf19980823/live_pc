@@ -60,3 +60,6 @@ export const getLessonProgress = params => get('/edu/course/lesson/progress', pa
 
 // 获取课程维度学习进度列表（班级内所有学生对该课程的进度）
 export const getCourseProgress = (courseId, classId) => get(`/edu/course/${courseId}/class/${classId}/students/progress`)
+
+// 获取课表列表
+export const getScheduleList = params => get('/edu/schedule/list', params)

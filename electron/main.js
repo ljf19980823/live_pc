@@ -15,7 +15,7 @@ const isDev = process.env.NODE_ENV === 'development'
 //   "mac_download_url": "https://example.com/app-2.0.0.dmg",
 //   "description": "更快、更稳定的2.0客户端"
 // }
-const VERSION_CHECK_URL = 'https://your-api.com/api/app/version'
+const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
 
 let mainWindow
 let screenGuardInterval = null
@@ -487,19 +487,17 @@ ipcMain.handle('check-for-update', async () => {
     if (!res.ok) return { hasUpdate: false }
 
     const json = await res.json()
-    // 兼容不同接口返回格式：根层或 data 层
     const data = json.data ?? json
-    const latestVersion = data.version
-    const winUrl = data.win_download_url
-    const macUrl = data.mac_download_url
-    const description = data.description || '更快、更稳定的新版本'
+    const latestVersion = data.systemVersion
+    const winUrl = data.windowsUrl
+    const macUrl = data.macUrl
 
     if (!latestVersion || latestVersion === currentVersion) {
       return { hasUpdate: false }
     }
 
     const downloadUrl = process.platform === 'win32' ? winUrl : macUrl
-    return { hasUpdate: true, version: latestVersion, downloadUrl, description }
+    return { hasUpdate: true, version: latestVersion, downloadUrl }
   } catch (e) {
     return { hasUpdate: false, error: e.message }
   }
