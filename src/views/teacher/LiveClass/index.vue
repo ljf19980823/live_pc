@@ -139,7 +139,7 @@
       </div>
       <div class="ls_last" v-loading="historyLoading">
         <template v-if="!historyLoading">
-          <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index">
+          <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item)">
             <div class="ls_last_detail_options">
               <div class="ls_last_detail_options_box">
                 <img src="@/assets/images/liveClass/options.png" class="ls_last_detail_options_box_img" alt="">
@@ -507,6 +507,13 @@
       </div>
     </dialog-custome>
 
+    <video-player
+      :visible="playerVisible"
+      :source="playerSource"
+      :title="playerTitle"
+      @close="playerVisible = false"
+    />
+
   </div>
 </template>
 
@@ -514,12 +521,13 @@
 import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
+import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 
 export default {
   name: 'LiveClass',
-  components: { EmptyState, DialogCustome },
+  components: { EmptyState, DialogCustome, VideoPlayer },
   data() {
     return {
       liveUrl: '',
@@ -568,6 +576,10 @@ export default {
       selectedCourseItem: null,
       detailShareEnabled: false,
       detailLoading: false,
+
+      playerVisible: false,
+      playerSource: '',
+      playerTitle: '',
 
       showSchedule: false,
       scheduleYear: new Date().getFullYear(),
@@ -748,6 +760,16 @@ export default {
     }
   },
   methods: {
+    openVideoPlayer(item) {
+      if (!item.filePath) {
+        this.$message.warning('暂无视频回放')
+        return
+      }
+      this.playerSource = item.filePath
+      this.playerTitle = item.name || '视频回放'
+      this.playerVisible = true
+    },
+
     // ── 分享链接开关 ────────────────────────────────────────────────────
     async handleShareToggle(val) {
       if (!this.selectedCourseItem) return

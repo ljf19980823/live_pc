@@ -15,6 +15,7 @@
     "electron:build:all": "vue-cli-service build --mode production && electron-builder build --win --mac"
   },
   "dependencies": {
+    "aliyun-aliplayer": "^2.37.6",
     "axios": "^1.6.8",
     "core-js": "^3.49.0",
     "echarts": "^6.0.0",

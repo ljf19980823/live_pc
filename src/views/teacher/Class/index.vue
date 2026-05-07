@@ -545,21 +545,12 @@
     <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" :classId="selectedClassId" @close="showStudentDetail = false" />
 
     <!-- 视频播放弹窗 -->
-    <el-dialog
+    <VideoPlayer
+      :visible="showVideoDialog"
+      :source="currentVideoUrl"
       :title="currentResourceTitle"
-      :visible.sync="showVideoDialog"
-      width="800px"
-      :append-to-body="true"
       @close="closeVideoDialog"
-    >
-      <video
-        v-if="showVideoDialog"
-        :src="currentVideoUrl"
-        controls
-        autoplay
-        style="width:100%;max-height:480px;background:#000;display:block;"
-      ></video>
-    </el-dialog>
+    />
 
     <!-- 音频播放弹窗 -->
     <el-dialog
@@ -624,10 +615,11 @@
 <script>
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail, resetStudentPassword } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
+import VideoPlayer from '@/components/VideoPlayer/index.vue'
 
 export default { 
   name: 'Class',
-  components: { FilePreview },
+  components: { FilePreview, VideoPlayer },
   data() {
     return {
       year: '',
@@ -1183,7 +1175,7 @@ export default {
       this.newClassEndDate = new Date()
     },
     handleResourceClick(item) {
-      const url = item.resourceUrl
+      const url = item.filePath
       if (!url) {
         this.$message.warning('资源地址不存在')
         return
@@ -1193,6 +1185,7 @@ export default {
       const audioTypes = ['6']
       if (videoTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '视频播放'
+        console.log(url,'视频地址')
         this.currentVideoUrl = url
         this.showVideoDialog = true
       } else if (imageTypes.includes(item.nodeType)) {
@@ -1274,7 +1267,8 @@ export default {
           date: '',
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
-          resourceUrl: res.resourceUrl || res.url || ''
+          resourceUrl: res.resourceUrl || res.url || '',
+          filePath: res.filePath || ''
         }
       }
     },

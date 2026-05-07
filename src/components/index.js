@@ -8,8 +8,9 @@ import SvgIcon from './SvgIcon/index.vue'
 import EmptyState from './EmptyState/index.vue'
 import DialogCustome from './DialogCustome/index.vue'
 import StudentDetail from './StudentDetail/index.vue'
+import VideoPlayer from './VideoPlayer/index.vue'
 
-const components = { Pagination, SvgIcon, EmptyState ,DialogCustome,StudentDetail}
+const components = { Pagination, SvgIcon, EmptyState, DialogCustome, StudentDetail, VideoPlayer }
 
 Object.keys(components).forEach(name => {
   Vue.component(name, components[name])
