@@ -93,6 +93,12 @@ const routes = [
         meta: { title: '消息', icon: 'el-icon-chat-dot-round', roles: ['teacher'] }
       },
       {
+        path: 'set',
+        name: 'Set',
+        component: () => import('@/views/teacher/Set/index.vue'),
+        meta: { title: '消息', icon: 'el-icon-chat-dot-round', roles: ['teacher'] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile/index.vue'),
@@ -128,6 +134,12 @@ const routes = [
         path: 'student/message',
         name: 'StudentMessage',
         component: () => import('@/views/Student/Message/index.vue'),
+        meta: { title: '消息', icon: 'el-icon-chat-dot-round', roles: ['student'] }
+      },
+      {
+        path: 'student/set',
+        name: 'StudentSet',
+        component: () => import('@/views/Student/Set/index.vue'),
         meta: { title: '消息', icon: 'el-icon-chat-dot-round', roles: ['student'] }
       },
       {
