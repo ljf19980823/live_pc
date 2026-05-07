@@ -177,7 +177,8 @@ export default {
       const typeInfo = SUPPORTED_TYPES[ext]
       console.log(typeInfo,'文件类型')
       if (!typeInfo) return null
-      return { ...typeInfo, title: name, url: this.file.path }
+      const titleWithExt = name.toLowerCase().endsWith(`.${ext}`) ? name : `${name}.${ext}`
+      return { ...typeInfo, title: titleWithExt, url: this.file.path }
     },
 
     /**
@@ -243,6 +244,7 @@ export default {
           }
         }
       }
+      console.log(config,'对象')
       try {
         this.editorInstance = new window.DocsAPI.DocEditor(this.editorContainerId, config)
       } catch (e) {
