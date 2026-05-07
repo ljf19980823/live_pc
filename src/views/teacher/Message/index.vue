@@ -62,17 +62,25 @@
                 <div class="app_last_right_detail_mess_top_time">{{ currentDetail.time }}</div>
             </div>
             <div class="app_last_right_detail_mess_con app_last_right_detail_mess_con_full">{{ currentDetail.content }}</div>
-            <div class="app_last_right_detailBOX_last" v-if="currentDetail.hasImage || currentDetail.files.length > 0">
-              <img v-if="currentDetail.hasImage" src="@/assets/images/message/such.png" class="app_last_right_detailBOX_last_img" alt="">
+            <div class="app_last_right_detailBOX_last" v-if="currentDetail.images.length > 0 || currentDetail.files.length > 0">
+              <el-image
+                v-for="(img, ii) in currentDetail.images"
+                :key="'img_' + ii"
+                :src="img.filePath"
+                :preview-src-list="currentDetail.images.map(i => i.filePath)"
+                :initial-index="ii"
+                class="app_last_right_detailBOX_last_img"
+                fit="cover"
+              />
               <div
                 class="app_last_right_detailBOX_last_file"
                 v-for="(file, fi) in currentDetail.files"
-                :key="fi"
+                :key="'file_' + fi"
+                @click="previewFile(file)"
               >
                 <img src="@/assets/images/message/icon.png" class="app_last_right_detailBOX_last_file_icon" alt="">
                 <div class="app_last_right_detailBOX_last_file_mess">
                   <div class="app_last_right_detailBOX_last_file_mess_title">{{ file.name }}</div>
-                  <div class="app_last_right_detailBOX_last_file_mess_size">{{ file.size }}</div>
                 </div>
               </div>
             </div>
@@ -296,17 +304,22 @@ export default {
         const params = { type }
         if (this.keyword) params.keyword = this.keyword
         const res = await getTeacherNoticeList(params)
-        const list = (res.data || []).map(item => ({
-          id: item.id,
-          itemId: item.itemId,
-          sender: item.sendPersonName || item.sendPerson || '',
-          sendPerson: item.sendPerson,
-          time: item.sendTime || '',
-          content: item.content || '',
-          attachCount: 0,
-          hasImage: false,
-          files: []
-        }))
+        const list = (res.data || []).map(item => {
+          const resourceInfoList = item.resourceInfoList || []
+          const images = resourceInfoList.filter(r => r.type === '1')
+          const fileItems = resourceInfoList.filter(r => r.type === '2')
+          return {
+            id: item.id,
+            itemId: item.itemId,
+            sender: item.sendPersonName || item.sendPerson || '',
+            sendPerson: item.sendPerson,
+            time: item.sendTime || '',
+            content: item.content || '',
+            attachCount: resourceInfoList.length,
+            images: images,
+            files: fileItems.map(f => ({ id: f.id, name: f.fileName || '', path: f.filePath || '' }))
+          }
+        })
         if (this.activeTab === 'sent') {
           this.sentMessages = list
         } else {
@@ -519,6 +532,12 @@ export default {
     },
     removeFile(index) {
       this.selectedFiles.splice(index, 1)
+    },
+
+    previewFile(file) {
+      if (file.path) {
+        window.open(file.path, '_blank')
+      }
     }
   }
 }
@@ -754,6 +773,7 @@ align-self: flex-end;
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
 }
 .app_last_right_detailBOX_last_file_icon{
   width: 36px;
