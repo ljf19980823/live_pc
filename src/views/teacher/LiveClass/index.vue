@@ -312,6 +312,8 @@
                   class="masl_con_dialog_last_shadow_third"
                   clearable
                   filterable
+                  multiple
+                  collapse-tags
                 >
                   <el-option
                     v-for="cls in classList"
@@ -559,7 +561,7 @@ export default {
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
       recordMode: 0,
       recordModeOptions: ['摄像头录制', '录老师头像'],
-      createClassId: '',
+      createClassId: [],
       createLoading: false,
 
       showDetailDialog: false,
@@ -595,7 +597,7 @@ export default {
         this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
         this.classDuration = 240
         this.recordMode = 0
-        this.createClassId = ''
+        this.createClassId = []
         const userName = this.$store.getters['user/userName'] || ''
         this.name = userName ? `${userName}的课堂` : ''
         this.fetchClassList()
@@ -605,7 +607,7 @@ export default {
         this.classStartTime = ''
         this.classDuration = 240
         this.recordMode = 0
-        this.createClassId = ''
+        this.createClassId = []
       }
     },
     activeTab(val) {
@@ -631,6 +633,11 @@ export default {
     this.checkUpdate()
     this.fetchLiveList()
     this.fetchClassList()
+    console.log(localStorage.getItem('openCreateClass'),'打印看看')
+    if (localStorage.getItem('openCreateClass') === '1') {
+      localStorage.removeItem('openCreateClass')
+      this.showCreateClass = true
+    }
     
     // 监听 iframe 直播退出消息
     window.addEventListener('message', (event) => {
@@ -930,7 +937,7 @@ export default {
           introduce: this.instr || undefined,
           // recordMode 0→摄像头录制→'1'，1→录老师头像→'2'
           recordingType: String(this.recordMode + 1),
-          classIds: this.createClassId ? [this.createClassId] : undefined
+          classIds: this.createClassId.length ? this.createClassId : undefined
         }
         await createLiveClass(params)
         this.$message.success('课堂创建成功')
@@ -988,6 +995,7 @@ export default {
       try {
         const res = await getClassList()
         const list = res.data || res || []
+        console.log(res,'测试')
         this.classList = list.map(item => ({
           value: item.classId,
           label:item.classAlias?item.classAlias: item.className,
@@ -1935,7 +1943,7 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(51, 51, 51, 0.60);
-  z-index: 1022;
+  z-index: 2001;
   overflow: hidden;
 }
 .mask_con{

@@ -33,7 +33,7 @@
           <EmptyState description="暂无消息数据" v-if="messageList.length==0"/>
         </div>
       </div>
-      <div class="app_container_last_right" v-if="isAdd">
+      <div class="app_container_last_right" v-if="isAdd" @click="toCreateClass">
         <img class="app_container_last_right_icon" src="@/assets/images/home/such.png" alt="">
         <div class="app_container_last_right_last">
           <div class="app_container_last_right_last_title">新建实时课堂</div>
@@ -67,6 +67,10 @@ export default {
   methods: {
     toMessage () {
       this.$router.push('/message')
+    },
+    toCreateClass () {
+      localStorage.setItem('openCreateClass', '1')
+      this.$router.push('/live-class')
     },
     async fetchMessageList () {
       try {
