@@ -57,7 +57,7 @@ export default {
   computed: {
     ...mapGetters('user', ['userInfo']),
     isAdd () {
-      return this.userInfo?.isAdd === 1
+      return this.userInfo?.isAdd === '1'
     }
   },
   created () {

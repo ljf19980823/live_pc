@@ -1,4 +1,4 @@
-import { get, post, del } from '@/utils/request'
+import { get, post, put, del } from '@/utils/request'
 
 /**
  * 教师端接口
@@ -75,3 +75,12 @@ export const createNotice = data => post('/edu/notice/pc/create', data)
 
 // 删除消息记录（type: '1' 已收消息，'2' 已发消息）
 export const removeNotice = params => post('/edu/notice/remove', {}, { params })
+
+// 获取直播详情
+export const getLiveDetail = liveId => get(`/edu/live/detail/${liveId}`)
+
+// 获取直播分享链接
+export const getLiveShare = liveId => get(`/edu/live/share/${liveId}`)
+
+// 更新直播信息（ifShare: '1' 开启分享, '2' 关闭分享）
+export const updateLive = (liveId, data) => put(`/edu/live/${liveId}`, data)

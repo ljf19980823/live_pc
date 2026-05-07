@@ -15,7 +15,7 @@
             <img src="@/assets/images/liveClass/bk_icon.png" class="page_top_right_fixed_bk_icon" alt="">
             <div class="page_top_right_fixed_bk_text">备课</div>
           </div>
-          <div class="page_top_right_fixed_add" @click="showCreateClass = true">
+          <div class="page_top_right_fixed_add" v-if="isAdd" @click="showCreateClass = true">
             <img src="@/assets/images/liveClass/add_icon.png" class="page_top_right_fixed_add_icon" alt="">
             <div class="page_top_right_fixed_add_text">新建课堂</div>
           </div>
@@ -246,7 +246,7 @@
     <transition name="mask-fade">
     <div class="mask" v-if="showCreateClass">
       <div class="mask_con"  >
-          <div class="masl_con_dialog create-class-dialog" >
+          <div class="masl_con_dialog create-class-dialog" v-loading="createLoading" element-loading-background="rgba(255,255,255,0.7)">
             <div class="masl_con_dialog_top" @click="showCreateClass = false">
               <img src="@/assets/images/liveClass/backIcon.png" class="masl_con_dialog_top_back" alt="" @click="showCreateClass = false">
               <div>新建课堂</div>
@@ -451,7 +451,7 @@
       :show-close="true"
       @cancel="showDetailDialog = false"
     >
-      <div class="cdc-wrap" v-if="selectedCourseItem">
+      <div class="cdc-wrap" v-loading="detailLoading" v-if="selectedCourseItem">
         <div class="cdc-liveTitle">{{selectedCourseItem.title}}</div>
         <div class="cdc-info-row">
           <span class="cdc-label">直播详情：</span>
@@ -470,7 +470,7 @@
 
         <div class="cdc-share-header">
           <span class="cdc-share-label">分享链接</span>
-          <el-switch v-model="detailShareEnabled" active-color="#0049FF"></el-switch>
+          <el-switch :value="detailShareEnabled" active-color="#0049FF" @change="handleShareToggle"></el-switch>
         </div>
 
         <template v-if="detailShareEnabled">
@@ -509,10 +509,11 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
+import { mapGetters } from 'vuex'
 
 export default {
   name: 'LiveClass',
@@ -557,12 +558,14 @@ export default {
       classDuration: 240,
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
       recordMode: 0,
-      recordModeOptions: ['无头像录制', '录老师头像', '录制课堂', '仅录老师头像'],
+      recordModeOptions: ['摄像头录制', '录老师头像'],
       createClassId: '',
+      createLoading: false,
 
       showDetailDialog: false,
       selectedCourseItem: null,
-      detailShareEnabled: true,
+      detailShareEnabled: false,
+      detailLoading: false,
 
       showSchedule: false,
       scheduleYear: new Date().getFullYear(),
@@ -642,6 +645,10 @@ export default {
     clearTimeout(this._searchTimer)
   },
   computed: {
+    ...mapGetters('user', ['userInfo']),
+    isAdd() {
+      return this.userInfo?.isAdd === '1'
+    },
     yearRange() {
       const cur = new Date().getFullYear()
       const arr = []
@@ -705,8 +712,7 @@ export default {
     },
 
     qrCodeUrl() {
-      if (!this.selectedCourseItem || !this.selectedCourseItem.shareUrl) return ''
-      return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.selectedCourseItem.shareUrl)}&color=000000&bgcolor=ffffff&qzone=1`
+      return this.selectedCourseItem?.qrcodeUrl || ''
     },
 
     startTimePickerOptions() {
@@ -735,11 +741,72 @@ export default {
     }
   },
   methods: {
+    // ── 分享链接开关 ────────────────────────────────────────────────────
+    async handleShareToggle(val) {
+      if (!this.selectedCourseItem) return
+      if (!val) {
+        // 关闭时弹确认框
+        try {
+          await this.$confirm('关闭后，已分享的外部学生都无法继续观看直播。', '关闭分享链接', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+        } catch {
+          return
+        }
+        try {
+          await updateLive(this.selectedCourseItem.id, { ifShare: '2' })
+          this.detailShareEnabled = false
+        } catch (e) {
+          // 错误由请求拦截器统一处理
+        }
+      } else {
+        // 开启时直接调用接口
+        try {
+          await updateLive(this.selectedCourseItem.id, { ifShare: '1' })
+          this.detailShareEnabled = true
+          // 若还没有二维码则拉取
+          if (!this.selectedCourseItem.qrcodeUrl) {
+            const res = await getLiveShare(this.selectedCourseItem.id)
+            const d = res.data || {}
+            this.$set(this.selectedCourseItem, 'qrcodeUrl', d.qrcodeUrl || '')
+            this.$set(this.selectedCourseItem, 'shareUrl', d.qrcodeUrl || '')
+          }
+        } catch (e) {
+          // 错误由请求拦截器统一处理
+        }
+      }
+    },
+
     // ── 课程详情弹窗 ────────────────────────────────────────────────────
-    openDetail(item) {
-      this.selectedCourseItem = item
-      this.detailShareEnabled = true
+    async openDetail(item) {
+      this.selectedCourseItem = { ...item }
+      this.detailShareEnabled = false
       this.showDetailDialog = true
+      this.detailLoading = true
+      try {
+        const res = await getLiveDetail(item.id)
+        const d = res.data || {}
+        this.selectedCourseItem = {
+          ...this.selectedCourseItem,
+          id: d.id || item.id,
+          title: d.name || item.title || '',
+          description: d.introduce || '',
+          teacherName: d.teacherName || '',
+          time: this.formatTimeRange(d.startTime, d.endTime),
+          minutes: d.liveMin || item.minutes || '',
+          status: d.isStart === '1' && d.isFinish !== '1' ? 'living' : 'soon',
+          qrcodeUrl: d.qrcodeUrl || '',
+          shareUrl: d.qrcodeUrl || '',
+          ifShare: d.ifShare || '2'
+        }
+        this.detailShareEnabled = d.ifShare === '1'
+      } catch (e) {
+        // 错误由请求拦截器统一处理
+      } finally {
+        this.detailLoading = false
+      }
     },
     enterLiveRoom(item) {
       const token = getToken();
@@ -841,25 +908,38 @@ export default {
 
     // ── 班级列表接口 ────────────────────────────────────────────────────
     async handleCreateClass() {
+      if (this.createLoading) return
       if (!this.name || !this.name.trim()) {
         this.$message.warning('请输入课堂名称')
         return
       }
+      if (!this.classStartTime) {
+        this.$message.warning('请选择上课时间')
+        return
+      }
+      this.createLoading = true
       try {
+        // startTime 补充秒位，满足 yyyy-MM-dd HH:mm:ss 格式
+        const startTime = this.classStartTime.length === 16
+          ? this.classStartTime + ':00'
+          : this.classStartTime
         const params = {
           name: this.name.trim(),
-          description: this.instr,
-          startTime: this.classStartTime,
-          duration: this.classDuration,
-          classId: this.createClassId,
-          recordMode: this.recordMode
+          startTime,
+          liveTime: String(this.classDuration),
+          introduce: this.instr || undefined,
+          // recordMode 0→摄像头录制→'1'，1→录老师头像→'2'
+          recordingType: String(this.recordMode + 1),
+          classIds: this.createClassId ? [this.createClassId] : undefined
         }
         await createLiveClass(params)
         this.$message.success('课堂创建成功')
         this.showCreateClass = false
         this.fetchLiveList()
       } catch (e) {
-        this.$message.error(e?.message || '创建失败，请重试')
+        // 错误由请求拦截器统一处理
+      } finally {
+        this.createLoading = false
       }
     },
 
