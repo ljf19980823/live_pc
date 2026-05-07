@@ -24,6 +24,9 @@
     </div>
 
     <!-- 实时课堂 -->
+    <div class="page-placeholder_last full-screen" v-if="activeTab === 'liveui'">
+       <iframe :src="liveUrl" style="width: 100%; height: 100vh;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay" allowusermedia></iframe>
+    </div>
     <div class="page-placeholder_last" v-if="activeTab === 'live'">
        <!-- ── 顶部更新横幅 ─────────────────────────────────────────────────── -->
     <transition name="banner-fade">
@@ -66,6 +69,7 @@
             <div
               class="placeholder_last_table_detail_last"
               :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
+              @click="enterLiveRoom(item)"
             >进入直播
               
               <img src="@/assets/images/liveClass/no_del.png" style="cursor:not-allowed" v-if="item.status == 'living'" class="placeholder_last_table_detail_last_del" alt="">
@@ -508,12 +512,14 @@
 import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
+import { getToken, getUserInfo } from '@/utils/auth'
 
 export default {
   name: 'LiveClass',
   components: { EmptyState, DialogCustome },
   data() {
     return {
+      liveUrl: '',
       hasUpdate: false,
       bannerDismissed: false,
       updateInfo: {
@@ -621,7 +627,15 @@ export default {
   mounted() {
     this.checkUpdate()
     this.fetchLiveList()
-     this.fetchClassList()
+    this.fetchClassList()
+    
+    // 监听 iframe 直播退出消息
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'CLASSROOM_EXIT') {
+        const { classId } = event.data;
+        this.activeTab = 'live';
+      }
+    });
   },
   beforeDestroy() {
     this.removeIpcListeners()
@@ -726,6 +740,19 @@ export default {
       this.selectedCourseItem = item
       this.detailShareEnabled = true
       this.showDetailDialog = true
+    },
+    enterLiveRoom(item) {
+      const token = getToken();
+      const courseid = item.id;
+      const {userId,realName,userName,role}=getUserInfo();
+      
+      let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
+      if(process.env.NODE_ENV === 'development'){
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+      }
+      this.liveUrl = `${liveBaseUrl}?userid=${userName}&username=${userName}&courseid=${courseid}&token=${token}`;
+      this.activeTab = 'liveui'
+      console.log(this.liveUrl);
     },
     copyShareLink() {
       const url = this.selectedCourseItem && this.selectedCourseItem.shareUrl
@@ -1123,6 +1150,16 @@ export default {
   overflow: auto;
   padding: 0 18px;
   box-sizing: border-box;
+}
+.full-screen{
+  position: fixed;
+  width: 100vw;
+  height: 100%;
+  top: 0;
+  left: 0;
+  padding: 0;
+  z-index: 99999;
+  overflow: hidden;
 }
 .placeholder_last_top {
   width: 100%;
