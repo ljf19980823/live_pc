@@ -173,8 +173,9 @@ export default {
     getFileInfo() {
       if (!this.file || !this.file.path) return null
       const name = this.file.name || ''
-      const ext = name.split('.').pop().toLowerCase()
+      const ext = this.file.path.split('.').pop().toLowerCase()
       const typeInfo = SUPPORTED_TYPES[ext]
+      console.log(typeInfo,'文件类型')
       if (!typeInfo) return null
       return { ...typeInfo, title: name, url: this.file.path }
     },

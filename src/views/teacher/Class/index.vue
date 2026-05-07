@@ -613,6 +613,9 @@
       </div>
     </DialogCustome>
 
+    <!-- 文件预览 -->
+    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
+
   </div>
 
   
@@ -620,9 +623,11 @@
 
 <script>
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail, resetStudentPassword } from '@/api'
+import FilePreview from '@/components/FilePreview/index.vue'
 
 export default { 
   name: 'Class',
+  components: { FilePreview },
   data() {
     return {
       year: '',
@@ -671,7 +676,9 @@ export default {
       currentAudioUrl: '',
       showImageDialog: false,
       currentImageUrl: '',
-      currentResourceTitle: ''
+      currentResourceTitle: '',
+      filePreviewVisible: false,
+      filePreviewData: null
     }
   },
   watch: {
@@ -1197,7 +1204,9 @@ export default {
         this.currentAudioUrl = url
         this.showAudioDialog = true
       } else {
-        window.open(url, '_blank')
+        console.log(item,'信息')
+        this.filePreviewData = { name: item.title || '', path: url }
+        this.filePreviewVisible = true
       }
     },
     closeVideoDialog() {
