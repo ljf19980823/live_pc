@@ -2,7 +2,7 @@
   <div class="page-placeholder">
     <!-- 隐藏的文件输入 -->
     <input ref="imageInput" type="file" accept="image/*" multiple style="display:none" @change="onImageFileChange">
-    <input ref="fileInput" type="file" multiple style="display:none" @change="onFileChange">
+    <input ref="fileInput" type="file" multiple style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.txt,.csv,.mp4,.mp3,.avi,.mov,.wmv,.mkv" @change="onFileChange">
 
     <div class="app_top">
       <div class="app_top_left" @click="openSendDialog">
@@ -41,7 +41,14 @@
                   <div class="app_last_right_detail_mess_top_file_text">{{ item.attachCount }}个附件</div>
                 </div>
               </div>
-              <img src="@/assets/images/message/options.png" class="app_last_right_detail_mess_top_options" alt="">
+              <el-dropdown v-if="activeTab === 'received'" trigger="click" @command="(cmd) => handleReceivedOptionsCommand(cmd, item)">
+                <img @click.stop src="@/assets/images/message/options.png" class="app_last_right_detail_mess_top_options" alt="">
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="delete">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
             <div class="app_last_right_detail_mess_con">{{ item.content }}</div>
           </div>
@@ -75,7 +82,7 @@
 
 
     <!-- 添加消息弹窗 -->
-    <DialogCustome :visible="showDialog" title="发消息" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
+    <DialogCustome :visible="showDialog" title="发消息" :confirmLoading="sendLoading" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
       <div class="dialog_con">
         <div class="dialog_con_top" @click="handleChooseReceive">
           <div class="dialog_con_top_left">
@@ -210,11 +217,11 @@
           </div>
         </div>
         <div class="receive_tc_box_right">
-          <div class="receive_tc_box_right_top">已选择<span> {{ tempSelectedRecipients.length }} </span>人</div>
+          <div class="receive_tc_box_right_top">已选择<span> {{ currentTempList.length }} </span>人</div>
           <div class="receive_tc_box_right_list">
             <div
               class="receive_tc_box_right_list_detail"
-              v-for="member in tempSelectedRecipients"
+              v-for="member in currentTempList"
               :key="member.id"
             >
               <img src="@/assets/images/message/such.png" class="receive_tc_box_right_list_detail_head" alt="">
@@ -234,7 +241,7 @@
 </template>
 
 <script>
-import { getTeacherNoticeList } from '@/api/modules/teacher'
+import { getTeacherNoticeList, getNoticeReceivers, createNotice, removeNotice } from '@/api/modules/teacher'
 
 export default {
   name: 'Message',
@@ -248,77 +255,20 @@ export default {
       currentDetail: null,
       keyword: '',
       loading: false,
+      sendLoading: false,
+      receiveLoading: false,
 
       // 发消息弹窗
       selectedRecipients: [],
-      tempSelectedRecipients: [],
+      tempTeacherRecipients: [],
+      tempStudentRecipients: [],
       selectedImages: [],
       selectedFiles: [],
 
       // 选择接收人弹窗
       receiveActiveTab: 'teacher',
-      teacherClasses: [
-        {
-          id: 1,
-          name: '铂金班',
-          expanded: true,
-          members: [
-            { id: 101, name: '立升老师-王明' },
-            { id: 102, name: '立升老师-李华' },
-            { id: 103, name: '立升老师-张伟' }
-          ]
-        },
-        {
-          id: 2,
-          name: '黄金班',
-          expanded: false,
-          members: [
-            { id: 201, name: '立升老师-陈杰' },
-            { id: 202, name: '立升老师-刘明' },
-            { id: 203, name: '立升老师-赵磊' }
-          ]
-        },
-        {
-          id: 3,
-          name: '钻石班',
-          expanded: false,
-          members: [
-            { id: 301, name: '立升老师-孙倩' },
-            { id: 302, name: '立升老师-周杰' }
-          ]
-        }
-      ],
-      studentClasses: [
-        {
-          id: 1,
-          name: '铂金班',
-          expanded: true,
-          members: [
-            { id: 1001, name: '铂金班-小明' },
-            { id: 1002, name: '铂金班-小红' },
-            { id: 1003, name: '铂金班-小华' }
-          ]
-        },
-        {
-          id: 2,
-          name: '黄金班',
-          expanded: false,
-          members: [
-            { id: 2001, name: '黄金班-小李' },
-            { id: 2002, name: '黄金班-小张' },
-            { id: 2003, name: '黄金班-小刘' }
-          ]
-        },
-        {
-          id: 3,
-          name: '钻石班',
-          expanded: false,
-          members: [
-            { id: 3001, name: '钻石班-小王' },
-            { id: 3002, name: '钻石班-小陈' }
-          ]
-        }
-      ],
+      teacherClasses: [],
+      studentClasses: [],
 
       sentMessages: [],
       receivedMessages: []
@@ -330,6 +280,9 @@ export default {
     },
     currentReceiveClasses() {
       return this.receiveActiveTab === 'teacher' ? this.teacherClasses : this.studentClasses
+    },
+    currentTempList() {
+      return this.receiveActiveTab === 'teacher' ? this.tempTeacherRecipients : this.tempStudentRecipients
     }
   },
   mounted() {
@@ -383,7 +336,7 @@ export default {
     onDialogCancel() {
       this.showDialog = false
     },
-    onDialogConfirm() {
+    async onDialogConfirm() {
       if (this.selectedRecipients.length === 0) {
         this.$message({ message: '请选择接收人', type: 'warning' })
         return
@@ -392,21 +345,30 @@ export default {
         this.$message({ message: '请输入消息内容', type: 'warning' })
         return
       }
-      const today = new Date()
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      const newMsg = {
-        id: Date.now(),
-        sender: '管理员',
-        time: dateStr,
-        content: this.messageContent.trim(),
-        attachCount: this.selectedImages.length + this.selectedFiles.length,
-        hasImage: this.selectedImages.length > 0,
-        files: this.selectedFiles.map(f => ({ name: f.name, size: f.size }))
+      this.sendLoading = true
+      try {
+        const formData = new FormData()
+        formData.append('content', this.messageContent.trim())
+        this.selectedRecipients.forEach((r, i) => {
+          formData.append(`receivers[${i}].userId`, r.id)
+          formData.append(`receivers[${i}].type`, r.type)
+        })
+        this.selectedImages.forEach(img => {
+          formData.append('images', img.file)
+        })
+        this.selectedFiles.forEach(f => {
+          formData.append('files', f.file)
+        })
+        await createNotice(formData)
+        this.resetSendDialog()
+        this.showDialog = false
+        this.$message({ message: '发送成功', type: 'success' })
+        this.fetchMessages()
+      } catch (e) {
+        // 错误由请求拦截器统一处理
+      } finally {
+        this.sendLoading = false
       }
-      this.sentMessages.unshift(newMsg)
-      this.resetSendDialog()
-      this.showDialog = false
-      this.$message({ message: '发送成功', type: 'success' })
     },
     resetSendDialog() {
       this.messageContent = ''
@@ -415,10 +377,39 @@ export default {
       this.selectedFiles = []
     },
 
+    // 将接口返回数据转换为班级树结构
+    transformReceivers(list) {
+      return (list || []).map(item => ({
+        id: item.classId,
+        name: item.classAlias || item.className || '',
+        expanded: false,
+        members: (item.users || []).map(u => ({
+          id: u.userId,
+          name: u.displayName || '',
+          type: u.type
+        }))
+      }))
+    },
+
     // 接收人相关
-    handleChooseReceive() {
-      this.tempSelectedRecipients = this.selectedRecipients.map(r => ({ ...r }))
+    async handleChooseReceive() {
+      // 回显：按 type 拆分上次确认的结果到两个独立数组
+      this.tempTeacherRecipients = this.selectedRecipients.filter(r => r.type === '2').map(r => ({ ...r }))
+      this.tempStudentRecipients = this.selectedRecipients.filter(r => r.type === '1').map(r => ({ ...r }))
       this.showDialogReceive = true
+      this.receiveLoading = true
+      try {
+        const [teacherRes, studentRes] = await Promise.all([
+          getNoticeReceivers({ type: '0' }),
+          getNoticeReceivers({ type: '1' })
+        ])
+        this.teacherClasses = this.transformReceivers(teacherRes.data)
+        this.studentClasses = this.transformReceivers(studentRes.data)
+      } catch (e) {
+        // 错误由请求拦截器统一处理
+      } finally {
+        this.receiveLoading = false
+      }
     },
     removeRecipient(index) {
       this.selectedRecipients.splice(index, 1)
@@ -427,46 +418,52 @@ export default {
       this.showDialogReceive = false
     },
     onDialogConfirmReceive() {
-      this.selectedRecipients = this.tempSelectedRecipients.map(r => ({ ...r }))
+      this.selectedRecipients = [
+        ...this.tempTeacherRecipients.map(r => ({ ...r })),
+        ...this.tempStudentRecipients.map(r => ({ ...r }))
+      ]
       this.showDialogReceive = false
     },
 
     // 接收人弹窗内部操作
     toggleClassExpand(classItem) {
-      classItem.expanded = !classItem.expanded
+      this.$set(classItem, 'expanded', !classItem.expanded)
     },
     isMemberSelected(member) {
-      return this.tempSelectedRecipients.some(r => r.id === member.id)
+      return this.currentTempList.some(r => r.id === member.id)
     },
     isClassAllSelected(classItem) {
       return classItem.members.length > 0 && classItem.members.every(m => this.isMemberSelected(m))
     },
     toggleClassSelect(classItem) {
+      const list = this.receiveActiveTab === 'teacher' ? this.tempTeacherRecipients : this.tempStudentRecipients
       const allSelected = this.isClassAllSelected(classItem)
       if (allSelected) {
         classItem.members.forEach(member => {
-          const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
-          if (idx !== -1) this.tempSelectedRecipients.splice(idx, 1)
+          const idx = list.findIndex(r => r.id === member.id)
+          if (idx !== -1) list.splice(idx, 1)
         })
       } else {
         classItem.members.forEach(member => {
-          if (!this.isMemberSelected(member)) {
-            this.tempSelectedRecipients.push({ id: member.id, name: member.name })
+          if (!list.some(r => r.id === member.id)) {
+            list.push({ id: member.id, name: member.name, type: member.type })
           }
         })
       }
     },
     toggleMemberSelect(member) {
-      const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
+      const list = this.receiveActiveTab === 'teacher' ? this.tempTeacherRecipients : this.tempStudentRecipients
+      const idx = list.findIndex(r => r.id === member.id)
       if (idx === -1) {
-        this.tempSelectedRecipients.push({ id: member.id, name: member.name })
+        list.push({ id: member.id, name: member.name, type: member.type })
       } else {
-        this.tempSelectedRecipients.splice(idx, 1)
+        list.splice(idx, 1)
       }
     },
     removeTempRecipient(member) {
-      const idx = this.tempSelectedRecipients.findIndex(r => r.id === member.id)
-      if (idx !== -1) this.tempSelectedRecipients.splice(idx, 1)
+      const list = this.receiveActiveTab === 'teacher' ? this.tempTeacherRecipients : this.tempStudentRecipients
+      const idx = list.findIndex(r => r.id === member.id)
+      if (idx !== -1) list.splice(idx, 1)
     },
 
     // 图片上传
@@ -476,12 +473,35 @@ export default {
     onImageFileChange(e) {
       Array.from(e.target.files).forEach(file => {
         const url = URL.createObjectURL(file)
-        this.selectedImages.push({ name: file.name, url })
+        this.selectedImages.push({ name: file.name, url, file })
       })
       e.target.value = ''
     },
     removeImage(index) {
       this.selectedImages.splice(index, 1)
+    },
+
+    // 已收消息操作下拉
+    async handleReceivedOptionsCommand(cmd, item) {
+      if (cmd === 'delete') {
+        try {
+          await this.$confirm('确定要删除该消息吗？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+        } catch {
+          return
+        }
+        try {
+          const type = this.activeTab === 'sent' ? '2' : '1'
+          await removeNotice({ itemId: item.itemId, type })
+          this.$message({ message: '删除成功', type: 'success' })
+          this.fetchMessages()
+        } catch (e) {
+          // 错误由请求拦截器统一处理
+        }
+      }
     },
 
     // 文件上传
@@ -493,7 +513,7 @@ export default {
         const size = file.size > 1024 * 1024
           ? (file.size / (1024 * 1024)).toFixed(1) + 'MB'
           : Math.ceil(file.size / 1024) + 'KB'
-        this.selectedFiles.push({ name: file.name, size })
+        this.selectedFiles.push({ name: file.name, size, file })
       })
       e.target.value = ''
     },
@@ -681,6 +701,7 @@ align-self: flex-end;
 .app_last_right_detail_mess_top_options{
   width: 20px;
   height: 4px;
+  cursor: pointer;
 }
 .app_last_right_detail_mess_con{
   margin-top: 10px;
@@ -760,6 +781,7 @@ margin-top: 5px;
 .app_last_right_detail_mess_con_full{
   -webkit-line-clamp: unset;
   overflow: visible;
+  white-space: pre-wrap!important;
 }
 
 

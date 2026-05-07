@@ -69,7 +69,7 @@
             >进入直播
               
               <img src="@/assets/images/liveClass/no_del.png" style="cursor:not-allowed" v-if="item.status == 'living'" class="placeholder_last_table_detail_last_del" alt="">
-              <img src="@/assets/images/liveClass/yes_del.png" style="cursor:pointer" v-else class="placeholder_last_table_detail_last_del" alt="">
+              <img src="@/assets/images/liveClass/yes_del.png" style="cursor:pointer" v-else class="placeholder_last_table_detail_last_del" alt="" @click.stop="handleDeleteLive(item)">
             </div>
           </div>
           <empty-state v-if="liveCourses.length === 0" description="暂无直播课堂" />
@@ -505,7 +505,7 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 
@@ -762,7 +762,7 @@ export default {
         const res = await getLiveList()
         const list = res.data || res || []
         this.liveCourses = list.map(item => {
-          const isLiving = item.isStart === '1' && item.isFinish !== '1'
+          const isLiving =  item.isFinish == '2' || ( item.isStart === '1' && item.isFinish !== '1')
           return {
             ...item,
             title: item.name,
@@ -777,6 +777,21 @@ export default {
       } catch (_) {} finally {
         this.liveLoading = false
       }
+    },
+
+    // ── 删除课堂 ────────────────────────────────────────────────────────
+    handleDeleteLive(item) {
+      this.$confirm('确认删除该课堂吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          await deleteLiveClass(item.id)
+          this.$message.success('删除成功')
+          this.fetchLiveList()
+        } catch (_) {}
+      }).catch(() => {})
     },
 
     // ── 历史课堂接口 ────────────────────────────────────────────────────

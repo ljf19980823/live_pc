@@ -1,4 +1,4 @@
-import { get, post } from '@/utils/request'
+import { get, post, del } from '@/utils/request'
 
 /**
  * 教师端接口
@@ -63,3 +63,15 @@ export const getCourseProgress = (courseId, classId) => get(`/edu/course/${cours
 
 // 获取课表列表
 export const getScheduleList = params => get('/edu/schedule/list', params)
+
+// 删除课堂
+export const deleteLiveClass = liveId => del(`/edu/live/${liveId}`)
+
+// 获取消息接收人列表（type: '0' 老师，'1' 学生）
+export const getNoticeReceivers = params => get('/edu/notice/pc/receivers', params)
+
+// 创建消息通知（multipart/form-data）
+export const createNotice = data => post('/edu/notice/pc/create', data)
+
+// 删除消息记录（type: '1' 已收消息，'2' 已发消息）
+export const removeNotice = params => post('/edu/notice/remove', {}, { params })
