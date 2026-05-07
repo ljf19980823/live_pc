@@ -162,6 +162,9 @@
       </div>
     </DialogCustome>
 
+    <!-- 文件预览 -->
+    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
+
     <!-- 选择接收人弹窗 -->
     <DialogCustome
       width="676px"
@@ -250,12 +253,16 @@
 
 <script>
 import { getTeacherNoticeList, getNoticeReceivers, createNotice, removeNotice } from '@/api/modules/teacher'
+import FilePreview from '@/components/FilePreview/index.vue'
 
 export default {
   name: 'Message',
+  components: { FilePreview },
   data() {
     return {
       showDetail: false,
+      filePreviewVisible: false,
+      filePreviewData: null,
       showDialog: false,
       showDialogReceive: false,
       messageContent: '',
@@ -536,7 +543,8 @@ export default {
 
     previewFile(file) {
       if (file.path) {
-        window.open(file.path, '_blank')
+        this.filePreviewData = { name: file.name, path: file.path }
+        this.filePreviewVisible = true
       }
     }
   }
