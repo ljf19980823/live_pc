@@ -38,7 +38,7 @@
     <main class="set-content">
 
       <!-- ─── 我的信息 ─── -->
-      <section v-if="currentMenu === 'info' && !showVerifyPhone">
+      <section v-if="currentMenu === 'info' && !showVerifyPhone  && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">我的信息</div>
@@ -106,10 +106,45 @@
       </section>
 
       <!-- ─── 其他菜单占位 ─── -->
-      <section v-else-if="currentMenu !== 'info' && !showVerifyPhone" class="placeholder-section">
+      <section v-else-if="currentMenu !== 'info' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
         <div class="placeholder-inner">
           <i class="el-icon-s-grid placeholder-icon" />
           <p>{{ currentMenuLabel }}</p>
+        </div>
+      </section>
+
+      <!-- ─── 修改手机号 ─── -->
+      <section v-if="showChangePhone" class="verify-section">
+        <div class="verify-header">
+          <span class="back-btn" @click="backToVerify">
+            <i class="el-icon-arrow-left" /> 返回
+          </span>
+          <span class="verify-page-title">修改手机号</span>
+        </div>
+
+        <div class="white-card verify-card">
+          <h3 class="verify-sub">请输入新手机号码</h3>
+
+          <div class="phone-input-row">
+           
+            <el-input v-model="changePhoneForm.phone" placeholder="请输入手机号" class="phone-number-input" />
+          </div>
+
+          <div class="code-row">
+            <el-input v-model="changePhoneForm.code" placeholder="请输入验证码" />
+            <span
+              class="get-code-btn"
+              :class="{ counting: changeCounting }"
+              @click="startChangeCountdown"
+            >{{ changeCounting ? `${changeCountdown}s 后重发` : '获取验证码' }}</span>
+          </div>
+
+          <el-button
+            type="primary"
+            class="next-btn"
+            :disabled="!changePhoneForm.phone || !changePhoneForm.code"
+            @click="handleConfirmChangePhone"
+          >确定</el-button>
         </div>
       </section>
 
@@ -140,6 +175,7 @@
             type="primary"
             class="next-btn"
             :disabled="!verifyForm.code"
+            @click="goToChangePhone"
           >下一步</el-button>
 
           <p class="verify-note">如原手机号无法获取验证码，请联系老师修改</p>
@@ -167,9 +203,18 @@ export default {
         phone: '19859650891',
         code: ''
       },
+      showChangePhone: false,
+      changePhoneForm: {
+        prefix: '+86',
+        phone: '',
+        code: ''
+      },
       counting: false,
       countdown: 60,
       countdownTimer: null,
+      changeCounting: false,
+      changeCountdown: 60,
+      changeCountdownTimer: null,
       menuItems: [
         { key: 'info',     label: '我的信息',      img: require('@/assets/images/set/wdxx.png'),     activeImg: require('@/assets/images/set/wdxx_yes.png') },
         { key: 'group',    label: '我的教研组',    img: require('@/assets/images/set/wdjyz.png'),    activeImg: require('@/assets/images/set/wdjyz.png') },
@@ -219,10 +264,37 @@ export default {
           clearInterval(this.countdownTimer)
         }
       }, 1000)
+    },
+    goToChangePhone() {
+      this.showVerifyPhone = false
+      this.showChangePhone = true
+      this.changePhoneForm = { prefix: '+86', phone: '', code: '' }
+    },
+    backToVerify() {
+      this.showChangePhone = false
+      this.showVerifyPhone = true
+    },
+    startChangeCountdown() {
+      if (this.changeCounting) return
+      this.changeCounting = true
+      this.changeCountdown = 60
+      this.changeCountdownTimer = setInterval(() => {
+        this.changeCountdown--
+        if (this.changeCountdown <= 0) {
+          this.changeCounting = false
+          clearInterval(this.changeCountdownTimer)
+        }
+      }, 1000)
+    },
+    handleConfirmChangePhone() {
+      // TODO: 调用修改手机号接口
+      this.showChangePhone = false
+      this.form.phone = this.changePhoneForm.phone
     }
   },
   beforeDestroy() {
     if (this.countdownTimer) clearInterval(this.countdownTimer)
+    if (this.changeCountdownTimer) clearInterval(this.changeCountdownTimer)
   }
 }
 </script>
@@ -709,7 +781,53 @@ border-radius: 0px 0px 0px 0px;
   color: #999999;
   margin: 0;
 }
+
+.phone-input-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 0;
+
+  .phone-prefix-select {
+    width: 90px;
+    flex-shrink: 0;
+
+    ::v-deep .el-input__inner {
+      border-right: none !important;
+      border-radius: 4px 0 0 4px !important;
+      padding-right: 20px;
+    }
+
+    ::v-deep .el-input__suffix {
+      right: 4px;
+    }
+  }
+
+  .phone-number-input {
+    flex: 1;
+
+    
+  }
+}
+
+.confirm-btn {
+  background: #5ECEC8 !important;
+  border-color: #5ECEC8 !important;
+
+  &:not(.is-disabled):hover {
+    opacity: 0.85;
+  }
+
+  &.is-disabled {
+    background: #A8E6E3 !important;
+    border-color: #A8E6E3 !important;
+  }
+}
 ::v-deep .el-input__inner{
+
+border: 1px solid #CAD9FF!important;
+}
+::v-deep .el-input__inner:hover{
 
 border: 1px solid #0049FF!important;
 }
