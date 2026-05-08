@@ -5,10 +5,11 @@
       <!-- 用户信息头部 -->
       <div class="sidebar-user">
         <div class="su-avatar">思雅</div>
+        <!-- <img src="" class="su-avatar_head" alt=""> -->
         <div class="su-meta">
-          <span class="su-name">fjlsjy思雅老师</span>
+          <div class="su-name">思雅</div>
+          <div class="su-account">fjlsjy思雅老师</div>
         </div>
-        <i class="el-icon-arrow-right su-arrow" />
       </div>
 
       <!-- 菜单列表 -->
@@ -20,9 +21,9 @@
           :class="{ active: currentMenu === item.key }"
           @click="switchMenu(item.key)"
         >
-          <i :class="item.icon" class="item-icon" />
-          <span class="item-label">{{ item.label }}</span>
-          <i class="el-icon-arrow-right item-arrow" />
+          <img :src="currentMenu === item.key ? item.activeImg : item.img" class="item-icon" alt="" />
+          <div class="item-label">{{ item.label }}</div>
+          <img v-if="currentMenu === item.key" src="@/assets/images/set/right.png" class="set_nav_item_right" alt="">
         </div>
       </nav>
 
@@ -38,61 +39,69 @@
 
       <!-- ─── 我的信息 ─── -->
       <section v-if="currentMenu === 'info' && !showVerifyPhone">
-        <h2 class="content-title">我的信息</h2>
-
-        <!-- 用户信息卡片 -->
-        <div class="white-card user-top-card">
-          <div class="utc-left">
-            <div class="utc-avatar">思雅</div>
-            <div class="utc-info">
-              <div class="utc-name">思雅老师</div>
-              <div class="utc-role">教师 · fjlsjy思雅老师</div>
-            </div>
+        <div class="section_top">
+          <div class="section_top_left">
+            <div class="section_top_left_text">我的信息</div>
           </div>
-          <div class="utc-right">
-            <template v-if="!isEditing">
-              <el-button type="primary" @click="isEditing = true">
-                <i class="el-icon-edit" /> 编辑信息
-              </el-button>
-            </template>
-            <template v-else>
-              <el-button @click="isEditing = false">
-                <i class="el-icon-close" /> 取消
-              </el-button>
-              <el-button type="primary" @click="handleSave">
-                <i class="el-icon-check" /> 保存
-              </el-button>
-            </template>
-          </div>
+          <div class="section_top_right"></div>
         </div>
 
-        <!-- 基本信息表单 -->
-        <div class="white-card form-card">
-          <p class="section-label">基本信息</p>
-
-          <div class="form-field">
-            <label>姓名</label>
-            <el-input v-model="form.name" :disabled="!isEditing" />
-          </div>
-
-          <div class="form-field">
-            <label>手机号码</label>
-            <div class="phone-row">
-              <el-input :value="'+86 ' + form.phone" disabled />
-              <span class="inline-link" @click="openVerifyPhone">修改</span>
+        <div class="section_last">
+          <!-- 用户信息卡片 -->
+          <div class="white-card user-top-card">
+            <div class="utc-left">
+              <div class="utc-avatar">思雅</div>
+              <!-- <img src="" class="utc-avatar_head" alt=""> -->
+              <div class="utc-info">
+                <div class="utc-name">思雅老师</div>
+                <div class="utc-role">教师 · fjlsjy思雅老师</div>
+              </div>
+            </div>
+            <div class="utc-right">
+              <template v-if="!isEditing">
+                <el-button type="primary" @click="isEditing = true">
+                  <i class="el-icon-edit" /> 编辑信息
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button @click="isEditing = false">
+                  <i class="el-icon-close" /> 取消
+                </el-button>
+                <el-button type="primary" @click="handleSave">
+                  <i class="el-icon-check" /> 保存
+                </el-button>
+              </template>
             </div>
           </div>
 
-          <div class="form-field">
-            <label>邮箱</label>
-            <el-input v-model="form.email" :disabled="!isEditing" placeholder="请输入邮箱地址" />
-          </div>
-        </div>
+          <!-- 基本信息表单 -->
+          <div class="white-card form-card">
+            <p class="section-label">基本信息</p>
 
-        <!-- 提示信息 -->
-        <div class="info-notice">
-          <i class="el-icon-info notice-icon" />
-          <span>个人信息仅用于平台内部展示，修改后实时生效。如需修改手机号码，请点击"修改"并完成验证。</span>
+            <div class="form-field">
+              <label>姓名</label>
+              <el-input v-model="form.name" :disabled="!isEditing" />
+            </div>
+
+            <div class="form-field">
+              <label>手机号码</label>
+              <div class="phone-row">
+                <el-input :value="'+86 ' + form.phone" disabled />
+                <span class="inline-link" @click="openVerifyPhone">修改</span>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>邮箱</label>
+              <el-input v-model="form.email" :disabled="!isEditing" placeholder="请输入邮箱地址" />
+            </div>
+          </div>
+
+          <!-- 提示信息 -->
+          <div class="info-notice">
+            <i class="el-icon-info notice-icon" />
+            <span>个人信息仅用于平台内部展示，修改后实时生效。如需修改手机号码，请点击"修改"并完成验证。</span>
+          </div>
         </div>
       </section>
 
@@ -162,11 +171,11 @@ export default {
       countdown: 60,
       countdownTimer: null,
       menuItems: [
-        { key: 'info',     label: '我的信息',     icon: 'el-icon-user' },
-        { key: 'group',    label: '我的教研组',   icon: 'el-icon-s-custom' },
-        { key: 'schedule', label: '我的课表',     icon: 'el-icon-date' },
-        { key: 'device',   label: '设备和网络检测', icon: 'el-icon-monitor' },
-        { key: 'settings', label: '设置',         icon: 'el-icon-setting' }
+        { key: 'info',     label: '我的信息',      img: require('@/assets/images/set/wdxx.png'),     activeImg: require('@/assets/images/set/wdxx_yes.png') },
+        { key: 'group',    label: '我的教研组',    img: require('@/assets/images/set/wdjyz.png'),    activeImg: require('@/assets/images/set/wdjyz.png') },
+        { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb.png') },
+        { key: 'device',   label: '设备和网络检测', img: require('@/assets/images/set/sbhwljc.png'), activeImg: require('@/assets/images/set/sbhwljc.png') },
+        { key: 'settings', label: '设置',          img: require('@/assets/images/set/sz.png'),       activeImg: require('@/assets/images/set/sz.png') }
       ]
     }
   },
@@ -243,39 +252,50 @@ export default {
 // 用户头部
 .sidebar-user {
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 10px;
-  padding: 28px 16px 20px;
+  padding: 18px;
+  box-sizing: border-box;
   border-bottom: 1px solid #F2F3F7;
   cursor: pointer;
 }
 
 .su-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: $color-primary;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
   color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
+.su-avatar_head{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
 
 .su-meta {
   flex: 1;
-  min-width: 0;
+  width: 0;
 }
 
 .su-name {
-  font-size: 13px;
-  color: $text-regular;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
+  font-weight: bold;
+font-size: 13px;
+color: #333333;
+word-break: break-all;
+}
+.su-account{
+  font-weight: 400;
+font-size: 11px;
+color: #999999;
+margin-top: 5px;
 }
 
 .su-arrow {
@@ -286,8 +306,12 @@ export default {
 
 // 菜单
 .set-nav {
+  height: 0;
+  width: 100%;
   flex: 1;
-  padding: 10px 10px 0;
+  padding: 11px;
+  box-sizing: border-box;
+
 }
 
 .set-nav-item {
@@ -295,23 +319,21 @@ export default {
   align-items: center;
   gap: 10px;
   padding: 14px 14px;
-  border-radius: 10px;
+  border-radius: 13px;
   cursor: pointer;
   transition: background $transition-fast;
   position: relative;
   margin-bottom: 2px;
 
   .item-icon {
-    font-size: 18px;
-    color: #787F8D;
-    flex-shrink: 0;
-    transition: color $transition-fast;
+    width: 15px;
+    height: 15px;
   }
 
   .item-label {
     flex: 1;
-    font-size: 14px;
-    color: #787F8D;
+    font-size: 13px;
+    color: #666666;
     font-weight: 500;
     transition: color $transition-fast;
     white-space: nowrap;
@@ -334,27 +356,22 @@ export default {
   }
 
   &.active {
-    background: #EEF2FF;
+    background: #EEF3FF;
 
     .item-icon,
     .item-label {
-      color: $color-primary;
-      font-weight: 600;
+      color: #0049FF;
+      font-weight: bold;
     }
 
     .item-arrow { color: $color-primary; }
 
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 3px;
-      height: 22px;
-      background: $color-primary;
-      border-radius: 0 3px 3px 0;
-    }
+    
+  }
+  .set_nav_item_right{
+
+    width: 13px;
+    height: 13px;
   }
 }
 
@@ -378,9 +395,52 @@ export default {
 // ─── 右侧内容区 ─────────────────────────────────────────────
 .set-content {
   flex: 1;
-  padding: 24px 28px;
-  overflow-y: auto;
+  // padding: 24px 28px;
+  // overflow-y: auto;
+  width: 0;
+  height: 100%;
   min-width: 0;
+  section{
+    width: 100%;
+     height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+}
+.section_top{
+  width: 100%;
+  display: flex;
+  height: 56px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px 0 32px;
+  box-sizing: border-box;
+  background: #ffffff;
+  
+}
+.section_top_left{
+  flex: 1;
+  width: 0;
+ display: flex;
+ justify-content: flex-start;
+ align-items: center;
+}
+.section_top_left_text{
+   font-weight: bold;
+font-size: 15px;
+color: #333333;
+}
+.section_top_right{
+
+}
+.section_last{
+  width: 100%;
+  flex: 1;
+  height: 0;
+  overflow-y: auto;
+  padding: 32px;
+  box-sizing: border-box;
 }
 
 .content-title {
@@ -404,38 +464,43 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 22px 24px;
+  box-sizing: border-box;
 }
 
 .utc-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .utc-avatar {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border-radius: 14px;
-  background: $color-primary;
+background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
   color: #fff;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-
+.utc-avatar_head{
+width: 56px;
+  height: 56px;
+  border-radius: 14px;
+}
 .utc-name {
   font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
+  font-weight: bold;
+  color: #333333;
   margin-bottom: 5px;
 }
 
 .utc-role {
-  font-size: 13px;
-  color: $text-secondary;
+  font-size: 12px;
+  color: #999999;
 }
 
 .utc-right {
@@ -489,12 +554,14 @@ export default {
 
 // 提示信息
 .info-notice {
-  background: #EEF3FF;
-  border-radius: $border-radius-lg;
-  padding: 14px 18px;
+  padding: 15px 17px;
+  box-sizing: border-box;
   display: flex;
   align-items: flex-start;
   gap: 10px;
+background: #EEF3FF;
+border-radius: 13px 13px 13px 13px;
+border: 1px solid #CAD9FF;
 
   .notice-icon {
     font-size: 16px;
@@ -538,11 +605,15 @@ export default {
 
 // ─── 身份验证 ────────────────────────────────────────────────
 .verify-header {
+height: 56px;
+background: #FFFFFF;
+border-radius: 0px 0px 0px 0px;
+// border: 1px solid #EDEEF3;
   display: flex;
   align-items: center;
-  margin-bottom: 28px;
+ padding: 0 24px;
+ box-sizing: border-box;
   position: relative;
-  min-height: 28px;
 }
 
 .back-btn {
@@ -563,20 +634,24 @@ export default {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
+  font-size: 15px;
+  font-weight: bold;
+  color: #333333;
   white-space: nowrap;
 }
 
 .verify-card {
-  max-width: 520px;
+  width: 520px;
+  // padding: 40px;
+  margin: 40px auto 0;
+  // box-sizing: border-box;
+  background: none;
 
   .verify-sub {
-    font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
-    margin: 0 0 22px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333333;
+    margin: 0 0 26px;
   }
 
   .verify-input {
@@ -617,10 +692,11 @@ export default {
   margin-bottom: 16px;
   font-size: 15px;
   height: 42px;
+  border-radius: 12px 12px 12px 12px;
 
   &.is-disabled {
-    background: #A8BFFF !important;
-    border-color: #A8BFFF !important;
+    background: #CAD9FF !important;
+    border-color: #CAD9FF !important;
     color: #fff !important;
     cursor: not-allowed;
     opacity: 1 !important;
@@ -630,7 +706,16 @@ export default {
 .verify-note {
   text-align: center;
   font-size: 13px;
-  color: $text-secondary;
+  color: #999999;
   margin: 0;
+}
+::v-deep .el-input__inner{
+
+border: 1px solid #0049FF!important;
+}
+::v-deep .el-input.is-disabled .el-input__inner{
+background-color:#F8F9FB!important;
+border: 1px solid #EDEEF3!important;
+color: #999999!important;
 }
 </style>
