@@ -28,8 +28,8 @@
       </nav>
 
       <!-- 退出登录 -->
-      <div class="set-logout" @click="handleLogout">
-        <img class="set-logout_img" src="@/assets/images/set/loginout.png" alt="">
+      <div class="set-logout" @click="handleLogout" @mouseenter="logoutHover = true" @mouseleave="logoutHover = false">
+        <img class="set-logout_img" :src="logoutHover ? require('@/assets/images/set/loginout_yes.png') : require('@/assets/images/set/loginout.png')" alt="">
         <div>退出登录</div>
       </div>
     </aside>
@@ -317,8 +317,63 @@
         </div>
       </section>
 
+      <!-- ─── 设备和网络检测 ─── -->
+      <section v-else-if="currentMenu === 'device' && !showVerifyPhone && !showChangePhone">
+        <div class="section_top">
+          <div class="section_top_left">
+            <div class="section_top_left_text">设备和网络检测</div>
+          </div>
+          <div class="section_top_right">
+            <div class="device-user-btn">思雅</div>
+          </div>
+        </div>
+
+        <div class="section_last">
+          <!-- 系统信息卡片 -->
+          <div class="white-card device-sys-card">
+            <p class="device-card-label">系统信息</p>
+            <div class="device-info-row">
+              <span class="device-info-key">操作系统</span>
+              <span class="device-info-val blue">{{ systemInfo.os }}</span>
+            </div>
+            <div class="device-info-row">
+              <span class="device-info-key">CPU</span>
+              <span class="device-info-val blue">{{ systemInfo.cpu }}</span>
+            </div>
+            <div class="device-info-row">
+              <span class="device-info-key">内存</span>
+              <span class="device-info-val">{{ systemInfo.memory }}</span>
+            </div>
+          </div>
+
+          <!-- 设备检测卡片 -->
+          <div class="white-card device-check-card">
+            <div class="device-check-header">
+              <p class="device-card-label">设备检测</p>
+              <el-button type="primary" size="small" class="device-one-btn">一键检测</el-button>
+            </div>
+            <div
+              v-for="(item, idx) in deviceCheckItems"
+              :key="idx"
+              class="device-check-item"
+            >
+              <div class="device-check-item-left">
+                <div class="device-check-icon">
+                  <img :src="item.icon" class="device-icon-img" alt="" />
+                </div>
+                <span class="device-check-name">{{ item.name }}</span>
+              </div>
+              <div class="device-check-item-right">
+                <span class="device-check-status">{{ item.status }}</span>
+                <i class="el-icon-arrow-right device-check-arrow"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ─── 其他菜单占位 ─── -->
-      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
+      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && currentMenu !== 'device' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
         <div class="placeholder-inner">
           <i class="el-icon-s-grid placeholder-icon" />
           <p>{{ currentMenuLabel }}</p>
@@ -405,6 +460,8 @@ export default {
   name: 'TeacherSet',
   data() {
     return {
+      systemInfo: { os: '获取中...', cpu: '获取中...', memory: '获取中...' },
+      logoutHover: false,
       currentMenu: 'info',
       isEditing: false,
       showVerifyPhone: false,
@@ -438,6 +495,12 @@ export default {
       ],
       showGroupDetail: false,
       currentGroup: null,
+      deviceCheckItems: [
+        { key: 'camera',  name: '摄像头检测', status: '未检测', icon: require('@/assets/images/set/sxtjc.png') },
+        { key: 'mic',     name: '麦克风检测', status: '未检测', icon: require('@/assets/images/set/mkfjc.png') },
+        { key: 'speaker', name: '扬声器检测', status: '未检测', icon: require('@/assets/images/set/ysqjc.png') },
+        { key: 'network', name: '网络检测',   status: '未检测', icon: require('@/assets/images/set/wljc.png') }
+      ],
       scheduleYear: new Date().getFullYear(),
       scheduleMonth: new Date().getMonth(),
       scheduleSelectedDate: '',
@@ -559,10 +622,19 @@ export default {
       }
     }
   },
-  mounted() {
+  async mounted() {
     const now = new Date()
     const pad = n => String(n).padStart(2, '0')
     this.scheduleSelectedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+
+    if (window.electronAPI?.getSystemInfo) {
+      try {
+        const info = await window.electronAPI.getSystemInfo()
+        this.systemInfo = info
+      } catch (e) {
+        console.error('获取系统信息失败', e)
+      }
+    }
   },
   methods: {
     switchMenu(key) {
@@ -1809,5 +1881,136 @@ border: 1px solid #0049FF!important;
 background-color:#F8F9FB!important;
 border: 1px solid #EDEEF3!important;
 color: #999999!important;
+}
+
+// ─── 设备和网络检测 ──────────────────────────────────────────
+
+.device-user-btn {
+  background: #0049FF;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.device-sys-card {
+  padding: 20px 24px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+.device-check-card {
+  padding: 20px 24px;
+  box-sizing: border-box;
+}
+
+.device-card-label {
+  font-size: 13px;
+  color: #999;
+  margin: 0 0 16px 0;
+  font-weight: 400;
+}
+
+.device-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+
+  & + & {
+    border-top: 1px solid #F5F6FA;
+  }
+}
+
+.device-info-key {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.device-info-val {
+  font-size: 13px;
+  color: #666;
+
+  &.blue {
+    color: #0049FF;
+  }
+}
+
+.device-check-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+
+  .device-card-label {
+    margin-bottom: 0;
+  }
+}
+
+.device-one-btn {
+  font-size: 13px !important;
+  padding: 7px 18px !important;
+  border-radius: 8px !important;
+}
+
+.device-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  cursor: pointer;
+
+  & + & {
+    border-top: 1px solid #F5F6FA;
+  }
+}
+
+.device-check-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.device-check-icon {
+  width: 36px;
+  height: 36px;
+  // background: #F5F6FA;
+  // border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .device-icon-img {
+    width: 36px;
+    height: 36px;
+    // object-fit: contain;
+  }
+}
+
+.device-check-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.device-check-item-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.device-check-status {
+  font-size: 13px;
+  color: #BBBBBB;
+}
+
+.device-check-arrow {
+  font-size: 13px;
+  color: #BBBBBB;
 }
 </style>

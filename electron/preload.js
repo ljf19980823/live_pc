@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('screen-guard-change', handler)
   },
 
+  // ─── 系统信息 ─────────────────────────────────────────────────────────────
+  // 获取操作系统、CPU、内存信息
+  getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+
   // ─── 版本更新 ─────────────────────────────────────────────────────────────
   // 获取当前应用版本号
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),

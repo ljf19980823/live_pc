@@ -507,6 +507,38 @@ function downloadFileWithProgress (url, destPath, onProgress) {
   })
 }
 
+// ─── 获取系统信息 ─────────────────────────────────────────────────────────────
+ipcMain.handle('get-system-info', () => {
+  const platform = os.platform()
+  const release = os.release()
+
+  let osName
+  if (platform === 'win32') {
+    const buildNum = parseInt((release.split('.')[2] || '0'), 10)
+    const winVersion = buildNum >= 22000 ? 'Windows 11' : 'Windows 10'
+    osName = `${winVersion} (${release})`
+  } else if (platform === 'darwin') {
+    const majorKernel = parseInt(release.split('.')[0], 10)
+    const macVersionMap = {
+      20: 'macOS 11 Big Sur',
+      21: 'macOS 12 Monterey',
+      22: 'macOS 13 Ventura',
+      23: 'macOS 14 Sonoma',
+      24: 'macOS 15 Sequoia',
+    }
+    const macName = macVersionMap[majorKernel] || `macOS (Darwin ${release})`
+    osName = `${macName} (${release})`
+  } else {
+    osName = `${os.type()} ${release}`
+  }
+
+  const cpus = os.cpus()
+  const cpuModel = cpus.length > 0 ? cpus[0].model.trim() : '未知'
+  const totalMemGB = Math.round(os.totalmem() / (1024 ** 3))
+
+  return { os: osName, cpu: cpuModel, memory: `${totalMemGB} GB` }
+})
+
 // ─── 获取当前应用版本 ─────────────────────────────────────────────────────────
 ipcMain.handle('get-app-version', () => app.getVersion())
 
