@@ -278,11 +278,11 @@ async function checkScreenGuard () {
 // ─── 启动防录屏守护 ──────────────────────────────────────────────────────
 function startScreenGuard () {
   // 启用内容保护：窗口内容在任何截图/录屏工具中显示为黑色
-  mainWindow.setContentProtection(true)
+  // mainWindow.setContentProtection(true)
 
   // 立即检测一次，之后每 3 秒检测一次
-  checkScreenGuard()
-  screenGuardInterval = setInterval(checkScreenGuard, 3000)
+  // checkScreenGuard()
+  // screenGuardInterval = setInterval(checkScreenGuard, 3000)
 }
 
 function stopScreenGuard () {
