@@ -38,8 +38,12 @@
           :class="{ active: activeMenu === setPath }"
           @click="goTo(setPath)"
         >
-          <img :src="avatar || require('@/assets/images/head.png')" class="nav-icon_img" alt="头像">
-          <span class="nav-icon_last-label">{{ userName || '设置' }}</span>
+          <div class="nav-icon_img" >
+            <img :src="avatar || require('@/assets/images/head.png')" class="nav-icon_img_img" alt="头像">
+          </div>
+          
+          <!-- <span class="nav-icon_last-label">{{ userName || '设置' }}</span> -->
+          <span class="nav-icon_last-label">{{ '设置' }}</span>
         </div>
       </div>
     </aside>
@@ -78,7 +82,8 @@
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="30" :src="avatar" icon="el-icon-user-solid" />
-              <span class="user-name">{{ userName }}</span>
+              <!-- <span class="user-name">{{ userName }}</span> -->
+              <span class="user-name">设置</span>
               <i class="el-icon-arrow-down" />
             </div>
             <el-dropdown-menu slot="dropdown">
@@ -504,8 +509,19 @@ $header-h: $header-height;
   width: 59px !important;
   height: 59px !important;
   border-radius: 50%;
+  border: 1px solid transparent;
+  padding: 1px;
+  box-sizing: border-box;
 }
-
+.nav-icon_img_img{
+  width: 100%;
+  height: 100%;
+    border-radius: 50%;
+}
+.nav-icon_img:hover{
+    border: 1px solid #0049FF!important;
+    box-sizing: border-box;
+}
 .nav-icon_last-label {
   font-weight: 500;
   font-size: 14px;

@@ -28,9 +28,11 @@
       </nav>
 
       <!-- 退出登录 -->
-      <div class="set-logout" @click="handleLogout" @mouseenter="logoutHover = true" @mouseleave="logoutHover = false">
-        <img class="set-logout_img" :src="logoutHover ? require('@/assets/images/set/loginout_yes.png') : require('@/assets/images/set/loginout.png')" alt="">
-        <div>退出登录</div>
+      <div class="set-logout_box" @click="handleLogout" @mouseenter="logoutHover = true" @mouseleave="logoutHover = false">
+        <div class="set-logout">
+          <img class="set-logout_img" :src="logoutHover ? require('@/assets/images/set/loginout_yes.png') : require('@/assets/images/set/loginout.png')" alt="">
+          <div>退出登录</div>
+        </div>
       </div>
     </aside>
 
@@ -897,21 +899,31 @@ margin-top: 5px;
 }
 
 // 退出登录
+.set-logout_box{
+  padding: 9px 11px 18px 11px;
+  box-sizing: border-box;
+  width: 100%;
+  border-top: 1px solid #F2F3F7;
+}
 .set-logout {
+  height: 37px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-  padding: 18px 24px;
-  border-top: 1px solid #F2F3F7;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 13px;
+
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   color: $text-secondary;
   transition: color $transition-fast;
 
   i { font-size: 16px; }
 
-  &:hover { color: $color-danger; }
+  &:hover { color: #FF3B30; background: #FFF0F0;}
 }
 .set-logout_img{
   width: 15px;
