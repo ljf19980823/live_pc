@@ -38,7 +38,7 @@
     <main class="set-content">
 
       <!-- ─── 我的信息 ─── -->
-      <section v-if="currentMenu === 'info' && !showVerifyPhone  && !showChangePhone">
+      <section  v-if="currentMenu === 'info' && !showVerifyPhone  && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">我的信息</div>
@@ -46,7 +46,7 @@
           <div class="section_top_right"></div>
         </div>
 
-        <div class="section_last">
+        <div class="section_last" style="width:664px">
           <!-- 用户信息卡片 -->
           <div class="white-card user-top-card">
             <div class="utc-left">
@@ -105,8 +105,139 @@
         </div>
       </section>
 
+      <!-- ─── 我的教研组 列表 ─── -->
+      <section v-else-if="currentMenu === 'group' && !showGroupDetail && !showVerifyPhone && !showChangePhone">
+        <div class="section_top">
+          <div class="section_top_left">
+            <div class="section_top_left_text">我的教研组</div>
+          </div>
+          <div class="section_top_right"></div>
+        </div>
+
+        <div class="section_last">
+          <!-- 统计卡片 -->
+          <div class="group-summary-card">
+            <img src="@/assets/images/set/jyz.png" class="group-summary-icon" alt="" onerror="this.style.display='none'" />
+            <span class="group-summary-text">
+              已加入 <b>{{ groupList.length }}</b> 个教研组 · 共 <b>{{ totalGroupMembers }}</b> 位成员
+            </span>
+          </div>
+
+          <!-- 教研组卡片列表 -->
+          <div class="group-grid">
+            <div
+              v-for="group in groupList"
+              :key="group.id"
+               @click="viewGroupDetail(group)"
+              class="group-card"
+            >
+              <!-- 卡片左侧彩色条 -->
+              <div class="group-card-stripe" :style="{ background: group.color }"></div>
+
+              <div class="group-card-body">
+                <!-- 顶部：组名 + 角色 + 学科图标 -->
+                <div class="group-card-top">
+                  <div class="group-card-top_left">
+                      <div class="group-card-title-wrap">
+                        <span class="group-card-name">{{ group.name }}</span>
+                        <span class="group-role-badge" :class="group.role === '组长' ? 'role-leader' : 'role-member'">{{ group.role }}</span>
+                      </div>
+                    <!-- 学科描述 -->
+                      <div class="group-card-desc">{{ group.subject }}</div>
+                  </div>
+                   <div class="group-subject-tag" >{{ group.subjectShort }}</div>
+                </div>
+                
+
+               
+
+                
+
+                <!-- 底部：成员头像 + 查看详情 -->
+                <div class="group-card-bottom">
+                  <div class="group-members-row">
+                    <div
+                      v-for="(member, idx) in group.members.slice(0, 4)"
+                      :key="idx"
+                      class="member-avatar"
+                      :style="{ background: member.color, marginLeft: idx === 0 ? '0' : '-8px', zIndex: group.members.length - idx }"
+                    >{{ member.name }}</div>
+                    <span class="group-member-count">共 {{ group.memberCount }} 人</span>
+                  </div>
+                    <div class="group-card-bottom_xq">
+                      <div class="group-card-bottom_xq_text">
+                        查看详情
+                      </div>
+                      <img class="group-card-bottom_xq_icon" src="@/assets/images/set/xq.png" alt="">
+                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部总数 -->
+          <div class="group-total-tip">
+            <div class="group-total-tip_hx"></div>
+            <div>共 {{ groupList.length }} 个教研组</div>
+            <div class="group-total-tip_hx"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 我的教研组 详情 ─── -->
+      <section v-else-if="currentMenu === 'group' && showGroupDetail && currentGroup && !showVerifyPhone && !showChangePhone">
+        <!-- 顶部导航 -->
+        <div class="section_top">
+          <div class="section_top_left">
+            <span class="gd-back-btn" @click="backToGroupList">
+              <i class="el-icon-arrow-left" />
+              <span>返回</span>
+            </span>
+            <div class="section_top_left_text gd-title">{{ currentGroup.name }}</div>
+          </div>
+        </div>
+
+        <div class="section_last">
+          <!-- 顶部 Banner 卡片 -->
+          <div class="gd-banner-card" :style="{ background: currentGroup.color }">
+            <div class="gd-banner-tag">{{ currentGroup.subjectShort }}</div>
+            <div class="gd-banner-info">
+              <div class="gd-banner-name">{{ currentGroup.name }}</div>
+              <div class="gd-banner-desc">
+                {{ currentGroup.subject }} · 共 {{ currentGroup.memberCount }} 人 · 我的角色：{{ currentGroup.role }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 人数统计卡片 -->
+          <div class="gd-stats-card">
+            <div class="gd-stats-num">{{ currentGroup.memberCount }} 人</div>
+            <div class="gd-stats-label">组内成员</div>
+          </div>
+
+          <!-- 成员列表卡片 -->
+          <div class="gd-member-card">
+            <div class="gd-member-card-title">组内成员</div>
+            <div
+              v-for="(member, idx) in currentGroup.members"
+              :key="idx"
+              class="gd-member-item"
+            >
+              <div class="gd-member-avatar" :style="{ background: member.color }">{{ member.avatarName }}</div>
+              <div class="gd-member-info">
+                <div class="gd-member-name-row">
+                  <span class="gd-member-name">{{ member.fullName }}</span>
+                  <span v-if="member.isSelf" class="gd-member-self-badge">我</span>
+                </div>
+                <div class="gd-member-role">{{ member.role }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ─── 其他菜单占位 ─── -->
-      <section v-else-if="currentMenu !== 'info' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
+      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
         <div class="placeholder-inner">
           <i class="el-icon-s-grid placeholder-icon" />
           <p>{{ currentMenuLabel }}</p>
@@ -217,10 +348,43 @@ export default {
       changeCountdownTimer: null,
       menuItems: [
         { key: 'info',     label: '我的信息',      img: require('@/assets/images/set/wdxx.png'),     activeImg: require('@/assets/images/set/wdxx_yes.png') },
-        { key: 'group',    label: '我的教研组',    img: require('@/assets/images/set/wdjyz.png'),    activeImg: require('@/assets/images/set/wdjyz.png') },
-        { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb.png') },
+        { key: 'group',    label: '我的教研组',    img: require('@/assets/images/set/wdjyz.png'),    activeImg: require('@/assets/images/set/wdjyz_yes.png') },
+        { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb_yes.png') },
         { key: 'device',   label: '设备和网络检测', img: require('@/assets/images/set/sbhwljc.png'), activeImg: require('@/assets/images/set/sbhwljc.png') },
         { key: 'settings', label: '设置',          img: require('@/assets/images/set/sz.png'),       activeImg: require('@/assets/images/set/sz.png') }
+      ],
+      showGroupDetail: false,
+      currentGroup: null,
+      groupList: [
+        {
+          id: 1,
+          name: '技术教研组',
+          role: '组长',
+          subject: '信息技术',
+          subjectShort: '技术',
+          color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
+          memberCount: 3,
+          members: [
+            { avatarName: '思', fullName: '思雅', role: '组长', isSelf: true,  color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)' },
+            { avatarName: '李', fullName: '李老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)' },
+            { avatarName: '王', fullName: '王老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)' }
+          ]
+        },
+        {
+          id: 2,
+          name: '英语教研组',
+          role: '成员',
+          subject: '英语',
+          subjectShort: '英语',
+          color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)',
+          memberCount: 7,
+          members: [
+            { avatarName: '陈', fullName: '陈老师', role: '组长', isSelf: false, color: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
+            { avatarName: '李', fullName: '李老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)' },
+            { avatarName: '王', fullName: '王老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)' },
+            { avatarName: '思', fullName: '思雅',   role: '成员', isSelf: true,  color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)' }
+          ]
+        }
       ]
     }
   },
@@ -228,6 +392,9 @@ export default {
     currentMenuLabel() {
       const item = this.menuItems.find(m => m.key === this.currentMenu)
       return item ? item.label : ''
+    },
+    totalGroupMembers() {
+      return this.groupList.reduce((sum, g) => sum + g.memberCount, 0)
     }
   },
   methods: {
@@ -235,6 +402,8 @@ export default {
       this.currentMenu = key
       this.showVerifyPhone = false
       this.isEditing = false
+      this.showGroupDetail = false
+      this.currentGroup = null
     },
     openVerifyPhone() {
       this.showVerifyPhone = true
@@ -290,6 +459,14 @@ export default {
       // TODO: 调用修改手机号接口
       this.showChangePhone = false
       this.form.phone = this.changePhoneForm.phone
+    },
+    viewGroupDetail(group) {
+      this.currentGroup = group
+      this.showGroupDetail = true
+    },
+    backToGroupList() {
+      this.showGroupDetail = false
+      this.currentGroup = null
     }
   },
   beforeDestroy() {
@@ -713,9 +890,9 @@ border-radius: 0px 0px 0px 0px;
 }
 
 .verify-card {
-  width: 520px;
-  // padding: 40px;
-  margin: 40px auto 0;
+  width: 664px;
+  padding: 40px;
+  // margin: 40px auto 0;
   // box-sizing: border-box;
   background: none;
 
@@ -823,6 +1000,374 @@ border-radius: 0px 0px 0px 0px;
     border-color: #A8E6E3 !important;
   }
 }
+// ─── 我的教研组 ────────────────────────────────────────────
+.group-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 13px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+
+  .group-summary-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
+  .group-summary-icon-fallback {
+    font-size: 20px;
+    color: #0049FF;
+    flex-shrink: 0;
+  }
+
+  .group-summary-text {
+    font-size: 13px;
+    color: #666;
+
+    b {
+      color: #333;
+      font-weight: bold;
+    }
+  }
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.group-card {
+  background: #fff;
+  border-radius: 13px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 1px 4px rgba(0, 73, 255, 0.04);
+  cursor: pointer;
+}
+
+.group-card-stripe {
+  height: 4px;
+  flex-shrink: 0;
+  border-radius: 13px 0 0 13px;
+  background: linear-gradient( 90deg, #0049FF 0%, #CAD9FF 100%);
+}
+
+.group-card-body {
+  flex: 1;
+  padding: 19px 22px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.group-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-card-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.group-role-badge {
+  width: 36px;
+height: 19px;
+background: #EEF3FF;
+border-radius: 20px 20px 20px 20px;
+display: flex;
+justify-content: center;
+align-items: center;
+
+  &.role-leader {
+    font-weight: bold;
+font-size: 10px;
+color: #0049FF;
+  }
+
+  &.role-member {
+    font-weight: normal;
+font-size: 10px;
+color: #71A0FF;
+  }
+}
+
+.group-subject-tag {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
+border-radius: 13px 13px 13px 13px;
+}
+
+.group-card-desc {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+.group-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.group-members-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+
+  .group-member-count {
+    font-size: 12px;
+    color: #666666;
+    margin-left: 10px;
+  }
+}
+.group-card-bottom_xq{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+}
+.group-card-bottom_xq_text{
+font-weight: bold;
+font-size: 12px;
+color: #71A0FF;
+}
+.group-card-bottom_xq_icon{
+  width: 13px;
+  height: 13px;
+}
+.member-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.group-detail-link {
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+
+  i {
+    font-size: 12px;
+  }
+
+  &:hover {
+    color: #0049FF;
+  }
+}
+
+.group-total-tip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #D9D9D9;
+  padding: 8px 0;
+}
+.group-total-tip_hx{
+  flex: 1;
+  width: 0;
+  height: 1px;
+  background: #EDEEF3;
+}
+
+// ─── 教研组详情页 ─────────────────────────────────────────
+.gd-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  background: #F3F4F8;
+  border-radius: 13px;
+  padding: 9px 12px;
+  margin-right: 12px;
+  transition: color 0.2s;
+  flex-shrink: 0;
+
+  i { font-size: 13px; }
+
+  &:hover { color: #0049FF; }
+}
+
+.gd-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333;
+}
+
+.gd-banner-card {
+  border-radius: 14px;
+  padding: 24px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+.gd-banner-tag {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gd-banner-info {
+  flex: 1;
+}
+
+.gd-banner-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.gd-banner-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gd-stats-card {
+  background: #fff;
+  border-radius: 13px;
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+.gd-stats-num {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  line-height: 1.2;
+}
+
+.gd-stats-label {
+  font-size: 13px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.gd-member-card {
+  background: #fff;
+  border-radius: 13px;
+  padding: 20px 22px;
+  box-sizing: border-box;
+}
+
+.gd-member-card-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.gd-member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+
+  & + & {
+    border-top: 1px solid #F5F6FA;
+  }
+}
+
+.gd-member-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gd-member-info {
+  flex: 1;
+}
+
+.gd-member-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.gd-member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.gd-member-self-badge {
+  font-size: 11px;
+  color: #0049FF;
+  background: #EEF3FF;
+  border: 1px solid #CAD9FF;
+  border-radius: 20px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+
+.gd-member-role {
+  font-size: 12px;
+  color: #999;
+}
+
 ::v-deep .el-input__inner{
 
 border: 1px solid #CAD9FF!important;
