@@ -637,6 +637,26 @@ async function clearDataOnReinstall () {
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
   await clearDataOnReinstall()
+
+  // ─── 清除上次遗留的 HTTP 磁盘缓存，确保 iframe 直播页始终拉取最新版本 ───
+  try {
+    await session.defaultSession.clearCache()
+  } catch (_) {}
+
+  // ─── 拦截直播域名的响应头，强制禁用缓存 ────────────────────────────────
+  // 原因：Electron/Chromium 会将 iframe 加载的外部 JS/CSS/HTML 写入磁盘缓存，
+  // 导致服务端更新后客户端仍展示旧版本。通过覆盖响应头可彻底避免。
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
+    (details, callback) => {
+      const headers = Object.assign({}, details.responseHeaders)
+      headers['cache-control'] = ['no-cache, no-store, must-revalidate']
+      headers['pragma'] = ['no-cache']
+      headers['expires'] = ['0']
+      callback({ responseHeaders: headers })
+    }
+  )
+
   createWindow()
 
   app.on('activate', () => {
