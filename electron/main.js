@@ -600,8 +600,45 @@ ipcMain.on('install-update', (event, filePath) => {
   })
 })
 
-app.whenReady().then(() => {
+// ─── macOS：检测重新安装并清除旧会话数据 ──────────────────────────────────
+// macOS 卸载方式是将 .app 拖入废纸篓，无法像 NSIS 那样在卸载时清数据。
+// 替代方案：将可执行文件的"创建时间 (birthtime)"作为安装指纹存入 userData。
+// 每次重新安装时，app bundle 中的二进制文件都是全新拷贝，birthtime 会变化，
+// 检测到差异即视为重新安装，自动清除 Chromium 会话（localStorage / Cookie 等）。
+async function clearDataOnMacReinstall () {
+  if (process.platform !== 'darwin') return
+
+  try {
+    const userDataPath = app.getPath('userData')
+    const markerFile = path.join(userDataPath, '.install-fingerprint')
+    const exePath = app.getPath('exe')
+
+    const exeStat = fs.statSync(exePath)
+    // birthtime 在 macOS APFS/HFS+ 上可靠；每次新安装文件都会得到新的创建时间
+    const fingerprint = exeStat.birthtimeMs.toString()
+
+    let storedFingerprint = ''
+    try {
+      storedFingerprint = fs.readFileSync(markerFile, 'utf8').trim()
+    } catch (_) {}
+
+    if (storedFingerprint && storedFingerprint !== fingerprint) {
+      // 指纹不同 → 检测到重新安装，清除所有 Chromium 会话数据
+      const { session } = require('electron')
+      await session.defaultSession.clearStorageData()
+    }
+
+    // 写入/更新安装指纹
+    fs.mkdirSync(userDataPath, { recursive: true })
+    fs.writeFileSync(markerFile, fingerprint)
+  } catch (_) {
+    // 静默处理，不影响主流程
+  }
+}
+
+app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
+  await clearDataOnMacReinstall()
   createWindow()
 
   app.on('activate', () => {

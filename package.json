@@ -68,7 +68,8 @@
       "shortcutName": "立升直播",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": true
     },
     "mac": {
       "icon": "build/icon.icns",
