@@ -278,6 +278,7 @@
                       :clearable="false"
                       class="class-time-picker"
                       :picker-options="startTimePickerOptions"
+                      @change="handleStartTimeChange"
                     />
                   </div>
                   <div class="masl_con_dialog_last_shadow_top_detail">
@@ -737,31 +738,26 @@ export default {
     },
 
     startTimePickerOptions() {
-      const now = new Date()
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
       return {
         disabledDate(date) {
           return date < todayStart
-        },
-        selectableRange: (() => {
-          const selected = this.classStartTime
-          if (!selected) return '00:00:00 - 23:59:59'
-          const selDate = new Date(selected.replace(' ', 'T'))
-          const isSameDay =
-            selDate.getFullYear() === now.getFullYear() &&
-            selDate.getMonth() === now.getMonth() &&
-            selDate.getDate() === now.getDate()
-          if (isSameDay) {
-            const h = String(now.getHours()).padStart(2, '0')
-            const m = String(now.getMinutes()).padStart(2, '0')
-            return `${h}:${m}:00 - 23:59:59`
-          }
-          return '00:00:00 - 23:59:59'
-        })()
+        }
       }
     }
   },
   methods: {
+    handleStartTimeChange(val) {
+      if (!val) return
+      const selected = new Date(val.replace(' ', 'T'))
+      const now = new Date()
+      if (selected < now) {
+        const pad = n => String(n).padStart(2, '0')
+        this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+      }
+    },
+
     openVideoPlayer(item) {
       if (!item.filePath) {
         this.$message.warning('暂无视频回放')
