@@ -1,6 +1,6 @@
 {
   "name": "lisheng-live-pc",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
