@@ -839,7 +839,21 @@ export default {
         this.detailLoading = false
       }
     },
-    enterLiveRoom(item) {
+    async enterLiveRoom(item) {
+      // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+
       const token = getToken();
       const courseid = item.id;
       const {userId,realName,userName,role}=getUserInfo();
@@ -850,7 +864,6 @@ export default {
       // }
       this.liveUrl = `${liveBaseUrl}?userid=${userName}&username=${userName}&courseid=${courseid}&token=${token}&_t=${Date.now()}`;
       this.activeTab = 'liveui'
-      console.log(this.liveUrl);
     },
     copyShareLink() {
       const url = this.selectedCourseItem && this.selectedCourseItem.shareUrl

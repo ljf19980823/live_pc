@@ -61,7 +61,7 @@
                                     
                                   </div>
                                   <div class="masl_con_dialog_con_xq_detail_center_detail">
-                                      <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看历史课堂时长</div>
+                                      <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看历史课堂</div>
                                       <div class="masl_con_dialog_con_xq_detail_center_detail_num">
                                         {{ studentInfo.viewHistoryClass }}  
                                       </div>
@@ -142,7 +142,7 @@
                           
                         </div>
                         <div class="masl_con_dialog_con_xq_detail_center_detail">
-                            <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看历史课堂时长</div>
+                            <div class="masl_con_dialog_con_xq_detail_center_detail_title">观看历史课堂</div>
                             <div class="masl_con_dialog_con_xq_detail_center_detail_num">
                               0  <span>分钟</span>
                         </div>

@@ -750,7 +750,7 @@ export default {
   },
   methods: {
     _mapClassItem(item) {
-      const sourceMap = { '1': '后台管理', '0': '教师自主' }
+      const sourceMap = { '1': '后台创建', '0': '' }
       return {
         classId: item.classId,
         name: item.className || '',
@@ -831,7 +831,7 @@ export default {
         const detail = res.data || {}
         const idx = this.classList.findIndex(c => c.classId === classId)
         if (idx !== -1) {
-          const sourceMap = { '1': '后台管理', '0': '教师自主' }
+          const sourceMap = { '1': '后台创建', '0': '' }
           this.classList.splice(idx, 1, {
             ...this.classList[idx],
             name: detail.className || this.classList[idx].name,

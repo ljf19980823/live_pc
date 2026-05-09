@@ -44,5 +44,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // 打开安装包并退出应用
-  installUpdate: (filePath) => ipcRenderer.send('install-update', filePath)
+  installUpdate: (filePath) => ipcRenderer.send('install-update', filePath),
+
+  // ─── macOS 媒体权限 ───────────────────────────────────────────────────────
+  // 查询系统权限状态：'not-determined' | 'granted' | 'denied' | 'restricted'
+  getMediaAccessStatus: (mediaType) => ipcRenderer.invoke('get-media-access-status', mediaType),
+  // 主动弹出系统级授权对话框，返回 Promise<boolean>
+  askForMediaAccess: (mediaType) => ipcRenderer.invoke('ask-for-media-access', mediaType),
 })

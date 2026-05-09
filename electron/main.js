@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, session } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const https = require('https')
@@ -507,6 +507,21 @@ function downloadFileWithProgress (url, destPath, onProgress) {
   })
 }
 
+// ─── macOS 媒体权限：状态查询 & 主动申请 ─────────────────────────────────────
+ipcMain.handle('get-media-access-status', (_, mediaType) => {
+  if (process.platform !== 'darwin') return 'granted'
+  return systemPreferences.getMediaAccessStatus(mediaType)
+})
+
+ipcMain.handle('ask-for-media-access', async (_, mediaType) => {
+  if (process.platform !== 'darwin') return true
+  try {
+    return await systemPreferences.askForMediaAccess(mediaType)
+  } catch {
+    return false
+  }
+})
+
 // ─── 获取系统信息 ─────────────────────────────────────────────────────────────
 ipcMain.handle('get-system-info', () => {
   const platform = os.platform()
@@ -663,6 +678,17 @@ app.whenReady().then(async () => {
     const ALLOWED = ['media', 'camera', 'microphone', 'display-capture', 'mediaKeySystem', 'fullscreen']
     return ALLOWED.includes(permission)
   })
+
+  // ─── macOS 系统级媒体权限申请 ────────────────────────────────────────────
+  // systemPreferences.askForMediaAccess 触发 macOS "相机/麦克风" 系统弹窗。
+  // 必须在主进程调用，renderer 无法直接触发系统级授权对话框。
+  if (process.platform === 'darwin') {
+    // 预先请求，避免用户进入直播间时才弹出打断体验
+    Promise.all([
+      systemPreferences.askForMediaAccess('camera'),
+      systemPreferences.askForMediaAccess('microphone'),
+    ]).catch(() => {})
+  }
 
   // ─── 清除上次遗留的 HTTP 磁盘缓存，确保 iframe 直播页始终拉取最新版本 ───
   try {
