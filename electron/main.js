@@ -638,6 +638,32 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
   await clearDataOnReinstall()
 
+  // ─── macOS 摄像头 / 麦克风 / 屏幕等权限处理 ─────────────────────────────
+  // Electron 默认拒绝所有渲染进程的权限请求，需手动放行媒体权限。
+  // 此处理器在 macOS 上触发系统级权限弹窗（用户首次使用时需手动授权）。
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const ALLOWED = [
+      'media',          // getUserMedia（摄像头 + 麦克风）
+      'camera',
+      'microphone',
+      'display-capture', // 屏幕共享
+      'mediaKeySystem',
+      'geolocation',
+      'notifications',
+      'fullscreen',
+      'openExternal',
+      'clipboard-read',
+      'clipboard-sanitized-write',
+    ]
+    callback(ALLOWED.includes(permission))
+  })
+
+  // 检查渲染进程是否已拥有某项权限（供 navigator.permissions.query 使用）
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    const ALLOWED = ['media', 'camera', 'microphone', 'display-capture', 'mediaKeySystem', 'fullscreen']
+    return ALLOWED.includes(permission)
+  })
+
   // ─── 清除上次遗留的 HTTP 磁盘缓存，确保 iframe 直播页始终拉取最新版本 ───
   try {
     await session.defaultSession.clearCache()

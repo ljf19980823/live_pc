@@ -83,7 +83,11 @@
         }
       ],
       "category": "public.app-category.utilities",
-      "identity": null
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist"
     },
     "dmg": {
       "icon": "build/icon.icns",
