@@ -675,6 +675,8 @@ export default {
   },
   watch: {
     liveStatus() {
+      // 用户主动切换过滤状态时，清空已选班级，避免自动切换逻辑将状态回跳
+      this.selectedClassId = null
       this.fetchClassList()
     },
     rightTab(val) {

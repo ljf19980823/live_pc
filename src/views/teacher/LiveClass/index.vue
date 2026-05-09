@@ -463,11 +463,11 @@
         </div>
         <div class="cdc-info-row">
           <span class="cdc-label">主讲老师：</span>
-          <span class="cdc-value">{{ selectedCourseItem.teacherName || '-' }}</span>
+          <span class="cdc-value">{{ selectedCourseItem.teacherName2 || '-' }}</span>
         </div>
         <div class="cdc-info-row">
           <span class="cdc-label">参与班级：</span>
-          <span class="cdc-value">{{ selectedCourseItem.className || '-' }}</span>
+          <span class="cdc-value">{{ selectedCourseItem.classTnfos && selectedCourseItem.classTnfos.length ? selectedCourseItem.classTnfos.map(item => item.className).join('、') : '-' }}</span>
         </div>
 
         <div class="cdc-divider"></div>
@@ -825,6 +825,7 @@ export default {
           title: d.name || item.title || '',
           description: d.introduce || '',
           teacherName: d.teacherName || '',
+          teacherName2: d.teacherName2 || '',
           time: this.formatTimeRange(d.startTime, d.endTime),
           minutes: d.liveMin || item.minutes || '',
           status: d.isStart === '1' && d.isFinish !== '1' ? 'living' : 'soon',
@@ -900,7 +901,7 @@ export default {
         const res = await getLiveList()
         const list = res.data || res || []
         this.liveCourses = list.map(item => {
-          const isLiving =  item.isFinish == '2' || ( item.isStart === '1' && item.isFinish !== '1')
+          const isLiving =  item.status == '直播中' ? true:false
           return {
             ...item,
             title: item.name,
