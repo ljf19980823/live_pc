@@ -61,11 +61,13 @@ service.interceptors.response.use(
     }
 
     // 其他业务错误
-    Message({
-      message: res.message || res.msg || '请求失败',
-      type: 'error',
-      duration: 3000
-    })
+    if (!response.config?.skipErrorMessage) {
+      Message({
+        message: res.message || res.msg || '请求失败',
+        type: 'error',
+        duration: 3000
+      })
+    }
     return Promise.reject(new Error(res.message || res.msg || 'Error'))
   },
   error => {
@@ -93,7 +95,7 @@ service.interceptors.response.use(
 
     if (status === 401) {
       handleUnauthorized()
-    } else {
+    } else if (!error.config?.skipErrorMessage) {
       Message({ message, type: 'error', duration: 3000 })
     }
 

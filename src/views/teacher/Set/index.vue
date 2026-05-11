@@ -387,8 +387,21 @@
         </div>
       </section>
 
+      <!-- ─── 设置 ─── -->
+      <section v-else-if="currentMenu === 'settings' && !showVerifyPhone && !showChangePhone" >
+        <div class="section_top">
+          <div class="section_top_left">
+            <div class="section_top_left_text">设置</div>
+          </div>
+         
+        </div>
+       <div class="section_last">
+         <Settings />
+       </div>
+      </section>
+
       <!-- ─── 其他菜单占位 ─── -->
-      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && currentMenu !== 'device' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
+      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && currentMenu !== 'device' && currentMenu !== 'settings' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
         <div class="placeholder-inner">
           <i class="el-icon-s-grid placeholder-icon" />
           <p>{{ currentMenuLabel }}</p>
@@ -509,6 +522,7 @@
 
 <script>
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo } from '@/api/modules/teacher'
+import Settings from './components/Settings.vue'
 
 const GROUP_COLORS = [
   'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
@@ -530,6 +544,7 @@ const MEMBER_COLORS = [
 
 export default {
   name: 'TeacherSet',
+  components: { Settings },
   data() {
     return {
       systemInfo: { os: '获取中...', cpu: '获取中...', memory: '获取中...' },
@@ -573,7 +588,7 @@ export default {
         { key: 'group',    label: '我的教研组',    img: require('@/assets/images/set/wdjyz.png'),    activeImg: require('@/assets/images/set/wdjyz_yes.png') },
         { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb_yes.png') },
         { key: 'device',   label: '设备和网络检测', img: require('@/assets/images/set/sbhwljc.png'), activeImg: require('@/assets/images/set/sbhwljc_yes.png') },
-        { key: 'settings', label: '设置',          img: require('@/assets/images/set/sz.png'),       activeImg: require('@/assets/images/set/sz.png') }
+        { key: 'settings', label: '设置',          img: require('@/assets/images/set/sz.png'),       activeImg: require('@/assets/images/set/sz_yes.png') }
       ],
       showGroupDetail: false,
       currentGroup: null,
@@ -1072,8 +1087,8 @@ margin-top: 5px;
   &:hover:not(.active) {
     background: #F5F7FF;
 
-    .item-icon,
-    .item-label { color: $color-primary; }
+    // .item-icon,
+    // .item-label { color: $color-primary; }
   }
 
   &.active {
@@ -2359,5 +2374,13 @@ color: #999999!important;
 .device-check-arrow {
   font-size: 13px;
   color: #BBBBBB;
+}
+
+// ─── 设置 section ─────────────────────────────────────────
+.settings-section {
+  display: flex;
+  flex: 1;
+  height: 0;
+  overflow: hidden;
 }
 </style>

@@ -103,3 +103,6 @@ export const updateSsoInfo = params => {
   Object.keys(params).forEach(key => formData.append(key, params[key]))
   return post('/edu/sso/updateInfo', formData)
 }
+
+// 修改密码（跳过全局错误提示，由页面自行展示失败状态）
+export const updatePassword = data => post('/edu/sso/updatePassword', data, { skipErrorMessage: true })
