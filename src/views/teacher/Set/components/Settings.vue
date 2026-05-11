@@ -7,7 +7,7 @@
         :key="item.key"
         class="st-nav-item"
         :class="{ active: currentSub === item.key,st_active:( currentSub === item.key && item.key=='password'),st_active2:( currentSub === item.key && item.key=='about')}"
-        @click="currentSub = item.key"
+        @click="handleNavClick(item)"
       >
         <span class="st-nav-icon" v-html="item.icon"></span>
         <span class="st-nav-label">{{ item.label }}</span>
@@ -20,6 +20,12 @@
       <!-- 修改密码 -->
       <ChangePassword v-if="currentSub === 'password'" />
 
+      <!-- 隐私政策 -->
+      <PrivacyPolicy v-else-if="currentSub === 'privacy'" />
+
+      <!-- 用户协议 -->
+      <UserAgreement v-else-if="currentSub === 'agreement'" />
+
       <!-- 其他子页占位 -->
       <div v-else class="st-placeholder">
         <i class="el-icon-s-grid st-placeholder-icon" />
@@ -31,10 +37,12 @@
 
 <script>
 import ChangePassword from './ChangePassword.vue'
+import PrivacyPolicy from './PrivacyPolicy.vue'
+import UserAgreement from './UserAgreement.vue'
 
 export default {
   name: 'Settings',
-  components: { ChangePassword },
+  components: { ChangePassword, PrivacyPolicy, UserAgreement },
   data() {
     return {
       currentSub: 'password',
@@ -104,6 +112,15 @@ export default {
       const item = this.subMenus.find(m => m.key === this.currentSub)
       return item ? item.label : ''
     }
+  },
+  methods: {
+    handleNavClick(item) {
+      if (item.key === 'cache') {
+        this.$message.success('缓存清理成功')
+        return
+      }
+      this.currentSub = item.key
+    }
   }
 }
 </script>
@@ -115,6 +132,7 @@ export default {
   height: 100%;
   justify-content: flex-start;
   gap: 16px;
+  overflow: hidden;
 }
 
 // ── 左侧子菜单 ──────────────────────────────────────
@@ -211,6 +229,7 @@ export default {
 .st-content {
   flex: 1;
   width: 0;
+  max-height: 100%;
   overflow-y: auto;
   background:#FFFFFF;
   display: flex;

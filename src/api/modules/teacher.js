@@ -106,3 +106,6 @@ export const updateSsoInfo = params => {
 
 // 修改密码（跳过全局错误提示，由页面自行展示失败状态）
 export const updatePassword = data => post('/edu/sso/updatePassword', data, { skipErrorMessage: true })
+
+// 获取协议内容（type: user_agreement 用户协议 | privacy_policy 隐私协议）
+export const getAgreement = type => get('/edu/recentView/agreement', { type })
