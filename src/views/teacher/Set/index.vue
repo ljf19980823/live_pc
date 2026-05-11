@@ -2475,7 +2475,7 @@ color: #999999!important;
   font-size: 13px;
   color: #BBBBBB;
 
-  &.status-ok  { color: #22C55E; }
+  &.status-ok  { color: #0049FF; }
   &.status-fail { color: #EF4444; }
 }
 

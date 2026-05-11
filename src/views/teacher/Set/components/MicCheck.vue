@@ -194,7 +194,7 @@ export default {
   transition: background 0.08s;
 
   &.active {
-    background: #00C48C;
+    background: #0049FF;
   }
 }
 
@@ -213,12 +213,12 @@ export default {
     min-width: 120px;
     border-radius: 8px !important;
     font-size: 14px !important;
-    background: #00C48C !important;
-    border-color: #00C48C !important;
+    background: #0049FF !important;
+    border-color: #0049FF !important;
 
     &:hover {
-      background: #00B07E !important;
-      border-color: #00B07E !important;
+      background: #0445eb !important;
+      border-color: #0445eb !important;
     }
   }
 }
