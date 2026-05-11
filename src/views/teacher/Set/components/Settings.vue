@@ -6,7 +6,12 @@
         v-for="item in subMenus"
         :key="item.key"
         class="st-nav-item"
-        :class="{ active: currentSub === item.key,st_active:( currentSub === item.key && item.key=='password'),st_active2:( currentSub === item.key && item.key=='about')}"
+        :class="{
+          active: currentSub === item.key,
+          'active-cancel': currentSub === item.key && item.key === 'cancel',
+          st_active: currentSub === item.key && item.key === 'password',
+          st_active2: currentSub === item.key && item.key === 'about'
+        }"
         @click="handleNavClick(item)"
       >
         <span class="st-nav-icon" v-html="item.icon"></span>
@@ -26,6 +31,9 @@
       <!-- 用户协议 -->
       <UserAgreement v-else-if="currentSub === 'agreement'" />
 
+      <!-- 账号注销 -->
+      <CancelAccount v-else-if="currentSub === 'cancel'" />
+
       <!-- 其他子页占位 -->
       <div v-else class="st-placeholder">
         <i class="el-icon-s-grid st-placeholder-icon" />
@@ -39,10 +47,11 @@
 import ChangePassword from './ChangePassword.vue'
 import PrivacyPolicy from './PrivacyPolicy.vue'
 import UserAgreement from './UserAgreement.vue'
+import CancelAccount from './CancelAccount.vue'
 
 export default {
   name: 'Settings',
-  components: { ChangePassword, PrivacyPolicy, UserAgreement },
+  components: { ChangePassword, PrivacyPolicy, UserAgreement, CancelAccount },
   data() {
     return {
       currentSub: 'password',
@@ -160,6 +169,7 @@ export default {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
+  box-sizing: border-box;
   cursor: pointer;
   position: relative;
   transition: background 0.15s;
@@ -193,6 +203,26 @@ export default {
 
     .st-nav-arrow {
       color: #0049FF;
+    }
+  }
+
+  &.active-cancel {
+    background: #FFF0F0;
+
+    &::before {
+      background: #FF3131;
+    }
+
+    .st-nav-label {
+      color: #FF3131;
+    }
+
+    .st-nav-icon {
+      color: #FF3131;
+    }
+
+    .st-nav-arrow {
+      color: #FF3131;
     }
   }
 }

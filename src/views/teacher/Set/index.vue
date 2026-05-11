@@ -40,7 +40,7 @@
     <main class="set-content">
 
       <!-- ─── 我的信息 ─── -->
-      <section  v-if="currentMenu === 'info' && !showVerifyPhone  && !showChangePhone">
+      <section  v-if="currentMenu === 'info' && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">我的信息</div>
@@ -115,7 +115,7 @@
      
 
       <!-- ─── 我的教研组 列表 ─── -->
-      <section v-else-if="currentMenu === 'group' && !showGroupDetail && !showVerifyPhone && !showChangePhone">
+      <section v-else-if="currentMenu === 'group' && !showGroupDetail && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">我的教研组</div>
@@ -197,7 +197,7 @@
       </section>
 
       <!-- ─── 我的教研组 详情 ─── -->
-      <section v-else-if="currentMenu === 'group' && showGroupDetail && currentGroup && !showVerifyPhone && !showChangePhone">
+      <section v-else-if="currentMenu === 'group' && showGroupDetail && currentGroup && !showChangePhone">
         <!-- 顶部导航 -->
         <div class="section_top">
           <div class="section_top_left">
@@ -252,7 +252,7 @@
       </section>
 
       <!-- ─── 我的课表 ─── -->
-      <section v-else-if="currentMenu === 'schedule' && !showVerifyPhone && !showChangePhone">
+      <section v-else-if="currentMenu === 'schedule' && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">我的课表</div>
@@ -333,7 +333,7 @@
       </section>
 
       <!-- ─── 设备和网络检测 ─── -->
-      <section v-else-if="currentMenu === 'device' && !showVerifyPhone && !showChangePhone">
+      <section v-else-if="currentMenu === 'device' && !showChangePhone">
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">设备和网络检测</div>
@@ -388,7 +388,7 @@
       </section>
 
       <!-- ─── 设置 ─── -->
-      <section v-else-if="currentMenu === 'settings' && !showVerifyPhone && !showChangePhone" >
+      <section v-else-if="currentMenu === 'settings' && !showChangePhone" >
         <div class="section_top">
           <div class="section_top_left">
             <div class="section_top_left_text">设置</div>
@@ -401,7 +401,7 @@
       </section>
 
       <!-- ─── 其他菜单占位 ─── -->
-      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && currentMenu !== 'device' && currentMenu !== 'settings' && !showVerifyPhone && !showChangePhone" class="placeholder-section">
+      <section v-else-if="currentMenu !== 'info' && currentMenu !== 'group' && currentMenu !== 'schedule' && currentMenu !== 'device' && currentMenu !== 'settings' && !showChangePhone" class="placeholder-section">
         <div class="placeholder-inner">
           <i class="el-icon-s-grid placeholder-icon" />
           <p>{{ currentMenuLabel }}</p>
@@ -411,7 +411,7 @@
       <!-- ─── 修改手机号 ─── -->
       <section v-if="showChangePhone" class="verify-section">
         <div class="verify-header">
-          <span class="back-btn" @click="backToVerify">
+          <span class="back-btn" @click="showChangePhone = false">
             <i class="el-icon-arrow-left" /> 返回
           </span>
           <span class="verify-page-title">修改手机号</span>
@@ -443,39 +443,6 @@
         </div>
       </section>
 
-      <!-- ─── 身份验证 ─── -->
-      <section v-if="showVerifyPhone" class="verify-section">
-        <div class="verify-header">
-          <span class="back-btn" @click="showVerifyPhone = false">
-            <i class="el-icon-arrow-left" /> 返回
-          </span>
-          <span class="verify-page-title">身份验证</span>
-        </div>
-
-        <div class="white-card verify-card">
-          <h3 class="verify-sub">请先验证已绑定的手机号码</h3>
-
-          <el-input v-model="verifyForm.phone" disabled class="verify-input" />
-
-          <div class="code-row">
-            <el-input v-model="verifyForm.code" placeholder="请输入验证码" />
-            <span
-              class="get-code-btn"
-              :class="{ counting }"
-              @click="startCountdown"
-            >{{ counting ? `${countdown}s 后重发` : '获取验证码' }}</span>
-          </div>
-
-          <el-button
-            type="primary"
-            class="next-btn"
-            :disabled="!verifyForm.code"
-            @click="goToChangePhone"
-          >下一步</el-button>
-
-          <p class="verify-note">如原手机号无法获取验证码，请联系老师修改</p>
-        </div>
-      </section>
 
     </main>
 
@@ -521,7 +488,7 @@
 </template>
 
 <script>
-import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo } from '@/api/modules/teacher'
+import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
 import Settings from './components/Settings.vue'
 
 const GROUP_COLORS = [
@@ -560,16 +527,11 @@ export default {
       ],
       currentMenu: 'info',
       isEditing: false,
-      showVerifyPhone: false,
       userInfo: {},
       form: {
         name: '',
         phone: '',
         email: ''
-      },
-      verifyForm: {
-        phone: '',
-        code: ''
       },
       showChangePhone: false,
       changePhoneForm: {
@@ -577,9 +539,6 @@ export default {
         phone: '',
         code: ''
       },
-      counting: false,
-      countdown: 60,
-      countdownTimer: null,
       changeCounting: false,
       changeCountdown: 60,
       changeCountdownTimer: null,
@@ -753,7 +712,6 @@ export default {
     },
     switchMenu(key) {
       this.currentMenu = key
-      this.showVerifyPhone = false
       this.isEditing = false
       this.showGroupDetail = false
       this.currentGroup = null
@@ -768,7 +726,8 @@ export default {
       }
     },
     openVerifyPhone() {
-      this.showVerifyPhone = true
+      this.showChangePhone = true
+      this.changePhoneForm = { prefix: '+86', phone: '', code: '' }
     },
     async fetchUserInfo() {
       try {
@@ -778,7 +737,6 @@ export default {
         this.form.name = data.realName || data.userName || ''
         this.form.phone = data.phone || ''
         this.form.email = data.email || ''
-        this.verifyForm.phone = data.phone || ''
       } catch (e) {
         console.error('获取用户信息失败', e)
       }
@@ -814,43 +772,42 @@ export default {
         })
       }).catch(() => {})
     },
-    startCountdown() {
-      if (this.counting) return
-      this.counting = true
-      this.countdown = 60
-      this.countdownTimer = setInterval(() => {
-        this.countdown--
-        if (this.countdown <= 0) {
-          this.counting = false
-          clearInterval(this.countdownTimer)
-        }
-      }, 1000)
-    },
-    goToChangePhone() {
-      this.showVerifyPhone = false
-      this.showChangePhone = true
-      this.changePhoneForm = { prefix: '+86', phone: '', code: '' }
-    },
-    backToVerify() {
-      this.showChangePhone = false
-      this.showVerifyPhone = true
-    },
-    startChangeCountdown() {
+    async startChangeCountdown() {
       if (this.changeCounting) return
-      this.changeCounting = true
-      this.changeCountdown = 60
-      this.changeCountdownTimer = setInterval(() => {
-        this.changeCountdown--
-        if (this.changeCountdown <= 0) {
-          this.changeCounting = false
-          clearInterval(this.changeCountdownTimer)
-        }
-      }, 1000)
+      const phone = (this.changePhoneForm.phone || '').trim()
+      if (!phone) {
+        this.$message.warning('请先输入手机号')
+        return
+      }
+      try {
+        await sendCode({ phone, type: 3 })
+        this.$message.success('验证码已发送')
+        this.changeCounting = true
+        this.changeCountdown = 60
+        this.changeCountdownTimer = setInterval(() => {
+          this.changeCountdown--
+          if (this.changeCountdown <= 0) {
+            this.changeCounting = false
+            clearInterval(this.changeCountdownTimer)
+          }
+        }, 1000)
+      } catch (e) {
+        this.$message.error('发送验证码失败，请稍后重试')
+      }
     },
-    handleConfirmChangePhone() {
-      // TODO: 调用修改手机号接口
-      this.showChangePhone = false
-      this.form.phone = this.changePhoneForm.phone
+    async handleConfirmChangePhone() {
+      try {
+        await updatePhone({
+          newPhone: this.changePhoneForm.phone,
+          code: this.changePhoneForm.code
+        })
+        this.$message.success('手机号修改成功')
+        this.showChangePhone = false
+        this.form.phone = this.changePhoneForm.phone
+        this.fetchUserInfo()
+      } catch (e) {
+        this.$message.error('修改失败，请稍后重试')
+      }
     },
     async fetchGroupData() {
       this.groupLoading = true
@@ -957,7 +914,6 @@ export default {
     }
   },
   beforeDestroy() {
-    if (this.countdownTimer) clearInterval(this.countdownTimer)
     if (this.changeCountdownTimer) clearInterval(this.changeCountdownTimer)
   }
 }
