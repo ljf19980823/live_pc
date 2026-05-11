@@ -4,11 +4,11 @@
     <aside class="set-sidebar">
       <!-- 用户信息头部 -->
       <div class="sidebar-user">
-        <div class="su-avatar">思雅</div>
-        <!-- <img src="" class="su-avatar_head" alt=""> -->
+        <img v-if="userInfo.profilePicture" :src="userInfo.profilePicture" class="su-avatar_head" alt="">
+        <div v-else class="su-avatar">{{ (userInfo.realName || userInfo.userName || '').slice(0, 2) }}</div>
         <div class="su-meta">
-          <div class="su-name">思雅</div>
-          <div class="su-account">fjlsjy思雅老师</div>
+          <div class="su-name">{{ userInfo.realName || userInfo.userName }}</div>
+          <div class="su-account">{{ userInfo.userName }}</div>
         </div>
       </div>
 
@@ -52,11 +52,11 @@
           <!-- 用户信息卡片 -->
           <div class="white-card user-top-card">
             <div class="utc-left">
-              <div class="utc-avatar">思雅</div>
-              <!-- <img src="" class="utc-avatar_head" alt=""> -->
+              <img v-if="userInfo.profilePicture" :src="userInfo.profilePicture" class="utc-avatar_head" alt="">
+              <div v-else class="utc-avatar">{{ (userInfo.realName || userInfo.userName || '').slice(0, 2) }}</div>
               <div class="utc-info">
-                <div class="utc-name">思雅老师</div>
-                <div class="utc-role">教师 · fjlsjy思雅老师</div>
+                <div class="utc-name">{{ userInfo.realName || userInfo.userName }}</div>
+                <div class="utc-role">教师 · {{ userInfo.userName }}</div>
               </div>
             </div>
             <div class="utc-right">
@@ -82,7 +82,7 @@
 
             <div class="form-field">
               <label>姓名</label>
-              <el-input v-model="form.name" :disabled="!isEditing" />
+              <el-input v-model="form.name" disabled />
             </div>
 
             <div class="form-field">
@@ -332,7 +332,7 @@
             <div class="section_top_left_text">设备和网络检测</div>
           </div>
           <div class="section_top_right">
-            <div class="device-user-btn">思雅</div>
+            <div class="device-user-btn">{{ userInfo.realName || userInfo.userName }}</div>
           </div>
         </div>
 
@@ -462,7 +462,7 @@
 </template>
 
 <script>
-import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail } from '@/api/modules/teacher'
+import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo } from '@/api/modules/teacher'
 
 const GROUP_COLORS = [
   'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
@@ -491,13 +491,14 @@ export default {
       currentMenu: 'info',
       isEditing: false,
       showVerifyPhone: false,
+      userInfo: {},
       form: {
-        name: '思雅',
-        phone: '19859650891',
+        name: '',
+        phone: '',
         email: ''
       },
       verifyForm: {
-        phone: '19859650891',
+        phone: '',
         code: ''
       },
       showChangePhone: false,
@@ -631,6 +632,8 @@ export default {
         console.error('获取系统信息失败', e)
       }
     }
+
+    this.fetchUserInfo()
   },
   methods: {
     switchMenu(key) {
@@ -639,6 +642,9 @@ export default {
       this.isEditing = false
       this.showGroupDetail = false
       this.currentGroup = null
+      if (key === 'info') {
+        this.fetchUserInfo()
+      }
       if (key === 'schedule') {
         this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
       }
@@ -649,8 +655,38 @@ export default {
     openVerifyPhone() {
       this.showVerifyPhone = true
     },
-    handleSave() {
-      this.isEditing = false
+    async fetchUserInfo() {
+      try {
+        const res = await getSsoInfo()
+        const data = res.data || res || {}
+        this.userInfo = data
+        this.form.name = data.realName || data.userName || ''
+        this.form.phone = data.phone || ''
+        this.form.email = data.email || ''
+        this.verifyForm.phone = data.phone || ''
+      } catch (e) {
+        console.error('获取用户信息失败', e)
+      }
+    },
+    async handleSave() {
+      const emailVal = (this.form.email || '').trim()
+      if (!emailVal) {
+        this.$message.warning('邮箱不能为空')
+        return
+      }
+      const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailReg.test(emailVal)) {
+        this.$message.warning('请输入正确的邮箱格式')
+        return
+      }
+      try {
+        await updateSsoInfo({ email: emailVal })
+        this.$message.success('保存成功')
+        this.isEditing = false
+        this.fetchUserInfo()
+      } catch (e) {
+        this.$message.error('保存失败，请稍后重试')
+      }
     },
     handleLogout() {
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -861,7 +897,7 @@ export default {
 .su-avatar_head{
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: 50%;
 }
 
 .su-meta {
@@ -1089,7 +1125,7 @@ background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
 .utc-avatar_head{
 width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: 50%;
 }
 .utc-name {
   font-size: 16px;

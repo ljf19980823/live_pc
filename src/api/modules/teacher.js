@@ -93,3 +93,13 @@ export const getTeachingGroupList = () => get('/edu/teaching-group/my/list')
 
 // 获取教研组详情
 export const getTeachingGroupDetail = groupId => get(`/edu/teaching-group/detail/${groupId}`)
+
+// 获取当前用户信息
+export const getSsoInfo = () => get('/edu/sso/info')
+
+// 更新当前用户信息（multipart/form-data）
+export const updateSsoInfo = params => {
+  const formData = new FormData()
+  Object.keys(params).forEach(key => formData.append(key, params[key]))
+  return post('/edu/sso/updateInfo', formData)
+}
