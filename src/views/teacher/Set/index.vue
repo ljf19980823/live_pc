@@ -52,8 +52,13 @@
           <!-- 用户信息卡片 -->
           <div class="white-card user-top-card">
             <div class="utc-left">
-              <img v-if="userInfo.profilePicture" :src="userInfo.profilePicture" class="utc-avatar_head" alt="">
-              <div v-else class="utc-avatar">{{ (userInfo.realName || userInfo.userName || '').slice(0, 2) }}</div>
+              <div class="utc-avatar-wrap" @click="showAvatarDialog = true">
+                <img v-if="userInfo.profilePicture" :src="userInfo.profilePicture" class="utc-avatar_head" alt="">
+                <div v-else class="utc-avatar">{{ (userInfo.realName || userInfo.userName || '').slice(0, 2) }}</div>
+                <div class="utc-avatar-edit-mask">
+                  <i class="el-icon-edit-outline utc-avatar-edit-icon"></i>
+                </div>
+              </div>
               <div class="utc-info">
                 <div class="utc-name">{{ userInfo.realName || userInfo.userName }}</div>
                 <div class="utc-role">教师 · {{ userInfo.userName }}</div>
@@ -106,6 +111,8 @@
           </div>
         </div>
       </section>
+
+     
 
       <!-- ─── 我的教研组 列表 ─── -->
       <section v-else-if="currentMenu === 'group' && !showGroupDetail && !showVerifyPhone && !showChangePhone">
@@ -458,6 +465,45 @@
       </section>
 
     </main>
+
+
+     <!-- 选择头像弹窗 -->
+      <DialogCustome
+        :visible="showAvatarDialog"
+        title="可选头像"
+        width="420px"
+        height="300px"
+        :show-cancel="true"
+        :show-confirm="selectedPresetIdx >= 0"
+        :confirm-loading="avatarUploading"
+        confirm-text="确认选择"
+        cancel-text="取消"
+        :show-close="true"
+        @close="closeAvatarDialog"
+        @cancel="closeAvatarDialog"
+        @confirm="submitPresetAvatar"
+      >
+        <div class="avatar-dialog-content">
+          <div class="avatar-preset-list">
+            <div
+              v-for="(avatar, idx) in presetAvatars"
+              :key="idx"
+              class="avatar-preset-item"
+              :class="{ 'is-selected': selectedPresetIdx === idx }"
+              @click="selectedPresetIdx = idx"
+            >
+              <div class="avatar-preset-bg">
+                <img :src="avatar.img" class="avatar-preset-img" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="avatar-album-btn" :class="{ 'is-loading': avatarUploading }" @click="triggerFileInput">
+            <span v-if="avatarUploading" class="avatar-album-spinner"></span>
+            <span>从相册中选择</span>
+          </div>
+          <input ref="avatarFileInput" type="file" accept="image/*" style="display:none" @change="onAvatarFileChange" />
+        </div>
+      </DialogCustome>
   </div>
 </template>
 
@@ -488,6 +534,15 @@ export default {
     return {
       systemInfo: { os: '获取中...', cpu: '获取中...', memory: '获取中...' },
       logoutHover: false,
+      showAvatarDialog: false,
+      selectedPresetIdx: -1,
+      avatarUploading: false,
+      presetAvatars: [
+        { img: require('@/assets/images/set/head_1.png') },
+        { img: require('@/assets/images/set/head_2.png') },
+        { img: require('@/assets/images/set/head_3.png') },
+        { img: require('@/assets/images/set/head_4.png') },
+      ],
       currentMenu: 'info',
       isEditing: false,
       showVerifyPhone: false,
@@ -636,6 +691,51 @@ export default {
     this.fetchUserInfo()
   },
   methods: {
+    closeAvatarDialog() {
+      if (this.avatarUploading) return
+      this.showAvatarDialog = false
+      this.selectedPresetIdx = -1
+    },
+    triggerFileInput() {
+      if (this.avatarUploading) return
+      this.$refs.avatarFileInput && this.$refs.avatarFileInput.click()
+    },
+    async onAvatarFileChange(e) {
+      const file = e.target.files && e.target.files[0]
+      e.target.value = ''
+      if (!file) return
+      await this.uploadAvatar(file)
+    },
+    async submitPresetAvatar() {
+      if (this.selectedPresetIdx < 0 || this.avatarUploading) return
+      const imgUrl = this.presetAvatars[this.selectedPresetIdx].img
+      try {
+        const res = await fetch(imgUrl)
+        const blob = await res.blob()
+        const ext = blob.type.split('/')[1] || 'png'
+        const file = new File([blob], `preset_avatar_${this.selectedPresetIdx + 1}.${ext}`, { type: blob.type })
+        await this.uploadAvatar(file)
+      } catch {
+        this.$message.error('头像处理失败，请重试')
+      }
+    },
+    async uploadAvatar(file) {
+      this.avatarUploading = true
+      try {
+        await updateSsoInfo({ avatar: file })
+        this.$message.success('头像更新成功')
+        await Promise.all([
+          this.fetchUserInfo(),
+          this.$store.dispatch('user/fetchUserInfo')
+        ])
+        this.showAvatarDialog = false
+        this.selectedPresetIdx = -1
+      } catch {
+        this.$message.error('头像上传失败，请重试')
+      } finally {
+        this.avatarUploading = false
+      }
+    },
     switchMenu(key) {
       this.currentMenu = key
       this.showVerifyPhone = false
@@ -1126,6 +1226,120 @@ background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
 width: 56px;
   height: 56px;
   border-radius: 50%;
+}
+
+.utc-avatar-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+
+  .utc-avatar,
+  .utc-avatar_head {
+    width: 100%;
+    height: 100%;
+  }
+
+  .utc-avatar-edit-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 50%;
+  }
+
+  &:hover .utc-avatar-edit-mask {
+    opacity: 1;
+  }
+
+  .utc-avatar-edit-icon {
+    font-size: 20px;
+    color: #fff;
+  }
+}
+
+// ─── 选择头像弹窗 ───────────────────────────────
+.avatar-dialog-content {
+  padding: 8px 0 4px;
+}
+
+.avatar-preset-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.avatar-preset-item {
+  cursor: pointer;
+  border-radius: 20px;
+  border: 3px solid transparent;
+  transition: border-color 0.2s;
+
+  &.is-selected {
+    border-color: #0049FF;
+  }
+}
+
+.avatar-preset-bg {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preset-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-album-btn {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #0049FF;
+  cursor: pointer;
+  background: #F8F9FB;
+  border-radius: 13px;
+  border: 1px solid #EDEEF3;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #F0F5FF;
+  }
+
+  &.is-loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.avatar-album-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #0049FF;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 .utc-name {
   font-size: 16px;
