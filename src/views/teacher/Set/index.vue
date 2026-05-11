@@ -334,57 +334,134 @@
 
       <!-- ─── 设备和网络检测 ─── -->
       <section v-else-if="currentMenu === 'device' && !showChangePhone">
-        <div class="section_top">
-          <div class="section_top_left">
-            <div class="section_top_left_text">设备和网络检测</div>
-          </div>
-          <div class="section_top_right">
-            <div class="device-user-btn">{{ userInfo.realName || userInfo.userName }}</div>
-          </div>
-        </div>
 
-        <div class="section_last">
-          <!-- 系统信息卡片 -->
-          <div class="white-card device-sys-card">
-            <p class="device-card-label">系统信息</p>
-            <div class="device-info-row">
-              <span class="device-info-key">操作系统</span>
-              <span class="device-info-val blue">{{ systemInfo.os }}</span>
+        <!-- 摄像头检测子页 -->
+        <template v-if="currentDeviceCheck === 'camera'">
+          <div class="section_top">
+            <div class="section_top_left">
+              <span class="back-btn" @click="closeDeviceCheck">
+                <i class="el-icon-arrow-left" />
+              </span>
+              <div class="section_top_left_text">摄像头检测</div>
             </div>
-            <div class="device-info-row">
-              <span class="device-info-key">CPU</span>
-              <span class="device-info-val blue">{{ systemInfo.cpu }}</span>
+          </div>
+          <div class="section_last">
+            <div class="white-card camera-check-card">
+              <CameraCheck @result="onCameraResult" />
             </div>
-            <div class="device-info-row">
-              <span class="device-info-key">内存</span>
-              <span class="device-info-val">{{ systemInfo.memory }}</span>
+          </div>
+        </template>
+
+        <!-- 麦克风检测子页 -->
+        <template v-else-if="currentDeviceCheck === 'mic'">
+          <div class="section_top">
+            <div class="section_top_left">
+              <span class="back-btn" @click="closeDeviceCheck">
+                <i class="el-icon-arrow-left" />
+              </span>
+              <div class="section_top_left_text">麦克风检测</div>
+            </div>
+          </div>
+          <div class="section_last">
+            <div class="white-card camera-check-card">
+              <MicCheck @result="onMicResult" />
+            </div>
+          </div>
+        </template>
+
+        <!-- 扬声器检测子页 -->
+        <template v-else-if="currentDeviceCheck === 'speaker'">
+          <div class="section_top">
+            <div class="section_top_left">
+              <span class="back-btn" @click="closeDeviceCheck">
+                <i class="el-icon-arrow-left" />
+              </span>
+              <div class="section_top_left_text">扬声器检测</div>
+            </div>
+          </div>
+          <div class="section_last">
+            <div class="white-card camera-check-card">
+              <SpeakerCheck @result="onSpeakerResult" />
+            </div>
+          </div>
+        </template>
+
+        <!-- 网络检测子页 -->
+        <template v-else-if="currentDeviceCheck === 'network'">
+          <div class="section_top">
+            <div class="section_top_left">
+              <span class="back-btn" @click="closeDeviceCheck">
+                <i class="el-icon-arrow-left" />
+              </span>
+              <div class="section_top_left_text">网络检测</div>
+            </div>
+          </div>
+          <div class="section_last">
+            <NetworkCheck />
+          </div>
+        </template>
+
+        <!-- 设备列表主页 -->
+        <template v-else>
+          <div class="section_top">
+            <div class="section_top_left">
+              <div class="section_top_left_text">设备和网络检测</div>
+            </div>
+            <div class="section_top_right">
+              <div class="device-user-btn">{{ userInfo.realName || userInfo.userName }}</div>
             </div>
           </div>
 
-          <!-- 设备检测卡片 -->
-          <div class="white-card device-check-card">
-            <div class="device-check-header">
-              <p class="device-card-label">设备检测</p>
-              <el-button type="primary" size="small" class="device-one-btn">一键检测</el-button>
+          <div class="section_last">
+            <!-- 系统信息卡片 -->
+            <div class="white-card device-sys-card">
+              <p class="device-card-label">系统信息</p>
+              <div class="device-info-row">
+                <span class="device-info-key">操作系统</span>
+                <span class="device-info-val blue">{{ systemInfo.os }}</span>
+              </div>
+              <div class="device-info-row">
+                <span class="device-info-key">CPU</span>
+                <span class="device-info-val blue">{{ systemInfo.cpu }}</span>
+              </div>
+              <div class="device-info-row">
+                <span class="device-info-key">内存</span>
+                <span class="device-info-val">{{ systemInfo.memory }}</span>
+              </div>
             </div>
-            <div
-              v-for="(item, idx) in deviceCheckItems"
-              :key="idx"
-              class="device-check-item"
-            >
-              <div class="device-check-item-left">
-                <div class="device-check-icon">
-                  <img :src="item.icon" class="device-icon-img" alt="" />
+
+            <!-- 设备检测卡片 -->
+            <div class="white-card device-check-card">
+              <div class="device-check-header">
+                <p class="device-card-label">设备检测</p>
+              </div>
+              <div
+                v-for="(item, idx) in deviceCheckItems"
+                :key="idx"
+                class="device-check-item"
+                @click="openDeviceCheck(item.key)"
+              >
+                <div class="device-check-item-left">
+                  <div class="device-check-icon">
+                    <img :src="item.icon" class="device-icon-img" alt="" />
+                  </div>
+                  <span class="device-check-name">{{ item.name }}</span>
                 </div>
-                <span class="device-check-name">{{ item.name }}</span>
-              </div>
-              <div class="device-check-item-right">
-                <span class="device-check-status">{{ item.status }}</span>
-                <i class="el-icon-arrow-right device-check-arrow"></i>
+                <div class="device-check-item-right">
+                  <span
+                    class="device-check-status"
+                    :class="{
+                      'status-ok': item.status === '正常',
+                      'status-fail': item.status === '异常'
+                    }"
+                  >{{ item.status }}</span>
+                  <i class="el-icon-arrow-right device-check-arrow"></i>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
+
       </section>
 
       <!-- ─── 设置 ─── -->
@@ -490,6 +567,10 @@
 <script>
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
 import Settings from './components/Settings.vue'
+import CameraCheck from './components/CameraCheck.vue'
+import MicCheck from './components/MicCheck.vue'
+import SpeakerCheck from './components/SpeakerCheck.vue'
+import NetworkCheck from './components/NetworkCheck.vue'
 
 const GROUP_COLORS = [
   'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
@@ -511,7 +592,7 @@ const MEMBER_COLORS = [
 
 export default {
   name: 'TeacherSet',
-  components: { Settings },
+  components: { Settings, CameraCheck, MicCheck, SpeakerCheck, NetworkCheck },
   data() {
     return {
       systemInfo: { os: '获取中...', cpu: '获取中...', memory: '获取中...' },
@@ -561,6 +642,7 @@ export default {
         { key: 'speaker', name: '扬声器检测', status: '未检测', icon: require('@/assets/images/set/ysqjc.png') },
         { key: 'network', name: '网络检测',   status: '未检测', icon: require('@/assets/images/set/wljc.png') }
       ],
+      currentDeviceCheck: null,
       scheduleYear: new Date().getFullYear(),
       scheduleMonth: new Date().getMonth(),
       scheduleSelectedDate: '',
@@ -663,6 +745,7 @@ export default {
     }
 
     this.fetchUserInfo()
+    this.loadDeviceCheckStatus()
   },
   methods: {
     closeAvatarDialog() {
@@ -715,6 +798,7 @@ export default {
       this.isEditing = false
       this.showGroupDetail = false
       this.currentGroup = null
+      this.closeDeviceCheck()
       if (key === 'info') {
         this.fetchUserInfo()
       }
@@ -725,6 +809,71 @@ export default {
         this.fetchGroupData()
       }
     },
+
+    // ─── 设备检测子页 ───────────────────────────────────────
+    openDeviceCheck(key) {
+      this.currentDeviceCheck = key
+      if (key === 'network') {
+        const item = this.deviceCheckItems.find(i => i.key === 'network')
+        if (item) item.status = navigator.onLine ? '正常' : '异常'
+        this.saveDeviceCheckStatus()
+      }
+    },
+    closeDeviceCheck() {
+      this.currentDeviceCheck = null
+    },
+    onCameraResult(result) {
+      const item = this.deviceCheckItems.find(i => i.key === 'camera')
+      if (item) item.status = result === 'ok' ? '正常' : '异常'
+      this.saveDeviceCheckStatus()
+      this.closeDeviceCheck()
+      if (result === 'ok') {
+        this.$message.success('摄像头检测正常')
+      } else {
+        this.$message.warning('摄像头检测异常，请参考常见问题进行排查')
+      }
+    },
+    onMicResult(result) {
+      const item = this.deviceCheckItems.find(i => i.key === 'mic')
+      if (item) item.status = result === 'ok' ? '正常' : '异常'
+      this.saveDeviceCheckStatus()
+      this.closeDeviceCheck()
+      if (result === 'ok') {
+        this.$message.success('麦克风检测正常')
+      } else {
+        this.$message.warning('麦克风检测异常，请参考常见问题进行排查')
+      }
+    },
+    onSpeakerResult(result) {
+      const item = this.deviceCheckItems.find(i => i.key === 'speaker')
+      if (item) item.status = result === 'ok' ? '正常' : '异常'
+      this.saveDeviceCheckStatus()
+      this.closeDeviceCheck()
+      if (result === 'ok') {
+        this.$message.success('扬声器检测正常')
+      } else {
+        this.$message.warning('扬声器检测异常，请参考常见问题进行排查')
+      }
+    },
+
+    saveDeviceCheckStatus() {
+      const statusMap = {}
+      this.deviceCheckItems.forEach(i => { statusMap[i.key] = i.status })
+      localStorage.setItem('device_check_status', JSON.stringify(statusMap))
+    },
+    loadDeviceCheckStatus() {
+      try {
+        const raw = localStorage.getItem('device_check_status')
+        if (!raw) return
+        const statusMap = JSON.parse(raw)
+        this.deviceCheckItems.forEach(i => {
+          if (statusMap[i.key]) i.status = statusMap[i.key]
+        })
+      } catch (e) {
+        // 数据异常时忽略
+      }
+    },
+
     openVerifyPhone() {
       this.showChangePhone = true
       this.changePhoneForm = { prefix: '+86', phone: '', code: '' }
@@ -2325,11 +2474,20 @@ color: #999999!important;
 .device-check-status {
   font-size: 13px;
   color: #BBBBBB;
+
+  &.status-ok  { color: #22C55E; }
+  &.status-fail { color: #EF4444; }
 }
 
 .device-check-arrow {
   font-size: 13px;
   color: #BBBBBB;
+}
+
+// ─── 摄像头/麦克风检测卡片容器 ───────────────────────────────
+.camera-check-card {
+  padding: 24px 32px;
+  box-sizing: border-box;
 }
 
 // ─── 设置 section ─────────────────────────────────────────

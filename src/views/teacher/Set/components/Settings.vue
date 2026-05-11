@@ -34,6 +34,9 @@
       <!-- 账号注销 -->
       <CancelAccount v-else-if="currentSub === 'cancel'" />
 
+      <!-- 关于 -->
+      <About v-else-if="currentSub === 'about'" />
+
       <!-- 其他子页占位 -->
       <div v-else class="st-placeholder">
         <i class="el-icon-s-grid st-placeholder-icon" />
@@ -48,10 +51,11 @@ import ChangePassword from './ChangePassword.vue'
 import PrivacyPolicy from './PrivacyPolicy.vue'
 import UserAgreement from './UserAgreement.vue'
 import CancelAccount from './CancelAccount.vue'
+import About from './About.vue'
 
 export default {
   name: 'Settings',
-  components: { ChangePassword, PrivacyPolicy, UserAgreement, CancelAccount },
+  components: { ChangePassword, PrivacyPolicy, UserAgreement, CancelAccount, About },
   data() {
     return {
       currentSub: 'password',
