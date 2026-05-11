@@ -61,10 +61,10 @@
               <div class="placeholder_last_table_detail_top_last">
                 <div class="placeholder_last_table_detail_top_last_time">{{ item.time }}</div>
                 <div class="placeholder_last_table_detail_top_last_leve" v-if="item.status === 'living'">
-                  已直播 <span class="placeholder_last_table_detail_top_last_leve_yj">{{ item.minutes }}</span> 分钟
+                  已直播 <span class="placeholder_last_table_detail_top_last_leve_yj">{{ item.minutes }}</span> 
                 </div>
                 <div class="placeholder_last_table_detail_top_last_leve" v-else>
-                  距离直播还有 <span class="placeholder_last_table_detail_top_last_leve_jl">{{ item.minutes }}</span> 分钟
+                  距离直播还有 <span class="placeholder_last_table_detail_top_last_leve_jl">{{ item.minutes }}</span> 
                 </div>
               </div>
             </div>
@@ -498,7 +498,7 @@
           <div class="cdc-time-row">
             <span class="cdc-time-text">{{ selectedCourseItem.time }}</span>
             <span class="cdc-live-min" v-if="selectedCourseItem.status === 'living'">
-              已直播 <span class="cdc-min-num">{{ selectedCourseItem.minutes }}</span> 分钟
+              已直播 <span class="cdc-min-num">{{ selectedCourseItem.minutes }}</span> 
             </span>
           </div>
           <div

@@ -84,3 +84,12 @@ export const getLiveShare = liveId => get(`/edu/live/share/${liveId}`)
 
 // 更新直播信息（ifShare: '1' 开启分享, '2' 关闭分享）
 export const updateLive = (liveId, data) => put(`/edu/live/${liveId}`, data)
+
+// 获取我的教研组统计（groupCount / memberCount）
+export const getTeachingGroupStats = () => get('/edu/teaching-group/my/stats')
+
+// 获取我的教研组列表
+export const getTeachingGroupList = () => get('/edu/teaching-group/my/list')
+
+// 获取教研组详情
+export const getTeachingGroupDetail = groupId => get(`/edu/teaching-group/detail/${groupId}`)

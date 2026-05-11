@@ -116,12 +116,12 @@
           <div class="section_top_right"></div>
         </div>
 
-        <div class="section_last">
+        <div class="section_last" v-loading="groupLoading">
           <!-- 统计卡片 -->
           <div class="group-summary-card">
             <img src="@/assets/images/set/jyz.png" class="group-summary-icon" alt="" onerror="this.style.display='none'" />
             <span class="group-summary-text">
-              已加入 <b>{{ groupList.length }}</b> 个教研组 · 共 <b>{{ totalGroupMembers }}</b> 位成员
+              已加入 <b>{{ groupStats.groupCount }}</b> 个教研组 · 共 <b>{{ groupStats.memberCount }}</b> 位成员
             </span>
           </div>
 
@@ -134,7 +134,7 @@
               class="group-card"
             >
               <!-- 卡片左侧彩色条 -->
-              <div class="group-card-stripe" :style="{ background: group.color }"></div>
+              <div class="group-card-stripe" ></div>
 
               <div class="group-card-body">
                 <!-- 顶部：组名 + 角色 + 学科图标 -->
@@ -162,8 +162,11 @@
                       v-for="(member, idx) in group.members.slice(0, 4)"
                       :key="idx"
                       class="member-avatar"
-                      :style="{ background: member.color, marginLeft: idx === 0 ? '0' : '-8px', zIndex: group.members.length - idx }"
-                    >{{ member.name }}</div>
+                      :style="{ marginLeft: idx === 0 ? '0' : '-8px', zIndex: group.members.length - idx }"
+                    >
+                      <img v-if="member.avatarUrl" :src="member.avatarUrl" class="member-avatar-img" />
+                      <span v-else class="member-avatar-text" :style="{ background: member.color }">{{ member.name }}</span>
+                    </div>
                     <span class="group-member-count">共 {{ group.memberCount }} 人</span>
                   </div>
                     <div class="group-card-bottom_xq">
@@ -180,7 +183,7 @@
           <!-- 底部总数 -->
           <div class="group-total-tip">
             <div class="group-total-tip_hx"></div>
-            <div>共 {{ groupList.length }} 个教研组</div>
+            <div>共 {{ groupStats.groupCount }} 个教研组</div>
             <div class="group-total-tip_hx"></div>
           </div>
         </div>
@@ -199,9 +202,9 @@
           </div>
         </div>
 
-        <div class="section_last">
+        <div class="section_last" v-loading="groupDetailLoading">
           <!-- 顶部 Banner 卡片 -->
-          <div class="gd-banner-card" :style="{ background: currentGroup.color }">
+          <div class="gd-banner-card" >
             <div class="gd-banner-tag">{{ currentGroup.subjectShort }}</div>
             <div class="gd-banner-info">
               <div class="gd-banner-name">{{ currentGroup.name }}</div>
@@ -225,7 +228,10 @@
               :key="idx"
               class="gd-member-item"
             >
-              <div class="gd-member-avatar" :style="{ background: member.color }">{{ member.avatarName }}</div>
+              <div class="gd-member-avatar" :style="{ background: member.avatarUrl ? 'transparent' : member.color }">
+                <img v-if="member.avatarUrl" :src="member.avatarUrl" class="gd-member-avatar-img" />
+                <template v-else>{{ member.avatarName }}</template>
+              </div>
               <div class="gd-member-info">
                 <div class="gd-member-name-row">
                   <span class="gd-member-name">{{ member.fullName }}</span>
@@ -456,7 +462,25 @@
 </template>
 
 <script>
-import { getScheduleList } from '@/api/modules/teacher'
+import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail } from '@/api/modules/teacher'
+
+const GROUP_COLORS = [
+  'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
+  'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)',
+  'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)',
+  'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+  'linear-gradient(135deg, #F7971E 0%, #FFD200 100%)',
+  'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
+]
+
+const MEMBER_COLORS = [
+  'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
+  'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)',
+  'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)',
+  'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+  'linear-gradient(135deg, #F7971E 0%, #FFD200 100%)',
+  'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
+]
 
 export default {
   name: 'TeacherSet',
@@ -497,6 +521,10 @@ export default {
       ],
       showGroupDetail: false,
       currentGroup: null,
+      groupList: [],
+      groupStats: { groupCount: 0, memberCount: 0 },
+      groupLoading: false,
+      groupDetailLoading: false,
       deviceCheckItems: [
         { key: 'camera',  name: '摄像头检测', status: '未检测', icon: require('@/assets/images/set/sxtjc.png') },
         { key: 'mic',     name: '麦克风检测', status: '未检测', icon: require('@/assets/images/set/mkfjc.png') },
@@ -509,47 +537,13 @@ export default {
       weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
       monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
       scheduleApiData: [],
-      scheduleLoading: false,
-      groupList: [
-        {
-          id: 1,
-          name: '技术教研组',
-          role: '组长',
-          subject: '信息技术',
-          subjectShort: '技术',
-          color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)',
-          memberCount: 3,
-          members: [
-            { avatarName: '思', fullName: '思雅', role: '组长', isSelf: true,  color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)' },
-            { avatarName: '李', fullName: '李老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)' },
-            { avatarName: '王', fullName: '王老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)' }
-          ]
-        },
-        {
-          id: 2,
-          name: '英语教研组',
-          role: '成员',
-          subject: '英语',
-          subjectShort: '英语',
-          color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)',
-          memberCount: 7,
-          members: [
-            { avatarName: '陈', fullName: '陈老师', role: '组长', isSelf: false, color: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
-            { avatarName: '李', fullName: '李老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%)' },
-            { avatarName: '王', fullName: '王老师', role: '成员', isSelf: false, color: 'linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%)' },
-            { avatarName: '思', fullName: '思雅',   role: '成员', isSelf: true,  color: 'linear-gradient(135deg, #0049FF 0%, #71A0FF 100%)' }
-          ]
-        }
-      ]
+      scheduleLoading: false
     }
   },
   computed: {
     currentMenuLabel() {
       const item = this.menuItems.find(m => m.key === this.currentMenu)
       return item ? item.label : ''
-    },
-    totalGroupMembers() {
-      return this.groupList.reduce((sum, g) => sum + g.memberCount, 0)
     },
     yearRange() {
       const cur = new Date().getFullYear()
@@ -648,6 +642,9 @@ export default {
       if (key === 'schedule') {
         this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
       }
+      if (key === 'group') {
+        this.fetchGroupData()
+      }
     },
     openVerifyPhone() {
       this.showVerifyPhone = true
@@ -704,9 +701,74 @@ export default {
       this.showChangePhone = false
       this.form.phone = this.changePhoneForm.phone
     },
-    viewGroupDetail(group) {
-      this.currentGroup = group
+    async fetchGroupData() {
+      this.groupLoading = true
+      try {
+        const [statsRes, listRes] = await Promise.all([
+          getTeachingGroupStats(),
+          getTeachingGroupList()
+        ])
+        this.groupStats = statsRes.data || statsRes || { groupCount: 0, memberCount: 0 }
+        const rawList = listRes.data || listRes || []
+        this.groupList = rawList.map((item, idx) => this.mapGroupListItem(item, idx))
+      } catch (_) {
+        this.groupList = []
+        this.groupStats = { groupCount: 0, memberCount: 0 }
+      } finally {
+        this.groupLoading = false
+      }
+    },
+    mapGroupListItem(item, idx) {
+      const color = GROUP_COLORS[idx % GROUP_COLORS.length]
+      const name = item.groupName || ''
+      return {
+        id: item.groupId,
+        name,
+        role: item.myRoleName || '',
+        subject: item.description || '',
+        subjectShort: name.slice(0, 2),
+        color,
+        memberCount: item.memberCount || 0,
+        members: (item.memberAvatars || []).map((url, i) => ({
+          avatarUrl: url,
+          name: '',
+          color: MEMBER_COLORS[i % MEMBER_COLORS.length]
+        }))
+      }
+    },
+    mapGroupDetail(detail, color) {
+      const name = detail.groupName || ''
+      return {
+        id: detail.groupId,
+        name,
+        role: detail.myRoleName || '',
+        subject: detail.description || '',
+        subjectShort: name.slice(0, 2),
+        color,
+        memberCount: detail.memberCount || 0,
+        members: (detail.members || []).map((m, i) => ({
+          avatarUrl: m.avatar || '',
+          avatarName: m.realName ? m.realName[0] : '?',
+          fullName: m.realName || '',
+          role: m.roleName || '',
+          isSelf: !!m.isMe,
+          color: MEMBER_COLORS[i % MEMBER_COLORS.length]
+        }))
+      }
+    },
+    async viewGroupDetail(group) {
+      this.currentGroup = { ...group }
       this.showGroupDetail = true
+      this.groupDetailLoading = true
+      try {
+        const res = await getTeachingGroupDetail(group.id)
+        const detail = res.data || res
+        this.currentGroup = this.mapGroupDetail(detail, group.color)
+      } catch (_) {
+        // 保留列表基础信息继续展示
+      } finally {
+        this.groupDetailLoading = false
+      }
     },
     backToGroupList() {
       this.showGroupDetail = false
@@ -1463,6 +1525,21 @@ color: #71A0FF;
   border: 2px solid #fff;
   flex-shrink: 0;
   position: relative;
+  overflow: hidden;
+}
+.member-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.member-avatar-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
 .group-detail-link {
@@ -1758,6 +1835,7 @@ color: #71A0FF;
   gap: 16px;
   margin-bottom: 14px;
   box-sizing: border-box;
+  background: linear-gradient(135deg, #0049FF 0%, #71A0FF 100%);
 }
 
 .gd-banner-tag {
@@ -1847,6 +1925,13 @@ color: #71A0FF;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.gd-member-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .gd-member-info {
