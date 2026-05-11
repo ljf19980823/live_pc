@@ -356,7 +356,10 @@
         <div class="app_container_box_right_top_top">
           <div class="app_container_box_right_top_top_left">
             <div class="app_container_box_right_top_top_name">{{ currentClass.alias || currentClass.name }}</div>
-            <div class="app_container_box_right_top_top_tag">剩余{{ currentClass.remainDays }}天</div>
+            <div
+              class="app_container_box_right_top_top_tag"
+              :class="{ 'is-expired': currentClass.remainDays < 0 }"
+            >{{ currentClass.remainDays < 0 ? `已过期${Math.abs(currentClass.remainDays)}天` : `剩余${currentClass.remainDays}天` }}</div>
           </div>
           <div class="app_container_box_right_top_top_right">
             <img @click="handleToAnnouncement()" src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
@@ -1127,7 +1130,7 @@ export default {
           this.$message.warning('请选择结束时间')
           return
         }
-        if (this.newClassEndDate <= this.newClassStartDate) {
+        if (this.newClassEndDate < this.newClassStartDate) {
           this.$message.warning('结束时间必须大于起始时间')
           return
         }
@@ -1523,10 +1526,15 @@ color: #333333;
   background: #FFEDED;
   border: 1px solid #FF2E00;
   font-weight: 400;
-font-size: 14px;
-color: #FF2E00;
-padding: 0 9px;
-box-sizing: border-box;
+  font-size: 14px;
+  color: #FF2E00;
+  padding: 0 9px;
+  box-sizing: border-box;
+  &.is-expired {
+    background: #F5F5F5;
+    border-color: #CCCCCC;
+    color: #999999;
+  }
 }
 .app_container_box_right_top_top_right{
   display: flex;

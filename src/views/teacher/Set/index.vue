@@ -319,7 +319,22 @@
                     <div class="schedule-timeline-line" v-if="idx < scheduleCoursesForDate.length - 1"></div>
                   </div>
                   <div class="schedule-timeline-content">
-                    <div class="schedule-timeline-time">{{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}</div>
+                    <div class="schedule-timeline-header">
+                      <div class="schedule-timeline-time">{{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}</div>
+                      <div
+                        class="schedule-timeline-status"
+                        :class="{
+                          'status-living': course.status === '直播中',
+                          'status-finished': course.status === '已结束',
+                          'status-soon': course.status === '未开始',
+                          'status-not-broadcast': course.status === '未开播',
+                          'status-unknown': course.status === '未知'
+                        }"
+                      >
+                        <i class="status-dot"></i>
+                        <span>{{ course.status }}</span>
+                      </div>
+                    </div>
                     <div class="schedule-timeline-name">{{ course.name }}</div>
                   </div>
                 </div>
@@ -2148,10 +2163,52 @@ color: #71A0FF;
   margin-bottom: 24px;
 }
 
+.schedule-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
 .schedule-timeline-time {
   font-size: 14px;
   color: #666;
-  margin-bottom: 12px;
+}
+
+.schedule-timeline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  flex-shrink: 0;
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  &.status-living {
+    color: #0049FF;
+    .status-dot { background: #0049FF; box-shadow: 0 0 0 2px rgba(0, 73, 255, 0.2); }
+  }
+  &.status-finished {
+    color: #BBBBBB;
+    .status-dot { background: #BBBBBB; }
+  }
+  &.status-soon {
+    color: #FF8C00;
+    .status-dot { background: #FF8C00; }
+  }
+  &.status-not-broadcast {
+    color: #9B59B6;
+    .status-dot { background: #9B59B6; }
+  }
+  &.status-unknown {
+    color: #BBBBBB;
+    .status-dot { background: #BBBBBB; }
+  }
 }
 
 .schedule-timeline-name {
