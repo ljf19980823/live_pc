@@ -1,7 +1,7 @@
 {
   "name": "lisheng-live-pc",
   "chname": "立升直播",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
