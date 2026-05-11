@@ -45,10 +45,14 @@
         常见问题
       </div>
       <ul class="cc-faq-list">
-        <li>新设备或第一次上课，前往设置&gt;隐私&gt;摄像头，开启本应用权限</li>
-        <li>检查摄像头物理开关，部分电脑存在摄像头物理开关，请手动开启</li>
-        <li>检查摄像头是否被其他应用程序占用，关闭其他应用程序</li>
+        <li v-if="$isWindows">新设备或第一次使用，前往 开始菜单 &gt; 设置 &gt; 隐私和安全性 &gt; 摄像头，开启本应用访问权限</li>
+        <li v-else-if="$isMac">新设备或第一次使用，前往 系统设置 &gt; 隐私与安全性 &gt; 摄像头，开启本应用权限（旧版 macOS：系统偏好设置 &gt; 安全性与隐私 &gt; 隐私 &gt; 摄像头）</li>
+        <li v-else>新设备或第一次上课，前往系统设置&gt;隐私&gt;摄像头，开启本应用权限</li>
+        <li v-if="$isMac">检查摄像头物理开关，部分 Mac 笔记本存在摄像头指示灯，确认摄像头已激活</li>
+        <li v-else>检查摄像头物理开关，部分电脑存在摄像头物理开关，请手动开启</li>
+        <li>检查摄像头是否被其他应用程序占用，关闭其他视频会议或直播软件</li>
         <li>检查摄像头连接是否稳定，重新插拔摄像头</li>
+        <li v-if="$isWindows">打开 设备管理器，确认摄像头驱动正常，必要时更新或重装驱动</li>
         <li>重启应用/重启电脑，再次检测</li>
         <li>还有问题，请更换电脑或摄像头</li>
       </ul>
@@ -57,8 +61,11 @@
 </template>
 
 <script>
+import platformMixin from '@/mixins/platform'
+
 export default {
   name: 'CameraCheck',
+  mixins: [platformMixin],
   emits: ['result'],
   data() {
     return {

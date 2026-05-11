@@ -45,9 +45,13 @@
         常见问题
       </div>
       <ul class="sc-faq-list">
-        <li>调整声音音量</li>
-        <li>当有多个扬声器时，切换正确的输出设备</li>
+        <li v-if="$isWindows">检查任务栏右侧音量图标，确认系统音量未静音且音量正常</li>
+        <li v-else-if="$isMac">前往 系统设置 &gt; 声音 &gt; 输出，确认输出设备正确且音量未静音</li>
+        <li v-else>调整声音音量</li>
+        <li>当有多个扬声器时，在上方下拉框中切换正确的输出设备</li>
+        <li v-if="$isWindows">在任务栏音量图标处右键 &gt; 打开声音设置，确认播放设备已启用并设为默认</li>
         <li>如使用耳机，请检查耳机连接是否稳定，重新插拔耳机</li>
+        <li v-if="$isWindows">打开 设备管理器，确认音频设备驱动正常，必要时更新驱动</li>
         <li>重启应用/重启电脑，再次检测</li>
         <li>还有问题，请更换电脑或扬声器</li>
       </ul>
@@ -56,8 +60,11 @@
 </template>
 
 <script>
+import platformMixin from '@/mixins/platform'
+
 export default {
   name: 'SpeakerCheck',
+  mixins: [platformMixin],
   emits: ['result'],
   data() {
     return {

@@ -40,14 +40,20 @@
         <li>建议使用有线网络，相比无线网（Wi-Fi）更加稳定流畅</li>
         <li>公共网络下尝试切换网络，如一个网络下用户人多，易导致卡顿</li>
         <li>家庭网络下尝试重启路由器，路由器长期运行后可能会导致卡顿</li>
-        <li>关闭其他占用网络的应用程序，如视频网站、防火墙等</li>
-        <li>重新进入此页面检测，如还有问题，请反馈给老师</li>
+        <li v-if="$isWindows">检查 Windows 防火墙设置：前往 控制面板 &gt; Windows Defender 防火墙 &gt; 允许应用通过防火墙，确认本应用已添加例外</li>
+        <li v-else-if="$isMac">检查 macOS 防火墙设置：前往 系统设置 &gt; 网络 &gt; 防火墙，确认本应用已允许传入连接</li>
+        <li>关闭其他占用网络的应用程序，如视频网站、下载工具等</li>
+        <li v-if="$isWindows">尝试关闭或暂停杀毒软件、VPN 软件，确认其未拦截网络请求</li>
+        <li v-else-if="$isMac">尝试关闭 VPN 或代理，确认其未影响直播连接</li>
+        <li>重新进入此页面检测，如还有问题，请联系客服</li>
       </ul>
     </div>
   </div>
 </template>
 
 <script>
+import platformMixin from '@/mixins/platform'
+
 const BASE = process.env.VUE_APP_BASE_API && !process.env.VUE_APP_BASE_API.startsWith('/')
   ? process.env.VUE_APP_BASE_API
   : 'http://47.92.30.163:8085'
@@ -68,6 +74,7 @@ const WARN_MS   = 1500
 
 export default {
   name: 'NetworkCheck',
+  mixins: [platformMixin],
   data() {
     return {
       networkStatus: null,  // null=检测中 true=正常 false=异常

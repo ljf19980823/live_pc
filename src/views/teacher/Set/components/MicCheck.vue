@@ -40,10 +40,15 @@
         常见问题
       </div>
       <ul class="mc-faq-list">
-        <li>新设备或第一次上课，请至设置&gt;隐私&gt;麦克风，开启本应用权限</li>
-        <li>调整声音和麦克风音量</li>
-        <li>当有多个麦克风时，选择正确的麦克风</li>
+        <li v-if="$isWindows">新设备或第一次使用，前往 开始菜单 &gt; 设置 &gt; 隐私和安全性 &gt; 麦克风，开启本应用访问权限</li>
+        <li v-else-if="$isMac">新设备或第一次使用，前往 系统设置 &gt; 隐私与安全性 &gt; 麦克风，开启本应用权限（旧版 macOS：系统偏好设置 &gt; 安全性与隐私 &gt; 隐私 &gt; 麦克风）</li>
+        <li v-else>新设备或第一次上课，请至系统设置&gt;隐私&gt;麦克风，开启本应用权限</li>
+        <li v-if="$isWindows">在任务栏右侧音量图标处右键 &gt; 打开声音设置，确认录音设备已启用并设为默认</li>
+        <li v-else-if="$isMac">前往 系统设置 &gt; 声音 &gt; 输入，调整麦克风输入音量</li>
+        <li v-else>调整声音和麦克风音量</li>
+        <li>当有多个麦克风时，在上方下拉框中选择正确的麦克风</li>
         <li>检查麦克风连接是否稳定，重新插拔麦克风</li>
+        <li v-if="$isWindows">打开 设备管理器，确认音频设备驱动正常，必要时更新驱动</li>
         <li>重启应用/重启电脑，再次检测</li>
         <li>还有问题，请更换电脑或麦克风</li>
       </ul>
@@ -52,8 +57,11 @@
 </template>
 
 <script>
+import platformMixin from '@/mixins/platform'
+
 export default {
   name: 'MicCheck',
+  mixins: [platformMixin],
   emits: ['result'],
   data() {
     return {
