@@ -421,6 +421,7 @@
                   <el-dropdown-menu>
                     <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
                     <el-dropdown-item command="studentDetail">学生详情</el-dropdown-item>
+                    <el-dropdown-item v-if="currentClass && currentClass.allowRemove == 1" command="removeStudent">移除学生</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -556,6 +557,7 @@
     </DialogCustome>
 
     <StudentDetail :visible="showStudentDetail" :studentId="currentStudentId" :classId="selectedClassId" @close="showStudentDetail = false" />
+
 
     <!-- 视频播放弹窗 -->
     <VideoPlayer
@@ -725,7 +727,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 
@@ -1213,7 +1215,7 @@ export default {
         this.deleteClassLoading = false
       }
     },
-    handleStudentOptionsCommand(command, student) {
+  async  handleStudentOptionsCommand(command, student) {
       if (command === 'resetPassword') {
         this.currentStudentId = student.id
         this.resetPasswordStudentUserName = student.userName || ''
@@ -1221,6 +1223,20 @@ export default {
       } else if (command === 'studentDetail') {
         this.currentStudentId = student.id
         this.showStudentDetail = true
+      } else if (command === 'removeStudent') {
+        const studentName = student.name || student.userName || ''
+        try {
+          await this.$confirm(`确认将学生 ${studentName} 从班级中移除吗？`, '移除学生', {
+            confirmButtonText: '确认移除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+          await removeClassStudent(this.selectedClassId, student.id)
+          this.$message.success('移除成功')
+          this.fetchStudentList()
+        } catch (e) {
+          // 取消或接口错误，不做处理
+        }
       }
     },
     handleContentOptionsCommand(command, item) {

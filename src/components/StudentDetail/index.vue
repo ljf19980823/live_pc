@@ -10,7 +10,8 @@
                   <div class="masl_con_dialog_con">
                   <div class="masl_con_dialog_con_basic">
                       <div class="masl_con_dialog_con_basic_top">
-                          <img :src="studentInfo.profilePicture || require('@/assets/images/class/such.png')" class="masl_con_dialog_con_basic_top_fm" alt="">
+                          <img v-if="studentInfo.profilePicture" :src="studentInfo.profilePicture" class="masl_con_dialog_con_basic_top_fm" alt="">
+                          <div v-else class="masl_con_dialog_con_basic_top_fm masl_con_dialog_con_basic_top_fm_placeholder">{{ (studentInfo.realName || studentInfo.userName || '').slice(0, 1) }}</div>
                           <div class="masl_con_dialog_con_basic_top_title">{{ studentInfo.realName || studentInfo.userName || '-' }}</div>
                       </div>
                       <div class="masl_con_dialog_con_basic_last">
@@ -691,6 +692,15 @@ export default {
     width: 56px;
     height: 56px;
     border-radius: 50%;
+}
+.masl_con_dialog_con_basic_top_fm_placeholder{
+    background-color: #0049FF;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
 }
 .masl_con_dialog_con_basic_top_title{
     font-weight: bold;

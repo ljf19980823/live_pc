@@ -121,3 +121,6 @@ export const sendCode = data => post('/edu/sso/sendCode', data)
 
 // 修改手机号
 export const updatePhone = data => post('/edu/sso/updatePhone', data)
+
+// 移除班级学生
+export const removeClassStudent = (classId, studentId) => del(`/edu/class/${classId}/students/${studentId}`)
