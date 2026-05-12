@@ -463,7 +463,7 @@
       :visible="showDetailDialog"
       title="直播详情"
       width="490px"
-      height="596px"
+      :height="detailShareEnabled ? '596px' : '340px'"
       :bg-color="'#FFFFFF'"
       @close="onDialogCloseAdd"
       :show-cancel="false"
@@ -2533,7 +2533,8 @@ border: 1px solid #F3F4F8;
   white-space: nowrap;
   background: #F9FAFB;
   border-radius: 10px;
-  border: 1px solid #E5E7EB;;
+  border: 1px solid #E5E7EB;
+  line-height: 38px;
 }
 .cdc-copy-btn {
   display: flex;

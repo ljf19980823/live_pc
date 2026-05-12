@@ -416,7 +416,8 @@
                 </template>
               </el-dropdown>
               <div class="app_container_box_right_last_list_detail_top_mess">
-                <img :src="item.avatar || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
+                <img v-if="item.avatar" :src="item.avatar" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
+                <div v-else class="app_container_box_right_last_list_detail_top_mess_icon app_container_box_right_last_list_detail_top_mess_icon_placeholder">{{ (item.name || '').slice(0, 1) }}</div>
                 <div class="app_container_box_right_last_list_detail_top_mess_mess">{{ item.name }}</div>
               </div>
             </div>
@@ -1669,6 +1670,16 @@ justify-content: space-between;
   width: 56px;
   height: 56px;
   border-radius: 50%;
+  flex-shrink: 0;
+}
+.app_container_box_right_last_list_detail_top_mess_icon_placeholder{
+  background-color: #0049FF;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
 }
 .app_container_box_right_last_list_detail_top_mess_mess{
   flex: 1;

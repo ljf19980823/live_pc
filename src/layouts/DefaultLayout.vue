@@ -39,7 +39,8 @@
           @click="goTo(setPath)"
         >
           <div class="nav-icon_img" >
-            <img :src="avatar || require('@/assets/images/head.png')" class="nav-icon_img_img" alt="头像">
+            <img v-if="avatar" :src="avatar" class="nav-icon_img_img" alt="头像">
+            <div v-else class="nav-icon_img_placeholder">{{ (userName || '').slice(0, 1) }}</div>
           </div>
           
           <!-- <span class="nav-icon_last-label">{{ userName || '设置' }}</span> -->
@@ -517,6 +518,19 @@ $header-h: $header-height;
   width: 100%;
   height: 100%;
     border-radius: 50%;
+    object-fit: cover;
+}
+.nav-icon_img_placeholder{
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #0049FF;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
 }
 .nav-icon_img:hover{
     border: 1px solid #0049FF!important;

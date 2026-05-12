@@ -1133,6 +1133,7 @@ export default {
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  object-fit: cover;
 }
 
 .su-meta {
@@ -1361,6 +1362,7 @@ background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
 width: 56px;
   height: 56px;
   border-radius: 50%;
+  object-fit: cover;
 }
 
 .utc-avatar-wrap {
