@@ -839,7 +839,7 @@ export default {
           teacherName2: d.teacherName2 || '',
           time: this.formatTimeRange(d.startTime, d.endTime),
           minutes: d.liveMin || item.minutes || '',
-          status: d.isStart === '1' && d.isFinish !== '1' ? 'living' : 'soon',
+          status:  d.status == '直播中'  ? 'living' : 'soon',
           qrcodeUrl: d.qrcodeUrl || '',
           shareUrl: d.qrcodeUrl || '',
           ifShare: d.ifShare || '2'
