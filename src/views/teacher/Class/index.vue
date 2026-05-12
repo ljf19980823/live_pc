@@ -2,7 +2,7 @@
   <div class="page-placeholder">
     <div class="app_container_box_left">
       <div class="app_container_box_left_top">
-        <div class="app_top_left_text">我的班级</div>
+        <div class="app_top_left_text">我的班级<span class="app_top_left_count">({{ classList.length }})</span></div>
         <img src="@/assets/images/home/add.png" @click="handleAddClass()" class="app_top_left_icon" alt="">
       </div>
       <div class="app_container_box_left_search_box" v-if="isOpenSearch == false">
@@ -1234,6 +1234,7 @@ export default {
           await removeClassStudent(this.selectedClassId, student.id)
           this.$message.success('移除成功')
           this.fetchStudentList()
+          this.fetchClassList()
         } catch (e) {
           // 取消或接口错误，不做处理
         }
@@ -1558,6 +1559,12 @@ border-bottom: 1px solid #F3F4F8;
   font-weight: bold;
 font-size: 16px;
 color: #333333;
+}
+.app_top_left_count{
+  font-weight: normal;
+  font-size: 14px;
+  color: #999999;
+  margin-left: 4px;
 }
 .app_top_left_icon{
   width: 16px;

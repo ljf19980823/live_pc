@@ -463,7 +463,7 @@
       :visible="showDetailDialog"
       title="直播详情"
       width="490px"
-      :height="detailShareEnabled ? '596px' : '340px'"
+      :height="detailShareEnabled ? '596px' : '360px'"
       :bg-color="'#FFFFFF'"
       @close="onDialogCloseAdd"
       :show-cancel="false"
@@ -483,7 +483,7 @@
         </div>
         <div class="cdc-info-row">
           <span class="cdc-label">参与班级：</span>
-          <span class="cdc-value">{{ selectedCourseItem.classTnfos && selectedCourseItem.classTnfos.length ? selectedCourseItem.classTnfos.map(item => item.className).join('、') : '-' }}</span>
+          <span class="cdc-value">{{ selectedCourseItem.classInfosName }}</span>
         </div>
 
         <div class="cdc-divider"></div>
@@ -842,8 +842,11 @@ export default {
           status:  d.status == '直播中'  ? 'living' : 'soon',
           qrcodeUrl: d.qrcodeUrl || '',
           shareUrl: d.qrcodeUrl || '',
-          ifShare: d.ifShare || '2'
+          ifShare: d.ifShare || '2',
+          classInfos:d.classInfos || [],
+          classInfosName:d.classInfos && d.classInfos.length ? d.classInfos.map(item => item.className).join('、') : '-' 
         }
+        console.log(this.selectedCourseItem ,'详情')
         this.detailShareEnabled = d.ifShare === '1'
       } catch (e) {
         // 错误由请求拦截器统一处理
@@ -971,6 +974,11 @@ export default {
       }
       if (!this.classStartTime) {
         this.$message.warning('请选择上课时间')
+        return
+      }
+      const selectedTime = new Date(this.classStartTime.replace(' ', 'T'))
+      if (selectedTime < new Date()) {
+        this.$message.warning('上课时间不得早于当前时间，请重新选择')
         return
       }
       this.createLoading = true
@@ -2482,7 +2490,7 @@ border: 1px solid #F3F4F8;
 }
 .cdc-info-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
 }
 .cdc-label {
@@ -2495,6 +2503,7 @@ border: 1px solid #F3F4F8;
   color: #364153;
   flex: 1;
   width: 0;
+  line-height:20px
 }
 .cdc-divider {
   height: 1px;
