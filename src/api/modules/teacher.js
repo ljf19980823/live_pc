@@ -46,6 +46,12 @@ export const getHistoryList = params => get('/edu/history/list', params)
 // 创建班级
 export const createClass = params => post('/edu/class/create', params)
 
+// 修改班级信息（className / beginTime / endTime / describe 均可选）
+export const updateClass = (classId, data) => put(`/edu/class/${classId}`, data)
+
+// 删除班级
+export const deleteClass = classId => post('/edu/class/remove', {}, { params: { classId } })
+
 // 获取课程详情（目录树）
 export const getCourseDetail = params => get('/edu/course/detail', params)
 

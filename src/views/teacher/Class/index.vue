@@ -377,6 +377,9 @@
                     {{ currentClass.pinned ? '取消置顶' : '置顶' }}
                   </el-dropdown-item>
                   <el-dropdown-item command="alias">设置别名</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="editName">修改班级名称</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="editDate">修改有效期</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="delete">删除班级</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -614,6 +617,105 @@
       </div>
     </DialogCustome>
 
+    <!-- 修改班级名称弹窗 -->
+    <DialogCustome
+      width="616px"
+      height="366px"
+      :showClose="true"
+      :visible="editNameDialogVisible"
+      confirmText="确定"
+      cancelText="取消"
+      :confirmLoading="editNameLoading"
+      title="修改班级名称"
+      @cancel="editNameDialogVisible = false"
+      @confirm="onDialogConfirmEditName"
+      @close="editNameDialogVisible = false"
+    >
+      <div class="dialog_box2">
+        <div class="dialog_box_con2">
+          <el-input style="width:100%" placeholder="请输入班级名称" v-model="editClassName"></el-input>
+        </div>
+        <div class="dialog_box_con2">
+          <el-input
+            type="textarea"
+            :rows="3"
+            placeholder="请输入班级描述"
+            maxlength="25"
+            show-word-limit
+            v-model="editClassDesc">
+          </el-input>
+        </div>
+      </div>
+    </DialogCustome>
+
+    <!-- 修改有效期弹窗 -->
+    <DialogCustome
+      width="616px"
+      height="366px"
+      :showClose="true"
+      :visible="editDateDialogVisible"
+      confirmText="确定"
+      cancelText="取消"
+      :confirmLoading="editDateLoading"
+      title="修改有效期"
+      @cancel="editDateDialogVisible = false"
+      @confirm="onDialogConfirmEditDate"
+      @close="editDateDialogVisible = false"
+    >
+      <div class="dialog_box2">
+        <div class="dialog_box_con">
+          <img src="@/assets/images/class/rl_icon.png" class="dialog_box_con_icon2" alt="">
+          <div class="dialog_box_con_title">起始时间 <span class="required-star">*</span></div>
+          <div class="dialog_box_con_sx"></div>
+          <div class="dialog_box_con_date">
+            <el-date-picker
+              v-model="editClassStartDate"
+              type="date"
+              placeholder="请选择"
+              style="width:100%"
+              :disabled="true"
+            />
+          </div>
+        </div>
+        <div class="dialog_box_con">
+          <img src="@/assets/images/class/rl_icon.png" class="dialog_box_con_icon2" alt="">
+          <div class="dialog_box_con_title">结束时间 <span class="required-star">*</span></div>
+          <div class="dialog_box_con_sx"></div>
+          <div class="dialog_box_con_date">
+            <el-date-picker
+              v-model="editClassEndDate"
+              type="date"
+              :disabled-date="disabledEditEndDate"
+              placeholder="请选择"
+              style="width:100%"
+            />
+          </div>
+        </div>
+      </div>
+    </DialogCustome>
+
+    <!-- 删除班级确认弹窗 -->
+    <DialogCustome
+      width="616px"
+      height="240px"
+      :showClose="true"
+      :visible="deleteClassDialogVisible"
+      confirmText="确定删除"
+      cancelText="取消"
+      :confirmLoading="deleteClassLoading"
+      title="删除班级"
+      @cancel="deleteClassDialogVisible = false"
+      @confirm="onDialogConfirmDeleteClass"
+      @close="deleteClassDialogVisible = false"
+    >
+      <div class="dialog_box2">
+        <div style="text-align:center;padding:16px 0;color:#333;font-size:15px;">
+          确定要删除班级「{{ currentClass && (currentClass.alias || currentClass.name) }}」吗？<br>
+          <span style="color:#f56c6c;font-size:13px;">删除后数据不可恢复，请谨慎操作。</span>
+        </div>
+      </div>
+    </DialogCustome>
+
     <!-- 文件预览 -->
     <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
 
@@ -623,7 +725,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, getCourseDetail, resetStudentPassword } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 
@@ -681,7 +783,17 @@ export default {
       currentImageUrl: '',
       currentResourceTitle: '',
       filePreviewVisible: false,
-      filePreviewData: null
+      filePreviewData: null,
+      editNameDialogVisible: false,
+      editNameLoading: false,
+      editClassName: '',
+      editClassDesc: '',
+      editDateDialogVisible: false,
+      editDateLoading: false,
+      editClassStartDate: null,
+      editClassEndDate: null,
+      deleteClassDialogVisible: false,
+      deleteClassLoading: false
     }
   },
   watch: {
@@ -998,6 +1110,18 @@ export default {
       } else if (command === 'alias') {
         this.aliasInput = this.classList[this.selectedClassIndex].alias || ''
         this.aliasDialogVisible = true
+      } else if (command === 'editName') {
+        const cls = this.classList[this.selectedClassIndex]
+        this.editClassName = cls.name || ''
+        this.editClassDesc = cls.describe || ''
+        this.editNameDialogVisible = true
+      } else if (command === 'editDate') {
+        const cls = this.classList[this.selectedClassIndex]
+        this.editClassStartDate = cls.startDate ? new Date(cls.startDate) : null
+        this.editClassEndDate = cls.endDate ? new Date(cls.endDate) : null
+        this.editDateDialogVisible = true
+      } else if (command === 'delete') {
+        this.deleteClassDialogVisible = true
       }
     },
     onDialogCancelAlias() {
@@ -1015,6 +1139,78 @@ export default {
         this.aliasInput = ''
       } catch (e) {
         // 接口失败时保持弹窗打开，错误由拦截器统一提示
+      }
+    },
+    async onDialogConfirmEditName() {
+      const cls = this.classList[this.selectedClassIndex]
+      if (!this.editClassName.trim()) {
+        this.$message.warning('请输入班级名称')
+        return
+      }
+      this.editNameLoading = true
+      try {
+        await updateClass(cls.classId, {
+          className: this.editClassName.trim(),
+          describe: this.editClassDesc
+        })
+        this.$message.success('班级名称修改成功')
+        this.editNameDialogVisible = false
+        await this.fetchClassList()
+      } catch (e) {
+        // 错误由请求拦截器统一提示
+      } finally {
+        this.editNameLoading = false
+      }
+    },
+    async onDialogConfirmEditDate() {
+      if (!this.editClassEndDate) {
+        this.$message.warning('请选择结束时间')
+        return
+      }
+      if (this.editClassStartDate && this.editClassEndDate < this.editClassStartDate) {
+        this.$message.warning('结束时间必须大于等于起始时间')
+        return
+      }
+      const cls = this.classList[this.selectedClassIndex]
+      const fmt = d => {
+        if (!d) return ''
+        const date = d instanceof Date ? d : new Date(d)
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+      }
+      this.editDateLoading = true
+      try {
+        await updateClass(cls.classId, {
+          beginTime: fmt(this.editClassStartDate),
+          endTime: fmt(this.editClassEndDate)
+        })
+        this.$message.success('有效期修改成功')
+        this.editDateDialogVisible = false
+        await this.fetchClassList()
+      } catch (e) {
+        // 错误由请求拦截器统一提示
+      } finally {
+        this.editDateLoading = false
+      }
+    },
+    disabledEditEndDate(date) {
+      if (!this.editClassStartDate) return false
+      const start = new Date(this.editClassStartDate)
+      start.setHours(0, 0, 0, 0)
+      return date.getTime() < start.getTime()
+    },
+    async onDialogConfirmDeleteClass() {
+      const cls = this.classList[this.selectedClassIndex]
+      this.deleteClassLoading = true
+      try {
+        await deleteClass(cls.classId)
+        this.$message.success('班级删除成功')
+        this.deleteClassDialogVisible = false
+        this.selectedClassId = null
+        await this.fetchClassList()
+      } catch (e) {
+        // 错误由请求拦截器统一提示
+      } finally {
+        this.deleteClassLoading = false
       }
     },
     handleStudentOptionsCommand(command, student) {
