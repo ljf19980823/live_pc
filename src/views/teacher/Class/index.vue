@@ -355,7 +355,13 @@
       <div class="app_container_box_right_top">
         <div class="app_container_box_right_top_top">
           <div class="app_container_box_right_top_top_left">
-            <div class="app_container_box_right_top_top_name">{{ currentClass.alias || currentClass.name }}</div>
+            <div class="app_container_box_right_top_top_title">
+              <div class="app_container_box_right_top_top_name">{{ currentClass.alias || currentClass.name }}</div>
+              <div
+                v-if="currentClass.alias && currentClass.name && currentClass.alias !== currentClass.name"
+                class="app_container_box_right_top_top_realname"
+              >{{ currentClass.name }}</div>
+            </div>
             <div
               class="app_container_box_right_top_top_tag"
               :class="{ 'is-expired': currentClass.remainDays < 0 }"
@@ -651,6 +657,7 @@ export default {
       aliasInput: '',
       showResetPasswordDialog: false,
       resetPasswordValue: '',
+      resetPasswordStudentUserName: '',
       resetPasswordLoading: false,
       showAddClassDialog: false,
       addClassStep: 1,
@@ -1013,6 +1020,7 @@ export default {
     handleStudentOptionsCommand(command, student) {
       if (command === 'resetPassword') {
         this.currentStudentId = student.id
+        this.resetPasswordStudentUserName = student.userName || ''
         this.showResetPasswordDialog = true
       } else if (command === 'studentDetail') {
         this.currentStudentId = student.id
@@ -1057,6 +1065,7 @@ export default {
     onDialogCancel() {
       this.showResetPasswordDialog = false
       this.resetPasswordValue = ''
+      this.resetPasswordStudentUserName = ''
     },
     generatePassword() {
       const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -1086,7 +1095,9 @@ export default {
           studentId: this.currentStudentId,
           password: this.resetPasswordValue,
         })
-        const text = `您的新密码为${this.resetPasswordValue}`
+        const pwd = this.resetPasswordValue
+        const userName = this.resetPasswordStudentUserName
+        const text = `你的用户名是${userName} 密码是${pwd} 请妥善保管，为了你的账号安全，请及时修改密码`
         try {
           await navigator.clipboard.writeText(text)
           this.$message.success('密码重置成功，已复制到剪贴板')
@@ -1101,6 +1112,7 @@ export default {
         }
         this.showResetPasswordDialog = false
         this.resetPasswordValue = ''
+        this.resetPasswordStudentUserName = ''
       } finally {
         this.resetPasswordLoading = false
       }
@@ -1511,11 +1523,26 @@ margin-top: 9px;
   justify-content: flex-start;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+}
+.app_container_box_right_top_top_title{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
 }
 .app_container_box_right_top_top_name{
   font-weight: bold;
 font-size: 16px;
 color: #333333;
+}
+.app_container_box_right_top_top_realname{
+  font-weight: 400;
+  font-size: 12px;
+  color: #999999;
+  line-height: 1.2;
+  word-break: break-all;
 }
 .app_container_box_right_top_top_tag{
   flex-shrink: 0;

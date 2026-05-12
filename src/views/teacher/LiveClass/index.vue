@@ -1415,7 +1415,7 @@ export default {
 .placeholder_last_table_detail_top_last_leve_jl {
   color: #ff2e00;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 16px;
 }
 .placeholder_last_table_detail_top_top {
   width: 100%;
