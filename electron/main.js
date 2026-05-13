@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences, desktopCapturer } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const https = require('https')
@@ -677,6 +677,28 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
     const ALLOWED = ['media', 'camera', 'microphone', 'display-capture', 'mediaKeySystem', 'fullscreen']
     return ALLOWED.includes(permission)
+  })
+
+  // ─── 屏幕共享：拦截 getDisplayMedia() 请求 ──────────────────────────────
+  // Electron 17+ 必须通过此处理器才能在渲染进程（含 iframe）中使用屏幕共享。
+  // 不设置此处理器时，getDisplayMedia() 会直接返回 false / 抛出异常。
+  // 此处自动选取整个主屏幕，行为与摄像头/麦克风自动授权一致。
+  session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 1, height: 1 },
+      })
+      if (sources.length === 0) { callback({}); return }
+      const streams = { video: sources[0] }
+      // Windows 支持同步采集系统音频
+      if (process.platform === 'win32') {
+        streams.audio = 'loopback'
+      }
+      callback(streams)
+    } catch (_) {
+      callback({})
+    }
   })
 
   // ─── macOS 系统级媒体权限申请 ────────────────────────────────────────────

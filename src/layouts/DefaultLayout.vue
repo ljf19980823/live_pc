@@ -117,9 +117,6 @@ export default {
   data() {
     return {
       sidebarVisible: false,
-      // 一级菜单静态配置
-      // icon：未选中图片；activeIcon：选中图片
-      // 图片放在 src/assets/icons/menu/ 目录下，替换为实际文件即可
       hoveredMenu: null
     }
   },
@@ -241,7 +238,8 @@ export default {
           })
         })
       }
-    }
+    },
+
   },
   mounted() {
     this.updateDevice()
@@ -548,4 +546,5 @@ $header-h: $header-height;
   color: $color-primary;
   font-weight: 600;
 }
+
 </style>

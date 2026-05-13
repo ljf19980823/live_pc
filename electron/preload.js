@@ -51,4 +51,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMediaAccessStatus: (mediaType) => ipcRenderer.invoke('get-media-access-status', mediaType),
   // 主动弹出系统级授权对话框，返回 Promise<boolean>
   askForMediaAccess: (mediaType) => ipcRenderer.invoke('ask-for-media-access', mediaType),
+
 })
