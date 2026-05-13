@@ -199,9 +199,10 @@ export default {
 
       try {
         this.teacherPlayer = new Aliplayer(
-          { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never' },
+          { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never', muted: true },
           (tp) => {
             this.teacherPlayer = tp
+            try { tp.setVolume(0) } catch (e) {}
           }
         )
         this.teacherPlayer.on('error', () => {
