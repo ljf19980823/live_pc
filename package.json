@@ -44,7 +44,6 @@
     "productName": "立升直播",
     "copyright": "Copyright © 2024 立升",
     "icon": "build/icon",
-    "afterSign": "build/notarize.js",
     "directories": {
       "output": "release"
     },
@@ -66,9 +65,7 @@
       ],
       "signingHashAlgorithms": [
         "sha256"
-      ],
-      "certificateFile": "${env.WIN_CSC_LINK}",
-      "certificatePassword": "${env.WIN_CSC_KEY_PASSWORD}"
+      ]
     },
     "nsis": {
       "oneClick": true,
@@ -91,15 +88,7 @@
           ]
         }
       ],
-      "category": "public.app-category.utilities",
-      "identity": "Developer ID Application: 公司名称 (TEAM_ID)",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
-      "notarize": {
-        "teamId": "${env.APPLE_TEAM_ID}"
-      }
+      "category": "public.app-category.utilities"
     },
     "dmg": {
       "icon": "build/icon.icns",
