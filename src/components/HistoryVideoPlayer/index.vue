@@ -163,7 +163,7 @@ export default {
         const baseConfig = {
           width: '100%',
           height: '100%',
-          autoplay: false,
+          autoplay: true,
           rePlay: false,
           playsinline: true,
           preload: true,
@@ -172,16 +172,13 @@ export default {
         }
 
         try {
-          // 用回调参数 mainPlayer 接收实例，避免同步回调时 this.mainPlayer 还未赋值
           this.mainPlayer = new Aliplayer(
             { ...baseConfig, id: this.mainPlayerId, source: this.mainSource, controlBarVisibility: 'hover' },
             (mainPlayer) => {
-              this.mainPlayer = mainPlayer // 确保实例已赋值
+              this.mainPlayer = mainPlayer
               this.setupSync(mainPlayer)
               if (this.teacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
-              } else {
-                mainPlayer.play()
               }
             }
           )
@@ -197,19 +194,14 @@ export default {
       const teacherMountEl = document.getElementById(this.teacherPlayerId)
       if (!teacherMountEl) {
         this.teacherError = true
-        mainPlayer.play()
         return
       }
 
       try {
-        // 用回调参数 tp 接收讲师播放器实例，不依赖 this.teacherPlayer 是否已赋值
         this.teacherPlayer = new Aliplayer(
           { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never', mute: true },
           (tp) => {
-            this.teacherPlayer = tp // 确保实例已赋值
-            // 双启：直接用参数实例，不依赖 this.xxx
-            mainPlayer.play()
-            tp.play()
+            this.teacherPlayer = tp
           }
         )
         this.teacherPlayer.on('error', () => {
@@ -218,7 +210,6 @@ export default {
       } catch (e) {
         console.error('[HRP] 讲师视频初始化失败:', e)
         this.teacherError = true
-        mainPlayer.play()
       }
     },
 
@@ -238,6 +229,15 @@ export default {
       mainPlayer.on('ended', () => {
         if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
       })
+      // 倍速同步（Aliplayer settingSelected 事件，type==='speed' 时同步）
+      mainPlayer.on('settingSelected', (e) => {
+        if (!this.teacherPlayer) return
+        const data = e && e.paramData
+        if (data && data.type === 'speed' && data.key) {
+          try { this.teacherPlayer.setSpeed(data.key) } catch (err) {}
+        }
+      })
+
       // completeSeek：文档说参数返回拖拽目标时间，存放在 e.paramData
       mainPlayer.on('completeSeek', (e) => {
         if (!this.teacherPlayer) return
@@ -273,16 +273,23 @@ export default {
         const onEnded = () => {
           if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
         }
+        const onRateChange = () => {
+          if (this.teacherPlayer) {
+            try { this.teacherPlayer.setSpeed(videoEl.playbackRate) } catch (e) {}
+          }
+        }
 
         videoEl.addEventListener('play', onPlay)
         videoEl.addEventListener('pause', onPause)
         videoEl.addEventListener('seeked', onSeeked)
         videoEl.addEventListener('ended', onEnded)
+        videoEl.addEventListener('ratechange', onRateChange)
         this._removeVideoListeners = () => {
           videoEl.removeEventListener('play', onPlay)
           videoEl.removeEventListener('pause', onPause)
           videoEl.removeEventListener('seeked', onSeeked)
           videoEl.removeEventListener('ended', onEnded)
+          videoEl.removeEventListener('ratechange', onRateChange)
         }
       }
       attachVideoEvents(0)
