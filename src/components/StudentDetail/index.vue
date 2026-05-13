@@ -11,7 +11,7 @@
                   <div class="masl_con_dialog_con_basic">
                       <div class="masl_con_dialog_con_basic_top">
                           <img v-if="studentInfo.profilePicture" :src="studentInfo.profilePicture" class="masl_con_dialog_con_basic_top_fm" alt="">
-                          <div v-else class="masl_con_dialog_con_basic_top_fm masl_con_dialog_con_basic_top_fm_placeholder">{{ (studentInfo.realName || studentInfo.userName || '').slice(0, 1) }}</div>
+                          <div v-else class="masl_con_dialog_con_basic_top_fm masl_con_dialog_con_basic_top_fm_placeholder">{{ (studentInfo.realName || studentInfo.userName || '').slice(-2) }}</div>
                           <div class="masl_con_dialog_con_basic_top_title">{{ studentInfo.realName || studentInfo.userName || '-' }}</div>
                       </div>
                       <div class="masl_con_dialog_con_basic_last">

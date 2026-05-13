@@ -427,7 +427,7 @@
               </el-dropdown>
               <div class="app_container_box_right_last_list_detail_top_mess">
                 <img v-if="item.avatar" :src="item.avatar" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
-                <div v-else class="app_container_box_right_last_list_detail_top_mess_icon app_container_box_right_last_list_detail_top_mess_icon_placeholder">{{ (item.name || '').slice(0, 1) }}</div>
+                <div v-else class="app_container_box_right_last_list_detail_top_mess_icon app_container_box_right_last_list_detail_top_mess_icon_placeholder">{{ (item.name || '').slice(-2) }}</div>
                 <div class="app_container_box_right_last_list_detail_top_mess_mess">{{ item.name }}</div>
               </div>
             </div>
@@ -799,6 +799,19 @@ export default {
     }
   },
   watch: {
+    '$store.state.user.token'(newVal, oldVal) {
+      if (newVal && newVal !== oldVal) {
+        this._sessionToken = newVal
+        this.classList = []
+        this.studentList = []
+        this.courseList = []
+        this.selectedClassId = null
+        this.selectedClassIndex = 0
+        this.searchClassList = []
+        this.searchStudentList = []
+        this.fetchClassList()
+      }
+    },
     liveStatus() {
       // 用户主动切换过滤状态时，清空已选班级，避免自动切换逻辑将状态回跳
       this.selectedClassId = null
@@ -873,7 +886,15 @@ export default {
     }
   },
   mounted() {
+    this._sessionToken = this.$store.state.user.token
     this.fetchClassList()
+  },
+  activated() {
+    const currentToken = this.$store.state.user.token
+    if (currentToken !== this._sessionToken) {
+      this._sessionToken = currentToken
+      this.fetchClassList()
+    }
   },
   methods: {
     _mapClassItem(item) {

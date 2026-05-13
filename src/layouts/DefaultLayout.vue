@@ -101,7 +101,7 @@
 
       <!-- 页面内容 -->
       <main class="layout-content">
-        <keep-alive :include="cachedViews">
+        <keep-alive :include="cachedViews" :key="cacheKey">
           <router-view :key="$route.fullPath" />
         </keep-alive>
       </main>
@@ -117,12 +117,14 @@ export default {
   data() {
     return {
       sidebarVisible: false,
-      hoveredMenu: null
+      hoveredMenu: null,
+      cacheKey: Date.now(),
+      lastUserId: null
     }
   },
   computed: {
     ...mapGetters('app', ['isMobile']),
-    ...mapGetters('user', ['userName', 'avatar', 'role','realName']),
+    ...mapGetters('user', ['userName', 'avatar', 'role', 'realName']),
 
     menuList() {
       if (this.role === 'STUDENT') {
@@ -233,6 +235,7 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
+          this.cacheKey = Date.now()
           this.$store.dispatch('user/logout').then(() => {
             this.$router.push('/login')
           })
@@ -241,7 +244,15 @@ export default {
     },
 
   },
+  activated() {
+    const currentUserId = this.$store.getters['user/userId']
+    if (this.lastUserId && this.lastUserId !== currentUserId) {
+      this.cacheKey = Date.now()
+    }
+    this.lastUserId = currentUserId
+  },
   mounted() {
+    this.lastUserId = this.$store.getters['user/userId']
     this.updateDevice()
     window.addEventListener('resize', this.updateDevice)
   },
