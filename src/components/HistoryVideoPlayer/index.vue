@@ -94,12 +94,12 @@ export default {
     /** 主视频播放地址（课堂屏幕内容） */
     mainSource: {
       type: String,
-      default: 'https://video.fjlsjy123.com/sv/5a48b883-19a2dc43132/5a48b883-19a2dc43132.mp4'
+      default: ''
     },
-    /** 讲师摄像头视频地址（选填） */
+    /** 讲师摄像头视频地址（选填，不传或传空则不显示画中画） */
     teacherSource: {
       type: String,
-      default: 'https://video.fjlsjy123.com/sv/5a48b883-19a2dc43132/5a48b883-19a2dc43132.mp4'
+      default: ''
     },
     /** 弹窗标题 */
     title: {
@@ -199,7 +199,7 @@ export default {
 
       try {
         this.teacherPlayer = new Aliplayer(
-          { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never', mute: true },
+          { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never' },
           (tp) => {
             this.teacherPlayer = tp
           }

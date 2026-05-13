@@ -40,10 +40,10 @@
         >
           <div class="nav-icon_img" >
             <img v-if="avatar" :src="avatar" class="nav-icon_img_img" alt="头像">
-            <div v-else class="nav-icon_img_placeholder">{{ (userName || '').slice(0, 1) }}</div>
+            <div v-else class="nav-icon_img_placeholder">{{ (realName || '').slice(0, 2) }}</div>
           </div>
           
-          <!-- <span class="nav-icon_last-label">{{ userName || '设置' }}</span> -->
+          <!-- <span class="nav-icon_last-label">{{ realName || '设置' }}</span> -->
           <span class="nav-icon_last-label">{{ '设置' }}</span>
         </div>
       </div>
@@ -83,7 +83,7 @@
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="30" :src="avatar" icon="el-icon-user-solid" />
-              <!-- <span class="user-name">{{ userName }}</span> -->
+              <!-- <span class="user-name">{{ realName }}</span> -->
               <span class="user-name">设置</span>
               <i class="el-icon-arrow-down" />
             </div>
@@ -125,7 +125,7 @@ export default {
   },
   computed: {
     ...mapGetters('app', ['isMobile']),
-    ...mapGetters('user', ['userName', 'avatar', 'role']),
+    ...mapGetters('user', ['userName', 'avatar', 'role','realName']),
 
     menuList() {
       if (this.role === 'STUDENT') {

@@ -1120,8 +1120,9 @@ export default {
 .su-avatar {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
-  background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
+  border-radius: 50%;
+  //background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
+  background:#0049FF;
   color: #fff;
   font-size: 12px;
   display: flex;
@@ -1349,7 +1350,8 @@ color: #333333;
   width: 56px;
   height: 56px;
   border-radius: 14px;
-background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
+//background: linear-gradient( 45deg, #0049FF 0%, #71A0FF 100%);
+background:#0049FF;
   color: #fff;
   font-size: 14px;
   font-weight: bold;

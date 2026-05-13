@@ -67,6 +67,7 @@ const getters = {
   userInfo: state => state.userInfo,
   userId: state => state.userInfo?.id,
   userName: state => state.userInfo?.userName,
+  realName: state => state.userInfo?.realName,
   avatar: state => state.userInfo?.profilePicture,
   role: state => state.role,
   isLoggedIn: state => !!state.token

@@ -150,7 +150,7 @@
             <img :src="item.cover || require('@/assets/images/such.png')" class="ls_last_detail_img" alt="">
             <div class="ls_last_detail_center">
               <div class="ls_last_detail_title">{{ item.name }}</div>
-              <div class="ls_last_detail_time">{{ formatDuration(item.duration) }}</div>
+              <div class="ls_last_detail_time">{{ formatDuration(item.fileList && item.fileList.length != 0 ? (item.fileList[0].duration) :0) }}</div>
             </div>
             <div class="ls_last_detail_last">{{ item.teacherName }} · {{ formatDate(item.generationTime) }}</div>
           </div>
@@ -293,13 +293,13 @@
                     </el-select>
                   </div>
                 </div>
-                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <!-- <div class="masl_con_dialog_last_shadow_hx"></div>
                 <div class="masl_con_dialog_last_shadow_second">
                   <div class="masl_con_dialog_last_shadow_second_label">上课对象：</div>
                   <div class="masl_con_dialog_last_shadow_second_choose">
                     <div class="masl_con_dialog_last_shadow_second_choose_detail">
                       <img src="@/assets/images/liveClass/yes.png" class="masl_con_dialog_last_shadow_second_choose_detail_no" alt="">
-                      <!-- <img src="@/assets/images/liveClass/no.png" class="masl_con_dialog_last_shadow_second_choose_detail_no" alt=""> -->
+                     
                       <div class="masl_con_dialog_last_shadow_second_choose_detail_text">学生</div>
                     </div>
                      <div class="masl_con_dialog_last_shadow_second_choose_detail">
@@ -307,7 +307,7 @@
                       <div class="masl_con_dialog_last_shadow_second_choose_detail_text">老师</div>
                     </div>
                   </div>
-                </div>
+                </div> -->
                 <div class="masl_con_dialog_last_shadow_hx"></div>
                 <el-select
                   v-model="createClassId"
@@ -776,14 +776,12 @@ export default {
     },
 
     openVideoPlayer(item) {
-      if (!item.filePath) {
-        this.$message.warning('暂无视频回放')
-        return
-      }
-      // this.playerSource = item.filePath
-      this.playerSource = 'https://video.fjlsjy123.com/sv/56ddf78b-19a2dc79074/56ddf78b-19a2dc79074.mp4'
-      // this.playerTeacherSource = item.teacherFilePath || ''
-      this.playerTeacherSource = 'https://video.fjlsjy123.com/sv/56ddf78b-19a2dc79074/56ddf78b-19a2dc79074.mp4'
+      const fileList = item.fileList || []
+      const mainFile = fileList.find(f => f.videoType === '1')
+      const teacherFile = fileList.find(f => f.videoType === '2')
+
+      this.playerSource = mainFile ? mainFile.filePath || '' : ''
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = item.name || '视频回放'
       this.playerVisible = true
     },
@@ -1014,7 +1012,12 @@ export default {
         return
       }
       const selectedTime = new Date(this.classStartTime.replace(' ', 'T'))
-      if (selectedTime < new Date()) {
+      console.log(selectedTime)
+      console.log(new Date())
+      const now = new Date()
+      now.setSeconds(0, 0)
+      selectedTime.setSeconds(0, 0)
+      if (selectedTime < now) {
         this.$message.warning('上课时间不得早于当前时间，请重新选择')
         return
       }

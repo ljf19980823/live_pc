@@ -365,7 +365,7 @@
             <div
               class="app_container_box_right_top_top_tag"
               :class="{ 'is-expired': currentClass.remainDays < 0 }"
-            >{{ currentClass.remainDays < 0 ? `已过期${Math.abs(currentClass.remainDays)}天` : `剩余${currentClass.remainDays}天` }}</div>
+            >{{ currentClass.remainDays < 0 ? `已过期${Math.abs(currentClass.remainDays)}天` : ( currentClass.remainDays==0? `今天到期` : `剩余${currentClass.remainDays}天` )}}</div>
           </div>
           <div class="app_container_box_right_top_top_right">
             <img @click="handleToAnnouncement()" src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
