@@ -2497,6 +2497,7 @@ border: 1px solid #F3F4F8;
   font-size: 14px;
   color: #6A7282;
   white-space: nowrap;
+  line-height: 20px;
 }
 .cdc-value {
   font-size: 14px;

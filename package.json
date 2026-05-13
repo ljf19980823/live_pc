@@ -13,7 +13,8 @@
     "electron:serve": "cross-env NODE_ENV=development electron .",
     "electron:build": "vue-cli-service build --mode production && electron-builder build --win",
     "electron:build:mac": "vue-cli-service build --mode production && electron-builder build --mac",
-    "electron:build:all": "vue-cli-service build --mode production && electron-builder build --win --mac"
+    "electron:build:all": "vue-cli-service build --mode production && electron-builder build --win --mac",
+    "electron:build:no-sign": "vue-cli-service build --mode production && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder build --win"
   },
   "dependencies": {
     "aliyun-aliplayer": "^2.37.6",
@@ -29,6 +30,7 @@
     "vuex": "^3.6.2"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@vue/cli-plugin-babel": "~5.0.8",
     "@vue/cli-service": "~5.0.8",
     "cross-env": "^7.0.3",
@@ -42,6 +44,7 @@
     "productName": "立升直播",
     "copyright": "Copyright © 2024 立升",
     "icon": "build/icon",
+    "afterSign": "build/notarize.js",
     "directories": {
       "output": "release"
     },
@@ -60,7 +63,12 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "certificateFile": "${env.WIN_CSC_LINK}",
+      "certificatePassword": "${env.WIN_CSC_KEY_PASSWORD}"
     },
     "nsis": {
       "oneClick": true,
@@ -84,11 +92,14 @@
         }
       ],
       "category": "public.app-category.utilities",
-      "identity": null,
-      "hardenedRuntime": false,
+      "identity": "Developer ID Application: 公司名称 (TEAM_ID)",
+      "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.inherit.plist"
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": {
+        "teamId": "${env.APPLE_TEAM_ID}"
+      }
     },
     "dmg": {
       "icon": "build/icon.icns",
