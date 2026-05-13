@@ -776,12 +776,15 @@ export default {
     },
 
     openVideoPlayer(item) {
+      console.log(item,'输出')
       const fileList = item.fileList || []
-      const mainFile = fileList.find(f => f.videoType === '1')
-      const teacherFile = fileList.find(f => f.videoType === '2')
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
 
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      console.log(this.playerSource)
+      console.log(this.playerTeacherSource)
       this.playerTitle = item.name || '视频回放'
       this.playerVisible = true
     },

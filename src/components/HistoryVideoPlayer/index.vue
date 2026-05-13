@@ -18,7 +18,15 @@
         <div v-if="mainError" class="hrp-main-error">
           <span class="hrp-error-text">主视频加载失败，请稍后重试</span>
         </div>
-        <div v-else :id="mainPlayerId" class="hrp-main-player"></div>
+        <template v-else>
+          <div :id="mainPlayerId" class="hrp-main-player"></div>
+          <transition name="hrp-loading-fade">
+            <div v-if="mainLoading" class="hrp-main-loading">
+              <div class="hrp-spinner"></div>
+              <span class="hrp-loading-text">视频加载中...</span>
+            </div>
+          </transition>
+        </template>
 
         <!-- 讲师画中画（右上角固定，仅显示，不可操作，不可拖拽） -->
         <transition name="hrp-pip-fade">
@@ -116,6 +124,7 @@ export default {
       mainPlayer: null,
       teacherPlayer: null,
       mainError: false,
+      mainLoading: false,
       teacherError: false,
       syncTimer: null,
       isSyncing: false,
@@ -144,10 +153,12 @@ export default {
 
     initPlayers() {
       this.mainError = false
+      this.mainLoading = true
       this.teacherError = false
 
       if (!this.mainSource) {
         this.mainError = true
+        this.mainLoading = false
         return
       }
 
@@ -155,6 +166,7 @@ export default {
         const mountEl = document.getElementById(this.mainPlayerId)
         if (!mountEl) {
           this.mainError = true
+          this.mainLoading = false
           return
         }
 
@@ -176,16 +188,21 @@ export default {
             { ...baseConfig, id: this.mainPlayerId, source: this.mainSource, controlBarVisibility: 'hover' },
             (mainPlayer) => {
               this.mainPlayer = mainPlayer
+              this.mainLoading = false
               this.setupSync(mainPlayer)
               if (this.teacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
             }
           )
-          this.mainPlayer.on('error', () => { this.mainError = true })
+          this.mainPlayer.on('error', () => {
+            this.mainError = true
+            this.mainLoading = false
+          })
         } catch (e) {
           console.error('[HRP] 主视频初始化失败:', e)
           this.mainError = true
+          this.mainLoading = false
         }
       })
     },
@@ -345,6 +362,7 @@ export default {
     destroyPlayers() {
       clearInterval(this.syncTimer)
       this.syncTimer = null
+      this.mainLoading = false
 
       if (this._removeVideoListeners) {
         this._removeVideoListeners()
@@ -471,6 +489,49 @@ export default {
 .hrp-error-text {
   font-size: 14px;
   color: #999;
+}
+
+/* ─── 主视频 Loading ─── */
+.hrp-main-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.hrp-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: hrp-spin 0.8s linear infinite;
+}
+
+@keyframes hrp-spin {
+  to { transform: rotate(360deg); }
+}
+
+.hrp-loading-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.5px;
+}
+
+.hrp-loading-fade-enter-active,
+.hrp-loading-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.hrp-loading-fade-enter,
+.hrp-loading-fade-leave-to {
+  opacity: 0;
 }
 
 /* ─── 讲师画中画（固定右上角，不可拖拽） ─── */
