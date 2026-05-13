@@ -525,9 +525,10 @@
       </div>
     </dialog-custome>
 
-    <video-player
+    <history-video-player
       :visible="playerVisible"
-      :source="playerSource"
+      :main-source="playerSource"
+      :teacher-source="playerTeacherSource"
       :title="playerTitle"
       @close="playerVisible = false"
     />
@@ -597,6 +598,7 @@ export default {
 
       playerVisible: false,
       playerSource: '',
+      playerTeacherSource: '',
       playerTitle: '',
 
       showSchedule: false,
@@ -778,7 +780,10 @@ export default {
         this.$message.warning('暂无视频回放')
         return
       }
-      this.playerSource = item.filePath
+      // this.playerSource = item.filePath
+      this.playerSource = 'https://video.fjlsjy123.com/sv/56ddf78b-19a2dc79074/56ddf78b-19a2dc79074.mp4'
+      // this.playerTeacherSource = item.teacherFilePath || ''
+      this.playerTeacherSource = 'https://video.fjlsjy123.com/sv/56ddf78b-19a2dc79074/56ddf78b-19a2dc79074.mp4'
       this.playerTitle = item.name || '视频回放'
       this.playerVisible = true
     },
@@ -855,6 +860,10 @@ export default {
       }
     },
     async enterLiveRoom(item) {
+      console.log(item)
+      if(item.status!='living'){
+        return true
+      }
       // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
       if (window.electronAPI) {
         try {
@@ -902,10 +911,38 @@ export default {
       document.body.removeChild(el)
       this.$message.success('链接已复制')
     },
-    enterLiveFromDetail() {
-      if (!this.selectedCourseItem || this.selectedCourseItem.status !== 'living') return
-      const id = this.selectedCourseItem.id
-      if (id) this.$router.push(`/live/room/${id}`)
+   async enterLiveFromDetail() {
+      // if (!this.selectedCourseItem || this.selectedCourseItem.status !== 'living') return
+      // const id = this.selectedCourseItem.id
+      // if (id) this.$router.push(`/live/room/${id}`)
+
+      if(this.selectedCourseItem.status!='living'){
+        return true
+      }
+      // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+
+      const token = getToken();
+      const courseid = this.selectedCourseItem.id;
+      const {userId,realName,userName,role}=getUserInfo();
+      
+      let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
+      // if(process.env.NODE_ENV === 'development'){
+      //   liveBaseUrl = "http://localhost:8000";  //本地开发环境
+      // }
+      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&_t=${Date.now()}`;
+      this.activeTab = 'liveui'
     },
 
     // ── 实时课堂接口 ────────────────────────────────────────────────────
