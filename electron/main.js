@@ -332,8 +332,10 @@ function showExitConfirmDialog () {
   })
 
   const cleanup = () => {
-    mainWindow.removeListener('move', syncBounds)
-    mainWindow.removeListener('resize', syncBounds)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.removeListener('move', syncBounds)
+      mainWindow.removeListener('resize', syncBounds)
+    }
     ipcMain.removeListener('exit-dialog-confirm', onConfirm)
     ipcMain.removeListener('exit-dialog-cancel', onCancel)
     if (!confirmWin.isDestroyed()) confirmWin.destroy()
@@ -342,7 +344,7 @@ function showExitConfirmDialog () {
   const onConfirm = () => {
     cleanup()
     stopScreenGuard()
-    mainWindow.destroy()
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy()
   }
 
   const onCancel = () => {
@@ -353,8 +355,10 @@ function showExitConfirmDialog () {
   ipcMain.once('exit-dialog-cancel', onCancel)
 
   confirmWin.on('closed', () => {
-    mainWindow.removeListener('move', syncBounds)
-    mainWindow.removeListener('resize', syncBounds)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.removeListener('move', syncBounds)
+      mainWindow.removeListener('resize', syncBounds)
+    }
     ipcMain.removeListener('exit-dialog-confirm', onConfirm)
     ipcMain.removeListener('exit-dialog-cancel', onCancel)
   })
