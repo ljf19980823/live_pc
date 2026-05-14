@@ -537,7 +537,7 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getLiveClassList, createLiveClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
@@ -1093,7 +1093,7 @@ export default {
     async fetchClassList() {
       if (this.classList.length) return
       try {
-        const res = await getClassList()
+        const res = await getLiveClassList()
         const list = res.data || res || []
         console.log(res,'测试')
         this.classList = list.map(item => ({

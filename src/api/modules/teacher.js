@@ -10,6 +10,9 @@ export const getTeacherNoticeList = params => get('/edu/notice/information', par
 // 获取班级列表
 export const getClassList = params => get('/edu/class/list', params)
 
+// 获取直播班级列表
+export const getLiveClassList = params => get('/edu/class/liveList', params)
+
 // 获取班级详情
 export const getClassDetail = classId => get(`/edu/class/detail/${classId}`)
 
