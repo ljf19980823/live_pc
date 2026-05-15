@@ -348,6 +348,28 @@
                     </div>
                  </div>
               </div>
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_four">
+                  <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
+                  <div class="masl_con_dialog_last_shadow_four_text">是否支持上麦：</div>
+                </div>
+                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <div class="masl_con_dialog_last_shadow_five">
+                  <div
+                    v-for="item in allowMicOptions"
+                    :key="item.value"
+                    class="masl_con_dialog_last_shadow_second_choose_detail"
+                    @click="allowMic = item.value"
+                  >
+                    <img
+                      :src="allowMic === item.value ? require('@/assets/images/liveClass/yes.png') : require('@/assets/images/liveClass/no.png')"
+                      class="masl_con_dialog_last_shadow_second_choose_detail_no"
+                      alt=""
+                    >
+                    <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item.label }}</div>
+                  </div>
+                </div>
+              </div>
               <div class="masl_con_dialog_last_btn">
                 <div class="masl_con_dialog_last_btn_cancel" @click="showCreateClass = false">取消</div>
                 <div class="masl_con_dialog_last_btn_confirm" @click="handleCreateClass">确定</div>
@@ -537,7 +559,7 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getLiveClassList, createLiveClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getLiveClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
@@ -588,6 +610,8 @@ export default {
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
       recordMode: 0,
       recordModeOptions: ['无头像录制', '录老师头像'],
+      allowMic: 1,
+      allowMicOptions: [{ label: '支持', value: 1 }, { label: '不支持', value: 0 }],
       createClassId: [],
       createLoading: false,
 
@@ -629,6 +653,7 @@ export default {
         this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
         this.classDuration = 240
         this.recordMode = 0
+        this.allowMic = 1
         this.createClassId = []
         const userName = this.$store.getters['user/userName'] || ''
         this.name = userName ? `${userName}的课堂` : ''
@@ -639,6 +664,7 @@ export default {
         this.classStartTime = ''
         this.classDuration = 240
         this.recordMode = 0
+        this.allowMic = 1
         this.createClassId = []
       }
     },
@@ -887,8 +913,9 @@ export default {
       // if(process.env.NODE_ENV === 'development'){
       //   liveBaseUrl = "http://localhost:8000";  //本地开发环境
       // }
-      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&_t=${Date.now()}`;
-      this.activeTab = 'liveui'
+      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}`;
+      console.log(this.liveUrl,'直播地址')
+    this.activeTab = 'liveui'
     },
     copyShareLink() {
       const url = this.selectedCourseItem && this.selectedCourseItem.shareUrl
@@ -942,8 +969,9 @@ export default {
       // if(process.env.NODE_ENV === 'development'){
       //   liveBaseUrl = "http://localhost:8000";  //本地开发环境
       // }
-      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&_t=${Date.now()}`;
-      this.activeTab = 'liveui'
+      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
+      console.log(this.liveUrl,'直播地址')
+     this.activeTab = 'liveui'
     },
 
     // ── 实时课堂接口 ────────────────────────────────────────────────────
@@ -1039,7 +1067,21 @@ export default {
           recordingType: String(this.recordMode + 1),
           classIds: this.createClassId.length ? this.createClassId : undefined
         }
-        await createLiveClass(params)
+        const result = await createLiveClass(params)
+        const liveData = result.data || result
+        const liveId = liveData.liveId
+        const liveLessonId = liveData.liveLessonId
+        const { userId, userName } = getUserInfo()
+        await createAliyunClass({
+          liveId,
+          mode: this.allowMic,
+          teacher_id: userId,
+          teacher_nick: userName,
+          title: this.name.trim(),
+          extends: '{}',
+          im_server: ['aliyun_new'],
+          id: liveLessonId
+        })
         this.$message.success('课堂创建成功')
         this.showCreateClass = false
         this.fetchLiveList()

@@ -1,4 +1,6 @@
+import axios from 'axios'
 import { get, post, put, del } from '@/utils/request'
+import { getToken } from '@/utils/auth'
 
 /**
  * 教师端接口
@@ -63,6 +65,15 @@ export const resetStudentPassword = data => post('/edu/class/students/resetPassw
 
 // 创建课堂
 export const createLiveClass = params => post('/edu/live/create', params)
+
+// 创建阿里云互动课堂（固定域名）
+export const createAliyunClass = params =>
+  axios.post('https://live.fjlsjy123.com/api/v2/class/create', params, {
+    headers: {
+      'Content-Type': 'application/json;charset=utf-8',
+      'Authorization': `Bearer ${getToken()}`
+    }
+  }).then(res => res.data)
 
 // 获取课时学习进度列表
 export const getLessonProgress = params => get('/edu/course/lesson/progress', params)
