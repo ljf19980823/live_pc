@@ -34,7 +34,7 @@
             <div class="app_last_right_detail_mess_top">
               <div class="app_last_right_detail_mess_top_left">
                 <div class="app_last_right_detail_mess_top_name">{{ item.sender }}</div>
-                <div class="app_last_right_detail_mess_top_time">{{ item.time }}</div>
+                <div class="app_last_right_detail_mess_top_time">{{ relativeTimeText(item.time) }}</div>
                 <div class="app_last_right_detail_mess_top_file" v-if="item.attachCount > 0">
                   <div class="app_last_right_detail_mess_top_file_sx"></div>
                   <img src="@/assets/images/message/file.png" class="app_last_right_detail_mess_top_file_icon" alt="">
@@ -59,7 +59,7 @@
         <div class="app_last_right_detailBOX">
             <div class="app_last_right_detailBOX_top">
                <div class="app_last_right_detail_mess_top_name">{{ currentDetail.sender }}</div>
-                <div class="app_last_right_detail_mess_top_time">{{ currentDetail.time }}</div>
+                <div class="app_last_right_detail_mess_top_time">{{ relativeTimeText(currentDetail.time) }}</div>
             </div>
             <div class="app_last_right_detail_mess_con app_last_right_detail_mess_con_full">{{ currentDetail.content }}</div>
             <div class="app_last_right_detailBOX_last" v-if="currentDetail.images.length > 0 || currentDetail.files.length > 0">
@@ -347,6 +347,19 @@ export default {
     handleDetail(item) {
       this.currentDetail = item
       this.showDetail = true
+    },
+    relativeTimeText(raw) {
+      if (!raw) return ''
+      const date = new Date(raw)
+      if (isNaN(date.getTime())) return raw
+      const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+      if (seconds < 3600) {
+        return `${Math.max(1, Math.floor(seconds / 60))}分钟前`
+      }
+      if (seconds < 86400) {
+        return `${Math.max(1, Math.floor(seconds / 3600))}小时前`
+      }
+      return `${Math.max(1, Math.floor(seconds / 86400))}天前`
     },
 
     // 发消息弹窗

@@ -1065,7 +1065,8 @@ export default {
           introduce: this.instr || undefined,
           // recordMode 0→无头像录制→'1'，1→录老师头像→'2'
           recordingType: String(this.recordMode + 1),
-          classIds: this.createClassId.length ? this.createClassId : undefined
+          classIds: this.createClassId.length ? this.createClassId : undefined,
+          isAllowMic: this.allowMic == '1' ? '1' : '2'
         }
         const result = await createLiveClass(params)
         const liveData = result.data || result

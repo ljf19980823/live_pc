@@ -894,6 +894,7 @@ export default {
       this.changePhoneForm = { prefix: '+86', phone: '', code: '' }
     },
     async fetchUserInfo() {
+       if (!this.$store.getters['user/token']) return
       try {
         const res = await getSsoInfo()
         const data = res.data || res || {}
