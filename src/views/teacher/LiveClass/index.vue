@@ -910,9 +910,9 @@ export default {
       const {userId,realName,userName,role}=getUserInfo();
       
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
-      // if(process.env.NODE_ENV === 'development'){
-      //   liveBaseUrl = "http://localhost:8000";  //本地开发环境
-      // }
+      if(process.env.NODE_ENV === 'development'){
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+      }
       this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
     this.activeTab = 'liveui'
@@ -966,9 +966,9 @@ export default {
       const {userId,realName,userName,role}=getUserInfo();
       
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
-      // if(process.env.NODE_ENV === 'development'){
-      //   liveBaseUrl = "http://localhost:8000";  //本地开发环境
-      // }
+      if(process.env.NODE_ENV === 'development'){
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+      }
       this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
      this.activeTab = 'liveui'
@@ -1140,7 +1140,7 @@ export default {
         const list = res.data || res || []
         console.log(res,'测试')
         this.classList = list.map(item => ({
-          value: item.classId,
+          value: item.id,
           label:item.classAlias?item.classAlias: item.className,
         }))
       } catch (_) {}

@@ -537,8 +537,8 @@ export default {
 /* ─── 讲师画中画（固定右上角，不可拖拽） ─── */
 .hrp-pip {
   position: absolute;
-  right: 12px;
-  top: 12px;
+  right: 0;
+  top: 0;
   width: 240px;
   border-radius: 6px;
   overflow: hidden;
