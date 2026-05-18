@@ -73,9 +73,9 @@
               :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
               @click="enterLiveRoom(item)"
             >进入直播
-              
-              <img src="@/assets/images/liveClass/no_del.png" style="cursor:not-allowed" v-if="item.status == 'living'" class="placeholder_last_table_detail_last_del" alt="">
-              <img src="@/assets/images/liveClass/yes_del.png" style="cursor:pointer" v-else class="placeholder_last_table_detail_last_del" alt="" @click.stop="handleDeleteLive(item)">
+              <div class="placeholder_last_table_detail_last_del" :class="{ 'notallow': item.status === 'living', 'allow': item.status !== 'living' }" @click.stop="handleDeleteLive(item)">
+                <img src="@/assets/images/liveClass/no_del.png">
+              </div>
             </div>
           </div>
           <empty-state v-if="liveCourses.length === 0" description="暂无直播课堂" />
@@ -1000,6 +1000,9 @@ export default {
 
     // ── 删除课堂 ────────────────────────────────────────────────────────
     handleDeleteLive(item) {
+      if(item.status=='living'){
+        return;
+      }
       this.$confirm('确认删除该课堂吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -1460,11 +1463,32 @@ export default {
 }
 .placeholder_last_table_detail_last_del{
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: 12px;
-  width: 15px;
-  height: 16px;
+  top: 0;
+  right: 0;
+  width: 43px;
+  height: 43px;
+  cursor: pointer;
+  img{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 15px;
+    height: 16px;
+    transform: translate(-50%,-50%);
+  }
+  &.allow:hover{
+    img{
+      filter: grayscale(100%) sepia(100%) hue-rotate(-40deg) saturate(800%) brightness(0.8);
+    }
+  }
+  &.notallow{
+    cursor: not-allowed;
+    &:hover{
+      img{
+        filter: initail;
+      }
+    }
+  }
 }
 .placeholder_last_table_detail_last_disable {
   font-weight: bold;
