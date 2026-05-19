@@ -572,13 +572,7 @@ export default {
   data() {
     return {
       liveUrl: '',
-      hasUpdate: false,
       bannerDismissed: false,
-      updateInfo: {
-        version: '',
-        downloadUrl: '',
-        description: ''
-      },
 
       dialogVisible: false,
       downloading: false,
@@ -711,6 +705,7 @@ export default {
   },
   computed: {
     ...mapGetters('user', ['userInfo']),
+    ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
     isAdd() {
       return this.userInfo?.isAdd === '1'
     },
@@ -1193,18 +1188,21 @@ export default {
 
     // ── 检查版本更新 ────────────────────────────────────────────────────
     async checkUpdate() {
-      console.log('开始检查更新')
+      // App.vue 启动时已经检查过了，有结果直接复用
+      if (this.hasUpdate) return
       if (!window.electronAPI?.checkForUpdate) return
       try {
         const result = await window.electronAPI.checkForUpdate()
-        console.log('输出',result)
         if (result && result.hasUpdate) {
-          this.updateInfo = {
-            version: result.version || '新版本',
-            downloadUrl: result.downloadUrl || '',
-            description: result.description || ''
-          }
-          this.hasUpdate = true
+          this.$store.commit('app/SET_UPDATE_INFO', {
+            hasUpdate: true,
+            isForceUpdate: result.isForceUpdate ?? 0,
+            updateInfo: {
+              version: result.version || '新版本',
+              downloadUrl: result.downloadUrl || '',
+              description: result.description || ''
+            }
+          })
         }
       } catch (_) {}
     },

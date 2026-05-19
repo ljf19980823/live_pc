@@ -580,7 +580,8 @@ ipcMain.handle('check-for-update', async () => {
     }
 
     const downloadUrl = process.platform === 'win32' ? winUrl : macUrl
-    return { hasUpdate: true, version: latestVersion, downloadUrl }
+    const isForceUpdate = data.isForceUpdate ?? 0
+    return { hasUpdate: true, version: latestVersion, downloadUrl, isForceUpdate }
   } catch (e) {
     return { hasUpdate: false, error: e.message }
   }

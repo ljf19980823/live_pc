@@ -8,7 +8,15 @@ const state = {
   // 设备类型：desktop / ipad / tablet / mobile
   device: getDeviceType(),
   // 屏幕宽度
-  screenWidth: window.innerWidth
+  screenWidth: window.innerWidth,
+  // 应用更新信息
+  hasUpdate: false,
+  isForceUpdate: 0,
+  updateInfo: {
+    version: '',
+    downloadUrl: '',
+    description: ''
+  }
 }
 
 const mutations = {
@@ -26,6 +34,11 @@ const mutations = {
   },
   SET_SCREEN_WIDTH(state, width) {
     state.screenWidth = width
+  },
+  SET_UPDATE_INFO(state, { hasUpdate, isForceUpdate, updateInfo }) {
+    state.hasUpdate = hasUpdate
+    state.isForceUpdate = isForceUpdate
+    state.updateInfo = updateInfo
   }
 }
 
@@ -51,7 +64,10 @@ const getters = {
   device: state => state.device,
   screenWidth: state => state.screenWidth,
   isMobile: state => state.device === 'mobile',
-  isTablet: state => ['tablet', 'ipad'].includes(state.device)
+  isTablet: state => ['tablet', 'ipad'].includes(state.device),
+  hasUpdate: state => state.hasUpdate,
+  isForceUpdate: state => state.isForceUpdate,
+  updateInfo: state => state.updateInfo
 }
 
 export default { namespaced: true, state, mutations, actions, getters }
