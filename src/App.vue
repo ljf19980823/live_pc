@@ -287,158 +287,177 @@ export default {
   opacity: 0;
 }
 
-/* ── 强制更新弹窗样式（复用 LiveClass 的 update-dialog 样式） ── */
+/* ── 弹窗遮罩 ─────────────────────────────────────────────────────────────── */
 .update-overlay {
   position: fixed;
   inset: 0;
-  z-index: 99998;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 99998;
 }
 
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.dialog-fade-enter,
+.dialog-fade-leave-to {
+  opacity: 0;
+}
+
+/* ── 弹窗卡片 ─────────────────────────────────────────────────────────────── */
 .update-dialog {
   background: #fff;
   border-radius: 16px;
-  width: 420px;
+  width: 340px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
+/* ── 顶部插图 ─────────────────────────────────────────────────────────────── */
 .dialog-illustration {
   position: relative;
-  background: linear-gradient(135deg, #e8f4ff 0%, #f0f8ff 50%, #e8f0ff 100%);
-  height: 160px;
+  background: linear-gradient(160deg, #d9f7fa 0%, #e8f9f9 60%, #f0fdfe 100%);
+  padding: 28px 0 0;
   display: flex;
-  align-items: center;
   justify-content: center;
+  min-height: 150px;
 }
 
-.stars {
+.dialog-illustration .stars {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.star {
+.dialog-illustration .star {
   position: absolute;
-  color: #ffd700;
-  font-size: 14px;
-  animation: twinkle 2s infinite alternate;
-}
-.s1 { top: 20px; left: 30px; animation-delay: 0s; }
-.s2 { top: 40px; right: 40px; animation-delay: 0.6s; }
-.s3 { bottom: 25px; left: 60px; animation-delay: 1.2s; }
-
-@keyframes twinkle {
-  from { opacity: 0.4; transform: scale(0.9); }
-  to   { opacity: 1;   transform: scale(1.2); }
+  color: #ffe066;
+  font-size: 16px;
+  animation: twinkle 2s ease-in-out infinite;
 }
 
-.rocket-wrap {
+.dialog-illustration .star.s1 { top: 18px; left: 40px; font-size: 14px; animation-delay: 0s; }
+.dialog-illustration .star.s2 { top: 28px; right: 50px; font-size: 18px; animation-delay: 0.6s; }
+.dialog-illustration .star.s3 { top: 10px; right: 90px; font-size: 12px; animation-delay: 1.2s; }
+
+.dialog-illustration .rocket-wrap {
+  position: relative;
   z-index: 1;
 }
 
-.rocket-svg {
-  width: 90px;
-  height: auto;
+.dialog-illustration .rocket-svg {
+  width: 120px;
+  height: 140px;
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(94, 207, 207, 0.3));
 }
 
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── 弹窗内容区 ───────────────────────────────────────────────────────────── */
 .dialog-body {
-  padding: 24px 28px 28px;
+  padding: 20px 24px 0;
+  text-align: center;
 }
 
 .dialog-title {
-  margin: 0 0 8px;
   font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 10px;
 }
 
 .dialog-desc {
-  margin: 0 0 20px;
   font-size: 14px;
-  color: #666;
+  color: #595959;
   line-height: 1.6;
+  margin: 0 0 20px;
 }
 
+/* ── 操作按钮 ─────────────────────────────────────────────────────────────── */
+.dialog-actions {
+  display: flex;
+  border-top: 1px solid #f0f0f0;
+  margin: 0 -24px;
+}
+
+.dialog-actions button {
+  flex: 1;
+  height: 50px;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dialog-actions button:hover {
+  background: #f5f5f5;
+}
+
+.dialog-actions button:active {
+  background: #ebebeb;
+}
+
+.dialog-actions .btn-cancel {
+  color: #8c8c8c;
+  border-right: 1px solid #f0f0f0;
+}
+
+.dialog-actions .btn-upgrade {
+  color: #13c2c2;
+  font-weight: 500;
+}
+
+/* ── 进度条 ───────────────────────────────────────────────────────────────── */
 .progress-wrap {
-  margin-bottom: 8px;
+  margin: 0 0 10px;
 }
 
 .progress-bar {
   position: relative;
-  background: #f0f0f0;
-  border-radius: 999px;
-  height: 12px;
+  height: 20px;
+  background: #e8e8e8;
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.progress-fill {
+.progress-bar .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4facfe, #00f2fe);
-  border-radius: 999px;
+  background: linear-gradient(90deg, #36cfc9, #13c2c2);
+  border-radius: 10px;
   transition: width 0.3s ease;
 }
 
-.progress-label {
+.progress-bar .progress-label {
   position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 10px;
-  color: #333;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
   font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .progress-tip {
-  margin: 8px 0 0;
   font-size: 13px;
-  color: #888;
-  text-align: center;
+  color: #8c8c8c;
+  margin: 6px 0 20px;
 }
 
-.success-tip { color: #52c41a; }
-.error-tip   { color: #ff4d4f; }
-
-.dialog-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+.success-tip {
+  color: #52c41a;
 }
 
-.btn-cancel {
-  padding: 8px 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn-cancel:hover { background: #f5f5f5; }
-
-.btn-upgrade {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.btn-upgrade:hover { opacity: 0.85; }
-
-.dialog-fade-enter-active,
-.dialog-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.dialog-fade-enter,
-.dialog-fade-leave-to {
-  opacity: 0;
+.error-tip {
+  color: #ff4d4f;
 }
 </style>
