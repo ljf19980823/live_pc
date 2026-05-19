@@ -750,3 +750,12 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+// 监听来自渲染进程的最小化请求
+ipcMain.on('window-minimize', (event) => {
+  // 获取发送该消息的窗口并最小化
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isMinimized()) {
+    win.minimize();
+  }
+});

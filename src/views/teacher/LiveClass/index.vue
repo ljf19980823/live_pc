@@ -696,6 +696,8 @@ export default {
       if (event.data?.type === 'CLASSROOM_EXIT') {
         const { classId } = event.data;
         this.activeTab = 'live';
+      } else if (event.data?.type === 'MINIMIZE_WINDOW') {
+        window.electronAPI.minimizeWindow();
       }
     });
   },

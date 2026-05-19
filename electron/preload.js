@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 开始下载更新包
   downloadUpdate: (url) => ipcRenderer.send('download-update', url),
+  
+  // 最小化窗口
+  minimizeWindow: () => ipcRenderer.send('window-minimize'),
 
   // 监听下载进度（0-100），返回移除监听的函数
   onUpdateProgress: (callback) => {
