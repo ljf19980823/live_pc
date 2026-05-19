@@ -913,7 +913,7 @@ export default {
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}`;
+      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${realName}&courseid=${courseid}&token=${token}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
     this.activeTab = 'liveui'
     },
