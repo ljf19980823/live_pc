@@ -905,15 +905,16 @@ export default {
         } catch (_) {}
       }
 
-      const token = getToken();
-      const courseid = item.id;
       const {userId,realName,userName,role}=getUserInfo();
+      const token = getToken();
+      const liveId = item.id;
+      const roleNumber = role === "STUDENT" ? 0 : 1;
       
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${realName}&courseid=${courseid}&token=${token}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}`;
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
       console.log(this.liveUrl,'直播地址')
     this.activeTab = 'liveui'
     },
