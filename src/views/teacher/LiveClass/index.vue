@@ -1239,7 +1239,7 @@ export default {
         const list = res.data || res || []
         console.log(res,'测试')
         this.classList = list.map(item => ({
-          value: item.id,
+          value: item.classId,
           label:item.classAlias?item.classAlias: item.className,
         }))
       } catch (_) {}
@@ -1922,7 +1922,11 @@ export default {
   }
 }
 
-
+.masl_con_dialog_last_shadow_third {
+    ::v-deep .el-select__input{
+    margin-left: 0!important;
+  }
+}
 
 
 /* ── 顶部横幅 ─────────────────────────────────────────────────────────────── */
