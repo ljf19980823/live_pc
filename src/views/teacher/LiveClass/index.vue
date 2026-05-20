@@ -9,7 +9,7 @@
         <div class="placeholder_top_detail_text" :class="{ 'placeholder_top_detail_text_active': activeTab === 'history' }">历史课堂</div>
         <div class="placeholder_top_detail_hx" v-if="activeTab === 'history'"></div>
       </div>
-      <div class="page_top_right_fixed">
+      <div class="page_top_right_fixed" v-if="isTeacher">
         <div class="page_top_right_fixed_box">
           <div class="page_top_right_fixed_bk">
             <img src="@/assets/images/liveClass/bk_icon.png" class="page_top_right_fixed_bk_icon" alt="">
@@ -134,7 +134,7 @@
               :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
               @click="enterLiveRoom(item)"
             >进入直播
-              <div class="placeholder_last_table_detail_last_del" :class="{ 'notallow': item.status === 'living', 'allow': item.status !== 'living' }" @click.stop="handleDeleteLive(item)">
+              <div v-if="isTeacher" class="placeholder_last_table_detail_last_del" :class="{ 'notallow': item.status === 'living', 'allow': item.status !== 'living' }" @click.stop="handleDeleteLive(item)">
                 <img src="@/assets/images/liveClass/no_del.png">
               </div>
             </div>
@@ -696,6 +696,7 @@ export default {
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
       showScreenCaptureFailedDialog: false,
       _removeScreenCaptureFailed: null,
+      isTeacher: false
     }
   },
   watch: {
@@ -749,6 +750,9 @@ export default {
       clearTimeout(this._searchTimer)
       this._searchTimer = setTimeout(() => this.fetchHistoryList(), 400)
     },
+  },
+  created() {
+    this.isTeacher = getUserInfo().role === 'TEACHER'
   },
   mounted() {
     this.checkUpdate()

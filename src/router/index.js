@@ -121,7 +121,8 @@ const routes = [
       {
         path: 'student/live-class',
         name: 'StudentLiveClass',
-        component: () => import('@/views/Student/LiveClass/index.vue'),
+        // component: () => import('@/views/Student/LiveClass/index.vue'),
+        component: () => import('@/views/teacher/LiveClass/index.vue'),
         meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', roles: ['student'] }
       },
       {
