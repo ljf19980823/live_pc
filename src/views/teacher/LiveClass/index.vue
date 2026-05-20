@@ -943,16 +943,6 @@ export default {
           if (needsRequest.length) await Promise.all(needsRequest)
         } catch (_) {}
 
-        // macOS：检查"屏幕录制"权限（该权限无法代码弹窗申请，需引导用户手动开启）
-        if (window.electronAPI.getScreenAccessStatus) {
-          try {
-            const screenStatus = await window.electronAPI.getScreenAccessStatus()
-            if (screenStatus !== 'granted') {
-              this.showScreenPermissionDialog = true
-              return
-            }
-          } catch (_) {}
-        }
       }
 
       const {userId,realName,userName,role}=getUserInfo();

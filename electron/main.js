@@ -690,15 +690,14 @@ app.whenReady().then(async () => {
   // 此处自动选取整个主屏幕，行为与摄像头/麦克风自动授权一致。
   session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
-      // ── macOS：必须先确认"屏幕录制"权限已获得 ──────────────────────────
+      // ── macOS：检查"屏幕录制"权限 ─────────────────────────────────────
       // 与摄像头/麦克风不同，屏幕录制权限无法通过代码弹窗申请，
       // 必须由用户在「系统设置 → 隐私与安全性 → 屏幕录制」手动开启。
-      // 未授权时 desktopCapturer 返回的 source 实际捕获为黑屏，
-      // 第三方 SDK 收到无效流后会上报 ERROR_DEVICE_UNKNOWNERROR。
+      // 注意：'not-determined' 表示系统尚未记录状态，此时仍允许尝试；
+      // 只有明确被拒绝（'denied' / 'restricted'）才拦截并引导用户。
       if (process.platform === 'darwin') {
         const screenStatus = systemPreferences.getMediaAccessStatus('screen')
-        if (screenStatus !== 'granted') {
-          // 通知渲染层弹出引导提示，让用户去系统设置开启权限
+        if (screenStatus === 'denied' || screenStatus === 'restricted') {
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('screen-permission-denied', { status: screenStatus })
           }
