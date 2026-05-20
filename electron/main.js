@@ -690,11 +690,34 @@ app.whenReady().then(async () => {
   // 此处自动选取整个主屏幕，行为与摄像头/麦克风自动授权一致。
   session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
+      // ── macOS：必须先确认"屏幕录制"权限已获得 ──────────────────────────
+      // 与摄像头/麦克风不同，屏幕录制权限无法通过代码弹窗申请，
+      // 必须由用户在「系统设置 → 隐私与安全性 → 屏幕录制」手动开启。
+      // 未授权时 desktopCapturer 返回的 source 实际捕获为黑屏，
+      // 第三方 SDK 收到无效流后会上报 ERROR_DEVICE_UNKNOWNERROR。
+      if (process.platform === 'darwin') {
+        const screenStatus = systemPreferences.getMediaAccessStatus('screen')
+        if (screenStatus !== 'granted') {
+          // 通知渲染层弹出引导提示，让用户去系统设置开启权限
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('screen-permission-denied', { status: screenStatus })
+          }
+          callback({})
+          return
+        }
+      }
+
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize: { width: 1, height: 1 },
       })
-      if (sources.length === 0) { callback({}); return }
+      if (sources.length === 0) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('screen-permission-denied', { status: 'no-sources' })
+        }
+        callback({})
+        return
+      }
       const streams = { video: sources[0] }
       // Windows 支持同步采集系统音频
       if (process.platform === 'win32') {
@@ -759,3 +782,17 @@ ipcMain.on('window-minimize', (event) => {
     win.minimize();
   }
 });
+
+// ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
+// 查询屏幕录制权限状态（仅 macOS 有效，其他平台返回 'granted'）
+ipcMain.handle('get-screen-access-status', () => {
+  if (process.platform !== 'darwin') return 'granted'
+  return systemPreferences.getMediaAccessStatus('screen')
+})
+
+// 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
+// macOS 屏幕录制权限无法通过代码弹窗申请，只能引导用户手动开启
+ipcMain.handle('open-screen-preferences', () => {
+  if (process.platform !== 'darwin') return
+  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+})

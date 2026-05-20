@@ -23,6 +23,37 @@
       </div>
     </div>
 
+    <!-- macOS 屏幕录制权限引导弹窗 -->
+    <div v-if="showScreenPermissionDialog" class="screen-permission-mask">
+      <div class="screen-permission-dialog">
+        <div class="screen-permission-icon">🖥️</div>
+        <div class="screen-permission-title">需要开启屏幕录制权限</div>
+        <div class="screen-permission-desc">
+          屏幕共享功能需要访问您的屏幕。请前往<br>
+          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
+          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
+        </div>
+        <div class="screen-permission-steps">
+          <div class="screen-permission-step">
+            <span class="step-num">1</span>
+            <span>点击「前往系统设置」按钮</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">2</span>
+            <span>在列表中找到「立升直播」并勾选</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">3</span>
+            <span>重启应用后重新进入直播间</span>
+          </div>
+        </div>
+        <div class="screen-permission-btns">
+          <div class="screen-permission-btn-primary" @click="openScreenPreferences">前往系统设置</div>
+          <div class="screen-permission-btn-secondary" @click="showScreenPermissionDialog = false">稍后再说</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 直播全屏页面 -->
     <div class="page-placeholder_last full-screen" v-if="activeTab === 'liveui'">
        <iframe :src="liveUrl" style="width: 100%; height: 100vh;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
@@ -626,7 +657,11 @@ export default {
       weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
       monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
       scheduleApiData: [],
-      scheduleLoading: false
+      scheduleLoading: false,
+
+      // macOS 屏幕录制权限引导弹窗
+      showScreenPermissionDialog: false,
+      _removeScreenPermissionDenied: null,
     }
   },
   watch: {
@@ -700,6 +735,13 @@ export default {
         window.electronAPI.minimizeWindow();
       }
     });
+
+    // macOS：监听主进程通知——屏幕录制权限被拒绝
+    if (window.electronAPI?.onScreenPermissionDenied) {
+      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied(() => {
+        this.showScreenPermissionDialog = true
+      })
+    }
   },
   beforeDestroy() {
     this.removeIpcListeners()
@@ -888,7 +930,7 @@ export default {
       if(item.status!='living'){
         return true
       }
-      // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
+      // macOS：进入直播间前先确保摄像头、麦克风已获得系统授权
       if (window.electronAPI) {
         try {
           const [camStatus, micStatus] = await Promise.all([
@@ -900,6 +942,17 @@ export default {
           if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
           if (needsRequest.length) await Promise.all(needsRequest)
         } catch (_) {}
+
+        // macOS：检查"屏幕录制"权限（该权限无法代码弹窗申请，需引导用户手动开启）
+        if (window.electronAPI.getScreenAccessStatus) {
+          try {
+            const screenStatus = await window.electronAPI.getScreenAccessStatus()
+            if (screenStatus !== 'granted') {
+              this.showScreenPermissionDialog = true
+              return
+            }
+          } catch (_) {}
+        }
       }
 
       const {userId,realName,userName,role}=getUserInfo();
@@ -1268,6 +1321,13 @@ export default {
       if (this._removeProgress) { this._removeProgress(); this._removeProgress = null }
       if (this._removeComplete) { this._removeComplete(); this._removeComplete = null }
       if (this._removeError) { this._removeError(); this._removeError = null }
+      if (this._removeScreenPermissionDenied) { this._removeScreenPermissionDenied(); this._removeScreenPermissionDenied = null }
+    },
+
+    async openScreenPreferences() {
+      if (window.electronAPI?.openScreenPreferences) {
+        await window.electronAPI.openScreenPreferences()
+      }
     },
 
     installUpdate() {
@@ -2761,5 +2821,109 @@ border-radius: 14px 14px 14px 14px;
 font-size: 16px;
 color: #101828;
 margin-bottom: 12px;
+}
+
+/* ─── macOS 屏幕录制权限引导弹窗 ──────────────────────────────────────── */
+.screen-permission-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.screen-permission-dialog {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px 40px 32px;
+  width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.screen-permission-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+.screen-permission-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #101828;
+  margin-bottom: 12px;
+}
+.screen-permission-desc {
+  font-size: 14px;
+  color: #4B5563;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.screen-permission-steps {
+  width: 100%;
+  background: #F9FAFB;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.screen-permission-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #374151;
+}
+.step-num {
+  width: 22px;
+  height: 22px;
+  background: #0049FF;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.screen-permission-btns {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.screen-permission-btn-primary {
+  flex: 1;
+  height: 44px;
+  background: #0049FF;
+  color: #fff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #003de0; }
+}
+.screen-permission-btn-secondary {
+  flex: 1;
+  height: 44px;
+  background: #F3F4F6;
+  color: #6B7280;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #E5E7EB; }
 }
 </style>

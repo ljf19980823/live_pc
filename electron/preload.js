@@ -55,4 +55,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 主动弹出系统级授权对话框，返回 Promise<boolean>
   askForMediaAccess: (mediaType) => ipcRenderer.invoke('ask-for-media-access', mediaType),
 
+  // ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
+  // 查询屏幕录制权限状态（与摄像头/麦克风不同，无法通过代码弹窗申请）
+  // 返回：'not-determined' | 'granted' | 'denied' | 'restricted'（非 macOS 返回 'granted'）
+  getScreenAccessStatus: () => ipcRenderer.invoke('get-screen-access-status'),
+  // 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
+  openScreenPreferences: () => ipcRenderer.invoke('open-screen-preferences'),
+  // 监听主进程通知：屏幕录制权限被拒绝（getDisplayMedia 被调用但权限不足时触发）
+  onScreenPermissionDenied: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('screen-permission-denied', handler)
+    return () => ipcRenderer.removeListener('screen-permission-denied', handler)
+  },
+
 })
