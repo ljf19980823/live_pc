@@ -68,4 +68,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('screen-permission-denied', handler)
   },
 
+  // 监听主进程通知：权限已授权但屏幕采集失败（重试多次后仍无法获取屏幕源）
+  onScreenCaptureFailed: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('screen-capture-failed', handler)
+    return () => ipcRenderer.removeListener('screen-capture-failed', handler)
+  },
+
 })

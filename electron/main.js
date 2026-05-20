@@ -686,47 +686,58 @@ app.whenReady().then(async () => {
 
   // ─── 屏幕共享：拦截 getDisplayMedia() 请求 ──────────────────────────────
   // Electron 17+ 必须通过此处理器才能在渲染进程（含 iframe）中使用屏幕共享。
-  // 不设置此处理器时，getDisplayMedia() 会直接返回 false / 抛出异常。
-  // 此处自动选取整个主屏幕，行为与摄像头/麦克风自动授权一致。
+  //
+  // macOS 策略（useSystemPicker: true）：
+  //   在 macOS 12.3+ 上启用系统原生屏幕选取器（与 Chrome/Safari 体验一致）。
+  //   开启后 Electron 完全将 getDisplayMedia() 交给 macOS 系统处理，
+  //   handler 本身不会被调用（官方文档行为），彻底避免手动构造流导致的
+  //   ERROR_DEVICE_UNKNOWNERROR (10000) 兼容性问题。
+  //   旧版 macOS 或 Windows/Linux 忽略该选项，仍走 handler 逻辑。
   session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
-    try {
-      // ── macOS：检查"屏幕录制"权限 ─────────────────────────────────────
-      // 与摄像头/麦克风不同，屏幕录制权限无法通过代码弹窗申请，
-      // 必须由用户在「系统设置 → 隐私与安全性 → 屏幕录制」手动开启。
-      // 注意：'not-determined' 表示系统尚未记录状态，此时仍允许尝试；
-      // 只有明确被拒绝（'denied' / 'restricted'）才拦截并引导用户。
-      if (process.platform === 'darwin') {
-        const screenStatus = systemPreferences.getMediaAccessStatus('screen')
-        if (screenStatus === 'denied' || screenStatus === 'restricted') {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('screen-permission-denied', { status: screenStatus })
-          }
-          callback({})
-          return
-        }
-      }
+    // ── 非 macOS 或 macOS < 12.3 的兜底逻辑 ─────────────────────────
+    // macOS 12.3+ 已由系统原生 picker 处理，此 handler 不会被执行。
+    // 以下逻辑仅在 Windows / Linux / 旧版 macOS 时生效。
 
+    if (process.platform === 'darwin') {
+      // 旧版 macOS 仍需手动检查权限
+      const screenStatus = systemPreferences.getMediaAccessStatus('screen')
+      if (screenStatus !== 'granted') {
+        if (screenStatus === 'not-determined') {
+          // 触发 macOS 将应用注册到屏幕录制列表（忽略结果，仅为副作用）
+          await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } }).catch(() => {})
+        }
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('screen-permission-denied', { status: screenStatus })
+        }
+        callback({})
+        return
+      }
+    }
+
+    try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize: { width: 1, height: 1 },
       })
-      if (sources.length === 0) {
+      if (!sources || sources.length === 0) {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('screen-permission-denied', { status: 'no-sources' })
+          mainWindow.webContents.send('screen-capture-failed', { reason: 'no-sources' })
         }
         callback({})
         return
       }
       const streams = { video: sources[0] }
-      // Windows 支持同步采集系统音频
       if (process.platform === 'win32') {
         streams.audio = 'loopback'
       }
       callback(streams)
-    } catch (_) {
+    } catch (err) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('screen-capture-failed', { reason: err.message || 'unknown' })
+      }
       callback({})
     }
-  })
+  }, { useSystemPicker: process.platform === 'darwin' })
 
   // ─── macOS 系统级媒体权限申请 ────────────────────────────────────────────
   // systemPreferences.askForMediaAccess 触发 macOS "相机/麦克风" 系统弹窗。

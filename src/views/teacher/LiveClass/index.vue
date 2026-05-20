@@ -28,8 +28,13 @@
       <div class="screen-permission-dialog">
         <div class="screen-permission-icon">🖥️</div>
         <div class="screen-permission-title">需要开启屏幕录制权限</div>
-        <div class="screen-permission-desc">
-          屏幕共享功能需要访问您的屏幕。请前往<br>
+        <div class="screen-permission-desc" v-if="screenPermissionStatus === 'not-determined'">
+          首次使用屏幕共享需要手动授权。请前往<br>
+          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
+          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
+        </div>
+        <div class="screen-permission-desc" v-else>
+          屏幕共享权限已被拒绝。请前往<br>
           <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
           勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
         </div>
@@ -50,6 +55,31 @@
         <div class="screen-permission-btns">
           <div class="screen-permission-btn-primary" @click="openScreenPreferences">前往系统设置</div>
           <div class="screen-permission-btn-secondary" @click="showScreenPermissionDialog = false">稍后再说</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- macOS 屏幕采集失败弹窗（权限已授权但系统无法采集屏幕） -->
+    <div v-if="showScreenCaptureFailedDialog" class="screen-permission-mask">
+      <div class="screen-permission-dialog">
+        <div class="screen-permission-icon">⚠️</div>
+        <div class="screen-permission-title">屏幕共享启动失败</div>
+        <div class="screen-permission-desc">
+          系统暂时无法采集屏幕画面（可能由休眠唤醒或系统资源不足引起）。<br>
+          请<strong>重启应用</strong>后重新尝试屏幕共享。
+        </div>
+        <div class="screen-permission-steps">
+          <div class="screen-permission-step">
+            <span class="step-num">1</span>
+            <span>退出并重新打开「立升直播」</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">2</span>
+            <span>重新进入直播间后再次开启屏幕共享</span>
+          </div>
+        </div>
+        <div class="screen-permission-btns">
+          <div class="screen-permission-btn-secondary" @click="showScreenCaptureFailedDialog = false">知道了</div>
         </div>
       </div>
     </div>
@@ -357,7 +387,7 @@
                   />
                 </el-select>
               </div>
-              <div class="masl_con_dialog_last_shadow">
+              <!-- <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
                   <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
                   <div class="masl_con_dialog_last_shadow_four_text">录制方式：</div> 
@@ -378,7 +408,7 @@
                       <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item }}</div>
                     </div>
                  </div>
-              </div>
+              </div> -->
               <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
                   <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
@@ -590,7 +620,7 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getLiveClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
@@ -661,7 +691,11 @@ export default {
 
       // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
+      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
       _removeScreenPermissionDenied: null,
+      // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
+      showScreenCaptureFailedDialog: false,
+      _removeScreenCaptureFailed: null,
     }
   },
   watch: {
@@ -738,8 +772,15 @@ export default {
 
     // macOS：监听主进程通知——屏幕录制权限被拒绝
     if (window.electronAPI?.onScreenPermissionDenied) {
-      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied(() => {
+      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
+        this.screenPermissionStatus = data?.status || 'denied'
         this.showScreenPermissionDialog = true
+      })
+    }
+    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
+    if (window.electronAPI?.onScreenCaptureFailed) {
+      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
+        this.showScreenCaptureFailedDialog = true
       })
     }
   },
@@ -1092,16 +1133,26 @@ export default {
       const now = new Date()
       now.setSeconds(0, 0)
       selectedTime.setSeconds(0, 0)
-      if (selectedTime < now) {
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
+      if (selectedTime < fiveMinutesAgo) {
         this.$message.warning('上课时间不得早于当前时间，请重新选择')
         return
       }
+      // 选择时间在5分钟误差内（已过期但未超5分钟），使用当前时间
+      const isExpiredWithinTolerance = selectedTime < now
       this.createLoading = true
       try {
         // startTime 补充秒位，满足 yyyy-MM-dd HH:mm:ss 格式
-        const startTime = this.classStartTime.length === 16
-          ? this.classStartTime + ':00'
-          : this.classStartTime
+        let startTime
+        if (isExpiredWithinTolerance) {
+          const pad = n => String(n).padStart(2, '0')
+          const n = new Date()
+          startTime = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`
+        } else {
+          startTime = this.classStartTime.length === 16
+            ? this.classStartTime + ':00'
+            : this.classStartTime
+        }
         const params = {
           name: this.name.trim(),
           startTime,
@@ -1180,7 +1231,7 @@ export default {
     async fetchClassList() {
       if (this.classList.length) return
       try {
-        const res = await getLiveClassList()
+        const res = await getClassList()
         const list = res.data || res || []
         console.log(res,'测试')
         this.classList = list.map(item => ({
@@ -1312,6 +1363,7 @@ export default {
       if (this._removeComplete) { this._removeComplete(); this._removeComplete = null }
       if (this._removeError) { this._removeError(); this._removeError = null }
       if (this._removeScreenPermissionDenied) { this._removeScreenPermissionDenied(); this._removeScreenPermissionDenied = null }
+      if (this._removeScreenCaptureFailed) { this._removeScreenCaptureFailed(); this._removeScreenCaptureFailed = null }
     },
 
     async openScreenPreferences() {
@@ -1860,6 +1912,9 @@ export default {
   }
   ::v-deep .el-input {
     font-size: 14px;
+  }
+  ::v-deep .el-select__input{
+    margin-left: 0!important;
   }
 }
 
