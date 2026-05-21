@@ -9,7 +9,7 @@
       </div>
       <div class="ab-app-name">{{ appName }}</div>
       <div class="ab-app-version">版本 {{ appVersion }}</div>
-      <div class="ab-app-copyright">© 2026 立升教育科技有限公司</div>
+      <div class="ab-app-copyright">© 2026 福建立升教育科技集团有限公司</div>
     </div>
 
     <!-- 分割线 -->
