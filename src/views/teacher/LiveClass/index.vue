@@ -1211,6 +1211,7 @@ export default {
             ? this.classStartTime + ':00'
             : this.classStartTime
         }
+        let isAllowMic = this.allowMic == '1' ? '1' : '2'
         const params = {
           name: this.name.trim(),
           startTime,
@@ -1219,7 +1220,7 @@ export default {
           // recordMode 0→无头像录制→'1'，1→录老师头像→'2'
           recordingType: String(this.recordMode + 1),
           classIds: this.createClassId.length ? this.createClassId : undefined,
-          isAllowMic: this.allowMic == '1' ? '1' : '2'
+          isAllowMic
         }
         const result = await createLiveClass(params)
         const liveData = result.data || result
@@ -1232,7 +1233,7 @@ export default {
           teacher_id: userId,
           teacher_nick: userName,
           title: this.name.trim(),
-          extends: '{}',
+          extends: JSON.stringify({isAllowMic}),
           im_server: ['aliyun_new'],
           id: liveLessonId
         })
