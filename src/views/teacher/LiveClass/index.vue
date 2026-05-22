@@ -131,7 +131,6 @@
             </div>
             <div
               class="placeholder_last_table_detail_last"
-              :class="{ 'placeholder_last_table_detail_last_disable': item.status !== 'living' }"
               @click="enterLiveRoom(item)"
             >进入直播
               <div v-if="isTeacher" class="placeholder_last_table_detail_last_del" :class="{ 'notallow': item.status === 'living', 'allow': item.status !== 'living' }" @click.stop="handleDeleteLive(item)">
@@ -734,10 +733,13 @@ export default {
     },
     activeTab(val) {
       if (val === 'history') {
-       
+        this.stopLiveRefreshTimer()
         this.fetchHistoryList()
-      } else {
+      } else if (val === 'live') {
         this.fetchLiveList()
+        this.startLiveRefreshTimer()
+      } else {
+        this.stopLiveRefreshTimer()
       }
     },
     dateRange() {
@@ -758,6 +760,15 @@ export default {
     this.checkUpdate()
     this.fetchLiveList()
     this.fetchClassList()
+    this.startLiveRefreshTimer()
+    this._onVisibilityChange = () => {
+      if (document.hidden) {
+        this.stopLiveRefreshTimer()
+      } else if (this.activeTab === 'live') {
+        this.startLiveRefreshTimer()
+      }
+    }
+    document.addEventListener('visibilitychange', this._onVisibilityChange)
     console.log(localStorage.getItem('openCreateClass'),'打印看看')
     if (localStorage.getItem('openCreateClass') === '1') {
       localStorage.removeItem('openCreateClass')
@@ -791,6 +802,10 @@ export default {
   beforeDestroy() {
     this.removeIpcListeners()
     clearTimeout(this._searchTimer)
+    this.stopLiveRefreshTimer()
+    if (this._onVisibilityChange) {
+      document.removeEventListener('visibilitychange', this._onVisibilityChange)
+    }
   },
   computed: {
     ...mapGetters('user', ['userInfo']),
@@ -972,8 +987,21 @@ export default {
     },
     async enterLiveRoom(item) {
       console.log(item)
-      if(item.status!='living'){
-        return true
+      const now = Date.now()
+      const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+
+      if (this.isTeacher) {
+        // 老师：距开始时间30分钟以内（含）或已开始，均可进入
+        if (!startTime || now < startTime - 30 * 60 * 1000) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
+      } else {
+        // 学生：当前时间 >= 直播开始时间 才可进入
+        if (!startTime || now < startTime) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
       }
       // macOS：进入直播间前先确保摄像头、麦克风已获得系统授权
       if (window.electronAPI) {
@@ -1026,12 +1054,22 @@ export default {
       this.$message.success('链接已复制')
     },
    async enterLiveFromDetail() {
-      // if (!this.selectedCourseItem || this.selectedCourseItem.status !== 'living') return
-      // const id = this.selectedCourseItem.id
-      // if (id) this.$router.push(`/live/room/${id}`)
+      const item = this.selectedCourseItem
+      if (!item) return
 
-      if(this.selectedCourseItem.status!='living'){
-        return true
+      const now = Date.now()
+      const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+
+      if (this.isTeacher) {
+        if (!startTime || now < startTime - 30 * 60 * 1000) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
+      } else {
+        if (!startTime || now < startTime) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
       }
       // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
       if (window.electronAPI) {
@@ -1058,6 +1096,22 @@ export default {
       this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
      this.activeTab = 'liveui'
+    },
+
+    // ── 定时刷新 ────────────────────────────────────────────────────────
+    startLiveRefreshTimer() {
+      this.stopLiveRefreshTimer()
+      this._liveRefreshTimer = setInterval(() => {
+        if (this.activeTab === 'live' && !document.hidden) {
+          this.fetchLiveList()
+        }
+      }, 2 * 60 * 1000)
+    },
+    stopLiveRefreshTimer() {
+      if (this._liveRefreshTimer) {
+        clearInterval(this._liveRefreshTimer)
+        this._liveRefreshTimer = null
+      }
     },
 
     // ── 实时课堂接口 ────────────────────────────────────────────────────
