@@ -66,8 +66,8 @@
 
 // ─── ElementUI 全局样式覆盖 ───────────────────────────────────
 .el-button--primary {
-  background-color: $color-primary;
-  border-color: $color-primary;
+  background-color: $color-primary!important;
+  border-color: $color-primary!important;
 }
 
 // 表格斑马纹
