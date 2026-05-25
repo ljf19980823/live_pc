@@ -430,6 +430,28 @@
                   </div>
                 </div>
               </div>
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_four">
+                  <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
+                  <div class="masl_con_dialog_last_shadow_four_text">回放设置：</div>
+                </div>
+                <div class="masl_con_dialog_last_shadow_hx"></div>
+                <div class="masl_con_dialog_last_shadow_five">
+                  <div
+                    v-for="item in isPlayBackOptions"
+                    :key="item.value"
+                    class="masl_con_dialog_last_shadow_second_choose_detail"
+                    @click="isPlayBack = item.value"
+                  >
+                    <img
+                      :src="isPlayBack === item.value ? require('@/assets/images/liveClass/yes.png') : require('@/assets/images/liveClass/no.png')"
+                      class="masl_con_dialog_last_shadow_second_choose_detail_no"
+                      alt=""
+                    >
+                    <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item.label }}</div>
+                  </div>
+                </div>
+              </div>
               <div class="masl_con_dialog_last_btn">
                 <div class="masl_con_dialog_last_btn_cancel" @click="showCreateClass = false">取消</div>
                 <div class="masl_con_dialog_last_btn_confirm" @click="handleCreateClass">确定</div>
@@ -666,6 +688,8 @@ export default {
       recordModeOptions: ['无头像录制', '录老师头像'],
       allowMic: 1,
       allowMicOptions: [{ label: '支持', value: 1 }, { label: '不支持', value: 0 }],
+      isPlayBack: 1,
+      isPlayBackOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
       createClassId: [],
       createLoading: false,
 
@@ -717,6 +741,7 @@ export default {
         this.classDuration = 240
         this.recordMode = 0
         this.allowMic = 1
+        this.isPlayBack = 1
         this.createClassId = []
         const userName = this.$store.getters['user/userName'] || ''
         this.name = userName ? `${userName}的课堂` : ''
@@ -728,6 +753,7 @@ export default {
         this.classDuration = 240
         this.recordMode = 0
         this.allowMic = 1
+        this.isPlayBack = 1
         this.createClassId = []
       }
     },
@@ -1220,7 +1246,8 @@ export default {
           // recordMode 0→无头像录制→'1'，1→录老师头像→'2'
           recordingType: String(this.recordMode + 1),
           classIds: this.createClassId.length ? this.createClassId : undefined,
-          isAllowMic
+          isAllowMic,
+          isPlayBack: this.isPlayBack
         }
         const result = await createLiveClass(params)
         const liveData = result.data || result
