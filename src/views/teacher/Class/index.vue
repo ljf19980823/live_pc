@@ -146,7 +146,7 @@
         <div class="cdetail-list" v-loading="courseDetailLoading">
           <template v-for="(item, idx) in courseDetail.items">
             <!-- 直播课 -->
-            <div v-if="item.type === 'live'" class="cdi-card"  :key="idx">
+            <div v-if="item.type === 'live'" class="cdi-card" :key="idx" @click="enterLiveRoom(item)">
               <div class="cdi-main">
                 <img src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                 <div class="cdi-info">
@@ -258,7 +258,7 @@
                 <template v-if="child.type === 'group' && child.expanded">
                   <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
                     class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
-                    @click="grandchild.type === 'resource' ? handleResourceClick(grandchild) : undefined">
+                    @click="grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined">
                     <div class="cdi-main">
                       <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                       <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
@@ -300,7 +300,7 @@
                 </template>
                 <!-- 一级分组下的普通内容（resource / live） -->
                 <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group"
-                  @click="child.type === 'resource' ? handleResourceClick(child) : undefined">
+                  @click="child.type === 'resource' ? handleResourceClick(child) : child.type === 'live' ? enterLiveRoom(child) : undefined">
                   <div class="cdi-main">
                     <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                     <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
@@ -567,6 +567,15 @@
       @close="closeVideoDialog"
     />
 
+    <!-- 历史课堂回放弹窗 -->
+    <history-video-player
+      :visible="playerVisible"
+      :main-source="playerSource"
+      :teacher-source="playerTeacherSource"
+      :title="playerTitle"
+      @close="playerVisible = false"
+    />
+
     <!-- 音频播放弹窗 -->
     <el-dialog
       :title="currentResourceTitle"
@@ -721,6 +730,73 @@
     <!-- 文件预览 -->
     <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
 
+    <!-- 直播间 -->
+    <div v-if="showLiveIframe" class="live-iframe-overlay">
+      
+      <iframe :src="liveUrl" style="width: 100%; height: 100vh;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
+    </div>
+
+
+    <!-- macOS 屏幕录制权限引导弹窗 -->
+    <div v-if="showScreenPermissionDialog" class="screen-permission-mask">
+      <div class="screen-permission-dialog">
+        <div class="screen-permission-icon">🖥️</div>
+        <div class="screen-permission-title">需要开启屏幕录制权限</div>
+        <div class="screen-permission-desc" v-if="screenPermissionStatus === 'not-determined'">
+          首次使用屏幕共享需要手动授权。请前往<br>
+          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
+          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
+        </div>
+        <div class="screen-permission-desc" v-else>
+          屏幕共享权限已被拒绝。请前往<br>
+          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
+          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
+        </div>
+        <div class="screen-permission-steps">
+          <div class="screen-permission-step">
+            <span class="step-num">1</span>
+            <span>点击「前往系统设置」按钮</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">2</span>
+            <span>在列表中找到「立升直播」并勾选</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">3</span>
+            <span>重启应用后重新进入直播间</span>
+          </div>
+        </div>
+        <div class="screen-permission-btns">
+          <div class="screen-permission-btn-primary" @click="openScreenPreferences">前往系统设置</div>
+          <div class="screen-permission-btn-secondary" @click="showScreenPermissionDialog = false">稍后再说</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- macOS 屏幕采集失败弹窗（权限已授权但系统无法采集屏幕） -->
+    <div v-if="showScreenCaptureFailedDialog" class="screen-permission-mask">
+      <div class="screen-permission-dialog">
+        <div class="screen-permission-icon">⚠️</div>
+        <div class="screen-permission-title">屏幕共享启动失败</div>
+        <div class="screen-permission-desc">
+          系统暂时无法采集屏幕画面（可能由休眠唤醒或系统资源不足引起）。<br>
+          请<strong>重启应用</strong>后重新尝试屏幕共享。
+        </div>
+        <div class="screen-permission-steps">
+          <div class="screen-permission-step">
+            <span class="step-num">1</span>
+            <span>退出并重新打开「立升直播」</span>
+          </div>
+          <div class="screen-permission-step">
+            <span class="step-num">2</span>
+            <span>重新进入直播间后再次开启屏幕共享</span>
+          </div>
+        </div>
+        <div class="screen-permission-btns">
+          <div class="screen-permission-btn-secondary" @click="showScreenCaptureFailedDialog = false">知道了</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   
@@ -730,12 +806,15 @@
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import { getToken, getUserInfo } from '@/utils/auth'
 
 export default { 
   name: 'Class',
   components: { FilePreview, VideoPlayer },
   data() {
     return {
+      liveUrl: '',
+      showLiveIframe: false,
       year: '',
       liveStatus: '未过期',
       isOpenSearch: false,
@@ -777,6 +856,10 @@ export default {
         taskCount: 0,
         items: []
       },
+      playerVisible: false,
+      playerSource: '',
+      playerTeacherSource: '',
+      playerTitle: '',
       showVideoDialog: false,
       currentVideoUrl: '',
       showAudioDialog: false,
@@ -795,7 +878,16 @@ export default {
       editClassStartDate: null,
       editClassEndDate: null,
       deleteClassDialogVisible: false,
-      deleteClassLoading: false
+      deleteClassLoading: false,
+
+
+       // macOS 屏幕录制权限引导弹窗
+      showScreenPermissionDialog: false,
+      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
+      _removeScreenPermissionDenied: null,
+      // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
+      showScreenCaptureFailedDialog: false,
+      _removeScreenCaptureFailed: null,
     }
   },
   watch: {
@@ -888,6 +980,30 @@ export default {
   mounted() {
     this._sessionToken = this.$store.state.user.token
     this.fetchClassList()
+
+    // 监听 iframe 直播退出消息
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'CLASSROOM_EXIT') {
+        const { classId } = event.data;
+        this.showLiveIframe =false;
+      } else if (event.data?.type === 'MINIMIZE_WINDOW') {
+        window.electronAPI.minimizeWindow();
+      }
+    });
+
+    // macOS：监听主进程通知——屏幕录制权限被拒绝
+    if (window.electronAPI?.onScreenPermissionDenied) {
+      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
+        this.screenPermissionStatus = data?.status || 'denied'
+        this.showScreenPermissionDialog = true
+      })
+    }
+    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
+    if (window.electronAPI?.onScreenCaptureFailed) {
+      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
+        this.showScreenCaptureFailedDialog = true
+      })
+    }
   },
   activated() {
     const currentToken = this.$store.state.user.token
@@ -1499,7 +1615,11 @@ export default {
           isFinish: live.isFinish,
           isStart: live.isStart,
           liveStatus: live.status || '',
-          liveMin:live.liveMin,
+          liveMin: live.liveMin,
+          startTime: live.startTime || '',
+          liveLessonId: live.liveLessonId || '',
+          liveId: live.id || '',
+          fileList: live.fileList || '',
           date,
           timeStart,
           timeEnd: '',
@@ -1545,6 +1665,51 @@ export default {
     },
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
+    },
+    openVideoPlayer(item) {
+      const fileList = item.fileList || []
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
+      this.playerSource = mainFile ? mainFile.filePath || '' : ''
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.playerTitle = item.name || '视频回放'
+      this.playerVisible = true
+    },
+    async enterLiveRoom(item) {
+      console.log(item)
+      if (item.isFinish == 1 && item.liveStatus !== '未开播') {
+        this.openVideoPlayer(item)
+        return
+      }
+      const now = Date.now()
+      const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+      if (!startTime || now < startTime - 30 * 60 * 1000) {
+        this.$message.warning('时间还未到，请耐心等候')
+        return
+      }
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+      const { userId, realName, role } = getUserInfo()
+      const token = getToken()
+      const liveId = item.liveId
+      const roleNumber = role === 'STUDENT' ? 0 : 1
+      let liveBaseUrl = 'https://live.fjlsjy123.com'
+      if (process.env.NODE_ENV === 'development') {
+        liveBaseUrl = 'http://localhost:8000'
+      }
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      console.log(this.liveUrl,'直播地址')
+      this.showLiveIframe = true
     }
   }
 }
@@ -1556,6 +1721,28 @@ export default {
   height: 100%;
   display: flex;
   justify-content: space-between;
+}
+.live-iframe-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+.live-iframe-back {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  cursor: pointer;
+  background: #f5f7fa;
+  gap: 6px;
+  font-size: 14px;
+  color: #333;
 }
 .app_container_box_left{
   width: 300px;
@@ -2553,5 +2740,111 @@ color: #333333;
 .percentImg{
   width: 36px;
   height: 36px;
+}
+
+
+
+/* ─── macOS 屏幕录制权限引导弹窗 ──────────────────────────────────────── */
+.screen-permission-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.screen-permission-dialog {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px 40px 32px;
+  width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.screen-permission-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+.screen-permission-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #101828;
+  margin-bottom: 12px;
+}
+.screen-permission-desc {
+  font-size: 14px;
+  color: #4B5563;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.screen-permission-steps {
+  width: 100%;
+  background: #F9FAFB;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.screen-permission-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #374151;
+}
+.step-num {
+  width: 22px;
+  height: 22px;
+  background: #0049FF;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.screen-permission-btns {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.screen-permission-btn-primary {
+  flex: 1;
+  height: 44px;
+  background: #0049FF;
+  color: #fff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #003de0; }
+}
+.screen-permission-btn-secondary {
+  flex: 1;
+  height: 44px;
+  background: #F3F4F6;
+  color: #6B7280;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #E5E7EB; }
 }
 </style>

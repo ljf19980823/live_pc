@@ -536,7 +536,7 @@
                             class="schedule-timeline-status"
                             :class="{
                               'status-living': course.status === '直播中',
-                              'status-finished': course.status === '已结束',
+                              'status-finished': course.status === '已结束' ||  course.status === '已开播',
                               'status-soon': course.status === '未开始',
                               'status-not-broadcast': course.status === '未开播',
                               'status-unknown': course.status === '未知'
@@ -547,6 +547,18 @@
                           </div>
                         </div>
                         <div class="schedule-timeline-name">{{ course.name }}</div>
+                        <div class="schedule-timeline-actions">
+                          <button
+                            v-if="course.status === '直播中' || course.status === '未开始'"
+                            class="schedule-action-btn schedule-action-enter"
+                            @click="enterLiveRoomFromSchedule(course)"
+                          >进入直播间</button>
+                          <button
+                            v-if="course.status === '已结束' || course.status === '已开播'"
+                            class="schedule-action-btn schedule-action-replay"
+                            @click="openVideoFromSchedule(course)"
+                          >查看回放</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -741,8 +753,10 @@ export default {
         this.allowMic = 1
         this.isPlayBack = 1
         this.createClassId = []
-        const userName = this.$store.getters['user/userName'] || ''
-        this.name = userName ? `${userName}的课堂` : ''
+        const userName = this.$store.getters['user/realName'] || ''
+      
+        const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+        this.name = userName ? `${userName}的课堂${dateStr}` : ''
         this.fetchClassList()
       } else {
         this.name = ''
@@ -853,6 +867,9 @@ export default {
           name: live.name || '',
           startTime: live.startTime ? live.startTime.substring(11, 16) : '',
           endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+          fullStartTime: live.startTime || '',
+          liveLessonId: live.liveLessonId || '',
+          fileList: live.fileList || [],
           status: live.status,
           isStart: live.isStart,
           isFinish: live.isFinish
@@ -1236,6 +1253,7 @@ export default {
             : this.classStartTime
         }
         let isAllowMic = this.allowMic == '1' ? '1' : '2'
+        let playbackSettings = this.isPlayBack
         const params = {
           name: this.name.trim(),
           startTime,
@@ -1245,7 +1263,8 @@ export default {
           recordingType: String(this.recordMode + 1),
           classIds: this.createClassId.length ? this.createClassId : undefined,
           isAllowMic,
-          isPlayBack: this.isPlayBack
+          isPlayBack: this.isPlayBack,
+          playbackSettings: playbackSettings
         }
         const result = await createLiveClass(params)
         const liveData = result.data || result
@@ -1258,7 +1277,7 @@ export default {
           teacher_id: userId,
           teacher_nick: userName,
           title: this.name.trim(),
-          extends: JSON.stringify({isAllowMic}),
+          extends: JSON.stringify({isAllowMic,playbackSettings}),
           im_server: ['aliyun_new'],
           id: liveLessonId
         })
@@ -1294,6 +1313,22 @@ export default {
     },
     selectScheduleDate(dateStr) {
       this.scheduleSelectedDate = dateStr
+    },
+
+    async enterLiveRoomFromSchedule(course) {
+      const item = {
+        ...course,
+        startTime: course.fullStartTime,
+      }
+      await this.enterLiveRoom(item)
+    },
+
+    openVideoFromSchedule(course) {
+      if (!course.fileList || course.fileList.length === 0) {
+        this.$message.warning('暂无回放视频')
+        return
+      }
+      this.openVideoPlayer(course)
     },
     prevScheduleMonth() {
       if (this.scheduleMonth === 0) {
@@ -2775,6 +2810,32 @@ border: 1px solid #F3F4F8;
   font-size: 14px;
   color: #333;
   font-weight: 400;
+}
+.schedule-timeline-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.schedule-action-btn {
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: opacity 0.2s;
+  &:hover { opacity: 0.85; }
+  &:active { opacity: 0.7; }
+}
+.schedule-action-enter {
+  background: #0049FF;
+  color: #fff;
+}
+.schedule-action-replay {
+  background: #fff;
+  color: #0049FF;
+  border: 1px solid #0049FF;
 }
 .schedule-empty {
   display: flex;
