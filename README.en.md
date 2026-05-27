@@ -1,7 +1,7 @@
 # Lisheng-Live-PC
 
 #### Description
-立升直播系统PC端
+立升云播系统PC端
 
 #### Software Architecture
 Software architecture description

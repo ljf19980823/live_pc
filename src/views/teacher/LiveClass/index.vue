@@ -109,7 +109,7 @@
       </div>
       <div class="placeholder_last_table" v-loading="liveLoading">
         <template v-if="!liveLoading">
-          <div class="placeholder_last_table_detail" v-for="(item, index) in liveCourses" :key="index">
+          <div class="placeholder_last_table_detail" v-for="(item, index) in liveCourses" :key="index" @click="enterLiveRoom(item)">
             <img :src="item.statusImg" class="placeholder_last_table_detail_statusImg" alt="">
             <div class="placeholder_last_table_detail_top">
               <div class="placeholder_last_table_detail_top_top">
@@ -131,7 +131,6 @@
             </div>
             <div
               class="placeholder_last_table_detail_last"
-              @click="enterLiveRoom(item)"
             >进入直播
               <div v-if="isTeacher" class="placeholder_last_table_detail_last_del" :class="{ 'notallow': item.status === 'living', 'allow': item.status !== 'living' }" @click.stop="handleDeleteLive(item)">
                 <img src="@/assets/images/liveClass/no_del.png">
@@ -622,7 +621,6 @@
           </div>
           <div
             class="cdc-enter-btn"
-            :class="{ 'cdc-enter-btn-disabled': selectedCourseItem.status !== 'living' }"
             @click="enterLiveFromDetail"
           >进入直播</div>
         </div>

@@ -376,7 +376,7 @@ function createWindow () {
     minWidth: 1320, //1280
     minHeight: 720,
     show: false,
-    title: '立升直播',
+    title: '立升云播',
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,

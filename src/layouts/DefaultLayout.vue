@@ -7,7 +7,7 @@
         <div class="logo-icon-wrap">
           <i class="el-icon-video-camera" />
         </div>
-        <span class="logo-name">立升直播</span>
+        <span class="logo-name">立升云播</span>
       </div> -->
      
       <!-- 菜单列表 --> 

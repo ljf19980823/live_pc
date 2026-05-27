@@ -1,6 +1,6 @@
 {
   "name": "lisheng-live-pc",
-  "chname": "立升直播",
+  "chname": "立升云播",
   "version": "1.0.8",
   "private": true,
   "main": "electron/main.js",
@@ -40,7 +40,7 @@
   },
   "build": {
     "appId": "com.lisheng.live.pc",
-    "productName": "立升直播",
+    "productName": "立升云播",
     "copyright": "Copyright © 2024 立升",
     "icon": "build/icon",
     "directories": {
@@ -67,7 +67,7 @@
       "oneClick": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "立升直播",
+      "shortcutName": "立升云播",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
@@ -88,9 +88,9 @@
       "entitlementsInherit": "electron/entitlements.mac.plist",
       "entitlements": "electron/entitlements.mac.plist",
       "extendInfo": {
-        "NSScreenCaptureUsageDescription": "立升直播需要录制屏幕以进行屏幕共享授课。",
-        "NSCameraUsageDescription": "立升直播需要访问摄像头以进行视频直播。",
-        "NSMicrophoneUsageDescription": "立升直播需要访问麦克风以进行语音直播。"
+        "NSScreenCaptureUsageDescription": "立升云播需要录制屏幕以进行屏幕共享授课。",
+        "NSCameraUsageDescription": "立升云播需要访问摄像头以进行视频直播。",
+        "NSMicrophoneUsageDescription": "立升云播需要访问麦克风以进行语音直播。"
       }
     },
     "dmg": {

@@ -183,9 +183,7 @@ router.beforeEach(async (to, from, next) => {
   const token = getToken()
   const requireAuth = to.meta?.requireAuth !== false
 
-  document.title = to.meta?.title
-    ? `${to.meta.title} - ${process.env.VUE_APP_TITLE || '立升直播'}`
-    : (process.env.VUE_APP_TITLE || '立升直播')
+  document.title = '立升云播'
 
   if (token) {
     if (to.path === '/login') {

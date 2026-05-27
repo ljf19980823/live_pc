@@ -155,11 +155,11 @@
                     <template v-if="item.isFinish == 1">
                       <div class="cdi-status-text">{{ item.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                     </template>
-                    <template v-else-if="item.isStart == 1">
+                    <template v-else-if="item.liveStatus == '直播中'">
                       <div class="cdi-status-text">已直播 <span class="yzb_text">{{ item.liveMin }}</span> </div>
                       <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                     </template>
-                    <template v-else-if="item.isStart == 2">
+                    <template v-else>
                       <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ item.liveMin }}</span> </div>
                      <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                     </template>
@@ -268,11 +268,11 @@
                           <template v-if="grandchild.isFinish == 1">
                             <div class="cdi-status-text">{{ grandchild.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                           </template>
-                          <template v-else-if="grandchild.isStart == 1">
+                          <template v-else-if="grandchild.liveStatus == '直播中'">
                             <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.liveMin }}</span> </div>
                             <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                           </template>
-                          <template v-else-if="grandchild.isStart == 2">
+                          <template v-else>
                             <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.liveMin }}</span> </div>
                             <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                           </template>
@@ -310,11 +310,11 @@
                         <template v-if="child.isFinish == 1">
                           <div class="cdi-status-text">{{ child.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
                         </template>
-                        <template v-else-if="child.isStart == 1">
+                        <template v-else-if="child.liveStatus == '直播中'">
                           <div class="cdi-status-text">已直播 <span class="yzb_text">{{ child.liveMin }}</span> </div>
                           <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
                         </template>
-                        <template v-else-if="child.isStart == 2">
+                        <template v-else>
                           <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ child.liveMin }}</span> </div>
                           <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
                         </template>
