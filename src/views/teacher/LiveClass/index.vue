@@ -86,7 +86,7 @@
 
     <!-- 直播全屏页面 -->
     <div class="page-placeholder_last full-screen" v-if="activeTab === 'liveui'">
-       <iframe :src="liveUrl" style="width: 100%; height: 100vh;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
+       <iframe :src="liveUrl" style="width: 100%; height: 100vh; background: #1E1E1E;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
     </div>
     
     <!-- 实时课堂 -->
