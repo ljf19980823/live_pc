@@ -648,9 +648,11 @@ async function clearDataOnReinstall () {
     } catch (_) {}
 
     if (storedFingerprint && storedFingerprint !== fingerprint) {
-      // 指纹不同 → 检测到重新安装，清除所有 Chromium 会话数据
-      // （包含 localStorage、sessionStorage、Cookie、IndexedDB 等）
-      await session.defaultSession.clearStorageData()
+      // 指纹不同 → 检测到重新安装，清除 Chromium 会话数据
+      // 注意：排除 localstorage，避免清除用户"记住密码"等本地偏好设置
+      await session.defaultSession.clearStorageData({
+        storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+      })
     }
 
     // 写入/更新安装指纹
