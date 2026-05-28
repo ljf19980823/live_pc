@@ -615,9 +615,16 @@ ipcMain.on('download-update', async (event, downloadUrl) => {
 
 // ─── 打开安装包并退出应用 ─────────────────────────────────────────────────────
 ipcMain.on('install-update', (event, filePath) => {
-  shell.openPath(filePath).then(() => {
-    setTimeout(() => app.quit(), 1500)
-  })
+  // 先打开安装包，再通过 destroy() 绕过 close 事件的 preventDefault 拦截，
+  // 确保旧版进程在 NSIS/DMG 安装程序启动前已退出，避免出现"请手动关闭"弹窗
+  shell.openPath(filePath)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.destroy()
+  }
+  // window-all-closed 在非 macOS 上会自动 quit；macOS 需手动退出
+  if (process.platform === 'darwin') {
+    setTimeout(() => app.quit(), 300)
+  }
 })
 
 // ─── 检测重新安装并清除旧会话数据（Windows + macOS 通用）────────────────────
