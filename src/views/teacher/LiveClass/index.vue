@@ -385,28 +385,7 @@
                   />
                 </el-select>
               </div>
-              <!-- <div class="masl_con_dialog_last_shadow">
-                <div class="masl_con_dialog_last_shadow_four">
-                  <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
-                  <div class="masl_con_dialog_last_shadow_four_text">录制方式：</div> 
-                </div>
-                 <div class="masl_con_dialog_last_shadow_hx"></div>
-                 <div class="masl_con_dialog_last_shadow_five">
-                    <div
-                      v-for="(item, index) in recordModeOptions"
-                      :key="index"
-                      class="masl_con_dialog_last_shadow_second_choose_detail"
-                      @click="recordMode = index"
-                    >
-                      <img
-                        :src="recordMode === index ? require('@/assets/images/liveClass/yes.png') : require('@/assets/images/liveClass/no.png')"
-                        class="masl_con_dialog_last_shadow_second_choose_detail_no"
-                        alt=""
-                      >
-                      <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item }}</div>
-                    </div>
-                 </div>
-              </div> -->
+              
               <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
                   <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
@@ -428,6 +407,29 @@
                     <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item.label }}</div>
                   </div>
                 </div>
+              </div>
+
+              <div class="masl_con_dialog_last_shadow">
+                <div class="masl_con_dialog_last_shadow_four">
+                  <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
+                  <div class="masl_con_dialog_last_shadow_four_text">录制方式：</div> 
+                </div>
+                 <div class="masl_con_dialog_last_shadow_hx"></div>
+                 <div class="masl_con_dialog_last_shadow_five">
+                    <div
+                      v-for="item in recordModeOptions"
+                      :key="item.value"
+                      class="masl_con_dialog_last_shadow_second_choose_detail"
+                      @click="recordMode = item.value"
+                    >
+                      <img
+                        :src="recordMode == item.value ? require('@/assets/images/liveClass/yes.png') : require('@/assets/images/liveClass/no.png')"
+                        class="masl_con_dialog_last_shadow_second_choose_detail_no"
+                        alt=""
+                      >
+                      <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item.label }}</div>
+                    </div>
+                 </div>
               </div>
               <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
@@ -694,8 +696,7 @@ export default {
       classStartTime: '',
       classDuration: 240,
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
-      recordMode: 0,
-      recordModeOptions: ['无头像录制', '录老师头像'],
+      recordMode: 1,
       allowMic: 1,
       allowMicOptions: [{ label: '支持', value: 1 }, { label: '不支持', value: 0 }],
       isPlayBack: 1,
@@ -733,6 +734,12 @@ export default {
     }
   },
   watch: {
+    allowMic(val) {
+      const validValues = this.recordModeOptions.map(o => o.value)
+      if (!validValues.includes(this.recordMode)) {
+        this.recordMode = 1
+      }
+    },
     scheduleYear(val) {
       if (this.showSchedule) {
         this.fetchScheduleData(val, this.scheduleMonth + 1)
@@ -749,7 +756,7 @@ export default {
         const pad = n => String(n).padStart(2, '0')
         this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
         this.classDuration = 240
-        this.recordMode = 0
+        this.recordMode = 1
         this.allowMic = 1
         this.isPlayBack = 1
         this.createClassId = []
@@ -763,7 +770,7 @@ export default {
         this.instr = ''
         this.classStartTime = ''
         this.classDuration = 240
-        this.recordMode = 0
+        this.recordMode = 1
         this.allowMic = 1
         this.isPlayBack = 1
         this.createClassId = []
@@ -848,6 +855,16 @@ export default {
   computed: {
     ...mapGetters('user', ['userInfo']),
     ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
+    recordModeOptions() {
+      const base = [
+        { label: '无头像录制（白板）', value: 1 },
+        { label: '录老师头像（白板+头像）', value: 2 }
+      ]
+      if (this.allowMic === 1 || this.allowMic === '1') {
+        base.push({ label: '仅录老师头像（头像）', value: 4 })
+      }
+      return base
+    },
     isAdd() {
       return this.userInfo?.isAdd === '1'
     },
@@ -1254,13 +1271,13 @@ export default {
         }
         let isAllowMic = this.allowMic == '1' ? '1' : '2'
         let playbackSettings = this.isPlayBack
+        let recordingType = String(this.recordMode)
         const params = {
           name: this.name.trim(),
           startTime,
           liveTime: String(this.classDuration),
           introduce: this.instr || undefined,
-          // recordMode 0→无头像录制→'1'，1→录老师头像→'2'
-          recordingType: String(this.recordMode + 1),
+          recordingType: recordingType,
           classIds: this.createClassId.length ? this.createClassId : undefined,
           isAllowMic,
           isPlayBack: this.isPlayBack,
@@ -1277,7 +1294,7 @@ export default {
           teacher_id: userId,
           teacher_nick: userName,
           title: this.name.trim(),
-          extends: JSON.stringify({isAllowMic,playbackSettings}),
+          extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
           im_server: ['aliyun_new'],
           id: liveLessonId
         })
@@ -2350,7 +2367,7 @@ export default {
   align-items: center;
 }
 .masl_con_dialog{
-    width: 632px;
+    width: 662px;
     height: 100%;
     position: relative;
     background: #F3F4F8;

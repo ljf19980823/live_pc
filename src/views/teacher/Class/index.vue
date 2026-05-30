@@ -399,6 +399,10 @@
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
             <img v-if="rightTab === 'course'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
+          <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'afterTest'">
+            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'afterTest' }">课后测试</div>
+            <img v-if="rightTab === 'afterTest'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+          </div>
         </div>
       </div>
       <!-- 学生tab列表 -->
@@ -474,6 +478,46 @@
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
       </div>
+      <!-- 课后测试tab列表 -->
+      <div class="app_container_box_right_last" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
+        <div class="after-test-list">
+          <div
+            class="after-test-item"
+            v-for="(item, index) in mockAfterTestList"
+            :key="index"
+          >
+            <img :src="item.cover" class="after-test-item__cover" alt="" />
+            <div class="after-test-item__info">
+              <div class="after-test-item__label">课程标题</div>
+              <div class="after-test-item__title" :title="item.title">{{ item.title }}</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">发布时间</div>
+              <div class="after-test-item__val">{{ item.publishDate }}</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">学生完成情况</div>
+              <div class="after-test-item__val">
+                {{ item.doneStu }}/{{ item.totalStu }}
+                <span class="after-test-item__rate">({{ item.rate }}%)</span>
+              </div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">题目数量</div>
+              <div class="after-test-item__val">{{ item.questionCount }}题</div>
+            </div>
+            <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
+          </div>
+        </div>
+      </div>
+      <!-- 课后测试 - 学生做题详情子组件 -->
+      <AfterClassTestDetail
+        v-if="rightTab === 'afterTest' && showAfterTestDetail"
+        :visible="showAfterTestDetail"
+        :className="currentClass && (currentClass.alias || currentClass.name)"
+        :courseInfo="currentAfterTestCourse"
+        @close="showAfterTestDetail = false"
+      />
       </template>
       </template>
     </div>
@@ -806,11 +850,12 @@
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import AfterClassTestDetail from './AfterClassTestDetail.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 
 export default { 
   name: 'Class',
-  components: { FilePreview, VideoPlayer },
+  components: { FilePreview, VideoPlayer, AfterClassTestDetail },
   data() {
     return {
       liveUrl: '',
@@ -852,6 +897,56 @@ export default {
       rightView: 'default',
       selectedCourse: null,
       courseDetailLoading: false,
+      // 课后测试
+      showAfterTestDetail: false,
+      currentAfterTestCourse: null,
+      mockAfterTestList: [
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '立升备课-管理学',
+          publishDate: '2025-06-09',
+          doneStu: 102,
+          totalStu: 120,
+          rate: 85,
+          questionCount: 20
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '市场营销学直播课',
+          publishDate: '2025-06-12',
+          doneStu: 110,
+          totalStu: 120,
+          rate: 92,
+          questionCount: 15
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '组织行为学',
+          publishDate: '2025-06-15',
+          doneStu: 82,
+          totalStu: 120,
+          rate: 68,
+          questionCount: 25
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '人力资源管理',
+          publishDate: '2025-06-18',
+          doneStu: 114,
+          totalStu: 120,
+          rate: 95,
+          questionCount: 18
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '战略管理',
+          publishDate: '2025-06-20',
+          doneStu: 90,
+          totalStu: 120,
+          rate: 75,
+          questionCount: 22
+        }
+      ],
       courseDetail: {
         taskCount: 0,
         items: []
@@ -880,6 +975,56 @@ export default {
       deleteClassDialogVisible: false,
       deleteClassLoading: false,
 
+      // 课后测试
+      showAfterTestDetail: false,
+      currentAfterTestCourse: null,
+      mockAfterTestList: [
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '立升备课-管理学',
+          publishDate: '2025-06-09',
+          doneStu: 102,
+          totalStu: 120,
+          rate: 85,
+          questionCount: 20
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '市场营销学直播课',
+          publishDate: '2025-06-12',
+          doneStu: 110,
+          totalStu: 120,
+          rate: 92,
+          questionCount: 15
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '组织行为学',
+          publishDate: '2025-06-15',
+          doneStu: 82,
+          totalStu: 120,
+          rate: 68,
+          questionCount: 25
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '人力资源管理',
+          publishDate: '2025-06-18',
+          doneStu: 114,
+          totalStu: 120,
+          rate: 95,
+          questionCount: 18
+        },
+        {
+          cover: require('@/assets/images/class/such.png'),
+          title: '战略管理',
+          publishDate: '2025-06-20',
+          doneStu: 90,
+          totalStu: 120,
+          rate: 75,
+          questionCount: 22
+        }
+      ],
 
        // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
@@ -1013,6 +1158,10 @@ export default {
     }
   },
   methods: {
+    openAfterTestDetail(item) {
+      this.currentAfterTestCourse = item
+      this.showAfterTestDetail = true
+    },
     _mapClassItem(item) {
       const sourceMap = { '1': '后台创建', '0': '' }
       return {
@@ -2846,5 +2995,82 @@ color: #333333;
   cursor: pointer;
   transition: background 0.2s;
   &:hover { background: #E5E7EB; }
+}
+
+/* ─── 课后测试 tab 列表 ──────────────────────────────────────── */
+.after-test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+.after-test-item {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid #F3F4F8;
+  gap: 0;
+  background: #fff;
+  border-radius:8px;
+  transition: background 0.15s;
+}
+.after-test-item:hover {
+  background: #F8F9FF;
+}
+.after-test-item__cover {
+  width: 178px;
+  height: 100px;
+
+  border-radius: 8px 0px 0px 8px;
+  flex-shrink: 0;
+}
+.after-test-item__info {
+  flex: 1;
+  min-width: 0;
+  padding: 0 16px;
+}
+.after-test-item__label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 6px;
+}
+.after-test-item__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.after-test-item__col {
+  flex: 1;
+  min-width: 0;
+  padding: 0 16px;
+}
+.after-test-item__val {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+.after-test-item__rate {
+  color: #00C853;
+  font-weight: 600;
+}
+.after-test-item__btn {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  background: #0049FF;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  outline: none;
+  margin-left: 16px;
+}
+.after-test-item__btn:hover {
+  background: #003de0;
 }
 </style>
