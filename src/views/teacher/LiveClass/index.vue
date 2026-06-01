@@ -201,10 +201,22 @@
       <div class="ls_last" v-loading="historyLoading">
         <template v-if="!historyLoading">
           <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item)">
-            <div class="ls_last_detail_options">
-              <div class="ls_last_detail_options_box">
-                <img src="@/assets/images/liveClass/options.png" class="ls_last_detail_options_box_img" alt="">
-              </div>
+            <div class="ls_last_detail_options" @click.stop v-if="isTeacher">
+              <el-popover
+                placement="bottom-end"
+                trigger="click"
+                popper-class="ls_options_popover"
+                :visible-arrow="false"
+              >
+                <div class="ls_options_menu">
+                  <div class="ls_options_menu_item" @click="publishAfterClassTest(item)">
+                    <span>发布课后测</span>
+                  </div>
+                </div>
+                <div slot="reference" class="ls_last_detail_options_box">
+                  <img src="@/assets/images/liveClass/options.png" class="ls_last_detail_options_box_img" alt="">
+                </div>
+              </el-popover>
             </div>
             <img :src="item.cover || require('@/assets/images/such.png')" class="ls_last_detail_img" alt="">
             <div class="ls_last_detail_center">
@@ -1156,6 +1168,34 @@ export default {
      this.activeTab = 'liveui'
     },
 
+    async publishAfterClassTest(item) {
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+
+      const token = getToken()
+      const { userId, realName } = getUserInfo()
+      const liveId = item.liveId
+
+      let liveBaseUrl = 'https://live.fjlsjy123.com'
+      if (process.env.NODE_ENV === 'development') {
+        liveBaseUrl = 'http://localhost:8000'
+      }
+
+      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.historyLessonId || ''}&afterClassTest=1&_t=${Date.now()}&token=${token}`
+      console.log(this.liveUrl, '发布课后测直播地址')
+      this.activeTab = 'liveui'
+    },
+
     // ── 定时刷新 ────────────────────────────────────────────────────────
     startLiveRefreshTimer() {
       this.stopLiveRefreshTimer()
@@ -2000,6 +2040,7 @@ export default {
 }
 
 /* Element UI 组件样式覆盖 */
+
 .ls_date_picker {
   ::v-deep .el-range-editor {
     border: none;
@@ -3136,5 +3177,30 @@ margin-bottom: 12px;
   cursor: pointer;
   transition: background 0.2s;
   &:hover { background: #E5E7EB; }
+}
+</style>
+
+<style lang="scss">
+.ls_options_popover {
+  padding: 4px 0 !important;
+  min-width: 120px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+.ls_options_menu {
+  display: flex;
+  flex-direction: column;
+}
+.ls_options_menu_item {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  &:hover {
+    background: #f0f4ff;
+    color: #0049ff;
+  }
 }
 </style>
