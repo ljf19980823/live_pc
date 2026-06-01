@@ -480,31 +480,31 @@
       </div>
       <!-- 课后测试tab列表 -->
       <div class="app_container_box_right_last" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
-        <div class="after-test-list">
+        <div class="after-test-list" v-loading="afterTestLoading">
           <div
             class="after-test-item"
-            v-for="(item, index) in mockAfterTestList"
+            v-for="(item, index) in afterTestList"
             :key="index"
           >
             <img :src="item.cover" class="after-test-item__cover" alt="" />
             <div class="after-test-item__info">
               <div class="after-test-item__label">课程标题</div>
-              <div class="after-test-item__title" :title="item.title">{{ item.title }}</div>
+              <div class="after-test-item__title" :title="item.name">{{ item.name }}</div>
             </div>
             <div class="after-test-item__col">
               <div class="after-test-item__label">发布时间</div>
-              <div class="after-test-item__val">{{ item.publishDate }}</div>
+              <div class="after-test-item__val">{{ item.createTime }}</div>
             </div>
             <div class="after-test-item__col">
               <div class="after-test-item__label">学生完成情况</div>
               <div class="after-test-item__val">
-                {{ item.doneStu }}/{{ item.totalStu }}
-                <span class="after-test-item__rate">({{ item.rate }}%)</span>
+                {{ item.finishedStudentCount }}/{{ item.totalStudentCount }}
+                <span class="after-test-item__rate">({{ item.finishedPercentage }}%)</span>
               </div>
             </div>
             <div class="after-test-item__col">
               <div class="after-test-item__label">题目数量</div>
-              <div class="after-test-item__val">{{ item.questionCount }}题</div>
+              <div class="after-test-item__val">{{ item.topicNum }}题</div>
             </div>
             <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
           </div>
@@ -847,7 +847,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import AfterClassTestDetail from './AfterClassTestDetail.vue'
@@ -900,53 +900,8 @@ export default {
       // 课后测试
       showAfterTestDetail: false,
       currentAfterTestCourse: null,
-      mockAfterTestList: [
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '立升备课-管理学',
-          publishDate: '2025-06-09',
-          doneStu: 102,
-          totalStu: 120,
-          rate: 85,
-          questionCount: 20
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '市场营销学直播课',
-          publishDate: '2025-06-12',
-          doneStu: 110,
-          totalStu: 120,
-          rate: 92,
-          questionCount: 15
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '组织行为学',
-          publishDate: '2025-06-15',
-          doneStu: 82,
-          totalStu: 120,
-          rate: 68,
-          questionCount: 25
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '人力资源管理',
-          publishDate: '2025-06-18',
-          doneStu: 114,
-          totalStu: 120,
-          rate: 95,
-          questionCount: 18
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '战略管理',
-          publishDate: '2025-06-20',
-          doneStu: 90,
-          totalStu: 120,
-          rate: 75,
-          questionCount: 22
-        }
-      ],
+      afterTestList: [],
+      afterTestLoading: false,
       courseDetail: {
         taskCount: 0,
         items: []
@@ -974,57 +929,6 @@ export default {
       editClassEndDate: null,
       deleteClassDialogVisible: false,
       deleteClassLoading: false,
-
-      // 课后测试
-      showAfterTestDetail: false,
-      currentAfterTestCourse: null,
-      mockAfterTestList: [
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '立升备课-管理学',
-          publishDate: '2025-06-09',
-          doneStu: 102,
-          totalStu: 120,
-          rate: 85,
-          questionCount: 20
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '市场营销学直播课',
-          publishDate: '2025-06-12',
-          doneStu: 110,
-          totalStu: 120,
-          rate: 92,
-          questionCount: 15
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '组织行为学',
-          publishDate: '2025-06-15',
-          doneStu: 82,
-          totalStu: 120,
-          rate: 68,
-          questionCount: 25
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '人力资源管理',
-          publishDate: '2025-06-18',
-          doneStu: 114,
-          totalStu: 120,
-          rate: 95,
-          questionCount: 18
-        },
-        {
-          cover: require('@/assets/images/class/such.png'),
-          title: '战略管理',
-          publishDate: '2025-06-20',
-          doneStu: 90,
-          totalStu: 120,
-          rate: 75,
-          questionCount: 22
-        }
-      ],
 
        // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
@@ -1057,6 +961,7 @@ export default {
     rightTab(val) {
       if (val === 'student') this.fetchStudentList()
       else if (val === 'course') this.fetchCourseList()
+      else if (val === 'afterTest') this.fetchAfterTestList()
     },
     rightStudentSearch(val) {
       clearTimeout(this._studentSearchTimer)
@@ -1161,6 +1066,19 @@ export default {
     openAfterTestDetail(item) {
       this.currentAfterTestCourse = item
       this.showAfterTestDetail = true
+    },
+    async fetchAfterTestList() {
+      if (!this.selectedClassId) return
+      const { userId } = getUserInfo()
+      this.afterTestLoading = true
+      try {
+        const res = await getAfterQuizTeacherList({ classId: this.selectedClassId, teacherId: userId })
+        this.afterTestList = (res && res.data) ? res.data : []
+      } catch (e) {
+        this.afterTestList = []
+      } finally {
+        this.afterTestLoading = false
+      }
     },
     _mapClassItem(item) {
       const sourceMap = { '1': '后台创建', '0': '' }
@@ -1348,6 +1266,7 @@ export default {
     selectClass(index) {
       this.selectedClassIndex = index
       this.selectedClassId = this.classList[index]?.classId || null
+      this.rightView = 'default'
       this.rightStudentSearch = ''
       this.rightCourseSearch = ''
       this.studentList = []

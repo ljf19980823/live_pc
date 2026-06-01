@@ -138,3 +138,11 @@ export const updatePhone = data => post('/edu/sso/updatePhone', data)
 
 // 移除班级学生
 export const removeClassStudent = (classId, studentId) => del(`/edu/class/${classId}/students/${studentId}`)
+
+export const joinClass = params => post('/edu/class/join', {}, { params })
+
+// 更新课时最近学习
+export const updateRecentStudy = data => post('/edu/course/recentStudy', data)
+
+// 更新课时学习进度
+export const updateCourseProgress = data => post('/edu/course/progress', data)
