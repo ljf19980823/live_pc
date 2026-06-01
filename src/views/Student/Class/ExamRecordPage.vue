@@ -20,6 +20,13 @@
     @close="showDetail = false"
   />
 
+  <!-- 错题提升巩固子页面 -->
+  <WrongExercisePage
+    :visible="showWrongExercise"
+    :record-id="wrongRecord ? wrongRecord.id : ''"
+    @close="showWrongExercise = false"
+  />
+
   <!-- 内容区 -->
   <div class="exam-record-body">
     <div class="exam-record-list">
@@ -70,10 +77,11 @@
 <script>
 import { getAfterQuizRecordList } from '@/api/modules/teacher'
 import StudentAnswerDetail from './StudentAnswerDetail.vue'
+import WrongExercisePage from './WrongExercisePage.vue'
 
 export default {
   name: 'ExamRecordPage',
-  components: { StudentAnswerDetail },
+  components: { StudentAnswerDetail, WrongExercisePage },
   props: {
     examInfo: {
       type: Object,
@@ -90,7 +98,9 @@ export default {
       loading: false,
       showDetail: false,
       selectedRecord: null,
-      selectedIndex: 1
+      selectedIndex: 1,
+      showWrongExercise: false,
+      wrongRecord: null
     }
   },
   created() {
@@ -123,7 +133,8 @@ export default {
       this.showDetail = true
     },
     handleWrongReview(record) {
-      this.$message.info('错题提升巩固功能开发中')
+      this.wrongRecord = record
+      this.showWrongExercise = true
     }
   }
 }
