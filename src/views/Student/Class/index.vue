@@ -454,8 +454,8 @@
             </div>
           </div>
           <div class="quiz-item-actions">
-            <button class="quiz-btn-primary">去考试</button>
-            <button class="quiz-btn-outline">考试记录</button>
+            <button class="quiz-btn-primary" @click="startExam(item)">去考试</button>
+            <button class="quiz-btn-outline" @click="openExamRecord(item)">考试记录</button>
           </div>
         </div>
       </div>
@@ -683,6 +683,23 @@
     <!-- 文件预览 -->
     <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
 
+    <!-- 考试页面 -->
+    <ExamPage
+      v-if="showExam"
+      :examInfo="currentExamItem"
+      :classId="selectedClassId"
+      @back="onExamBack"
+      @submitted="onExamSubmitted"
+    />
+
+    <!-- 考试记录页面 -->
+    <ExamRecordPage
+      v-if="showExamRecord"
+      :examInfo="currentExamRecordItem"
+      :classId="selectedClassId"
+      @back="showExamRecord = false"
+    />
+
     <!-- 直播间 -->
     <div v-if="showLiveIframe" class="live-iframe-overlay">
       
@@ -759,11 +776,13 @@
 import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import ExamPage from './ExamPage.vue'
+import ExamRecordPage from './ExamRecordPage.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 
 export default { 
   name: 'Class',
-  components: { FilePreview, VideoPlayer },
+  components: { FilePreview, VideoPlayer, ExamPage, ExamRecordPage },
   data() {
     return {
       liveUrl: '',
@@ -823,6 +842,14 @@ export default {
       // 课后测
       afterQuizList: [],
       afterQuizLoading: false,
+
+      // 考试
+      showExam: false,
+      currentExamItem: null,
+
+      // 考试记录
+      showExamRecord: false,
+      currentExamRecordItem: null,
 
        // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
@@ -1058,6 +1085,33 @@ export default {
       } finally {
         this.afterQuizLoading = false
       }
+    },
+    startExam(item) {
+      this.currentExamItem = {
+        id: item.id || item.quizId || item.examId,
+        name: item.name || item.examName || '',
+        duration: item.duration || 60,
+        examConfigId: item.examConfigId || item.configId || '',
+        liveId: item.liveId || ''
+      }
+      this.showExam = true
+    },
+    openExamRecord(item) {
+      const cls = this.currentClass || {}
+      this.currentExamRecordItem = {
+        id: item.id || item.quizId || item.examId,
+        name: item.name || item.examName || '',
+        className: cls.alias || cls.name || ''
+      }
+      this.showExamRecord = true
+    },
+    onExamBack() {
+      this.showExam = false
+      this.fetchAfterQuizList()
+    },
+    onExamSubmitted() {
+      this.showExam = false
+      this.fetchAfterQuizList()
     },
     async fetchClassSearch(keyword) {
       try {

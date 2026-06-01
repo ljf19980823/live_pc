@@ -147,5 +147,25 @@ export const updateRecentStudy = data => post('/edu/course/recentStudy', data)
 // 更新课时学习进度
 export const updateCourseProgress = data => post('/edu/course/progress', data)
 
+// 获取教师课后测列表
+export const getAfterQuizTeacherList = params => get('/edu/after/quiz/teacher/list', params)
 // 获取课后测列表
 export const getAfterQuizList = params => get('/edu/after/quiz/list', params)
+
+// 获取考试题目详情（Path 参数 examId）
+export const getExamDetail = examId => get(`/edu/after/quiz/quests/${examId}`)
+
+// 提交单题答案（过程保存）
+export const saveExamAnswer = data => post('/edu/after/quiz/answer/save', data)
+
+// 提交考试（最终提交）
+export const submitExam = data => post('/edu/after/quiz/submit', data)
+
+// 课后测判分提交
+export const gradeExam = data => post('/edu/after/quiz/grade', data)
+
+// 获取课后测考试记录列表
+export const getAfterQuizRecordList = params => get('/edu/after/quiz/record/list', params)
+
+// 获取课后测做题记录详情（Path 参数 recordId）
+export const getAfterQuizRecordDetail = recordId => get(`/edu/after/quiz/record/detail/${recordId}`)

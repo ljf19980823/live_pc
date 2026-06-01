@@ -1075,6 +1075,7 @@ export default {
         const res = await getAfterQuizTeacherList({ classId: this.selectedClassId, teacherId: userId })
         this.afterTestList = (res && res.data) ? res.data : []
       } catch (e) {
+        console.log(e,'呼呼')
         this.afterTestList = []
       } finally {
         this.afterTestLoading = false
