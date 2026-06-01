@@ -6,7 +6,7 @@
         <img src="@/assets/images/class/back_icon.png" class="sad__back-arrow" alt="返回" />
         <span class="sad__back-text">返回</span>
       </div>
-      <div class="sad__title">{{ studentName }} - 第{{ attemptIndex }}次 - 做题详情</div>
+      <div class="sad__title">{{ studentName ? studentName + ' - ' : '' }} 做题详情</div>
       <div class="sad__header-right"></div>
     </div>
 
@@ -21,8 +21,13 @@
       </span>
     </div>
 
+    <!-- 加载中 -->
+    <div v-if="loading" class="sad__loading">
+      <span>加载中...</span>
+    </div>
+
     <!-- 主体内容 -->
-    <div class="sad__body">
+    <div v-else class="sad__body">
       <!-- 左侧题目列表 -->
       <div class="sad__questions">
         <div
@@ -33,18 +38,25 @@
         >
           <!-- 题目头部 -->
           <div class="sad__q-header">
-            <span class="sad__q-type-tag" :class="'sad__q-type-tag--' + q.type">{{ typeLabel(q.type) }}</span>
+            <span class="sad__q-type-tag">{{ q.questName || typeLabel(q.type) }}</span>
             <span class="sad__q-index">第 {{ idx + 1 }} 题</span>
-            <span class="sad__q-result" :class="q.isCorrect ? 'sad__q-result--correct' : 'sad__q-result--wrong'">
+            <span v-if="q.isPending" class="sad__q-result sad__q-result--pending">
+              <span class="sad__q-result-icon">—</span>
+              待判定
+            </span>
+            <span v-else class="sad__q-result" :class="q.isCorrect ? 'sad__q-result--correct' : 'sad__q-result--wrong'">
               <span class="sad__q-result-icon">{{ q.isCorrect ? '✓' : '✗' }}</span>
               {{ q.isCorrect ? '回答正确' : '回答错误' }}
             </span>
           </div>
 
+          <!-- 材料 -->
+          <div v-if="q.material" class="sad__q-material">{{ q.material }}</div>
+
           <!-- 题目题干 -->
           <div class="sad__q-stem">
-            {{ q.stem }}
-            
+            <img v-if="q.stemIsImg" :src="q.stem" class="sad__rich-img" />
+            <span v-else v-html="q.stem"></span>
           </div>
 
           <!-- 单选题 / 多选题 / 判断题 选项 -->
@@ -56,30 +68,28 @@
               :class="getOptionClass(q, opt)"
             >
               <span class="sad__q-opt-key">{{ opt.key }}.</span>
-              <span class="sad__q-opt-text">{{ opt.text }}</span>
+              <span class="sad__q-opt-text">
+                <img v-if="opt.isImg" :src="opt.text" class="sad__rich-img" />
+                <span v-else v-html="opt.text"></span>
+              </span>
               <span v-if="isStudentChose(q, opt) && isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--correct">✓</span>
               <span v-else-if="isStudentChose(q, opt) && !isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--wrong">✗</span>
-              <span v-else-if="!isStudentChose(q, opt) && isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--wrong">✗</span>
+              <span v-else-if="!isStudentChose(q, opt) && isCorrectOpt(q, opt) && q.type !== 'multi'" class="sad__q-opt-icon sad__q-opt-icon--correct">✓</span>
+              <span v-else-if="!isStudentChose(q, opt) && isCorrectOpt(q, opt) && q.type === 'multi'" class="sad__q-opt-icon sad__q-opt-icon--missed">✗</span>
             </div>
           </div>
 
-          <!-- 单选/多选/判断题 答案汇总 -->
+          <!-- 单选/多选/判断题 学生答案 -->
           <div v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__fill-wrap">
             <div class="sad__fill-block" :class="q.isCorrect ? 'sad__fill-block--correct' : 'sad__fill-block--wrong'">
               <div class="sad__fill-block-label">学生答案：</div>
               <div class="sad__fill-block-answer" :class="q.isCorrect ? 'sad__fill-block-answer--correct' : 'sad__fill-block-answer--wrong'">
-                {{ getOptionTexts(q, q.studentAnswer) }}
-              </div>
-            </div>
-            <div v-if="!q.isCorrect" class="sad__fill-block sad__fill-block--right">
-              <div class="sad__fill-block-label">正确答案：</div>
-              <div class="sad__fill-block-answer sad__fill-block-answer--right">
-                {{ getOptionTexts(q, q.correctAnswer) }}
+                {{ q.studentAnswer && q.studentAnswer.length ? q.studentAnswer.join('') : '未作答' }}
               </div>
             </div>
           </div>
 
-          <!-- 填空题 -->
+          <!-- 填空题 学生答案 -->
           <div v-if="q.type === 'fill'" class="sad__fill-wrap">
             <div
               v-for="(blank, bi) in q.blanks"
@@ -88,41 +98,72 @@
             >
               <div class="sad__fill-block" :class="blank.isCorrect ? 'sad__fill-block--correct' : 'sad__fill-block--wrong'">
                 <span class="sad__fill-block-label">学生答案：</span>
-                <span class="sad__fill-block-answer" :class="blank.isCorrect ? 'sad__fill-block-answer--correct' : 'sad__fill-block-answer--wrong'">{{ blank.studentAnswer }}</span>
-              </div>
-              <div v-if="!blank.isCorrect" class="sad__fill-block sad__fill-block--right">
-                <span class="sad__fill-block-label">正确答案：</span>
-                <span class="sad__fill-block-answer sad__fill-block-answer--right">{{ blank.correctAnswer }}</span>
+                <span class="sad__fill-block-answer" :class="blank.isCorrect ? 'sad__fill-block-answer--correct' : 'sad__fill-block-answer--wrong'">{{ blank.studentAnswer || '未作答' }}</span>
               </div>
             </div>
           </div>
 
-          <!-- 答案解析 -->
-          <div v-if="q.analysis" class="sad__analysis">
-            <div class="sad__analysis-label">答案解析：</div>
-            <div class="sad__analysis-text">{{ q.analysis }}</div>
+          <!-- 简答/计算/论述题 学生答案 -->
+          <div v-if="q.type === 'essay'" class="sad__fill-wrap">
+            <div class="sad__fill-block" :class="q.isPending ? 'sad__fill-block--correct' : (q.isCorrect ? 'sad__fill-block--correct' : 'sad__fill-block--wrong')">
+              <div class="sad__fill-block-label">学生答案：</div>
+              <div class="sad__fill-block-answer">{{ q.studentAnswer || '未作答' }}</div>
+            </div>
+          </div>
+
+          <!-- 答案解析（含正确答案） -->
+          <div
+            v-if="q.analysis || (q.correctAnswer && q.correctAnswer.length) || (q.blanks && q.blanks[0] && q.blanks[0].correctAnswer)"
+            class="sad__analysis"
+          >
+            <div class="sad__analysis-label">答案解析</div>
+            <!-- 正确答案行 -->
+            <div class="sad__analysis-correct-row">
+              <span class="sad__analysis-correct-label">{{ q.type === 'essay' ? '参考答案' : '正确答案' }}：</span>
+              <!-- 选择/判断：字母 -->
+              <span v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__analysis-correct-val">
+                {{ q.correctAnswerRaw || '-' }}
+              </span>
+              <!-- 填空 -->
+              <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
+                <img v-if="q.answerIsImg" :src="q.blanks[0].correctAnswer" class="sad__rich-img" />
+                <span v-else v-html="q.blanks[0].correctAnswer || '-'"></span>
+              </span>
+              <!-- 简答/主观 -->
+              <span v-else-if="q.type === 'essay'" class="sad__analysis-correct-val">
+                <img v-if="q.answerIsImg" :src="q.correctAnswer" class="sad__rich-img" />
+                <span v-else v-html="q.correctAnswer || '-'"></span>
+              </span>
+            </div>
+            <!-- 解析文字 -->
+            <div v-if="q.analysis" class="sad__analysis-text">
+              <img v-if="q.analysisIsImg" :src="q.analysis" class="sad__rich-img" />
+              <span v-else v-html="q.analysis"></span>
+            </div>
           </div>
         </div>
+
+        <div v-if="!loading && questions.length === 0" class="sad__empty">暂无做题数据</div>
       </div>
 
       <!-- 右侧做题看板 -->
       <div class="sad__board">
-        <div class="sad__board-title">做题看板</div>
+        <div class="sad__board-title">考试看板</div>
         <div class="sad__board-stats">
           <div class="sad__board-stat-row">
-            <span class="sad__board-stat-label">题目总数</span>
-            <span class="sad__board-stat-val">{{ examInfo.totalCount }}</span>
+            <span class="sad__board-stat-label">总题数：</span>
+            <span class="sad__board-stat-val">{{ examInfo.totalCount }} 题</span>
           </div>
           <div class="sad__board-stat-row">
-            <span class="sad__board-stat-label">回答正确</span>
-            <span class="sad__board-stat-val sad__board-stat-val--correct">{{ examInfo.correctCount }}</span>
+            <span class="sad__board-stat-label">正确题数：</span>
+            <span class="sad__board-stat-val sad__board-stat-val--correct">{{ examInfo.correctCount }} 题</span>
           </div>
           <div class="sad__board-stat-row">
-            <span class="sad__board-stat-label">回答错误</span>
-            <span class="sad__board-stat-val sad__board-stat-val--wrong">{{ examInfo.totalCount - examInfo.correctCount }}</span>
+            <span class="sad__board-stat-label">错误题数：</span>
+            <span class="sad__board-stat-val sad__board-stat-val--wrong">{{ examInfo.totalCount - examInfo.correctCount }} 题</span>
           </div>
           <div class="sad__board-stat-row">
-            <span class="sad__board-stat-label">正确率</span>
+            <span class="sad__board-stat-label">正确率：</span>
             <span class="sad__board-stat-val sad__board-stat-val--rate">{{ examInfo.correctRate }}%</span>
           </div>
         </div>
@@ -131,9 +172,20 @@
             v-for="(q, idx) in questions"
             :key="q.id"
             class="sad__board-nav-btn"
-            :class="q.isCorrect ? 'sad__board-nav-btn--correct' : 'sad__board-nav-btn--wrong'"
+            :class="q.isPending ? 'sad__board-nav-btn--pending' : (q.isCorrect ? 'sad__board-nav-btn--correct' : 'sad__board-nav-btn--wrong')"
             @click="scrollToQuestion(q.id)"
-          >{{ idx + 1 }}</button>
+          >
+            <span class="sad__board-nav-btn-icon">{{ q.isPending ? '—' : (q.isCorrect ? '✓' : '✗') }}</span>
+            {{ idx + 1 }}
+          </button>
+        </div>
+        <div class="sad__board-legend">
+          <span class="sad__board-legend-item">
+            <span class="sad__board-legend-dot sad__board-legend-dot--correct"></span>回答正确
+          </span>
+          <span class="sad__board-legend-item">
+            <span class="sad__board-legend-dot sad__board-legend-dot--wrong"></span>回答错误
+          </span>
         </div>
       </div>
     </div>
@@ -141,166 +193,109 @@
 </template>
 
 <script>
+import { getAfterQuizRecordDetail } from '@/api/modules/teacher'
+
 export default {
   name: 'StudentAnswerDetail',
   props: {
     visible: { type: Boolean, default: false },
-    studentName: { type: String, default: '学生1' },
+    studentName: { type: String, default: '' },
+    recordId: { type: String, default: '' },
     attemptIndex: { type: Number, default: 1 }
   },
   emits: ['close'],
   data() {
     return {
+      loading: false,
       examInfo: {
-        examTime: '2025-06-15 14:30',
-        score: 85,
-        correctRate: 60,
-        correctCount: 3,
-        totalCount: 5
+        examTime: '',
+        score: 0,
+        correctRate: 0,
+        correctCount: 0,
+        totalCount: 0
       },
-      questions: [
-        {
-          id: 1,
-          type: 'single',
-          stem: '管理的首要职能是什么？',
-          options: [
-            { key: 'A', text: '计划' },
-            { key: 'B', text: '组织' },
-            { key: 'C', text: '领导' },
-            { key: 'D', text: '控制' }
-          ],
-          studentAnswer: ['A'],
-          correctAnswer: ['A'],
-          isCorrect: true,
-          analysis: '管理的首要职能是计划。计划是管理的首要职能，它为组织确定目标并制定实现目标的方案。'
-        },
-        {
-          id: 2,
-          type: 'multi',
-          stem: '以下哪些属于管理的基本职能？',
-          options: [
-            { key: 'A', text: '计划' },
-            { key: 'B', text: '组织' },
-            { key: 'C', text: '协调' },
-            { key: 'D', text: '控制' }
-          ],
-          studentAnswer: ['A', 'B', 'C'],
-          correctAnswer: ['A', 'B', 'D'],
-          isCorrect: false,
-          analysis: '管理的基本职能包括计划、组织、领导和控制。协调虽然重要，但不属于管理的基本职能。'
-        },
-        {
-          id: 3,
-          type: 'judge',
-          stem: '管理就是通过他人来完成工作。',
-          options: [
-            { key: 'A', text: '正确' },
-            { key: 'B', text: '错误' }
-          ],
-          studentAnswer: ['A'],
-          correctAnswer: ['A'],
-          isCorrect: true,
-          analysis: '这个说法是正确的。管理的本质就是通过协调和指导他人的工作来实现组织目标。'
-        },
-        {
-          id: 4,
-          type: 'single',
-          stem: 'SWOT分析中的"O"代表什么？',
-          options: [
-            { key: 'A', text: '优势（Strengths）' },
-            { key: 'B', text: '劣势（Weaknesses）' },
-            { key: 'C', text: '机会（Opportunities）' },
-            { key: 'D', text: '威胁（Threats）' }
-          ],
-          studentAnswer: ['B'],
-          correctAnswer: ['C'],
-          isCorrect: false,
-          analysis: 'SWOT分析中，S代表优势（Strengths），W代表劣势（Weaknesses），O代表机会（Opportunities），T代表威胁（Threats）。'
-        },
-        {
-          id: 5,
-          type: 'fill',
-          stem: '管理的四大基本职能包括计划、组织、____和控制。',
-          blanks: [
-            { studentAnswer: '领导', correctAnswer: '领导', isCorrect: true }
-          ],
-          isCorrect: true,
-          analysis: '管理的四大基本职能是：计划、组织、领导和控制。'
-        },
-        {
-          id: 6,
-          type: 'single',
-          stem: '下列哪项不属于计划职能的内容？',
-          options: [
-            { key: 'A', text: '确定组织目标' },
-            { key: 'B', text: '制定实施方案' },
-            { key: 'C', text: '评估员工绩效' },
-            { key: 'D', text: '分配资源' }
-          ],
-          studentAnswer: ['C'],
-          correctAnswer: ['C'],
-          isCorrect: true,
-          analysis: '评估员工绩效属于控制职能，而非计划职能。计划职能主要包括确定目标、制定方案和分配资源等内容。'
-        },
-        {
-          id: 7,
-          type: 'multi',
-          stem: '有效的组织结构设计应遵循哪些原则？',
-          options: [
-            { key: 'A', text: '统一指挥原则' },
-            { key: 'B', text: '管理幅度原则' },
-            { key: 'C', text: '随机应变原则' },
-            { key: 'D', text: '职权对等原则' }
-          ],
-          studentAnswer: ['A', 'B', 'D'],
-          correctAnswer: ['A', 'B', 'D'],
-          isCorrect: true,
-          analysis: '有效的组织结构设计应遵循统一指挥、管理幅度和职权对等等原则，随机应变是领导风格而非组织结构设计原则。'
-        },
-        {
-          id: 8,
-          type: 'judge',
-          stem: '正式组织是组织图上可见的关系，非正式组织是看不见的人际关系网络。',
-          options: [
-            { key: 'A', text: '正确' },
-            { key: 'B', text: '错误' }
-          ],
-          studentAnswer: ['B'],
-          correctAnswer: ['A'],
-          isCorrect: false,
-          analysis: '这个说法是正确的。正式组织通过组织图等文件明确规定，非正式组织则是自发形成的人际关系网络，两者共同影响着组织的运作。'
-        },
-        {
-          id: 9,
-          type: 'fill',
-          stem: '按照决策的重要性，可以将决策分为战略决策、战术决策和____决策。',
-          blanks: [
-            { studentAnswer: '操作', correctAnswer: '业务', isCorrect: false }
-          ],
-          isCorrect: false,
-          analysis: '按重要性分类，决策分为战略决策、战术决策和业务决策三个层次。'
-        },
-        {
-          id: 10,
-          type: 'single',
-          stem: '马斯洛需求层次理论中，最高层次的需求是？',
-          options: [
-            { key: 'A', text: '安全需求' },
-            { key: 'B', text: '社交需求' },
-            { key: 'C', text: '尊重需求' },
-            { key: 'D', text: '自我实现需求' }
-          ],
-          studentAnswer: ['D'],
-          correctAnswer: ['D'],
-          isCorrect: true,
-          analysis: '马斯洛将人类需求从低到高分为五个层次：生理需求、安全需求、社交需求、尊重需求和自我实现需求。自我实现是最高层次。'
-        }
-      ]
+      questions: []
     }
   },
   methods: {
+    async fetchDetail() {
+      if (!this.recordId) return
+      this.loading = true
+      this.questions = []
+      try {
+        const res = await getAfterQuizRecordDetail(this.recordId)
+        this.mapApiData(res.data || {})
+      } catch (e) {
+        this.questions = []
+      } finally {
+        this.loading = false
+      }
+    },
+    mapApiData(data) {
+      this.examInfo = {
+        examTime: data.submitTime || data.startTime || '',
+        score: data.score || 0,
+        correctRate: data.accuracy || 0,
+        correctCount: data.correctNum || 0,
+        totalCount: data.topicNum || 0
+      }
+      const typeMap = {
+        '1': 'single', '2': 'multi', '3': 'judge',
+        '4': 'fill', '5': 'essay', '6': 'essay', '7': 'essay'
+      }
+      const sorted = (data.details || []).sort((a, b) => (a.serialNumber || 0) - (b.serialNumber || 0))
+      this.questions = sorted.map(item => {
+        const type = typeMap[item.questType] || 'single'
+        const isCorrect = item.isCorrect === '1'
+        const isPending = item.isCorrect === '3'
+        const q = {
+          id: item.detailId || item.topicId,
+          type,
+          questName: item.questName || '',
+          stem: item.name || '',
+          stemIsImg: item.isImg === '1',
+          isCorrect,
+          isPending,
+          analysis: item.analysis || '',
+          analysisIsImg: item.analysisIsImg === '1',
+          answerIsImg: item.answerIsImg === '1',
+          material: item.material || ''
+        }
+        if (type === 'single' || type === 'multi' || type === 'judge') {
+          const optKeys = ['A', 'B', 'C', 'D', 'E']
+          const optFields = ['optionA', 'optionB', 'optionC', 'optionD', 'optionE']
+          const optIsImgFields = ['optionIsImgA', 'optionIsImgB', 'optionIsImgC', 'optionIsImgD', 'optionIsImgE']
+          q.options = optKeys
+            .map((key, i) => ({ key, text: item[optFields[i]], isImg: item[optIsImgFields[i]] === '1' }))
+            .filter(opt => opt.text)
+          if (type === 'judge' && q.options.length === 0) {
+            q.options = [{ key: 'A', text: '正确', isImg: false }, { key: 'B', text: '错误', isImg: false }]
+          }
+          q.studentAnswer = this.parseAnswer(item.studentAnswer)
+          q.correctAnswer = this.parseAnswer(item.correctAnswer || item.answer)
+          q.correctAnswerRaw = item.correctAnswer || item.answer || ''
+        } else if (type === 'fill') {
+          q.blanks = [{
+            studentAnswer: item.studentAnswer || '',
+            correctAnswer: item.correctAnswer || item.answer || '',
+            isCorrect
+          }]
+        } else {
+          q.studentAnswer = item.studentAnswer || ''
+          q.correctAnswer = item.correctAnswer || item.answer || ''
+        }
+        return q
+      })
+    },
+    parseAnswer(str) {
+      if (!str) return []
+      str = str.trim()
+      if (str.includes(',')) return str.split(',').map(s => s.trim()).filter(Boolean)
+      const letters = str.split('').filter(c => /[A-E]/i.test(c))
+      return letters.length > 0 ? letters.map(c => c.toUpperCase()) : (str ? [str] : [])
+    },
     typeLabel(type) {
-      const map = { single: '单选题', multi: '多选题', judge: '判断题', fill: '填空题' }
+      const map = { single: '单选题', multi: '多选题', judge: '判断题', fill: '填空题', essay: '主观题' }
       return map[type] || type
     },
     isCorrectOpt(q, opt) {
@@ -329,25 +324,15 @@ export default {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   },
-  computed: {
-    computedExamInfo() {
-      const total = this.questions.length
-      const correct = this.questions.filter(q => q.isCorrect).length
-      return {
-        totalCount: total,
-        correctCount: correct,
-        correctRate: total > 0 ? Math.round((correct / total) * 100) : 0
-      }
-    }
-  },
   watch: {
     visible(val) {
-      if (val) {
-        const total = this.questions.length
-        const correct = this.questions.filter(q => q.isCorrect).length
-        this.examInfo.totalCount = total
-        this.examInfo.correctCount = correct
-        this.examInfo.correctRate = total > 0 ? Math.round((correct / total) * 100) : 0
+      if (val && this.recordId) {
+        this.fetchDetail()
+      }
+    },
+    recordId(val) {
+      if (val && this.visible) {
+        this.fetchDetail()
       }
     }
   }
@@ -421,6 +406,16 @@ export default {
 .sad__info-val--score { color: #0049FF; font-weight: 700; font-size: 15px; }
 .sad__info-val--rate { color: #00C853; font-weight: 600; }
 
+/* ===== 加载中 ===== */
+.sad__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #999;
+}
+
 /* ===== 主体内容 ===== */
 .sad__body {
   flex: 1;
@@ -466,11 +461,13 @@ export default {
   font-size: 13px;
   font-weight: 600;
   color: #fff;
+  background: #0049FF;
 }
 .sad__q-type-tag--single { background: #0049FF; }
 .sad__q-type-tag--multi  { background: #9C27B0; }
 .sad__q-type-tag--judge  { background: #FF6D00; }
 .sad__q-type-tag--fill   { background: #00897B; }
+.sad__q-type-tag--essay  { background: #607D8B; }
 
 .sad__q-index {
   font-size: 14px;
@@ -486,7 +483,20 @@ export default {
 }
 .sad__q-result--correct { color: #00C853; }
 .sad__q-result--wrong   { color: #FF2E00; }
+.sad__q-result--pending { color: #FF9800; }
 .sad__q-result-icon { font-size: 13px; }
+
+/* 材料 */
+.sad__q-material {
+  font-size: 13px;
+  color: #777;
+  background: #F8F9FA;
+  border-left: 3px solid #BDBDBD;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
 
 /* 题干 */
 .sad__q-stem {
@@ -494,11 +504,6 @@ export default {
   color: #333333;
   line-height: 1.7;
   margin-bottom: 14px;
-}
-.sad__q-multi-hint {
-  font-size: 13px;
-  color: #888;
-  margin-left: 4px;
 }
 
 /* ===== 选项样式 ===== */
@@ -518,7 +523,7 @@ export default {
   color: #666666;
   background: #F8F8F8;
   position: relative;
-   border: 2px solid #F8F8F8;
+  border: 2px solid #F8F8F8;
 }
 .sad__q-opt-key {
   font-weight: 500;
@@ -532,20 +537,19 @@ export default {
 }
 .sad__q-opt-icon--correct { color: #00C853; }
 .sad__q-opt-icon--wrong   { color: #FF2E00; }
+.sad__q-opt-icon--missed  { color: #FF2E00; }
 
 /* 学生选对了 => 绿色背景+绿色边框 */
 .sad__q-option--student-correct {
   background: #E8F5E9;
-  border-color: #00C853;
-  color: #00C853;
   border: 2px solid #00C853;
+  color: #00C853;
 }
 /* 学生选错了 => 红色背景+红色边框 */
 .sad__q-option--student-wrong {
   background: #FFEBEE;
-  border-color: #FF2E00;
+  border: 2px solid #FF2E00;
   color: #FF2E00;
-   border: 2px solid #FF2E00;
 }
 /* 正确答案（学生未选） => 绿色边框 */
 .sad__q-option--answer-correct {
@@ -554,7 +558,7 @@ export default {
   color: #00C853;
 }
 
-/* ===== 填空题 ===== */
+/* ===== 填空题 / 主观题 ===== */
 .sad__fill-wrap {
   display: flex;
   flex-direction: column;
@@ -599,21 +603,70 @@ export default {
   border-left: 4px solid #FFA726;
   border-radius: 4px;
   padding: 16px;
-  font-size: 12px;
+  font-size: 13px;
   color: #666;
   margin-top: 4px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 .sad__analysis-label {
-  color: #666666;
-  font-weight: 500;
-}
-.sad__analysis-text{
   color: #333333;
+  font-weight: 600;
   font-size: 14px;
 }
+.sad__analysis-correct-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.sad__analysis-correct-label {
+  color: #666666;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sad__analysis-correct-val {
+  color: #333333;
+  font-size: 14px;
+  font-weight: 500;
+}
+.sad__analysis-text {
+  color: #555555;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* ===== 富文本 / 图片 ===== */
+.sad__rich-img {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  margin: 4px 0;
+    mix-blend-mode: multiply!important;
+}
+/* 题干、选项内嵌 HTML 中的图片自动限宽 */
+.sad__q-stem img,
+.sad__q-opt-text img,
+.sad__analysis-text img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* ===== 空状态 ===== */
+.sad__empty {
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  padding: 60px 0;
+}
+
 /* ===== 右侧做题看板 ===== */
 .sad__board {
   width: 320px;
@@ -659,28 +712,70 @@ export default {
   gap: 8px;
   padding-top: 14px;
   border-top: 1px solid #F0F0F0;
+  margin-bottom: 16px;
 }
 .sad__board-nav-btn {
-  width: 47.8px;
-  height: 47.8px;
-  border-radius: 6px;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   border: none;
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
   cursor: pointer;
   transition: opacity 0.15s, transform 0.1s;
   outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .sad__board-nav-btn:hover {
   opacity: 0.85;
   transform: scale(1.05);
 }
+.sad__board-nav-btn-icon {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
 .sad__board-nav-btn--correct {
-  background: #E8F5E9;
-  color: #00C853;
+  background: #00C853;
+  color: #fff;
 }
 .sad__board-nav-btn--wrong {
-  background: #FFEBEE;
-  color: #FF2E00;
+  background: #F44336;
+  color: #fff;
 }
+.sad__board-nav-btn--pending {
+  background: #FF9800;
+  color: #fff;
+}
+
+/* 图例 */
+.sad__board-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #F0F0F0;
+}
+.sad__board-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+}
+.sad__board-legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.sad__board-legend-dot--correct { background: #00C853; }
+.sad__board-legend-dot--wrong   { background: #F44336; }
 </style>

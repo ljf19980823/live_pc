@@ -13,10 +13,10 @@
     <!-- 统计栏 -->
     <div class="act-detail__stats">
       <div class="act-detail__stats-left">
-        <span class="act-detail__stats-item">总人数：<span class="act-detail__stats-val">{{ totalCount }}</span></span>
-        <span class="act-detail__stats-item">已完成：<span class="act-detail__stats-val" style="color:#00C853">{{ doneCount }}</span></span>
-        <span class="act-detail__stats-item">未完成：<span class="act-detail__stats-val" style="color:#FF2E00">{{ undoneCount }}</span></span>
-        <span class="act-detail__stats-item">完成率：<span class="act-detail__stats-val act-detail__stats-val--blue">{{ completionRate }}%</span></span>
+        <span class="act-detail__stats-item">总人数：<span class="act-detail__stats-val">{{ leaderboardData.totalStudentCount || 0 }}</span></span>
+        <span class="act-detail__stats-item">已完成：<span class="act-detail__stats-val" style="color:#00C853">{{ leaderboardData.finishedStudentCount || 0 }}</span></span>
+        <span class="act-detail__stats-item">未完成：<span class="act-detail__stats-val" style="color:#FF2E00">{{ leaderboardData.unFinishedStudentCount || 0 }}</span></span>
+        <span class="act-detail__stats-item">完成率：<span class="act-detail__stats-val act-detail__stats-val--blue">{{ leaderboardData.finishedPercentage || 0 }}%</span></span>
       </div>
       <div class="act-detail__filter-btns">
         <button
@@ -33,49 +33,90 @@
     </div>
 
     <!-- 表格 -->
-    <div class="act-detail__table-wrap">
-      <table class="act-detail__table">
-        <thead>
-          <tr>
-            <th>序号</th>
-            <th>学生姓名</th>
-            <th>分数</th>
-            <th>状态</th>
-            <th>做题时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, index) in filteredList" :key="index">
-            <td>{{ row.index }}</td>
-            <td class="act-detail__td-name">{{ row.name }}</td>
-            <td>
-              <span v-if="row.status === 'done'" class="act-detail__score">{{ row.score }}分</span>
-              <span v-else class="act-detail__score--empty">--</span>
-            </td>
-            <td>
-              <span
-                class="act-detail__tag"
-                :class="row.status === 'done' ? 'act-detail__tag--done' : 'act-detail__tag--undone'"
-              >{{ row.status === 'done' ? '已做题' : '未做题' }}</span>
-            </td>
-            <td class="act-detail__td-time">{{ row.status === 'done' ? row.doTime : '--' }}</td>
-            <td>
-              <button v-if="row.status === 'done'" class="act-detail__detail-btn" @click="openStudentDetail(row)">做题详情</button>
-            </td>
-          </tr>
-          <tr v-if="filteredList.length === 0">
-            <td colspan="6" class="act-detail__empty">暂无数据</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="act-detail__table-wrap" v-loading="loading">
+      <!-- 已做题排行榜 -->
+      <template v-if="filterTab === 'done'">
+        <table class="act-detail__table" v-if="leaderboardItems.length > 0">
+          <thead>
+            <tr>
+              <th>排名</th>
+              <th>学生姓名</th>
+              <th>得分</th>
+              <th>正确题数</th>
+              <th>提交时间</th>
+              <th>考试时长</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, index) in leaderboardItems" :key="row.studentId || index">
+              <td>
+                <span class="act-detail__rank" :class="getRankClass(index + 1)">{{ index + 1 }}</span>
+              </td>
+              <td class="act-detail__td-student">
+                <!-- <img
+                  v-if="row.profilePicture"
+                  :src="row.profilePicture"
+                  class="act-detail__avatar"
+                  alt=""
+                />
+                <span class="act-detail__avatar-placeholder" v-else>{{ (row.studentName || '').charAt(0) }}</span> -->
+                <span class="act-detail__td-name">{{ row.studentName || '--' }}</span>
+              </td>
+              <td>
+                <span class="act-detail__score">{{ row.score != null ? row.score + '分' : '--' }}</span>
+              </td>
+              <td>
+                <span class="act-detail__correct">{{ row.correctNum }}/{{ row.topicNum }}</span>
+              </td>
+              <td class="act-detail__td-time">{{ row.submitTime || '--' }}</td>
+              <td class="act-detail__td-time">{{ formatDuration(row.examDuration) }}</td>
+              <td>
+                <button class="act-detail__detail-btn" @click="openStudentDetail(row)">做题详情</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else class="act-detail__empty">暂无已做题学生数据</div>
+      </template>
+
+      <!-- 未做题列表 -->
+      <template v-else>
+        <div v-loading="unSubmitLoading">
+          <table class="act-detail__table" v-if="unSubmitList.length > 0">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>学生</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in unSubmitList" :key="row.studentId || index">
+                <td>{{ index + 1 }}</td>
+                <td class="act-detail__td-student">
+                  <img
+                    v-if="row.profilePicture"
+                    :src="row.profilePicture"
+                    class="act-detail__avatar"
+                    alt=""
+                  />
+                
+                  <span class="act-detail__td-name">{{ row.studentName || '--' }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else-if="!unSubmitLoading" class="act-detail__empty">全部学生已完成做题</div>
+        </div>
+      </template>
     </div>
 
     <!-- 学生做题详情子组件 -->
     <StudentAnswerDetail
       :visible="studentDetailVisible"
-      :studentName="currentStudent.name"
-      :attemptIndex="currentStudent.attemptIndex"
+      :student-name="currentStudent.studentName || ''"
+      :record-id="currentStudent.recordId || ''"
+      :attempt-index="currentStudent.attemptIndex || 1"
       @close="studentDetailVisible = false"
     />
   </div>
@@ -83,6 +124,7 @@
 
 <script>
 import StudentAnswerDetail from './StudentAnswerDetail.vue'
+import { getAfterQuizLeaderboard, getAfterQuizUnSubmitList } from '@/api'
 
 export default {
   name: 'AfterClassTestDetail',
@@ -94,7 +136,7 @@ export default {
     },
     className: {
       type: String,
-      default: '班级A'
+      default: ''
     },
     courseInfo: {
       type: Object,
@@ -105,52 +147,110 @@ export default {
   data() {
     return {
       filterTab: 'done',
+      loading: false,
+      unSubmitLoading: false,
+      leaderboardData: {
+        finishedStudentCount: 0,
+        unFinishedStudentCount: 0,
+        totalStudentCount: 0,
+        finishedPercentage: 0,
+        leaderboardItems: []
+      },
+      unSubmitList: [],
       studentDetailVisible: false,
-      currentStudent: { name: '学生1', attemptIndex: 1 },
-      mockStudentList: [
-        { index: 1,  name: '学生1', score: 100, status: 'done',   doTime: '2025-06-11 17:08' },
-        { index: 2,  name: '学生1', score: 99,  status: 'done',   doTime: '2025-06-22 17:36' },
-        { index: 3,  name: '学生2', score: 97,  status: 'done',   doTime: '2025-06-28 18:35' },
-        { index: 4,  name: '学生2', score: 93,  status: 'done',   doTime: '2025-06-19 09:22' },
-        { index: 5,  name: '学生3', score: null, status: 'undone', doTime: '' },
-        { index: 6,  name: '学生4', score: 90,  status: 'done',   doTime: '2025-06-15 11:59' },
-        { index: 7,  name: '学生4', score: 80,  status: 'done',   doTime: '2025-06-19 10:49' },
-        { index: 8,  name: '学生5', score: 70,  status: 'done',   doTime: '2025-06-28 10:40' },
-        { index: 9,  name: '学生5', score: 69,  status: 'done',   doTime: '2025-06-18 16:22' },
-        { index: 10, name: '学生5', score: 65,  status: 'done',   doTime: '2025-06-20 12:43' },
-        { index: 11, name: '学生6', score: 63,  status: 'done',   doTime: '2025-06-23 14:13' },
-        { index: 12, name: '学生7', score: null, status: 'undone', doTime: '' },
-        { index: 13, name: '学生8', score: 88,  status: 'done',   doTime: '2025-06-17 09:15' },
-        { index: 14, name: '学生9', score: null, status: 'undone', doTime: '' },
-        { index: 15, name: '学生10', score: 76, status: 'done',   doTime: '2025-06-21 14:30' },
-      ]
+      currentStudent: {}
     }
   },
   computed: {
-    totalCount() {
-      return this.mockStudentList.length
+    leaderboardItems() {
+      return this.leaderboardData.leaderboardItems || []
+    }
+  },
+  watch: {
+    visible(val) {
+      if (val) {
+        this.filterTab = 'done'
+        this.fetchAll()
+      }
     },
-    doneCount() {
-      return this.mockStudentList.filter(s => s.status === 'done').length
+    courseInfo(val) {
+      if (this.visible && val && val.examConfigId) {
+        this.fetchAll()
+      }
     },
-    undoneCount() {
-      return this.mockStudentList.filter(s => s.status === 'undone').length
-    },
-    completionRate() {
-      if (this.totalCount === 0) return 0
-      return Math.round((this.doneCount / this.totalCount) * 100)
-    },
-    filteredList() {
-      return this.mockStudentList.filter(s =>
-        this.filterTab === 'done' ? s.status === 'done' : s.status === 'undone'
-      )
+    filterTab(val) {
+      if (val === 'done') {
+        this.fetchLeaderboard()
+      } else {
+        this.fetchUnSubmitList()
+      }
+    }
+  },
+  mounted() {
+    if (this.visible) {
+      this.fetchAll()
     }
   },
   methods: {
+    fetchAll() {
+      this.fetchLeaderboard()
+      this.fetchUnSubmitList()
+    },
+    async fetchLeaderboard() {
+      const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      if (!examConfigId) return
+      this.loading = true
+      try {
+        const res = await getAfterQuizLeaderboard(examConfigId)
+        if (res && res.data) {
+          this.leaderboardData = {
+            finishedStudentCount: res.data.finishedStudentCount || 0,
+            unFinishedStudentCount: res.data.unFinishedStudentCount || 0,
+            totalStudentCount: res.data.totalStudentCount || 0,
+            finishedPercentage: res.data.finishedPercentage || 0,
+            leaderboardItems: res.data.leaderboardItems || []
+          }
+        }
+      } catch (e) {
+        console.error('获取排行榜失败', e)
+      } finally {
+        this.loading = false
+      }
+    },
+    async fetchUnSubmitList() {
+      const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      if (!examConfigId) return
+      this.unSubmitLoading = true
+      try {
+        const res = await getAfterQuizUnSubmitList(examConfigId)
+        this.unSubmitList = (res && res.data) ? res.data : []
+      } catch (e) {
+        console.error('获取未提交学生列表失败', e)
+        this.unSubmitList = []
+      } finally {
+        this.unSubmitLoading = false
+      }
+    },
+    getRankClass(rank) {
+      if (rank === 1) return 'act-detail__rank--gold'
+      if (rank === 2) return 'act-detail__rank--silver'
+      if (rank === 3) return 'act-detail__rank--bronze'
+      return ''
+    },
+    formatDuration(seconds) {
+      if (!seconds && seconds !== 0) return '--'
+      const s = parseInt(seconds, 10)
+      if (isNaN(s)) return seconds
+      if (s < 60) return s + '秒'
+      const m = Math.floor(s / 60)
+      const rem = s % 60
+      return rem > 0 ? `${m}分${rem}秒` : `${m}分钟`
+    },
     openStudentDetail(row) {
       this.currentStudent = {
-        name: row.name,
-        attemptIndex: row.attemptNo || 1
+        studentName: row.studentName,
+        recordId: row.recordId,
+        examId: row.examId
       }
       this.studentDetailVisible = true
     }
@@ -288,19 +388,73 @@ export default {
   white-space: nowrap;
 }
 .act-detail__table td {
-  padding: 14px 12px;
+  padding: 12px;
   font-size: 14px;
   color: #333;
   border-bottom: 1px solid #F5F5F5;
   text-align: center;
 }
+.act-detail__td-time {
+  color: #666;
+  font-size: 13px;
+}
+
+/* 学生单元格 */
+.act-detail__td-student {
+  /* display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center; */
+}
+.act-detail__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.act-detail__avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E8EEFF;
+  color: #0049FF;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .act-detail__td-name {
   font-weight: 500;
   color: #222;
 }
-.act-detail__td-time {
-  color: #666;
+
+/* 排名徽章 */
+.act-detail__rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   font-size: 13px;
+  font-weight: 700;
+  background: #F0F0F0;
+  color: #666;
+}
+.act-detail__rank--gold {
+  background: #FFF3CD;
+  color: #D48806;
+}
+.act-detail__rank--silver {
+  background: #F0F0F0;
+  color: #8C8C8C;
+}
+.act-detail__rank--bronze {
+  background: #FDE8D8;
+  color: #C06010;
 }
 
 /* 分数 */
@@ -309,25 +463,12 @@ export default {
   font-size: 15px;
   color: #0049FF;
 }
-.act-detail__score--empty {
-  color: #999;
-}
 
-/* 状态标签 */
-.act-detail__tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-}
-.act-detail__tag--done {
-  background: #CAD9FF;
-  color: #0049FF;
-}
-.act-detail__tag--undone {
-  background: #FFEDED;
-  color: #FF2E00;
+/* 正确题数 */
+.act-detail__correct {
+  font-size: 13px;
+  color: #00C853;
+  font-weight: 600;
 }
 
 /* 做题详情按钮 */
@@ -351,7 +492,8 @@ export default {
 .act-detail__empty {
   text-align: center;
   color: #aaa;
-  padding: 40px 0;
+  padding: 60px 0;
   font-size: 14px;
 }
+
 </style>
