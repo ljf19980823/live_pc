@@ -430,7 +430,7 @@
         <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index">
           <div class="quiz-item-left">
             <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
-            <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0">
+            <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item)">
               <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
             </div>
           </div>
