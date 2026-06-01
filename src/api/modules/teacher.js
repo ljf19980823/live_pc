@@ -146,3 +146,6 @@ export const updateRecentStudy = data => post('/edu/course/recentStudy', data)
 
 // 更新课时学习进度
 export const updateCourseProgress = data => post('/edu/course/progress', data)
+
+// 获取课后测列表
+export const getAfterQuizList = params => get('/edu/after/quiz/list', params)

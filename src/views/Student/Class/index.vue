@@ -379,6 +379,10 @@
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
             <img v-if="rightTab === 'course'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
+          <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'quiz'">
+            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测</div>
+            <img v-if="rightTab === 'quiz'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+          </div>
         </div>
       </div>
       <!-- 课程tab列表 -->
@@ -417,6 +421,42 @@
             </div> -->
           </div>
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
+        </div>
+      </div>
+
+      <!-- 课后测tab列表 -->
+      <div class="app_container_box_right_last quiz-list-wrap" v-if="rightTab === 'quiz'" v-loading="afterQuizLoading">
+        <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
+        <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index">
+          <div class="quiz-item-left">
+            <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
+            <div class="quiz-item-play-icon">
+              <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
+            </div>
+          </div>
+          <div class="quiz-item-body">
+            <div class="quiz-item-title-row">
+              <span class="quiz-item-name">{{ item.name }}</span>
+              <span class="quiz-item-status" :class="item.finishStatus === '1' ? 'quiz-status-done' : 'quiz-status-todo'">
+                {{ item.finishStatus === '1' ? '已做题' : '未做题' }}
+              </span>
+              <span class="quiz-item-date">发布时间: {{ item.createTime }}</span>
+            </div>
+            <div class="quiz-item-meta-row">
+              <span class="quiz-item-meta">做题次数: {{ item.finishNum }}次</span>
+              <span class="quiz-item-meta">
+                最高分数:
+                <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
+                  {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '--' }}
+                </span>
+              </span>
+              <span class="quiz-item-meta">题目数量: {{ item.topicNum }}题</span>
+            </div>
+          </div>
+          <div class="quiz-item-actions">
+            <button class="quiz-btn-primary">去考试</button>
+            <button class="quiz-btn-outline">考试记录</button>
+          </div>
         </div>
       </div>
       </template>
@@ -716,7 +756,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress } from '@/api'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -780,6 +820,10 @@ export default {
       deleteClassDialogVisible: false,
       deleteClassLoading: false,
 
+      // 课后测
+      afterQuizList: [],
+      afterQuizLoading: false,
+
        // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
       screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
@@ -808,6 +852,7 @@ export default {
     },
     rightTab(val) {
       if (val === 'course') this.fetchCourseList()
+      if (val === 'quiz') this.fetchAfterQuizList()
     },
     rightCourseSearch(val) {
       clearTimeout(this._courseSearchTimer)
@@ -999,6 +1044,21 @@ export default {
         this.courseListLoading = false
       }
     },
+    async fetchAfterQuizList() {
+      if (!this.selectedClassId) return
+      const userInfo = getUserInfo() || {}
+      const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
+      this.afterQuizLoading = true
+      try {
+        const res = await getAfterQuizList({ classId: this.selectedClassId, studentId })
+        this.afterQuizList = res.data || []
+      } catch (e) {
+        console.error(e)
+        this.afterQuizList = []
+      } finally {
+        this.afterQuizLoading = false
+      }
+    },
     async fetchClassSearch(keyword) {
       try {
         const res = await getClassList({ keyword })
@@ -1024,11 +1084,14 @@ export default {
       this.rightView = 'default'
       this.rightCourseSearch = ''
       this.courseList = []
+      this.afterQuizList = []
       if (this.selectedClassId) {
         this.fetchClassDetail(this.selectedClassId)
       }
       if (this.rightTab === 'course') {
         this.fetchCourseList()
+      } else if (this.rightTab === 'quiz') {
+        this.fetchAfterQuizList()
       } else {
         this.rightTab = 'course'
       }
@@ -2653,6 +2716,146 @@ color: #333333;
 }
 .class-detail-drawer__value--bold {
   font-weight: 600;
+}
+
+/* 课后测列表 */
+.quiz-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.quiz-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  padding: 0 16px 0 0;
+  gap: 16px;
+  min-height: 100px;
+}
+.quiz-item-left {
+  position: relative;
+  flex-shrink: 0;
+  width: 178px;
+  height: 100px;
+  border-radius: 8px 0 0 8px;
+  overflow: hidden;
+}
+.quiz-item-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.quiz-item-play-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.18);
+}
+.quiz-play-btn {
+  width: 40px;
+  height: 40px;
+}
+.quiz-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.quiz-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.quiz-item-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.quiz-item-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.quiz-status-done {
+  background: #e6f0ff;
+  color: #0049FF;
+}
+.quiz-status-todo {
+  background: #fff0f0;
+  color: #f44;
+}
+.quiz-item-date {
+  font-size: 12px;
+  color: #666666;
+  white-space: nowrap;
+}
+.quiz-item-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.quiz-item-meta {
+  font-size: 12px;
+  color: #666666;
+}
+.quiz-score-done {
+  color: #0049FF;
+  font-weight: 700;
+}
+.quiz-score-none {
+  color: #aaa;
+}
+.quiz-item-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.quiz-btn-primary {
+  width: 79px;
+  height: 34px;
+  background: #0049FF;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.quiz-btn-primary:hover {
+  background: #003acc;
+}
+.quiz-btn-outline {
+  width: 79px;
+  height: 34px;
+  background: #fff;
+  color: #0049FF;
+  border: 1px solid #0049FF;
+  box-sizing: border-box;
+  border-radius: 6px;
+  font-size: 13px;
+ font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.quiz-btn-outline:hover {
+  background: #e6f0ff;
 }
 
 </style>
