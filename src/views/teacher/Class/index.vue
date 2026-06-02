@@ -169,7 +169,7 @@
                 </div>
               </div>
               <div class="cdi-actions">
-                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" :color="item.progress >= 100 ? '' : '#71A0FF'" :status="item.progress >= 100 ? 'success' : ''"></el-progress>
                 <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
                   <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   <template #dropdown>
@@ -195,7 +195,7 @@
                 </div>
               </div>
               <div class="cdi-actions" @click.stop>
-                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" :color="item.progress >= 100 ? '' : '#71A0FF'" :status="item.progress >= 100 ? 'success' : ''"></el-progress>
                 <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
                   <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   <template #dropdown>
@@ -217,7 +217,7 @@
                 <span class="cdi-group-title">{{ item.title }}</span>
               </div>
               <div class="cdi-actions" @click.stop>
-                <el-progress type="circle" :percentage="Math.round(parseFloat(item.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <el-progress type="circle" :percentage="Math.round(parseFloat(item.percent)) || 0" :width="36" :stroke-width="2" :color="(Math.round(parseFloat(item.percent)) || 0) >= 100 ? '' : '#71A0FF'" :status="(Math.round(parseFloat(item.percent)) || 0) >= 100 ? 'success' : ''"></el-progress>
                 <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
                   <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   <template #dropdown>
@@ -243,7 +243,7 @@
                     <span class="cdi-group-title">{{ child.title }}</span>
                   </div>
                   <div class="cdi-actions" @click.stop>
-                <el-progress type="circle" :percentage="Math.round(parseFloat(child.percent)) || 0" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                <el-progress type="circle" :percentage="Math.round(parseFloat(child.percent)) || 0" :width="36" :stroke-width="2" :color="(Math.round(parseFloat(child.percent)) || 0) >= 100 ? '' : '#71A0FF'" :status="(Math.round(parseFloat(child.percent)) || 0) >= 100 ? 'success' : ''"></el-progress>
                 <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, child)">
                   <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                   <template #dropdown>
@@ -286,7 +286,7 @@
                       </div>
                     </div>
                     <div class="cdi-actions" @click.stop>
-                      <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                      <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" :color="grandchild.progress >= 100 ? '' : '#71A0FF'" :status="grandchild.progress >= 100 ? 'success' : ''"></el-progress>
                       <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, grandchild)">
                         <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                         <template #dropdown>
@@ -328,7 +328,7 @@
                     </div>
                   </div>
                   <div class="cdi-actions" @click.stop>
-                    <el-progress type="circle" :percentage="child.progress" :width="36" :stroke-width="2" color="#71A0FF"></el-progress>
+                    <el-progress type="circle" :percentage="child.progress" :width="36" :stroke-width="2" :color="child.progress >= 100 ? '' : '#71A0FF'" :status="child.progress >= 100 ? 'success' : ''"></el-progress>
                     <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, child)">
                       <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
                       <template #dropdown>
@@ -1709,7 +1709,7 @@ export default {
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
-          filePath: res.filePath || ''
+          filePath: res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath
         }
       }
     },

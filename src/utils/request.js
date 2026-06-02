@@ -1,12 +1,7 @@
 import axios from 'axios'
 import { Message, MessageBox } from 'element-ui'
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
 import { getToken, clearAuth } from './auth'
 import router from '@/router'
-
-// NProgress 配置（顶部加载条）
-NProgress.configure({ showSpinner: false })
 
 // ─── 创建 axios 实例 ──────────────────────────────────────────
 const service = axios.create({
@@ -20,8 +15,6 @@ const service = axios.create({
 // ─── 请求拦截器 ───────────────────────────────────────────────
 service.interceptors.request.use(
   config => {
-    NProgress.start()
-
     // 携带 Token
     const token = getToken()
     if (token) {
@@ -36,7 +29,6 @@ service.interceptors.request.use(
     return config
   },
   error => {
-    NProgress.done()
     console.error('[Request Error]', error)
     return Promise.reject(error)
   }
@@ -45,7 +37,6 @@ service.interceptors.request.use(
 // ─── 响应拦截器 ───────────────────────────────────────────────
 service.interceptors.response.use(
   response => {
-    NProgress.done()
     const res = response.data
 
     // 根据业务状态码处理（按实际后端约定修改 code 字段名和成功值）
@@ -71,8 +62,6 @@ service.interceptors.response.use(
     return Promise.reject(new Error(res.message || res.msg || 'Error'))
   },
   error => {
-    NProgress.done()
-
     if (axios.isCancel(error)) {
       console.warn('[Request Cancelled]', error.message)
       return Promise.reject(error)

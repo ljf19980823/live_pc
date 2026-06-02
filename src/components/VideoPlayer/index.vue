@@ -297,4 +297,9 @@ export default {
   font-size: 15px;
   color: #999999;
 }
+
+
+::v-deep .prism-player .prism-info-display{
+  height: auto!important;
+}
 </style>

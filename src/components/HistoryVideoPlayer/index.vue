@@ -613,4 +613,8 @@ export default {
   opacity: 0;
   transform: scale(0.85);
 }
+
+::v-deep .prism-player .prism-info-display{
+  height: auto!important;
+}
 </style>
