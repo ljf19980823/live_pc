@@ -110,7 +110,7 @@
       <div class="placeholder_last_table" v-loading="liveLoading">
         <template v-if="!liveLoading">
           <div class="placeholder_last_table_detail" v-for="(item, index) in liveCourses" :key="index" @click="enterLiveRoom(item)">
-            <img :src="item.statusImg" class="placeholder_last_table_detail_statusImg" alt="">
+            <img v-if="item.statusImg" :src="item.statusImg" class="placeholder_last_table_detail_statusImg" alt="">
             <div class="placeholder_last_table_detail_top">
               <div class="placeholder_last_table_detail_top_top">
                 <div class="placeholder_last_table_detail_top_top_title">{{ item.title }}</div>
@@ -592,7 +592,7 @@
       :visible="showDetailDialog"
       title="直播详情"
       width="490px"
-      :height="detailShareEnabled ? '596px' : '360px'"
+      :height="isTeacher ? (detailShareEnabled ? '596px' : '360px') : '280px'"
       :bg-color="'#FFFFFF'"
       @close="onDialogCloseAdd"
       :show-cancel="false"
@@ -610,14 +610,14 @@
           <span class="cdc-label">主讲老师：</span>
           <span class="cdc-value">{{ selectedCourseItem.teacherName2 || '-' }}</span>
         </div>
-        <div class="cdc-info-row">
+        <div class="cdc-info-row" v-if="isTeacher">
           <span class="cdc-label">参与班级：</span>
           <span class="cdc-value">{{ selectedCourseItem.classInfosName }}</span>
         </div>
 
-        <div class="cdc-divider"></div>
+        <div class="cdc-divider" v-if="isTeacher"></div>
 
-        <div class="cdc-share-header">
+        <div class="cdc-share-header" v-if="isTeacher">
           <span class="cdc-share-label">分享链接</span>
           <el-switch :value="detailShareEnabled" active-color="#0049FF" @change="handleShareToggle"></el-switch>
         </div>
@@ -1219,16 +1219,23 @@ export default {
         const res = await getLiveList()
         const list = res.data || res || []
         this.liveCourses = list.map(item => {
-          const isLiving =  item.status == '直播中' ? true:false
+          const isLiving = item.status == '直播中' ? true : false
+          const now = Date.now()
+          const startMs = item.startTime ? new Date(item.startTime.replace(' ', 'T')).getTime() : null
+          const isWithin30Min = startMs !== null && !isLiving && (startMs - now) <= 30 * 60 * 1000 && (startMs - now) >= 0
+          let statusImg = null
+          if (isLiving) {
+            statusImg = require('@/assets/images/liveClass/zzzb.png')
+          } else if (isWithin30Min) {
+            statusImg = require('@/assets/images/liveClass/jjks.png')
+          }
           return {
             ...item,
             title: item.name,
             time: this.formatTimeRange(item.startTime, item.endTime),
             status: isLiving ? 'living' : 'soon',
             minutes: item.liveMin,
-            statusImg: isLiving
-              ? require('@/assets/images/liveClass/zzzb.png')
-              : require('@/assets/images/liveClass/jjks.png'),
+            statusImg,
           }
         })
       } catch (_) {} finally {
