@@ -393,7 +393,20 @@ export default {
     },
 
     handleClose() {
-      this.$emit('close')
+      let percent = 0
+      try {
+        const videoEl = this._mainVideoEl
+        if (videoEl && videoEl.duration > 0) {
+          percent = Math.min(Math.round(videoEl.currentTime / videoEl.duration * 100), 100)
+        } else if (this.mainPlayer) {
+          const current = this.mainPlayer.getCurrentTime() || 0
+          const total = this.mainPlayer.getDuration() || 0
+          if (total > 0) {
+            percent = Math.min(Math.round(current / total * 100), 100)
+          }
+        }
+      } catch (e) {}
+      this.$emit('close', percent)
     }
   },
 

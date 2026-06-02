@@ -189,9 +189,19 @@ export default {
       if (el) el.innerHTML = ''
     },
 
-    /** 关闭播放器，向父组件抛出 close 事件 */
+    /** 关闭播放器，向父组件抛出 close 事件，携带当前播放进度百分比（0-100） */
     handleClose() {
-      this.$emit('close')
+      let percent = 0
+      if (this.playerInstance) {
+        try {
+          const current = this.playerInstance.getCurrentTime() || 0
+          const total = this.playerInstance.getDuration() || 0
+          if (total > 0) {
+            percent = Math.min(Math.round(current / total * 100), 100)
+          }
+        } catch (e) {}
+      }
+      this.$emit('close', percent)
     }
   },
 

@@ -142,6 +142,7 @@
                   <div class="cdi-status-row">
                     <template v-if="item.isFinish == 1">
                       <div class="cdi-status-text">{{ item.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
+                      <img v-if="item.isRecent && item.liveStatus !== '未开播'" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                     </template>
                     <template v-else-if="item.liveStatus == '直播中'">
                       <div class="cdi-status-text">已直播 <span class="yzb_text">{{ item.liveMin }}</span> </div>
@@ -526,7 +527,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
-      @close="playerVisible = false"
+      @close="closeHistoryPlayer"
     />
 
     <!-- 音频播放弹窗 -->
@@ -821,6 +822,7 @@ export default {
       playerTitle: '',
       showVideoDialog: false,
       currentVideoUrl: '',
+      currentPlayingItem: null,
       showAudioDialog: false,
       currentAudioUrl: '',
       showImageDialog: false,
@@ -1373,6 +1375,7 @@ export default {
         this.currentResourceTitle = item.title || '视频播放'
         console.log(url,'视频地址')
         this.currentVideoUrl = url
+        this.currentPlayingItem = item
         this.showVideoDialog = true
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
@@ -1388,9 +1391,35 @@ export default {
         this.filePreviewVisible = true
       }
     },
-    closeVideoDialog() {
+    async closeVideoDialog(percent = 0) {
       this.showVideoDialog = false
       this.currentVideoUrl = ''
+      await this.saveVideoProgress(percent)
+    },
+    async closeHistoryPlayer(percent = 0) {
+      this.playerVisible = false
+      await this.saveVideoProgress(percent)
+    },
+    async saveVideoProgress(percent) {
+      const item = this.currentPlayingItem
+      this.currentPlayingItem = null
+      if (!item) return
+      const newPercent = Math.max(percent, item.progress || 0)
+      if (newPercent <= (item.progress || 0)) return
+      try {
+        const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+        const lessonId = String(item.id || '')
+        await updateCourseProgress({
+          classId: String(this.selectedClassId || ''),
+          courseId,
+          lessonId,
+          type: String(item.nodeType || ''),
+          percent: String(newPercent)
+        })
+        if (this.selectedCourse) {
+          this.fetchCourseDetail(this.selectedCourse.id)
+        }
+      } catch (_) {}
     },
     closeAudioDialog() {
       this.showAudioDialog = false
@@ -1451,7 +1480,7 @@ export default {
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
         const res = node.resource || node.historyLesson || {}
-        const sizeStr = res.size ? `${res.size}${res.unit || ''}` : ''
+        const sizeStr = res.size ? `${res.size}` : ''
         return {
           id: node.id || node.lessonId || '',
           type: 'resource',
@@ -1488,19 +1517,30 @@ export default {
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
     },
-    openVideoPlayer(item) {
+    async openVideoPlayer(item, updateRecent = false) {
+      if (updateRecent) {
+        try {
+          const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+          const lessonId = String(item.id || '')
+          await updateRecentStudy({ courseId, lessonId })
+          if (this.selectedCourse) {
+            this.fetchCourseDetail(this.selectedCourse.id)
+          }
+        } catch (_) {}
+      }
       const fileList = item.fileList || []
       const mainFile = fileList.find(f => f.videoType == '1')
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
-      this.playerTitle = item.name || '视频回放'
+      this.playerTitle = item.name ||item.title || '视频回放'
+      this.currentPlayingItem = item
       this.playerVisible = true
     },
     async enterLiveRoom(item) {
       console.log(item)
       if (item.isFinish == 1 && item.liveStatus !== '未开播') {
-        this.openVideoPlayer(item)
+        this.openVideoPlayer(item, true)
         return
       }
       const now = Date.now()
@@ -1521,6 +1561,16 @@ export default {
           if (needsRequest.length) await Promise.all(needsRequest)
         } catch (_) {}
       }
+      // 更新最近学习记录
+      try {
+        const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+        const lessonId = String(item.id || '')
+        await updateRecentStudy({ courseId, lessonId })
+        if (this.selectedCourse) {
+          this.fetchCourseDetail(this.selectedCourse.id)
+        }
+      } catch (_) {}
+
       const { userId, realName, role } = getUserInfo()
       const token = getToken()
       const liveId = item.liveId
@@ -2434,7 +2484,6 @@ color: #333333;
 .cdi-file-row {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex-wrap: wrap;
 }
 .cdi-file-meta {

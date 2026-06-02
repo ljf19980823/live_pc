@@ -188,8 +188,8 @@
                 <div class="cdi-info">
                   <div class="cdi-name">{{ item.title }}</div>
                   <div class="cdi-file-row">
-                    <span class="cdi-file-meta">{{ item.size }}</span>
-                    <span class="cdi-file-meta">{{ item.date }}</span>
+                    <span class="cdi-file-meta" v-if="item.size">{{ item.size }}</span>
+                    <span class="cdi-file-meta" v-if="item.date">{{ item.date }}</span>
                     <img v-if="item.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                   </div>
                 </div>
@@ -1741,7 +1741,7 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
-      this.playerTitle = item.name || '视频回放'
+      this.playerTitle = item.name || item.title || '视频回放'
       this.playerVisible = true
     },
     async enterLiveRoom(item) {
