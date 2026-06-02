@@ -1327,8 +1327,8 @@ export default {
       if (!this.joinClassCode.trim()) return
       this.joinClassLoading = true
       try {
-        await joinClass({ classCode: this.joinClassCode.trim() })
-        this.$message.success('加入班级成功')
+        let res =  await joinClass({ classCode: this.joinClassCode.trim() })
+        this.$message.success(res.data)
         this.showJoinClassDialog = false
         this.joinClassCode = ''
         await this.fetchClassList()
