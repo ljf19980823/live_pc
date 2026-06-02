@@ -1191,7 +1191,7 @@ export default {
         liveBaseUrl = 'http://localhost:8000'
       }
 
-      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.historyLessonId || ''}&afterClassTest=1&_t=${Date.now()}&token=${token}`
+      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`
       console.log(this.liveUrl, '发布课后测直播地址')
       this.activeTab = 'liveui'
     },

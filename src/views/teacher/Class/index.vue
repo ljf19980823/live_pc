@@ -1698,7 +1698,7 @@ export default {
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
         const res = node.resource || node.historyLesson || {}
-        const sizeStr = res.size ? `${res.size}${res.unit || ''}` : ''
+        const sizeStr = res.size ? `${res.size}` : ''
         return {
           id: node.id || node.lessonId || '',
           type: 'resource',

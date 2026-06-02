@@ -215,7 +215,8 @@
                   :key="member.id"
                   @click="toggleMemberSelect(member)"
                 >
-                  <img src="@/assets/images/message/such.png" class="receive_tc_box_left_list_detail_second_detail_fm" alt="">
+                  <img v-if="member.profilePicture" :src="member.profilePicture" class="receive_tc_box_left_list_detail_second_detail_fm" alt="">
+                  <div v-else class="receive_tc_box_left_list_detail_second_detail_fm avatar_placeholder">{{ member.name ? member.name.slice(-2) : '' }}</div>
                   <div class="receive_tc_box_left_list_detail_second_detail_name">{{ member.name }}</div>
                   <img
                     :src="isMemberSelected(member) ? require('@/assets/images/message/choose_yes.png') : require('@/assets/images/message/choose_no.png')"
@@ -235,7 +236,8 @@
               v-for="member in currentTempList"
               :key="member.id"
             >
-              <img src="@/assets/images/message/such.png" class="receive_tc_box_right_list_detail_head" alt="">
+              <img v-if="member.profilePicture" :src="member.profilePicture" class="receive_tc_box_right_list_detail_head" alt="">
+              <div v-else class="receive_tc_box_right_list_detail_head avatar_placeholder">{{ member.name ? member.name.slice(-2) : '' }}</div>
               <div class="receive_tc_box_right_list_detail_title">{{ member.name }}</div>
               <img
                 src="@/assets/images/message/close.png"
@@ -419,7 +421,8 @@ export default {
         members: (item.users || []).map(u => ({
           id: u.userId,
           name: u.displayName || '',
-          type: u.type
+          type: u.type,
+          profilePicture:u.profilePicture||''
         }))
       }))
     },
@@ -479,7 +482,7 @@ export default {
       } else {
         classItem.members.forEach(member => {
           if (!list.some(r => r.id === member.id)) {
-            list.push({ id: member.id, name: member.name, type: member.type })
+            list.push({ id: member.id, name: member.name, type: member.type, profilePicture: member.profilePicture })
           }
         })
       }
@@ -488,7 +491,7 @@ export default {
       const list = this.receiveActiveTab === 'teacher' ? this.tempTeacherRecipients : this.tempStudentRecipients
       const idx = list.findIndex(r => r.id === member.id)
       if (idx === -1) {
-        list.push({ id: member.id, name: member.name, type: member.type })
+        list.push({ id: member.id, name: member.name, type: member.type, profilePicture: member.profilePicture })
       } else {
         list.splice(idx, 1)
       }
@@ -1105,6 +1108,17 @@ color: #333333;
   width: 32px;
   height: 32px;
   border-radius: 50%;
+}
+.avatar_placeholder{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #4A90E2;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  user-select: none;
 }
 .receive_tc_box_left_list_detail_second_detail_name{
   flex: 1;
