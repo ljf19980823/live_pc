@@ -3,12 +3,15 @@
     <div class="file-preview-box">
       <div class="file-preview-header">
         <div class="file-preview-title">{{ file && file.name ? file.name : '文件预览' }}</div>
-        <img
-          src="@/assets/images/login/close.png"
-          class="file-preview-close"
-          alt="关闭"
-          @click="handleClose"
-        >
+        <div class="file-preview-header-actions">
+          <div v-if="!isStudent || allowDownload === '1'" class="file-preview-download-btn" @click="handleDownload">下载</div>
+          <img
+            src="@/assets/images/login/close.png"
+            class="file-preview-close"
+            alt="关闭"
+            @click="handleClose"
+          >
+        </div>
       </div>
       <div class="file-preview-body">
         <div v-if="loadError" class="file-preview-error">
@@ -110,6 +113,8 @@ function loadOnlyOfficeScript() {
   })
 }
 
+import { getUserInfo } from '@/utils/auth'
+
 /** 用于生成唯一的编辑器容器 id，避免同页面多实例冲突 */
 let editorIdCounter = 0
 
@@ -137,11 +142,24 @@ export default {
     file: {
       type: Object,
       default: null
+    },
+
+    /**
+     * 是否允许下载：1 允许，2 不允许
+     * @type {String}
+     * @default '2'
+     */
+    allowDownload: {
+      type: String,
+      default: '2'
     }
   },
 
   data() {
+    const userInfo = getUserInfo() || {}
     return {
+      /** 当前用户是否为学生角色，权限限制仅对学生生效 */
+      isStudent: userInfo.role === 'STUDENT',
       /** 是否加载/预览失败（不支持的类型或脚本加载异常时为 true，显示兜底提示） */
       loadError: false,
       /** ONLYOFFICE DocEditor 实例，用于在关闭时主动销毁释放资源 */
@@ -222,13 +240,13 @@ export default {
           title: fileInfo.title,
           url: fileInfo.url,
           permissions: {
-            edit: false,      // 禁止编辑
-            download: false,  // 禁止下载
-            print: false,     // 禁止打印
-            copy: false,      // 禁止复制
-            search: false,    // 禁止搜索
-            comment: false,   // 禁止批注
-            chat: false       // 禁止聊天
+            edit: false,
+            download: !this.isStudent || this.allowDownload === '1',
+            print: !this.isStudent || this.allowDownload === '1',
+            copy: false,
+            search: false,
+            comment: false,
+            chat: false
           }
         },
         editorConfig: {
@@ -340,12 +358,32 @@ export default {
   white-space: nowrap;
 }
 
+.file-preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.file-preview-download-btn {
+  padding: 5px 14px;
+  background: #0049FF;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
 .file-preview-close {
   width: 20px;
   height: 20px;
   cursor: pointer;
   flex-shrink: 0;
-  margin-left: 16px;
 }
 
 .file-preview-body {

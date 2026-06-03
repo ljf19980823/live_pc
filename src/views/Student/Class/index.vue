@@ -521,6 +521,8 @@
       :visible="showVideoDialog"
       :source="currentVideoUrl"
       :title="currentResourceTitle"
+      :allow-multiple="currentAllowMultiple"
+      :allow-fast-forward="currentAllowFastForward"
       @close="closeVideoDialog"
     />
 
@@ -685,7 +687,7 @@
     </DialogCustome>
 
     <!-- 文件预览 -->
-    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" @close="filePreviewVisible = false" />
+    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" :allow-download="currentAllowDownload" @close="filePreviewVisible = false" />
 
     <!-- 考试页面 -->
     <ExamPage
@@ -833,6 +835,9 @@ export default {
       currentResourceTitle: '',
       filePreviewVisible: false,
       filePreviewData: null,
+      currentAllowMultiple: '2',
+      currentAllowFastForward: '2',
+      currentAllowDownload: '2',
       editNameDialogVisible: false,
       editNameLoading: false,
       editClassName: '',
@@ -1376,7 +1381,9 @@ export default {
 
       if (videoTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '视频播放'
-        console.log(url,'视频地址')
+        this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+        this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+        console.log(item.allowMultiple,'视频地址')
         this.currentVideoUrl = url
         this.currentPlayingItem = item
         this.showVideoDialog = true
@@ -1390,6 +1397,7 @@ export default {
         this.showAudioDialog = true
       } else {
         console.log(item,'信息')
+        this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.filePreviewData = { name: item.title || '', path: url }
         this.filePreviewVisible = true
       }
@@ -1450,6 +1458,9 @@ export default {
           title: node.name || '',
           percent: node.percent || '0',
           expanded: false,
+          allowMultiple: String(node.allowMultiple || '1'),
+          allowFastForward: String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2'),
           children: (node.children || []).map(child => this._mapDetailNode(child))
         }
       } else if (node.type === '2') {
@@ -1478,7 +1489,10 @@ export default {
           timeStart,
           timeEnd: '',
           progress: Math.round(parseFloat(node.percent)) || 0,
-          isRecent: live.isRecentStudy === '1'
+          isRecent: live.isRecentStudy === '1',
+          allowMultiple: String(node.allowMultiple || '1'),
+          allowFastForward: String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2')
         }
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
@@ -1494,7 +1508,10 @@ export default {
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
-          filePath:res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath
+          filePath: res.fileList && res.fileList.length !== 0 ? res.fileList[0].filePath : res.filePath,
+          allowMultiple: String(node.allowMultiple || '1'),
+          allowFastForward: String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2')
         }
       }
     },
@@ -1559,8 +1576,11 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
-      this.playerTitle = item.name ||item.title || '视频回放'
+      this.playerTitle = item.name || item.title || '视频回放'
+      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
       this.currentPlayingItem = item
+      console.log(this.currentAllowMultiple,'currentAllowMultiple')
       this.playerVisible = true
     },
     async enterLiveRoom(item) {

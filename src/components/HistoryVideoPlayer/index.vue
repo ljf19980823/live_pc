@@ -113,11 +113,13 @@ export default {
     title: {
       type: String,
       default: ''
-    }
+    },
+
   },
 
   data() {
     const uid = ++idCounter
+    const userInfo = getUserInfo() || {}
     return {
       mainPlayerId: `hrp-main-${uid}`,
       teacherPlayerId: `hrp-teacher-${uid}`,
@@ -624,4 +626,5 @@ export default {
 ::v-deep .prism-setting-quality {
   display: none !important;
 }
+
 </style>

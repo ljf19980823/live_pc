@@ -1,5 +1,5 @@
 <template>
-  <div class="video-player-mask" v-if="visible" @click.self="handleClose">
+  <div class="video-player-mask" v-if="visible" @click.self="handleClose" :class="{ 'vp-no-speed': isStudent && allowMultiple === '2' }">
     <div class="video-player-box">
       <div class="video-player-header">
         <div class="video-player-title">{{ title || '视频播放' }}</div>
@@ -45,6 +45,7 @@
  */
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
+import { getUserInfo } from '@/utils/auth'
 
 /** 阿里云播放器 License 配置 */
 const ALIPLAYER_LICENSE = {
@@ -88,17 +89,46 @@ export default {
     title: {
       type: String,
       default: '视频播放'
+    },
+
+    /**
+     * 是否允许倍速播放：1 允许，2 不允许
+     * @type {String}
+     * @default '2'
+     */
+    allowMultiple: {
+      type: String,
+      default: '1'
+    },
+
+    /**
+     * 是否允许快进：'1' 允许，'2' 不允许
+     * @type {String}
+     * @default '1'
+     */
+    allowFastForward: {
+      type: String,
+      default: '1'
     }
   },
 
   data() {
+    const userInfo = getUserInfo() || {}
     return {
+      /** 当前用户是否为学生角色，权限限制仅对学生生效 */
+      isStudent: userInfo.role === 'STUDENT',
       /** 是否初始化失败（source 为空或播放器创建异常时为 true） */
       initError: false,
       /** Aliplayer 播放器实例 */
       playerInstance: null,
       /** 播放器挂载的 DOM 容器 id，每个组件实例唯一 */
-      playerId: `aliplayer-${++playerIdCounter}`
+      playerId: `aliplayer-${++playerIdCounter}`,
+      /** 用于快进限制：记录用户已看到的最大播放时间（秒） */
+      _maxWatchedTime: 0,
+      /** 原生 video 元素引用，用于绑定快进拦截事件 */
+      _videoEl: null,
+      /** 清理函数：移除快进拦截相关的事件监听 */
+      _removeSeekGuard: null
     }
   },
 
@@ -128,7 +158,9 @@ export default {
       }
     }
   },
-
+mounted(){
+  console.log(this.allowMultiple,'allowMultiple')
+},
   methods: {
     /**
      * 初始化阿里云播放器：
@@ -138,6 +170,7 @@ export default {
      */
     async initPlayer() {
       this.initError = false
+      this._maxWatchedTime = 0
 
       if (!this.source) {
         this.initError = true
@@ -163,8 +196,7 @@ export default {
         config.license = ALIPLAYER_LICENSE
 
         this.playerInstance = new Aliplayer(config, (player) => {
-          console.log(config,'配置')
-          console.log('VideoPlayer: 播放器初始化完成')
+          this._attachSeekGuard()
         })
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
@@ -173,10 +205,56 @@ export default {
     },
 
     /**
+     * 附加快进拦截守卫：
+     * - 通过 timeupdate 记录已播放最大时间
+     * - 当 allowFastForward === 2 时，seeking 事件中阻止跳转到未播放区域
+     */
+    _attachSeekGuard() {
+      const waitForVideo = (attempts) => {
+        if (attempts > 40) return
+        const container = document.getElementById(this.playerId)
+        const videoEl = container && container.querySelector('video')
+        if (!videoEl) {
+          setTimeout(() => waitForVideo(attempts + 1), 100)
+          return
+        }
+        this._videoEl = videoEl
+
+        const onTimeUpdate = () => {
+          if (!videoEl.paused) {
+            this._maxWatchedTime = Math.max(this._maxWatchedTime, videoEl.currentTime)
+          }
+        }
+
+        const onSeeking = () => {
+          if (this.isStudent && this.allowFastForward === '2' && videoEl.currentTime > this._maxWatchedTime + 0.5) {
+            videoEl.currentTime = this._maxWatchedTime
+          }
+        }
+
+        videoEl.addEventListener('timeupdate', onTimeUpdate)
+        videoEl.addEventListener('seeking', onSeeking)
+
+        this._removeSeekGuard = () => {
+          videoEl.removeEventListener('timeupdate', onTimeUpdate)
+          videoEl.removeEventListener('seeking', onSeeking)
+        }
+      }
+      waitForVideo(0)
+    },
+
+    /**
      * 销毁播放器实例并清空容器 innerHTML，
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
+      if (this._removeSeekGuard) {
+        this._removeSeekGuard()
+        this._removeSeekGuard = null
+      }
+      this._videoEl = null
+      this._maxWatchedTime = 0
+
       if (this.playerInstance) {
         try {
           this.playerInstance.dispose()
@@ -308,5 +386,13 @@ export default {
 ::v-deep .prism-setting-audio,
 ::v-deep .prism-setting-quality {
   display: none !important;
+}
+
+/* allowMultiple === 2 时隐藏倍速控件 */
+.video-player-mask.vp-no-speed {
+  ::v-deep .prism-setting-speed,
+  ::v-deep .prism-speed-selector {
+    display: none !important;
+  }
 }
 </style>
