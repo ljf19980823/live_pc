@@ -173,7 +173,8 @@
             <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
             <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx" @click="handleResourceClick(item)">
               <div class="cdi-main">
-                <img src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                <img v-if="['3','4'].includes(item.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
+                <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                 <div class="cdi-info">
                   <div class="cdi-name">{{ item.title }}</div>
                   <div class="cdi-file-row">
@@ -250,6 +251,7 @@
                     @click="grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined">
                     <div class="cdi-main">
                       <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                      <img v-else-if="['3','4'].includes(grandchild.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
                       <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                       <div class="cdi-info">
                         <div class="cdi-name">{{ grandchild.title }}</div>
@@ -292,6 +294,7 @@
                   @click="child.type === 'resource' ? handleResourceClick(child) : child.type === 'live' ? enterLiveRoom(child) : undefined">
                   <div class="cdi-main">
                     <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                    <img v-else-if="['3','4'].includes(child.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
                     <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
                     <div class="cdi-info">
                       <div class="cdi-name">{{ child.title }}</div>
@@ -2550,6 +2553,10 @@ color: #333333;
 .cdi-actions ::v-deep .el-progress__text {
   font-size: 10px !important;
 }
+.cdi-actions ::v-deep .el-progress.is-success .el-progress__text {
+  font-size: 18px !important;
+  color: #67C23A !important;
+}
 .cdi-progress-wrap {
   width: 42px;
   height: 42px;
@@ -2983,5 +2990,6 @@ color: #333333;
 .quiz-btn-outline:hover {
   background: #e6f0ff;
 }
+
 
 </style>

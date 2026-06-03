@@ -521,7 +521,6 @@
                       @click="cell.currentMonth && selectScheduleDate(cell.dateStr)"
                     >
                       <span class="schedule-cal-day-num">{{ cell.isToday ? '今' : cell.day }}</span>
-                      <span v-if="cell.hasClass && cell.currentMonth" class="schedule-cal-dot"></span>
                     </div>
                   </div>
                 </div>
@@ -2684,20 +2683,22 @@ border: 1px solid #F3F4F8;
 .schedule-cal-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .schedule-cal-weekday {
   text-align: center;
-  font-size: 13px;
-  color: #999;
-  padding: 4px 0;
+  font-size: 12px;
+  color: #b0b5c0;
+  padding: 4px 0 6px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 /* 日期格子 */
 .schedule-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px 4px;
+  gap: 2px 0;
 }
 .schedule-cal-cell {
   position: relative;
@@ -2705,8 +2706,8 @@ border: 1px solid #F3F4F8;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  font-size: 14px;
+  height: 40px;
+  font-size: 13px;
   color: #333;
   cursor: pointer;
   user-select: none;
@@ -2714,23 +2715,25 @@ border: 1px solid #F3F4F8;
 .schedule-cal-cell::before {
   content: '';
   position: absolute;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   background: transparent;
-  transition: background 0.15s;
+  transition: background 0.18s;
   z-index: 0;
 }
 .schedule-cal-day-num {
   position: relative;
   z-index: 1;
   line-height: 1;
+  margin-top: -4px;
 }
 .schedule-cal-cell:hover:not(.is-other-month)::before {
-  background: #EEF2FF;
+  background: #F0F4FF;
 }
 .schedule-cal-cell.is-other-month {
-  color: #ccc;
+  color: #d0d0d0;
   cursor: default;
 }
 .schedule-cal-cell.is-today::before {
@@ -2738,35 +2741,47 @@ border: 1px solid #F3F4F8;
 }
 .schedule-cal-cell.is-today {
   color: #fff;
-  font-weight: bold;
+  font-weight: 600;
 }
 .schedule-cal-cell.is-today:hover::before {
-  background: #0049FF;
+  background: #1a5cff;
 }
 .schedule-cal-cell.is-selected:not(.is-today)::before {
-  background: #EEF2FF;
+  background: #E8EEFF;
 }
 .schedule-cal-cell.is-selected:not(.is-today) {
   color: #0049FF;
-  font-weight: bold;
-}
-.schedule-cal-cell.has-class:not(.is-today)::before {
-  background: #F0F0F0;
+  font-weight: 600;
 }
 .schedule-cal-cell.has-class.is-selected:not(.is-today)::before {
-  background: #EEF2FF;
+  background: #E8EEFF;
 }
-.schedule-cal-dot {
+.schedule-cal-cell.has-class.is-today::after {
+  content: '';
   position: absolute;
-  bottom: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #0049FF;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.75);
   z-index: 1;
 }
-.schedule-cal-cell.is-today .schedule-cal-dot {
-  background: #fff;
+.schedule-cal-cell.has-class:not(.is-today)::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: #4E80EE;
+  z-index: 1;
+}
+.schedule-cal-cell.has-class.is-selected:not(.is-today)::after {
+  background: #0049FF;
 }
 
 /* 课程列表 */

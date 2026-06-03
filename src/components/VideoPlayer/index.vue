@@ -302,4 +302,11 @@ export default {
 ::v-deep .prism-player .prism-info-display{
   height: auto!important;
 }
+
+/* 设置面板只保留倍速，隐藏字幕/音轨/画质 */
+::v-deep .prism-setting-cc,
+::v-deep .prism-setting-audio,
+::v-deep .prism-setting-quality {
+  display: none !important;
+}
 </style>
