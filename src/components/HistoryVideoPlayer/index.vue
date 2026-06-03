@@ -4,6 +4,17 @@
       <!-- 标题栏 -->
       <div class="hrp-header">
         <div class="hrp-title">{{ title || '历史课堂回放' }}</div>
+        <button
+          v-if="allowDownload === '1'"
+          class="hrp-download"
+          @click="handleDownload"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v13M7 11l5 5 5-5"/>
+            <path d="M4 20h16"/>
+          </svg>
+          下载
+        </button>
         <img
           src="@/assets/images/login/close.png"
           class="hrp-close"
@@ -115,11 +126,19 @@ export default {
       default: ''
     },
 
+    /**
+     * 是否允许下载：'1' 允许，'2' 不允许
+     * @type {String}
+     * @default '2'
+     */
+    allowDownload: {
+      type: String,
+      default: '2'
+    }
   },
 
   data() {
     const uid = ++idCounter
-    const userInfo = getUserInfo() || {}
     return {
       mainPlayerId: `hrp-main-${uid}`,
       teacherPlayerId: `hrp-teacher-${uid}`,
@@ -149,7 +168,6 @@ export default {
       }
     }
   },
-
   methods: {
     // ─────────────── 播放器初始化 ───────────────
 
@@ -394,6 +412,31 @@ export default {
       this.teacherPlayer = null
     },
 
+    /** 下载主视频 */
+    async handleDownload() {
+      const url = this.mainSource
+      if (!url) return
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = this.title || '课堂回放'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = this.title || '课堂回放'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
+    },
+
     handleClose() {
       let percent = 0
       try {
@@ -463,6 +506,27 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+
+.hrp-download {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
 }
 
 .hrp-close {

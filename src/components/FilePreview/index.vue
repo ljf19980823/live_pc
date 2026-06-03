@@ -298,10 +298,24 @@ export default {
       this.$emit('close')
     },
 
-    /** 不支持预览时的兜底操作：在新标签页中直接打开文件地址 */
-    handleDownload() {
-      if (this.file && this.file.path) {
-        window.open(this.file.path, '_blank')
+    /** 不支持预览时的兜底操作：将文件下载到本地 */
+    async handleDownload() {
+      if (!this.file || !this.file.path) return
+      const url = this.file.path
+      const filename = this.file.name || url.split('/').pop() || '文件'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        window.open(url, '_blank')
       }
     }
   },

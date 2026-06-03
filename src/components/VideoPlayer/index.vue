@@ -3,6 +3,17 @@
     <div class="video-player-box">
       <div class="video-player-header">
         <div class="video-player-title">{{ title || '视频播放' }}</div>
+        <button
+          v-if="allowDownload === '1'"
+          class="video-player-download"
+          @click="handleDownload"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v13M7 11l5 5 5-5"/>
+            <path d="M4 20h16"/>
+          </svg>
+          下载
+        </button>
         <img
           src="@/assets/images/login/close.png"
           class="video-player-close"
@@ -109,6 +120,16 @@ export default {
     allowFastForward: {
       type: String,
       default: '1'
+    },
+
+    /**
+     * 是否允许下载：'1' 允许，'2' 不允许
+     * @type {String}
+     * @default '2'
+     */
+    allowDownload: {
+      type: String,
+      default: '2'
     }
   },
 
@@ -122,13 +143,7 @@ export default {
       /** Aliplayer 播放器实例 */
       playerInstance: null,
       /** 播放器挂载的 DOM 容器 id，每个组件实例唯一 */
-      playerId: `aliplayer-${++playerIdCounter}`,
-      /** 用于快进限制：记录用户已看到的最大播放时间（秒） */
-      _maxWatchedTime: 0,
-      /** 原生 video 元素引用，用于绑定快进拦截事件 */
-      _videoEl: null,
-      /** 清理函数：移除快进拦截相关的事件监听 */
-      _removeSeekGuard: null
+      playerId: `aliplayer-${++playerIdCounter}`
     }
   },
 
@@ -151,16 +166,12 @@ export default {
     /** source 变更时（弹窗已打开状态）重新初始化播放器 */
     source(val) {
       if (this.visible && val) {
-        console.log(val,'视频地址')
         this.$nextTick(() => {
           this.initPlayer()
         })
       }
     }
   },
-mounted(){
-  console.log(this.allowMultiple,'allowMultiple')
-},
   methods: {
     /**
      * 初始化阿里云播放器：
@@ -170,7 +181,6 @@ mounted(){
      */
     async initPlayer() {
       this.initError = false
-      this._maxWatchedTime = 0
 
       if (!this.source) {
         this.initError = true
@@ -190,14 +200,12 @@ mounted(){
           playsinline: true,
           preload: true,
           controlBarVisibility: 'hover',
-          useH5Prism: true
+          useH5Prism: true,
+          disableSeek: this.isStudent && this.allowFastForward === '2',
+          license: ALIPLAYER_LICENSE
         }
 
-        config.license = ALIPLAYER_LICENSE
-
-        this.playerInstance = new Aliplayer(config, (player) => {
-          this._attachSeekGuard()
-        })
+        this.playerInstance = new Aliplayer(config)
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
         this.initError = true
@@ -205,56 +213,10 @@ mounted(){
     },
 
     /**
-     * 附加快进拦截守卫：
-     * - 通过 timeupdate 记录已播放最大时间
-     * - 当 allowFastForward === 2 时，seeking 事件中阻止跳转到未播放区域
-     */
-    _attachSeekGuard() {
-      const waitForVideo = (attempts) => {
-        if (attempts > 40) return
-        const container = document.getElementById(this.playerId)
-        const videoEl = container && container.querySelector('video')
-        if (!videoEl) {
-          setTimeout(() => waitForVideo(attempts + 1), 100)
-          return
-        }
-        this._videoEl = videoEl
-
-        const onTimeUpdate = () => {
-          if (!videoEl.paused) {
-            this._maxWatchedTime = Math.max(this._maxWatchedTime, videoEl.currentTime)
-          }
-        }
-
-        const onSeeking = () => {
-          if (this.isStudent && this.allowFastForward === '2' && videoEl.currentTime > this._maxWatchedTime + 0.5) {
-            videoEl.currentTime = this._maxWatchedTime
-          }
-        }
-
-        videoEl.addEventListener('timeupdate', onTimeUpdate)
-        videoEl.addEventListener('seeking', onSeeking)
-
-        this._removeSeekGuard = () => {
-          videoEl.removeEventListener('timeupdate', onTimeUpdate)
-          videoEl.removeEventListener('seeking', onSeeking)
-        }
-      }
-      waitForVideo(0)
-    },
-
-    /**
      * 销毁播放器实例并清空容器 innerHTML，
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
-      if (this._removeSeekGuard) {
-        this._removeSeekGuard()
-        this._removeSeekGuard = null
-      }
-      this._videoEl = null
-      this._maxWatchedTime = 0
-
       if (this.playerInstance) {
         try {
           this.playerInstance.dispose()
@@ -265,6 +227,31 @@ mounted(){
       }
       const el = document.getElementById(this.playerId)
       if (el) el.innerHTML = ''
+    },
+
+    /** 下载当前视频 */
+    async handleDownload() {
+      const url = this.source
+      if (!url) return
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = this.title || '视频'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = this.title || '视频'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     },
 
     /** 关闭播放器，向父组件抛出 close 事件，携带当前播放进度百分比（0-100） */
@@ -335,6 +322,27 @@ mounted(){
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+
+.video-player-download {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
 }
 
 .video-player-close {

@@ -657,6 +657,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
 
@@ -724,6 +725,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerAllowDownload: '2',
 
       showSchedule: false,
       scheduleYear: new Date().getFullYear(),
@@ -980,6 +982,7 @@ export default {
       console.log(this.playerSource)
       console.log(this.playerTeacherSource)
       this.playerTitle = item.name || '视频回放'
+      this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
     },
 

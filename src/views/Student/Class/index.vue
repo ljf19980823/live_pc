@@ -523,6 +523,7 @@
       :title="currentResourceTitle"
       :allow-multiple="currentAllowMultiple"
       :allow-fast-forward="currentAllowFastForward"
+      :allow-download="currentAllowDownload"
       @close="closeVideoDialog"
     />
 
@@ -532,6 +533,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :allow-download="currentAllowDownload"
       @close="closeHistoryPlayer"
     />
 
@@ -550,6 +552,9 @@
         autoplay
         style="width:100%;margin:16px 0;display:block;"
       ></audio>
+      <div v-if="currentAllowDownload === '1'" style="text-align:right;margin-top:4px;">
+        <el-button type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
+      </div>
     </el-dialog>
 
     <!-- 图片预览弹窗 -->
@@ -566,6 +571,9 @@
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
+      <div v-if="currentAllowDownload === '1'" style="text-align:right;margin-top:12px;">
+        <el-button type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
+      </div>
     </el-dialog>
 
 
@@ -1380,6 +1388,7 @@ export default {
       }
 
       if (videoTypes.includes(item.nodeType)) {
+         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentResourceTitle = item.title || '视频播放'
         this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
@@ -1389,9 +1398,11 @@ export default {
         this.showVideoDialog = true
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
+         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentImageUrl = url
         this.showImageDialog = true
       } else if (audioTypes.includes(item.nodeType)) {
+         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentResourceTitle = item.title || '音频播放'
         this.currentAudioUrl = url
         this.showAudioDialog = true
@@ -1436,9 +1447,57 @@ export default {
       this.showAudioDialog = false
       this.currentAudioUrl = ''
     },
+    async handleAudioDownload() {
+      const url = this.currentAudioUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '音频'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
+    },
     closeImageDialog() {
       this.showImageDialog = false
       this.currentImageUrl = ''
+    },
+    async handleImageDownload() {
+      const url = this.currentImageUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '图片'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     },
     handleBackToCourseList() {
       this.rightView = 'default'
@@ -1509,8 +1568,8 @@ export default {
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
           filePath: res.fileList && res.fileList.length !== 0 ? res.fileList[0].filePath : res.filePath,
-          allowMultiple: String(node.allowMultiple || '1'),
-          allowFastForward: String(node.allowFastForward || '1'),
+          allowMultiple:node.type=='3'?'1': String(node.allowMultiple || '1'),
+          allowFastForward:node.type=='3'?'1':  String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2')
         }
       }
@@ -1579,6 +1638,7 @@ export default {
       this.playerTitle = item.name || item.title || '视频回放'
       this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
       this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.currentPlayingItem = item
       console.log(this.currentAllowMultiple,'currentAllowMultiple')
       this.playerVisible = true
@@ -2535,6 +2595,7 @@ color: #333333;
 .cdi-file-meta {
   font-size: 13px;
   color: #999999;
+  margin-right: 5px;
 }
 
 /* 徽标 */

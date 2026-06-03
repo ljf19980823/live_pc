@@ -611,6 +611,7 @@
       :visible="showVideoDialog"
       :source="currentVideoUrl"
       :title="currentResourceTitle"
+      :allow-download="playerAllowDownload"
       @close="closeVideoDialog"
     />
 
@@ -620,6 +621,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
 
@@ -913,6 +915,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerAllowDownload: '2',
       showVideoDialog: false,
       currentVideoUrl: '',
       showAudioDialog: false,
@@ -1625,6 +1628,7 @@ export default {
       const audioTypes = ['6']
       if (videoTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '视频播放'
+        this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         console.log(url,'视频地址')
         this.currentVideoUrl = url
         this.showVideoDialog = true
@@ -1745,6 +1749,7 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = item.name || item.title || '视频回放'
+      this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
     },
     async enterLiveRoom(item) {
