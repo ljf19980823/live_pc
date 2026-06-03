@@ -61,7 +61,7 @@
               </div>
               <div class="utc-info">
                 <div class="utc-name">{{ userInfo.realName || userInfo.userName }}</div>
-                <div class="utc-role">教师 · {{ userInfo.userName }}</div>
+                <div class="utc-role">学生 · {{ userInfo.userName }}</div>
               </div>
             </div>
             <div class="utc-right">
@@ -94,7 +94,7 @@
               <label>手机号码</label>
               <div class="phone-row">
                 <el-input :value="'+86 ' + form.phone" disabled />
-                <span class="inline-link" @click="openVerifyPhone">修改</span>
+                <!-- <span class="inline-link" @click="openVerifyPhone">修改</span> -->
               </div>
             </div>
 

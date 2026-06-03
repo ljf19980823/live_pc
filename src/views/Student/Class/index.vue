@@ -1495,9 +1495,31 @@ export default {
         }
       }
     },
+    _saveExpandedState(items, map = {}) {
+      if (!items) return map
+      items.forEach(item => {
+        if (item.type === 'group') {
+          map[item.id] = item.expanded || false
+          if (item.children) this._saveExpandedState(item.children, map)
+        }
+      })
+      return map
+    },
+    _restoreExpandedState(items, map) {
+      if (!items || !map) return
+      items.forEach(item => {
+        if (item.type === 'group') {
+          if (map[item.id] !== undefined) {
+            this.$set(item, 'expanded', map[item.id])
+          }
+          if (item.children) this._restoreExpandedState(item.children, map)
+        }
+      })
+    },
     async fetchCourseDetail(courseId) {
       if (!courseId) return
       this.courseDetailLoading = true
+      const expandedMap = this._saveExpandedState(this.courseDetail.items || [])
       try {
         const params = { courseId }
         if (this.selectedClassId) params.classId = this.selectedClassId
@@ -1507,6 +1529,7 @@ export default {
           taskCount: data.totalLessons || 0,
           items: (data.detailTree || []).map(node => this._mapDetailNode(node))
         }
+        this._restoreExpandedState(this.courseDetail.items, expandedMap)
       } catch (e) {
         console.error(e)
         this.courseDetail = { taskCount: 0, items: [] }

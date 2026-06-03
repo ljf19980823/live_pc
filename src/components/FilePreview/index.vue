@@ -15,7 +15,10 @@
           <div class="file-preview-error-text">该文件类型暂不支持在线预览</div>
           <div class="file-preview-error-btn" @click="handleDownload">点击下载查看</div>
         </div>
-        <div v-else :id="editorContainerId" class="file-preview-editor"></div>
+        <div v-else class="file-preview-editor-wrap">
+          <div :id="editorContainerId" class="file-preview-editor"></div>
+          <div class="toolbar-right-mask"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -233,7 +236,10 @@ export default {
           lang: 'zh-CN',
           customization: {
             embedded: {
-              toolbarDocked: 'hidden'   // 嵌入模式下隐藏浮动工具栏
+              toolbarDocked: 'hidden',  // 嵌入模式下隐藏浮动工具栏
+              saveUrl: '',              // 隐藏右侧"保存"按钮
+              shareUrl: '',             // 隐藏右侧"分享"按钮
+              embedUrl: ''              // 隐藏右侧"嵌入"按钮
             },
             logo: {
               // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
@@ -346,11 +352,30 @@ export default {
   flex: 1;
   height: 0;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-preview-editor-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .file-preview-editor {
   width: 100%;
   height: 100%;
+}
+
+.toolbar-right-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 42px;
+  background: #F7F7F7;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .file-preview-error {
