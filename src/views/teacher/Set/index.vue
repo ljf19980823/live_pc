@@ -335,6 +335,18 @@
                       </div>
                     </div>
                     <div class="schedule-timeline-name">{{ course.name }}</div>
+                    <div class="schedule-timeline-actions">
+                      <button
+                        v-if="course.status === '直播中' || course.status === '未开始'"
+                        class="schedule-action-btn schedule-action-enter"
+                        @click="enterLiveRoomFromSchedule(course)"
+                      >进入直播间</button>
+                      <button
+                        v-if="course.status === '已结束已开播' || course.status === '已结束未开播'"
+                        class="schedule-action-btn schedule-action-replay"
+                        @click="openVideoFromSchedule(course)"
+                      >查看回放</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -575,11 +587,27 @@
           <input ref="avatarFileInput" type="file" accept="image/*" style="display:none" @change="onAvatarFileChange" />
         </div>
       </DialogCustome>
+
+    <!-- 直播间 -->
+    <div v-if="showLiveIframe" class="live-iframe-overlay">
+      <iframe :src="liveUrl" style="width: 100%; height: 100vh; background: #1E1E1E;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
+    </div>
+
+    <!-- 历史课堂回放 -->
+    <history-video-player
+      :visible="playerVisible"
+      :main-source="playerSource"
+      :teacher-source="playerTeacherSource"
+      :title="playerTitle"
+      :allow-download="currentAllowDownload"
+      @close="playerVisible = false"
+    />
   </div>
 </template>
 
 <script>
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
+import { getToken, getUserInfo } from '@/utils/auth'
 import Settings from './components/Settings.vue'
 import CameraCheck from './components/CameraCheck.vue'
 import MicCheck from './components/MicCheck.vue'
@@ -663,7 +691,17 @@ export default {
       weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
       monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
       scheduleApiData: [],
-      scheduleLoading: false
+      scheduleLoading: false,
+      showLiveIframe: false,
+      liveUrl: '',
+      playerVisible: false,
+      playerSource: '',
+      playerTeacherSource: '',
+      playerTitle: '',
+      currentAllowMultiple: '2',
+      currentAllowFastForward: '2',
+      currentAllowDownload: '2',
+      currentPlayingItem: null
     }
   },
   computed: {
@@ -687,6 +725,13 @@ export default {
           name: live.name || '',
           startTime: live.startTime ? live.startTime.substring(11, 16) : '',
           endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+          fullStartTime: live.startTime || '',
+          liveId: live.liveId || live.id,
+          liveLessonId: live.liveLessonId || '',
+          fileList: live.fileList || [],
+          allowMultiple: live.allowMultiple,
+          allowFastForward: live.allowFastForward,
+          allowDownload: live.allowDownload,
           status: live.status,
           isStart: live.isStart,
           isFinish: live.isFinish
@@ -758,6 +803,13 @@ export default {
       }
     }
 
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'CLASSROOM_EXIT') {
+        this.showLiveIframe = false
+      } else if (event.data?.type === 'MINIMIZE_WINDOW') {
+        window.electronAPI && window.electronAPI.minimizeWindow()
+      }
+    })
     this.fetchUserInfo()
     this.loadDeviceCheckStatus()
   },
@@ -1075,6 +1127,52 @@ export default {
       } else {
         this.scheduleMonth += 1
       }
+    },
+    async enterLiveRoomFromSchedule(course) {
+      const now = Date.now()
+      const startTime = course.fullStartTime ? new Date(course.fullStartTime.replace(/-/g, '/')).getTime() : null
+      if (!startTime || now < startTime - 30 * 60 * 1000) {
+        this.$message.warning('时间还未到，请耐心等候')
+        return
+      }
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+      const { userId, realName } = getUserInfo()
+      const token = getToken()
+      const liveId = course.liveId
+      let liveBaseUrl = 'https://live.fjlsjy123.com'
+      if (process.env.NODE_ENV === 'development') {
+        liveBaseUrl = 'http://localhost:8000'
+      }
+      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      this.showLiveIframe = true
+    },
+    openVideoFromSchedule(course) {
+      if (!course.fileList || course.fileList.length === 0 || course.status === '已结束未开播') {
+        this.$message.warning('暂无回放视频')
+        return
+      }
+      const fileList = course.fileList
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
+      this.playerSource = mainFile ? mainFile.filePath || '' : ''
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.playerTitle = course.name || '视频回放'
+      this.currentAllowMultiple = course.allowMultiple != null ? String(course.allowMultiple) : '2'
+      this.currentAllowFastForward = course.allowFastForward != null ? String(course.allowFastForward) : '2'
+      this.currentAllowDownload = course.allowDownload != null ? String(course.allowDownload) : '2'
+      this.currentPlayingItem = course
+      this.playerVisible = true
     }
   },
   beforeDestroy() {
@@ -2238,6 +2336,42 @@ color: #71A0FF;
   font-size: 14px;
   color: #333;
   font-weight: 400;
+}
+
+.schedule-timeline-actions {
+  margin-top: 8px;
+}
+.schedule-action-btn {
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: opacity 0.2s;
+  &:hover { opacity: 0.85; }
+  &:active { opacity: 0.7; }
+}
+.schedule-action-enter {
+  background: #0049FF;
+  color: #fff;
+}
+.schedule-action-replay {
+  background: #fff;
+  color: #0049FF;
+  border: 1px solid #0049FF;
+}
+
+// ─── 直播 iframe 全屏覆盖 ─────────────────────────────────
+.live-iframe-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  background: #1E1E1E;
 }
 
 .schedule-empty {
