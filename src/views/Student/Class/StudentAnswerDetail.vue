@@ -121,18 +121,18 @@
             <div class="sad__analysis-correct-row">
               <span class="sad__analysis-correct-label">{{ q.type === 'essay' ? '参考答案' : '正确答案' }}：</span>
               <!-- 选择/判断：字母 -->
-              <span v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__analysis-correct-val">
+              <!-- <span v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__analysis-correct-val">
                 {{ q.correctAnswerRaw || '-' }}
-              </span>
+              </span> -->
               <!-- 填空 -->
-              <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
+              <!-- <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.blanks[0].correctAnswer" class="sad__rich-img" />
                 <span v-else v-html="q.blanks[0].correctAnswer || '-'"></span>
-              </span>
+              </span> -->
               <!-- 简答/主观 -->
-              <span v-else-if="q.type === 'essay'" class="sad__analysis-correct-val">
-                <img v-if="q.answerIsImg" :src="q.correctAnswer" class="sad__rich-img" />
-                <span v-else v-html="q.correctAnswer || '-'"></span>
+              <span  class="sad__analysis-correct-val">
+                <img v-if="q.answerIsImg" :src="q.answer" class="sad__rich-img" />
+                <span v-else v-html="q.answer || '-'"></span>
               </span>
             </div>
             <!-- 解析文字 -->
@@ -258,6 +258,7 @@ export default {
           analysis: item.analysis || '',
           analysisIsImg: item.analysisIsImg === '1',
           answerIsImg: item.answerIsImg === '1',
+          answer: item.answer || '',
           material: item.material || ''
         }
         if (type === 'single' || type === 'multi' || type === 'judge') {
@@ -271,17 +272,17 @@ export default {
             q.options = [{ key: 'A', text: '正确', isImg: false }, { key: 'B', text: '错误', isImg: false }]
           }
           q.studentAnswer = this.parseAnswer(item.studentAnswer)
-          q.correctAnswer = this.parseAnswer(item.correctAnswer || item.answer)
-          q.correctAnswerRaw = item.correctAnswer || item.answer || ''
+          q.correctAnswer = this.parseAnswer( item.answer|| item.correctAnswer)
+          q.correctAnswerRaw = item.answer || item.correctAnswer || ''
         } else if (type === 'fill') {
           q.blanks = [{
             studentAnswer: item.studentAnswer || '',
-            correctAnswer: item.correctAnswer || item.answer || '',
+            correctAnswer: item.answer || item.correctAnswer || '',
             isCorrect
           }]
         } else {
           q.studentAnswer = item.studentAnswer || ''
-          q.correctAnswer = item.correctAnswer || item.answer || ''
+          q.correctAnswer = item.answer || item.correctAnswer || ''
         }
         return q
       })

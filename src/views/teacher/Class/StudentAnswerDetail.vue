@@ -121,18 +121,18 @@
             <div class="sad__analysis-correct-row">
               <span class="sad__analysis-correct-label">{{ q.type === 'essay' ? '参考答案' : '正确答案' }}：</span>
               <!-- 选择/判断：字母 -->
-              <span v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__analysis-correct-val">
+              <!-- <span v-if="q.type === 'single' || q.type === 'multi' || q.type === 'judge'" class="sad__analysis-correct-val">
                 {{ q.correctAnswerRaw || '-' }}
-              </span>
+              </span> -->
               <!-- 填空 -->
-              <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
+              <!-- <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.blanks[0].correctAnswer" class="sad__rich-img" />
                 <span v-else v-html="q.blanks[0].correctAnswer || '-'"></span>
-              </span>
+              </span> -->
               <!-- 简答/主观 -->
-              <span v-else-if="q.type === 'essay'" class="sad__analysis-correct-val">
-                <img v-if="q.answerIsImg" :src="q.correctAnswer" class="sad__rich-img" />
-                <span v-else v-html="q.correctAnswer || '-'"></span>
+              <span  class="sad__analysis-correct-val">
+                <img v-if="q.answerIsImg" :src="q.answer" class="sad__rich-img" />
+                <span v-else v-html="q.answer || '-'"></span>
               </span>
             </div>
             <!-- 解析文字 -->
@@ -259,6 +259,7 @@ export default {
           analysis: item.analysis || '',
           analysisIsImg: item.analysisIsImg === '1',
           answerIsImg: item.answerIsImg === '1',
+          answer:item.answer || '',
           material: item.material || ''
         }
         if (type === 'single' || type === 'multi' || type === 'judge') {

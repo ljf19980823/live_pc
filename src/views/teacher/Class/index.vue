@@ -1063,6 +1063,7 @@ export default {
   },
   activated() {
     const currentToken = this.$store.state.user.token
+    
     if (currentToken !== this._sessionToken) {
       this._sessionToken = currentToken
       this.fetchClassList()
@@ -1192,7 +1193,8 @@ export default {
       }
     },
     async fetchStudentList(keyword) {
-      if (!this.selectedClassId) return
+       let isTeacher = getUserInfo().role === 'TEACHER'
+      if (!this.selectedClassId || !isTeacher) return
       this.studentListLoading = true
       try {
         const params = {}
