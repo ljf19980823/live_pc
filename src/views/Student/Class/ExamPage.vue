@@ -110,7 +110,6 @@
               v-model="textAnswers[currentQuestion.id]"
               resize="none"
             />
-            <button class="exam-save-btn" @click="saveTextAnswer(currentQuestion.id)">保存答案</button>
           </div>
         </div>
 
@@ -433,6 +432,13 @@ export default {
       if (this.currentIndex > 0) this.currentIndex -= 1
     },
     nextQuestion() {
+      const q = this.currentQuestion
+      if (q && this.isTextType(q.type)) {
+        const val = (this.textAnswers[q.id] || '').trim()
+        if (val) {
+          this.$set(this.textAnswers, q.id, val)
+        }
+      }
       if (this.currentIndex < this.questions.length - 1) this.currentIndex += 1
     },
     goToQuestion(idx) {
@@ -785,20 +791,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-.exam-save-btn {
-  align-self: flex-start;
-  padding: 8px 20px;
-  background: #0049FF;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.exam-save-btn:hover {
-  background: #003acc;
 }
 
 /* Navigation */
