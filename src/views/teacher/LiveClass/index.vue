@@ -549,14 +549,14 @@
                             class="schedule-timeline-status"
                             :class="{
                               'status-living': course.status === '直播中',
-                              'status-finished': course.status === '已结束' ||  course.status === '已开播',
+                              'status-finished': course.status === '已结束已开播' ||  course.status === '已结束未开播',
                               'status-soon': course.status === '未开始',
                               'status-not-broadcast': course.status === '未开播',
                               'status-unknown': course.status === '未知'
                             }"
                           >
                             <i class="status-dot"></i>
-                            <span>{{ course.status }}</span>
+                            <span>{{ course.status === '已结束已开播' ||  course.status === '已结束未开播'?'已结束':course.status}}</span>
                           </div>
                         </div>
                         <div class="schedule-timeline-name">{{ course.name }}</div>
@@ -567,7 +567,7 @@
                             @click="enterLiveRoomFromSchedule(course)"
                           >进入直播间</button>
                           <button
-                            v-if="course.status === '已结束' || course.status === '已开播'"
+                            v-if="course.status === '已结束已开播' ||  course.status === '已结束未开播'"
                             class="schedule-action-btn schedule-action-replay"
                             @click="openVideoFromSchedule(course)"
                           >查看回放</button>
@@ -666,6 +666,7 @@
 
 <script>
 import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
@@ -1094,7 +1095,17 @@ export default {
       const token = getToken();
       const liveId = item.id;
       const roleNumber = role === "STUDENT" ? 0 : 1;
-      
+
+      if (role === "STUDENT") {
+        try {
+          const res = await checkTempStudentLiveRecord(liveId)
+          if (res && res.data === true) {
+            this.$message.warning('超过直播观看次数上限，请先转为正式学员')
+            return
+          }
+        } catch (_) {}
+      }
+
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
@@ -1160,12 +1171,22 @@ export default {
       const token = getToken();
       const courseid = this.selectedCourseItem.id;
       const {userId,realName,userName,role}=getUserInfo();
-      
+      const roleNumber = role === "STUDENT" ? 0 : 1;
+      if (role === "STUDENT") {
+        try {
+          const res = await checkTempStudentLiveRecord(courseid)
+          if (res && res.data === true) {
+            this.$message.warning('超过直播观看次数上限，请先转为正式学员')
+            return
+          }
+        } catch (_) {}
+      }
+
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?userid=${userId}&username=${userName}&courseid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
      this.activeTab = 'liveui'
     },
@@ -1390,7 +1411,7 @@ export default {
     },
 
     openVideoFromSchedule(course) {
-      if (!course.fileList || course.fileList.length === 0) {
+      if (!course.fileList || course.fileList.length === 0 ||course.status=='已结束未开播' ) {
         this.$message.warning('暂无回放视频')
         return
       }

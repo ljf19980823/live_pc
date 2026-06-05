@@ -187,14 +187,14 @@
                         class="schedule-timeline-status"
                         :class="{
                           'status-living': course.status === '直播中',
-                          'status-finished': course.status === '已结束',
+                          'status-finished':  course.status === '已结束已开播' ||  course.status === '已结束未开播',
                           'status-soon': course.status === '未开始',
                           'status-not-broadcast': course.status === '未开播',
                           'status-unknown': course.status === '未知'
                         }"
                       >
                         <i class="status-dot"></i>
-                        <span>{{ course.status }}</span>
+                        <span>{{ course.status === '已结束已开播' ||  course.status === '已结束未开播'?'已结束':course.status}}</span>
                       </div>
                     </div>
                     <div class="schedule-timeline-name">{{ course.name }}</div>

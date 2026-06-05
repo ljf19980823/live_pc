@@ -1,4 +1,4 @@
-import { get } from '@/utils/request'
+import { get, post } from '@/utils/request'
 
 /**
  * 学生端接口
@@ -9,3 +9,6 @@ export const getStudentNoticeList = () => get('/edu/notice/information', { type:
 
 // 获取错题练习题目列表
 export const getErrorExercises = (recordId) => get(`/edu/after/quiz/errorExercises/${recordId}`)
+
+// 校验临时学生直播观看次数
+export const checkTempStudentLiveRecord = (liveId) => post('/edu/sso/checkTempStudentLiveRecord', null, { params: { liveId } })

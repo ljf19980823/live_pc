@@ -141,7 +141,7 @@
                   <div class="cdi-name">{{ item.title }}</div>
                   <div class="cdi-status-row">
                     <template v-if="item.isFinish == 1">
-                      <div class="cdi-status-text">{{ item.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
+                      <div class="cdi-status-text">已结束</div>
                       <img v-if="item.isRecent && item.liveStatus !== '未开播'" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                     </template>
                     <template v-else-if="item.liveStatus == '直播中'">
@@ -257,7 +257,7 @@
                         <div class="cdi-name">{{ grandchild.title }}</div>
                         <div v-if="grandchild.type === 'live'" class="cdi-status-row">
                           <template v-if="grandchild.isFinish == 1">
-                            <div class="cdi-status-text">{{ grandchild.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
+                            <div class="cdi-status-text">已结束</div>
                           </template>
                           <template v-else-if="grandchild.liveStatus == '直播中'">
                             <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.liveMin }}</span> </div>
@@ -300,7 +300,7 @@
                       <div class="cdi-name">{{ child.title }}</div>
                       <div v-if="child.type === 'live'" class="cdi-status-row">
                         <template v-if="child.isFinish == 1">
-                          <div class="cdi-status-text">{{ child.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
+                          <div class="cdi-status-text">已结束</div>
                         </template>
                         <template v-else-if="child.liveStatus == '直播中'">
                           <div class="cdi-status-text">已直播 <span class="yzb_text">{{ child.liveMin }}</span> </div>
@@ -787,7 +787,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList } from '@/api'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'
@@ -1645,10 +1645,16 @@ export default {
     },
     async enterLiveRoom(item) {
       console.log(item)
-      if (item.isFinish == 1 && item.liveStatus !== '未开播') {
+      if (item.isFinish == 1 && item.liveStatus == '已结束已开播') {
         this.openVideoPlayer(item, true)
         return
       }
+      if (item.isFinish == 1 && item.liveStatus == '已结束未开播') {
+        this.$message.warning('该课程暂无回放地址')
+        return
+      }
+
+        console.log(2222,'halo')
       const now = Date.now()
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
       if (!startTime || now < startTime - 30 * 60 * 1000) {
@@ -1681,6 +1687,17 @@ export default {
       const token = getToken()
       const liveId = item.liveId
       const roleNumber = role === 'STUDENT' ? 0 : 1
+    console.log(roleNumber,'adadwadwa')
+      if (role === 'STUDENT') {
+        try {
+          const res = await checkTempStudentLiveRecord(liveId)
+          if (res === true || res?.data === true) {
+            this.$message.warning('超过直播观看次数上限，请先转为正式学员')
+            return
+          }
+        } catch (_) {}
+      }
+
       let liveBaseUrl = 'https://live.fjlsjy123.com'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
