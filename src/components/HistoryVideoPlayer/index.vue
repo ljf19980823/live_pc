@@ -5,6 +5,18 @@
       <div class="hrp-header">
         <div class="hrp-title">{{ title || '历史课堂回放' }}</div>
         <button
+          v-if="isStudent && fromTask"
+          class="hrp-collect"
+          :class="{ 'hrp-collect--active': isCollected }"
+          :disabled="collecting"
+          @click="handleCollect"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" :fill="isCollected ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          {{ isCollected ? '已收藏' : '收藏' }}
+        </button>
+        <button
           v-if="allowDownload === '1'"
           class="hrp-download"
           @click="handleDownload"
@@ -89,6 +101,8 @@
  */
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
+import { getUserInfo } from '@/utils/auth'
+import { collectToggle } from '@/api'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -134,12 +148,34 @@ export default {
     allowDownload: {
       type: String,
       default: '2'
+    },
+
+    /**
+     * 是否从"学习任务"入口打开，true 时才对学生显示收藏按钮
+     * @type {Boolean}
+     * @default false
+     */
+    fromTask: {
+      type: Boolean,
+      default: false
+    },
+
+    /**
+     * 收藏接口所需参数 { courseId, lessonId, historyLessonId?, type }
+     * @type {Object}
+     * @default {}
+     */
+    collectParams: {
+      type: Object,
+      default: () => ({})
     }
   },
 
   data() {
     const uid = ++idCounter
+    const userInfo = getUserInfo() || {}
     return {
+      isStudent: userInfo.role === 'STUDENT',
       mainPlayerId: `hrp-main-${uid}`,
       teacherPlayerId: `hrp-teacher-${uid}`,
       mainPlayer: null,
@@ -150,13 +186,16 @@ export default {
       syncTimer: null,
       isSyncing: false,
       isFullscreen: false,
-      _onFsChange: null
+      _onFsChange: null,
+      isCollected: false,
+      collecting: false
     }
   },
 
   watch: {
     visible(val) {
       if (val) {
+        this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.$nextTick(() => this.initPlayers())
       } else {
         this.destroyPlayers()
@@ -412,6 +451,23 @@ export default {
       this.teacherPlayer = null
     },
 
+    /** 收藏/取消收藏 */
+    async handleCollect() {
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.collectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        this.$emit('collect-change', this.isCollected)
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
+      }
+    },
+
     /** 下载主视频 */
     async handleDownload() {
       const url = this.mainSource
@@ -508,6 +564,37 @@ export default {
   white-space: nowrap;
 }
 
+
+.hrp-collect {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  &--active {
+    color: #FFD700;
+    border-color: rgba(255, 215, 0, 0.5);
+    background: rgba(255, 215, 0, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
 
 .hrp-download {
   display: flex;

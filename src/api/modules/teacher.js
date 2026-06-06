@@ -175,3 +175,6 @@ export const getAfterQuizLeaderboard = examConfigId => get(`/edu/after/quiz/lead
 
 // 获取课后测未提交学生列表（Path 参数 examConfigId）
 export const getAfterQuizUnSubmitList = examConfigId => get(`/edu/after/quiz/student/unSubmit/list/${examConfigId}`)
+
+// 收藏/取消收藏切换
+export const collectToggle = data => post('/edu/recentView/collect/toggle', data)

@@ -524,7 +524,10 @@
       :allow-multiple="currentAllowMultiple"
       :allow-fast-forward="currentAllowFastForward"
       :allow-download="currentAllowDownload"
+      :from-task="fromLearningTask"
+      :collect-params="currentCollectParams"
       @close="closeVideoDialog"
+      @collect-change="onChildCollectChange"
     />
 
     <!-- 历史课堂回放弹窗 -->
@@ -534,7 +537,10 @@
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
       :allow-download="currentAllowDownload"
+      :from-task="fromLearningTask"
+      :collect-params="currentCollectParams"
       @close="closeHistoryPlayer"
+      @collect-change="onChildCollectChange"
     />
 
     <!-- 音频播放弹窗 -->
@@ -552,8 +558,15 @@
         autoplay
         style="width:100%;margin:16px 0;display:block;"
       ></audio>
-      <div v-if="currentAllowDownload === '1'" style="text-align:right;margin-top:4px;">
-        <el-button type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+        <el-button
+          v-if="isStudent && fromLearningTask"
+          :type="isCollected ? 'warning' : 'default'"
+          size="small"
+          :loading="collecting"
+          @click="handleCollect"
+        >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
+        <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
       </div>
     </el-dialog>
 
@@ -571,8 +584,15 @@
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
-      <div v-if="currentAllowDownload === '1'" style="text-align:right;margin-top:12px;">
-        <el-button type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <el-button
+          v-if="isStudent && fromLearningTask"
+          :type="isCollected ? 'warning' : 'default'"
+          size="small"
+          :loading="collecting"
+          @click="handleCollect"
+        >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
+        <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
       </div>
     </el-dialog>
 
@@ -695,7 +715,7 @@
     </DialogCustome>
 
     <!-- 文件预览 -->
-    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" :allow-download="currentAllowDownload" @close="filePreviewVisible = false" />
+    <FilePreview :visible="filePreviewVisible" :file="filePreviewData" :allow-download="currentAllowDownload" :from-task="fromLearningTask" :collect-params="currentCollectParams" @close="filePreviewVisible = false; fromLearningTask = false; isCollected = false" @collect-change="onChildCollectChange" />
 
     <!-- 考试页面 -->
     <ExamPage
@@ -787,7 +807,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord } from '@/api'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord, collectToggle } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'
@@ -798,7 +818,14 @@ export default {
   name: 'Class',
   components: { FilePreview, VideoPlayer, ExamPage, ExamRecordPage },
   data() {
+    const userInfo = getUserInfo() || {}
     return {
+      isStudent: userInfo.role === 'STUDENT',
+      // 收藏相关：标记是否从"学习任务"入口打开，以及当前收藏接口所需参数
+      fromLearningTask: false,
+      currentCollectParams: {},
+      isCollected: false,
+      collecting: false,
       liveUrl: '',
       showLiveIframe: false,
       year: '',
@@ -1387,6 +1414,16 @@ export default {
         this.fetchCourseDetail(this.selectedCourse.id)
       }
 
+      const collectBase = {
+        courseId: this.selectedCourse ? String(this.selectedCourse.id || '') : '',
+        lessonId: String(item.id || ''),
+        type: String(item.nodeType || ''),
+        collectCount: String(item.collectCount || 0),
+        historyLessonId: String(item.historyLessonId || ''),
+      }
+      console.log(item.collectCount,'收藏')
+      const initCollected = collectBase.collectCount == 1
+
       if (videoTypes.includes(item.nodeType)) {
          this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentResourceTitle = item.title || '视频播放'
@@ -1395,31 +1432,47 @@ export default {
         console.log(item.allowMultiple,'视频地址')
         this.currentVideoUrl = url
         this.currentPlayingItem = item
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
         this.showVideoDialog = true
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
          this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentImageUrl = url
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
         this.showImageDialog = true
       } else if (audioTypes.includes(item.nodeType)) {
          this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.currentResourceTitle = item.title || '音频播放'
         this.currentAudioUrl = url
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
         this.showAudioDialog = true
       } else {
         console.log(item,'信息')
         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.filePreviewData = { name: item.title || '', path: url }
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
         this.filePreviewVisible = true
       }
     },
     async closeVideoDialog(percent = 0) {
       this.showVideoDialog = false
       this.currentVideoUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
       await this.saveVideoProgress(percent)
     },
     async closeHistoryPlayer(percent = 0) {
       this.playerVisible = false
+      this.fromLearningTask = false
+      this.isCollected = false
       await this.saveVideoProgress(percent)
     },
     async saveVideoProgress(percent) {
@@ -1446,6 +1499,8 @@ export default {
     closeAudioDialog() {
       this.showAudioDialog = false
       this.currentAudioUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
     },
     async handleAudioDownload() {
       const url = this.currentAudioUrl
@@ -1474,6 +1529,30 @@ export default {
     closeImageDialog() {
       this.showImageDialog = false
       this.currentImageUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+    },
+    onChildCollectChange() {
+      if (this.selectedCourse) {
+        this.fetchCourseDetail(this.selectedCourse.id)
+      }
+    },
+    async handleCollect() {
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.currentCollectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        if (this.selectedCourse) {
+          this.fetchCourseDetail(this.selectedCourse.id)
+        }
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
+      }
     },
     async handleImageDownload() {
       const url = this.currentImageUrl
@@ -1520,7 +1599,8 @@ export default {
           allowMultiple: String(node.allowMultiple || '1'),
           allowFastForward: String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
-          children: (node.children || []).map(child => this._mapDetailNode(child))
+          children: (node.children || []).map(child => this._mapDetailNode(child)),
+          collectCount:node.collectCount
         }
       } else if (node.type === '2') {
         const live = node.liveInfo || {}
@@ -1551,14 +1631,15 @@ export default {
           isRecent: live.isRecentStudy === '1',
           allowMultiple: String(node.allowMultiple || '1'),
           allowFastForward: String(node.allowFastForward || '1'),
-          allowDownload: String(node.allowDownload || '2')
+          allowDownload: String(node.allowDownload || '2'),
+          collectCount:node.collectCount
         }
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
         const res = node.resource || node.historyLesson || {}
         const sizeStr = res.size ? `${res.size}` : ''
         return {
-          id: node.id || node.lessonId || '',
+          id: node.id || node.lessonId||  '',
           type: 'resource',
           nodeType: node.type,
           title: node.name || res.name || res.fileName || '',
@@ -1570,7 +1651,9 @@ export default {
           filePath: res.fileList && res.fileList.length !== 0 ? res.fileList[0].filePath : res.filePath,
           allowMultiple:node.type=='3'?'1': String(node.allowMultiple || '1'),
           allowFastForward:node.type=='3'?'1':  String(node.allowFastForward || '1'),
-          allowDownload: String(node.allowDownload || '2')
+          allowDownload: String(node.allowDownload || '2'),
+          collectCount:node.collectCount,
+          historyLessonId:node.type=='3'?node.historyLesson.historyLessonId:""
         }
       }
     },
@@ -1619,7 +1702,7 @@ export default {
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
     },
-    async openVideoPlayer(item, updateRecent = false) {
+    async openVideoPlayer(item, updateRecent = false, fromTask = false) {
       if (updateRecent) {
         try {
           const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
@@ -1640,13 +1723,26 @@ export default {
       this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
       this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.currentPlayingItem = item
+      this.fromLearningTask = fromTask
+      this.isCollected = fromTask ? String(item.collectCount || 0) == 1 : false
+      if (fromTask) {
+        this.currentCollectParams = {
+          courseId: this.selectedCourse ? String(this.selectedCourse.id || '') : '',
+          lessonId: String(item.id || ''),
+          historyLessonId: String(item.historyLessonId || ''),
+          type: '3',
+          collectCount: String(item.collectCount || 0)
+        }
+      } else {
+        this.currentCollectParams = {}
+      }
       console.log(this.currentAllowMultiple,'currentAllowMultiple')
       this.playerVisible = true
     },
     async enterLiveRoom(item) {
       console.log(item)
       if (item.isFinish == 1 && item.liveStatus == '已结束已开播') {
-        this.openVideoPlayer(item, true)
+        this.openVideoPlayer(item, true, true)
         return
       }
       if (item.isFinish == 1 && item.liveStatus == '已结束未开播') {

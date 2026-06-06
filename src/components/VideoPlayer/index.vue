@@ -4,6 +4,18 @@
       <div class="video-player-header">
         <div class="video-player-title">{{ title || '视频播放' }}</div>
         <button
+          v-if="isStudent && fromTask"
+          class="video-player-collect"
+          :class="{ 'video-player-collect--active': isCollected }"
+          :disabled="collecting"
+          @click="handleCollect"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" :fill="isCollected ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          {{ isCollected ? '已收藏' : '收藏' }}
+        </button>
+        <button
           v-if="allowDownload === '1'"
           class="video-player-download"
           @click="handleDownload"
@@ -57,6 +69,7 @@
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
+import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
 const ALIPLAYER_LICENSE = {
@@ -130,6 +143,26 @@ export default {
     allowDownload: {
       type: String,
       default: '2'
+    },
+
+    /**
+     * 是否从"学习任务"入口打开，true 时才对学生显示收藏按钮
+     * @type {Boolean}
+     * @default false
+     */
+    fromTask: {
+      type: Boolean,
+      default: false
+    },
+
+    /**
+     * 收藏接口所需参数 { courseId, lessonId, historyLessonId?, type }
+     * @type {Object}
+     * @default {}
+     */
+    collectParams: {
+      type: Object,
+      default: () => ({})
     }
   },
 
@@ -143,7 +176,11 @@ export default {
       /** Aliplayer 播放器实例 */
       playerInstance: null,
       /** 播放器挂载的 DOM 容器 id，每个组件实例唯一 */
-      playerId: `aliplayer-${++playerIdCounter}`
+      playerId: `aliplayer-${++playerIdCounter}`,
+      /** 是否已收藏 */
+      isCollected: false,
+      /** 收藏请求进行中 */
+      collecting: false
     }
   },
 
@@ -155,6 +192,7 @@ export default {
      */
     visible(val) {
       if (val) {
+        this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.$nextTick(() => {
           this.initPlayer()
         })
@@ -254,6 +292,24 @@ export default {
       }
     },
 
+    /** 收藏/取消收藏 */
+    async handleCollect() {
+      console.log(this.collectParams,'参数')
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.collectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        this.$emit('collect-change', this.isCollected)
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
+      }
+    },
+
     /** 关闭播放器，向父组件抛出 close 事件，携带当前播放进度百分比（0-100） */
     handleClose() {
       let percent = 0
@@ -285,7 +341,7 @@ export default {
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.7);
-  z-index: 9999;
+  z-index: 2002!important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,6 +380,37 @@ export default {
   white-space: nowrap;
 }
 
+
+.video-player-collect {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  &--active {
+    color: #FFD700;
+    border-color: rgba(255, 215, 0, 0.5);
+    background: rgba(255, 215, 0, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
 
 .video-player-download {
   display: flex;

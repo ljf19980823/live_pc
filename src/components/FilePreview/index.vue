@@ -4,6 +4,17 @@
       <div class="file-preview-header">
         <div class="file-preview-title">{{ file && file.name ? file.name : '文件预览' }}</div>
         <div class="file-preview-header-actions">
+          <div
+            v-if="isStudent && fromTask"
+            class="file-preview-collect-btn"
+            :class="{ 'file-preview-collect-btn--active': isCollected }"
+            @click="handleCollect"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" :fill="isCollected ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            {{ isCollected ? '已收藏' : '收藏' }}
+          </div>
           <div v-if="!isStudent || allowDownload === '1'" class="file-preview-download-btn" @click="handleDownload">下载</div>
           <img
             src="@/assets/images/login/close.png"
@@ -114,6 +125,7 @@ function loadOnlyOfficeScript() {
 }
 
 import { getUserInfo } from '@/utils/auth'
+import { collectToggle } from '@/api'
 
 /** 用于生成唯一的编辑器容器 id，避免同页面多实例冲突 */
 let editorIdCounter = 0
@@ -152,6 +164,26 @@ export default {
     allowDownload: {
       type: String,
       default: '2'
+    },
+
+    /**
+     * 是否从"学习任务"入口打开，true 时才对学生显示收藏按钮
+     * @type {Boolean}
+     * @default false
+     */
+    fromTask: {
+      type: Boolean,
+      default: false
+    },
+
+    /**
+     * 收藏接口所需参数 { courseId, lessonId, type }
+     * @type {Object}
+     * @default {}
+     */
+    collectParams: {
+      type: Object,
+      default: () => ({})
     }
   },
 
@@ -165,7 +197,11 @@ export default {
       /** ONLYOFFICE DocEditor 实例，用于在关闭时主动销毁释放资源 */
       editorInstance: null,
       /** 编辑器挂载的 DOM 容器 id，每个组件实例唯一 */
-      editorContainerId: `onlyoffice-editor-${++editorIdCounter}`
+      editorContainerId: `onlyoffice-editor-${++editorIdCounter}`,
+      /** 是否已收藏 */
+      isCollected: false,
+      /** 收藏请求进行中 */
+      collecting: false
     }
   },
 
@@ -177,6 +213,7 @@ export default {
      */
     visible(val) {
       if (val) {
+        this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.$nextTick(() => {
           this.initEditor()
         })
@@ -293,6 +330,23 @@ export default {
       if (el) el.innerHTML = ''
     },
 
+    /** 收藏/取消收藏 */
+    async handleCollect() {
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.collectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        this.$emit('collect-change', this.isCollected)
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
+      }
+    },
+
     /** 关闭预览，向父组件抛出 close 事件 */
     handleClose() {
       this.$emit('close')
@@ -377,6 +431,30 @@ export default {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.file-preview-collect-btn {
+  display: flex;
+  align-items: center;
+  padding: 5px 14px;
+  background: #f5f5f5;
+  color: #555;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid #ddd;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: #ebebeb;
+  }
+
+  &--active {
+    background: #FFF8E1;
+    color: #E6A817;
+    border-color: #F5C842;
+  }
 }
 
 .file-preview-download-btn {
