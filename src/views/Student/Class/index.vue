@@ -384,7 +384,7 @@
             <img v-if="rightTab === 'course'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'quiz'">
-            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测</div>
+            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测试</div>
             <img v-if="rightTab === 'quiz'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
         </div>
@@ -448,13 +448,16 @@
             </div>
             <div class="quiz-item-meta-row">
               <span class="quiz-item-meta">做题次数: {{ item.finishNum }}次</span>
-              <span class="quiz-item-meta">
-                最高分数:
-                <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
-                  {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '--' }}
-                </span>
-              </span>
+              
               <span class="quiz-item-meta">题目数量: {{ item.topicNum }}题</span>
+
+              <span class="quiz-item-meta">
+                
+                <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
+                  {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
+                </span>
+                <span  class="quiz-score-done">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
+              </span>
             </div>
           </div>
           <div class="quiz-item-actions">

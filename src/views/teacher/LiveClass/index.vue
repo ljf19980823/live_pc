@@ -1071,7 +1071,7 @@ export default {
         }
       } else {
         // 学生：当前时间 >= 直播开始时间 才可进入
-        if (!startTime || now < startTime) {
+        if (!startTime|| now < startTime - 30 * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
@@ -1149,7 +1149,7 @@ export default {
           return
         }
       } else {
-        if (!startTime || now < startTime) {
+        if (!startTime|| now < startTime - 30 * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
