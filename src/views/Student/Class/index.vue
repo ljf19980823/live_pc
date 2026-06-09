@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-placeholder">
     <div class="app_container_box_left">
       <div class="app_container_box_left_top">
@@ -456,7 +456,7 @@
                 <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
                   {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
                 </span>
-                <span  class="quiz-score-done">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
+                <span class="quiz-score-done" style="cursor:pointer;" @click="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
               </span>
             </div>
           </div>
@@ -737,6 +737,13 @@
       @back="showExamRecord = false"
     />
 
+    <!-- 排行榜页面 -->
+    <RankingPage
+      :visible="showRanking"
+      :examConfigId="rankingExamConfigId"
+      @back="showRanking = false"
+    />
+
     <!-- 直播间 -->
     <div v-if="showLiveIframe" class="live-iframe-overlay">
       
@@ -815,11 +822,12 @@ import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'
 import ExamRecordPage from './ExamRecordPage.vue'
+import RankingPage from './RankingPage.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 
 export default { 
   name: 'Class',
-  components: { FilePreview, VideoPlayer, ExamPage, ExamRecordPage },
+  components: { FilePreview, VideoPlayer, ExamPage, ExamRecordPage, RankingPage },
   data() {
     const userInfo = getUserInfo() || {}
     return {
@@ -898,6 +906,10 @@ export default {
       // 考试记录
       showExamRecord: false,
       currentExamRecordItem: null,
+
+      // 排行榜
+      showRanking: false,
+      rankingExamConfigId: '',
 
        // macOS 屏幕录制权限引导弹窗
       showScreenPermissionDialog: false,
@@ -1133,6 +1145,10 @@ export default {
       } finally {
         this.afterQuizLoading = false
       }
+    },
+    openRanking(item) {
+      this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
+      this.showRanking = true
     },
     startExam(item) {
       this.currentExamItem = {
@@ -1790,8 +1806,8 @@ export default {
       if (role === 'STUDENT') {
         try {
           const res = await checkTempStudentLiveRecord(liveId)
-          if (res === true || res?.data === true) {
-            this.$message.warning('超过直播观看次数上限，请先转为正式学员')
+          if (res.data==false) {
+             this.$message.warning(res.message)
             return
           }
         } catch (_) {}

@@ -1012,8 +1012,8 @@ export default {
       if (role === 'STUDENT') {
         try {
           const res = await checkTempStudentLiveRecord(liveId)
-          if (res === true || res?.data === true) {
-            this.$message.warning('超过直播观看次数上限，请先转为正式学员')
+          if (res.data==false) {
+             this.$message.warning(res.message)
             return
           }
         } catch (_) {}

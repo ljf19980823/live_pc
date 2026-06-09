@@ -11,4 +11,7 @@ export const getStudentNoticeList = () => get('/edu/notice/information', { type:
 export const getErrorExercises = (recordId) => get(`/edu/after/quiz/errorExercises/${recordId}`)
 
 // 校验临时学生直播观看次数
-export const checkTempStudentLiveRecord = (liveId) => post('/edu/sso/checkTempStudentLiveRecord', null, { params: { liveId } })
+export const checkTempStudentLiveRecord = (liveId) => post('/edu/sso/checkEnterLive', null, { params: { liveId } })
+
+// 获取课后测验排行榜
+export const getQuizLeaderboard = (examConfigId) => get(`/edu/after/quiz/leaderboard/${examConfigId}`)
