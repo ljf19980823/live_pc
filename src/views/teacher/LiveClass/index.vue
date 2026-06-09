@@ -11,10 +11,10 @@
       </div>
       <div class="page_top_right_fixed" v-if="isTeacher">
         <div class="page_top_right_fixed_box">
-          <div class="page_top_right_fixed_bk">
+          <!-- <div class="page_top_right_fixed_bk">
             <img src="@/assets/images/liveClass/bk_icon.png" class="page_top_right_fixed_bk_icon" alt="">
             <div class="page_top_right_fixed_bk_text">备课</div>
-          </div>
+          </div> -->
           <div class="page_top_right_fixed_add" v-if="isAdd" @click="showCreateClass = true">
             <img src="@/assets/images/liveClass/add_icon.png" class="page_top_right_fixed_add_icon" alt="">
             <div class="page_top_right_fixed_add_text">新建课堂</div>
@@ -220,7 +220,9 @@
             </div>
             <img :src="item.cover || require('@/assets/images/such.png')" class="ls_last_detail_img" alt="">
             <div class="ls_last_detail_center">
-              <div class="ls_last_detail_title">{{ item.name }}</div>
+              <el-tooltip :content="item.name" placement="top" :enterable="false">
+                <div class="ls_last_detail_title">{{ item.name }}</div>
+              </el-tooltip>
               <div class="ls_last_detail_time">{{ formatDuration(item.fileList && item.fileList.length != 0 ? (item.fileList[0].duration) :0) }}</div>
             </div>
             <div class="ls_last_detail_last">{{ item.teacherName }} · {{ formatDate(item.generationTime) }}</div>
@@ -1092,7 +1094,7 @@ export default {
       }
 
       const {userId,realName,userName,role}=getUserInfo();
-      const token = getToken();
+      const token =  getToken();
       const liveId = item.id;
       const roleNumber = role === "STUDENT" ? 0 : 1;
 
@@ -1169,7 +1171,7 @@ export default {
         } catch (_) {}
       }
 
-      const token = getToken();
+      const token =  getToken();
       const courseid = this.selectedCourseItem.id;
       const {userId,realName,userName,role}=getUserInfo();
       const roleNumber = role === "STUDENT" ? 0 : 1;
@@ -1206,7 +1208,8 @@ export default {
         } catch (_) {}
       }
 
-      const token = getToken()
+      const token =  getToken()
+      console.log(token,'token值')
       const { userId, realName } = getUserInfo()
       const liveId = item.liveId
 
