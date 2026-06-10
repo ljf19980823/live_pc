@@ -128,7 +128,7 @@ export const updateSsoInfo = params => {
 export const updatePassword = data => post('/edu/sso/updatePassword', data, { skipErrorMessage: true })
 
 // 获取协议内容（type: user_agreement 用户协议 | privacy_policy 隐私协议）
-export const getAgreement = type => get('/edu/recentView/agreement', { type })
+export const getAgreement = type => get('/edu/recentView/getConfig', { type })
 
 // 发送验证码（type: 3 修改手机号）
 export const sendCode = data => post('/edu/sso/sendCode', data)

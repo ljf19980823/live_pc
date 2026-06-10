@@ -30,9 +30,9 @@ export default {
     async fetchAgreement() {
       try {
         const res = await getAgreement('user_agreement')
-        if (res && res.data) {
-          this.moduleValue = res.data.moduleValue || ''
-          this.updateTime = res.data.updateTime || res.data.createTime || ''
+       if (res && res.data && res.data.length!=0) {
+          this.moduleValue = res.data[0].moduleValue || ''
+          this.updateTime = res.data[0].updateTime || res.data[0].createTime || ''
         }
       } catch (e) {
         console.error('获取用户协议失败', e)
