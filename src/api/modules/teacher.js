@@ -170,11 +170,11 @@ export const getAfterQuizRecordList = params => get('/edu/after/quiz/record/list
 // 获取课后测做题记录详情（Path 参数 recordId）
 export const getAfterQuizRecordDetail = recordId => get(`/edu/after/quiz/record/detail/${recordId}`)
 
-// 获取课后测学生做题排行榜（Path 参数 examConfigId）
-export const getAfterQuizLeaderboard = examConfigId => get(`/edu/after/quiz/leaderboard/${examConfigId}`)
+// 获取课后测学生做题排行榜（Path 参数 examConfigId, classId）
+export const getAfterQuizLeaderboard = (examConfigId, classId) => get(`/edu/after/quiz/leaderboard/${examConfigId}/${classId}`)
 
-// 获取课后测未提交学生列表（Path 参数 examConfigId）
-export const getAfterQuizUnSubmitList = examConfigId => get(`/edu/after/quiz/student/unSubmit/list/${examConfigId}`)
+// 获取课后测未提交学生列表（Path 参数 examConfigId, classId）
+export const getAfterQuizUnSubmitList = (examConfigId, classId) => get(`/edu/after/quiz/student/unSubmit/list/${examConfigId}/${classId}`)
 
 // 收藏/取消收藏切换
 export const collectToggle = data => post('/edu/recentView/collect/toggle', data)

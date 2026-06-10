@@ -1071,7 +1071,7 @@ export default {
   },
   methods: {
     openAfterTestDetail(item) {
-      this.currentAfterTestCourse = item
+      this.currentAfterTestCourse = { ...item, classId: this.selectedClassId }
       this.showAfterTestDetail = true
     },
     async fetchAfterTestList() {

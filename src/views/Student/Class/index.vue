@@ -741,6 +741,7 @@
     <RankingPage
       :visible="showRanking"
       :examConfigId="rankingExamConfigId"
+      :classId="selectedClassId"
       @back="showRanking = false"
     />
 

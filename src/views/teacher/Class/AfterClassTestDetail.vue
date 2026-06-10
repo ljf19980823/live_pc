@@ -198,10 +198,11 @@ export default {
     },
     async fetchLeaderboard() {
       const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      const classId = this.courseInfo && this.courseInfo.classId
       if (!examConfigId) return
       this.loading = true
       try {
-        const res = await getAfterQuizLeaderboard(examConfigId)
+        const res = await getAfterQuizLeaderboard(examConfigId, classId)
         if (res && res.data) {
           this.leaderboardData = {
             finishedStudentCount: res.data.finishedStudentCount || 0,
@@ -219,10 +220,11 @@ export default {
     },
     async fetchUnSubmitList() {
       const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      const classId = this.courseInfo && this.courseInfo.classId
       if (!examConfigId) return
       this.unSubmitLoading = true
       try {
-        const res = await getAfterQuizUnSubmitList(examConfigId)
+        const res = await getAfterQuizUnSubmitList(examConfigId, classId)
         this.unSubmitList = (res && res.data) ? res.data : []
       } catch (e) {
         console.error('获取未提交学生列表失败', e)

@@ -136,6 +136,10 @@ export default {
     examConfigId: {
       type: String,
       default: ''
+    },
+    classId: {
+      type: [String, Number],
+      default: ''
     }
   },
   data() {
@@ -185,7 +189,7 @@ export default {
       if (!this.examConfigId) return
       this.loading = true
       try {
-        const res = await getQuizLeaderboard(this.examConfigId)
+        const res = await getQuizLeaderboard(this.examConfigId, this.classId)
         const data = res.data || res
         console.log(res,'测试')
         const userInfo = getUserInfo() || {}
