@@ -125,6 +125,15 @@ function safeAvatar(url, index) {
   }
 }
 
+function formatSeconds(seconds) {
+  if (seconds == null || seconds === '' || isNaN(Number(seconds))) return '-'
+  const total = Math.floor(Number(seconds))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
 export default {
   name: 'RankingPage',
   components: { StudentAnswerDetail },
@@ -206,7 +215,7 @@ export default {
             rank: index + 1,
             name: item.studentName || '未知',
             score: item.score || 0,
-            timeStr: item.examDuration || '-',
+            timeStr: formatSeconds(item.examDuration),
             isMine,
             avatar: safeAvatar(item.profilePicture, index),
             recordId: item.recordId || ''

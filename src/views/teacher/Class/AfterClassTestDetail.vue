@@ -243,10 +243,10 @@ export default {
       if (!seconds && seconds !== 0) return '--'
       const s = parseInt(seconds, 10)
       if (isNaN(s)) return seconds
-      if (s < 60) return s + '秒'
-      const m = Math.floor(s / 60)
-      const rem = s % 60
-      return rem > 0 ? `${m}分${rem}秒` : `${m}分钟`
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const sec = s % 60
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
     },
     openStudentDetail(row) {
       this.currentStudent = {
