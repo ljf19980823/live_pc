@@ -162,21 +162,24 @@
           </div>
           <div class="ls_top_left_class">
             <img src="@/assets/images/liveClass/class.png" class="ls_top_left_time_icon" alt="">
-            <el-select
-              v-model="selectedClass"
-              placeholder="选择班级"
-              size="mini"
-              filterable
-              class="ls_class_select"
-              clearable
-            >
-              <el-option
-                v-for="cls in classList"
-                :key="cls.value"
-                :label="cls.label"
-                :value="cls.value"
-              />
-            </el-select>
+            <div class="ls_class_select_wrap">
+              <el-select
+                v-model="selectedClass"
+                placeholder="选择班级"
+                size="mini"
+                filterable
+                class="ls_class_select"
+                clearable
+              >
+                <el-option
+                  v-for="cls in classList"
+                  :key="cls.value"
+                  :label="cls.label"
+                  :value="cls.value"
+                />
+              </el-select>
+              <i class="el-icon-arrow-down ls_class_select_arrow"></i>
+            </div>
           </div>
           <div class="ls_top_left_search">
             <div class="ls_top_left_search_sx"></div>
@@ -356,14 +359,17 @@
                   </div>
                   <div class="masl_con_dialog_last_shadow_top_detail">
                     <div class="masl_con_dialog_last_shadow_top_detail_text">上课时长:</div>
-                    <el-select v-model="classDuration" class="class-duration-select" :clearable="false">
-                      <el-option
-                        v-for="item in durationOptions"
-                        :key="item"
-                        :label="item + '分钟'"
-                        :value="item"
-                      />
-                    </el-select>
+                    <div class="class-duration-select-wrap">
+                      <el-select v-model="classDuration" class="class-duration-select" :clearable="false">
+                        <el-option
+                          v-for="item in durationOptions"
+                          :key="item"
+                          :label="item + '分钟'"
+                          :value="item"
+                        />
+                      </el-select>
+                      <i class="el-icon-arrow-down class-duration-arrow"></i>
+                    </div>
                   </div>
                 </div>
                 <!-- <div class="masl_con_dialog_last_shadow_hx"></div>
@@ -382,22 +388,25 @@
                   </div>
                 </div> -->
                 <div class="masl_con_dialog_last_shadow_hx"></div>
-                <el-select
-                  v-model="createClassId"
-                  placeholder="选择班级"
-                  class="masl_con_dialog_last_shadow_third"
-                  clearable
-                  filterable
-                  multiple
-                  collapse-tags
-                >
-                  <el-option
-                    v-for="cls in classList"
-                    :key="cls.value"
-                    :label="cls.label"
-                    :value="cls.value"
-                  />
-                </el-select>
+                <div class="masl_third_select_wrap">
+                  <el-select
+                    v-model="createClassId"
+                    placeholder="选择班级"
+                    class="masl_con_dialog_last_shadow_third"
+                    clearable
+                    filterable
+                    multiple
+                    collapse-tags
+                  >
+                    <el-option
+                      v-for="cls in classList"
+                      :key="cls.value"
+                      :label="cls.label"
+                      :value="cls.value"
+                    />
+                  </el-select>
+                  <i class="el-icon-arrow-down masl_third_select_arrow"></i>
+                </div>
               </div>
               
               <div class="masl_con_dialog_last_shadow">
@@ -2108,6 +2117,20 @@ export default {
   }
 }
 
+.ls_class_select_wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.ls_class_select_arrow {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #888;
+  pointer-events: none;
+}
 .ls_class_select {
   width: 150px;
   // flex: 1;
@@ -2117,9 +2140,10 @@ export default {
     font-size: 14px;
     color: #333333;
     background: transparent;
+    padding-right: 22px;
   }
-  ::v-deep .el-input__suffix {
-    // right: 0;
+  ::v-deep .el-select__caret {
+    display: none !important;
   }
   ::v-deep .el-input {
     font-size: 14px;
@@ -2129,9 +2153,27 @@ export default {
   }
 }
 
+.masl_third_select_wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.masl_third_select_arrow {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #888;
+  pointer-events: none;
+}
 .masl_con_dialog_last_shadow_third {
-    ::v-deep .el-select__input{
+  ::v-deep .el-select__input{
     margin-left: 0!important;
+  }
+  ::v-deep .el-select__caret {
+    display: none !important;
   }
 }
 
@@ -2378,18 +2420,35 @@ export default {
 .class-time-picker .el-input__prefix {
   display: none;
 }
+.class-duration-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.class-duration-arrow {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #888;
+  pointer-events: none;
+}
 .class-duration-select {
   width: 110px !important;
-}
-.class-duration-select .el-input__inner {
-  border: none;
-  background: transparent;
-  padding: 0 20px 0 0;
-  height: 28px;
-  line-height: 28px;
-  font-size: 13px;
-  color: #333;
-  cursor: pointer;
+  ::v-deep .el-input__inner {
+    border: none;
+    background: transparent;
+    padding: 0 22px 0 0;
+    height: 28px;
+    line-height: 28px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+  }
+  ::v-deep .el-select__caret {
+    display: none !important;
+  }
 }
 
 .mask-fade-enter-active {
@@ -2575,10 +2634,14 @@ color: #333333;
   border: none;
   background: transparent;
   padding-left: 0;
+  padding-right: 22px;
   font-size: 14px;
   color: #333333;
   height: 32px;
   line-height: 32px;
+}
+.masl_con_dialog_last_shadow_third .el-select__caret {
+  display: none !important;
 }
 .masl_con_dialog_last_shadow_four{
   display: flex;

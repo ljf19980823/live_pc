@@ -9,7 +9,7 @@
            </div>
            <div class="masl_con_dialog_last" v-if="showCancel || showConfirm" >
               <div class="masl_con_dialog_last_cancel" v-if="showCancel" @click="handleCancel">{{ cancelText }}</div>
-              <div class="masl_con_dialog_last_cobfirm" :class="{ 'is-loading': confirmLoading, 'is-disabled': confirmDisabled && !confirmLoading }" v-if="showConfirm" @click="!confirmLoading && !confirmDisabled && handleConfirm()">
+              <div class="masl_con_dialog_last_cobfirm" :class="{ 'is-loading': confirmLoading, 'is-disabled': confirmDisabled && !confirmLoading, 'is-danger': confirmDanger }" v-if="showConfirm" @click="!confirmLoading && !confirmDisabled && handleConfirm()">
                 <span v-if="confirmLoading" class="loading-spinner"></span>
                 {{ confirmText }}
               </div>
@@ -72,6 +72,10 @@ export default {
     bgColor: {
       type: String,
       default: ''
+    },
+    confirmDanger: {
+      type: Boolean,
+      default: false
     }
   },
   methods: {
@@ -181,6 +185,11 @@ cursor: pointer;
 .masl_con_dialog_last_cobfirm.is-disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.masl_con_dialog_last_cobfirm.is-danger {
+  color: #ffffff;
+  background: #F04444;
+  border-radius: 0 0 16px 0;
 }
 .loading-spinner {
   display: inline-block;

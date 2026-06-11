@@ -146,7 +146,7 @@
         <div class="cdetail-list" v-loading="courseDetailLoading">
           <template v-for="(item, idx) in courseDetail.items">
             <!-- 直播课 -->
-            <div v-if="item.type === 'live'" class="cdi-card" :key="idx" @click="enterLiveRoom(item)">
+            <div v-if="item.type === 'live'" class="cdi-card" :key="idx" @click="handleCardClickWithLoading(`live-${idx}`, () => enterLiveRoom(item))" v-loading="activeLoadingKey === `live-${idx}`" element-loading-background="rgba(255,255,255,0.7)">
               <div class="cdi-main">
                 <img src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                 <div class="cdi-info">
@@ -182,7 +182,7 @@
             </div>
 
             <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
-            <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx" @click="handleResourceClick(item)">
+            <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx" @click="handleCardClickWithLoading(`resource-${idx}`, () => handleResourceClick(item))" v-loading="activeLoadingKey === `resource-${idx}`" element-loading-background="rgba(255,255,255,0.7)">
               <div class="cdi-main">
                 <img v-if="['3','4'].includes(item.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
                 <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
@@ -259,7 +259,8 @@
                 <template v-if="child.type === 'group' && child.expanded">
                   <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
                     class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
-                    @click="grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined">
+                    @click="handleCardClickWithLoading(`grandchild-${idx}-${ci}-${gi}`, () => grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined)"
+                    v-loading="activeLoadingKey === `grandchild-${idx}-${ci}-${gi}`" element-loading-background="rgba(255,255,255,0.7)">
                     <div class="cdi-main">
                       <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                       <img v-else-if="['3','4'].includes(grandchild.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
@@ -302,7 +303,8 @@
                 </template>
                 <!-- 一级分组下的普通内容（resource / live） -->
                 <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group"
-                  @click="child.type === 'resource' ? handleResourceClick(child) : child.type === 'live' ? enterLiveRoom(child) : undefined">
+                  @click="handleCardClickWithLoading(`child-${idx}-${ci}`, () => child.type === 'resource' ? handleResourceClick(child) : child.type === 'live' ? enterLiveRoom(child) : undefined)"
+                  v-loading="activeLoadingKey === `child-${idx}-${ci}`" element-loading-background="rgba(255,255,255,0.7)">
                   <div class="cdi-main">
                     <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
                     <img v-else-if="['3','4'].includes(child.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
@@ -863,6 +865,7 @@ export default {
   components: { FilePreview, VideoPlayer, AfterClassTestDetail },
   data() {
     return {
+      activeLoadingKey: null,
       liveUrl: '',
       showLiveIframe: false,
       year: '',
@@ -1619,6 +1622,14 @@ export default {
       this.newClassStartDate = new Date()
       this.newClassEndDate = new Date()
     },
+    async handleCardClickWithLoading(key, handler) {
+      this.activeLoadingKey = key
+      try {
+        await Promise.resolve(handler())
+      } finally {
+        this.activeLoadingKey = null
+      }
+    },
     handleResourceClick(item) {
       const url = item.filePath
       if (!url) {
@@ -1683,7 +1694,7 @@ export default {
         if (startTime) {
           const parts = startTime.split(' ')
           date = parts[0] || ''
-          timeStart = (parts[1] || '').substring(0, 5)
+          timeStart = (parts[1] || '').substring(0, 8)
         }
         return {
           id: node.id || node.lessonId || '',
