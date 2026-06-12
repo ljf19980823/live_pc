@@ -100,7 +100,7 @@
       <div class="group-stats-bar">
         <div class="group-stats-left">
           <div class="stats-badge">
-            <img src="@/assets/images/material/jyz_icon.png" alt="" class="badge-icon" />
+            <img src="@/assets/images/material/jyz.png" alt="" class="badge-icon" />
             3 个教研组
           </div>
           <div class="stats-badge">最近更新：2026-02-02</div>
@@ -110,31 +110,33 @@
 
       <!-- 教研组卡片区 -->
       <div class="group-card-section">
-        <div class="group-card-header">
-          <div class="group-card-title-wrap">
-            <div class="group-card-title">选择教研组</div>
-            <div class="group-card-hint">点击教研组后查看组内资料。</div>
-          </div>
-          <button class="btn-build-library">共建资库</button>
-        </div>
-        <div class="group-card-list">
-          <div
-            class="group-card"
-            v-for="group in groupList"
-            :key="group.id"
-            :class="[`group-card-${group.color}`, { 'group-card-active': selectedGroup === group.id }]"
-            @click="selectedGroup = group.id"
-          >
-            <div class="group-card-top">
-              <div class="group-avatar">
-                <img src="@/assets/images/material/jyz.png" alt="" class="group-avatar-icon" />
-              </div>
-              <div class="group-card-arrow" :class="{ 'arrow-active': selectedGroup === group.id }">
-                <img src="@/assets/images/material/right_icon.png" alt="" class="arrow-icon" />
-              </div>
+        <div class="group-card-section_box">
+          <div class="group-card-header">
+            <div class="group-card-title-wrap">
+              <div class="group-card-title">选择教研组</div>
+              <div class="group-card-hint">点击教研组后查看组内资料。</div>
             </div>
-            <div class="group-name">{{ group.name }}</div>
-            <div class="group-info">{{ group.count }} 个资料 · 更新于 {{ group.updateDate }}</div>
+            <div class="btn-build-library">共建资料库</div>
+          </div>
+          <div class="group-card-list">
+            <div
+              class="group-card"
+              v-for="group in groupList"
+              :key="group.id"
+              :class="[`group-card-${group.color}`, { 'group-card-active': selectedGroup === group.id }]"
+              @click="selectedGroup = group.id"
+            >
+              <div class="group-card-top">
+                <div class="group-avatar">
+                  <img src="@/assets/images/material/jyz_icon.png" alt="" class="group-avatar-icon" />
+                </div>
+                <div class="group-card-arrow" :class="{ 'arrow-active': selectedGroup === group.id }">
+                  <img src="@/assets/images/material/right_icon.png" alt="" class="arrow-icon" />
+                </div>
+              </div>
+              <div class="group-name">{{ group.name }}</div>
+              <div class="group-info">{{ group.count }} 个资料 · 更新于 {{ group.updateDate }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -144,23 +146,25 @@
     <DialogCustome
       :visible="showNewFolderDialog"
       title="新建文件夹"
-      width="400px"
-      height="200px"
-      :showClose="false"
+      width="500px"
+      height="220px"
+      :showClose="true"
       cancelText="取消"
       confirmText="确认"
       :confirmDisabled="!newFolderName.trim()"
       @cancel="closeNewFolderDialog"
       @confirm="confirmNewFolder"
+      @close="closeNewFolderDialog"
     >
-      <div class="dialog-input-wrap">
-        <input
-          class="dialog-input"
-          type="text"
-          placeholder="请输入文件夹名称"
-          v-model="newFolderName"
-          ref="newFolderInput"
-        />
+      <div class="dialog_box2">
+        <div class="dialog_box_con2">
+          <el-input
+            style="width:100%"
+            placeholder="请输入文件夹名称"
+            v-model="newFolderName"
+            ref="newFolderInput"
+          />
+        </div>
       </div>
     </DialogCustome>
 
@@ -168,43 +172,44 @@
     <DialogCustome
       :visible="showRenameDialog"
       title="重命名文件夹"
-      width="400px"
-      height="200px"
-      :showClose="false"
+      width="500px"
+      height="220px"
+      :showClose="true"
       cancelText="取消"
       confirmText="确认"
       :confirmDisabled="!renameValue.trim()"
       @cancel="closeRenameDialog"
       @confirm="confirmRename"
+      @close="closeRenameDialog"
     >
-      <div class="dialog-input-wrap">
-        <input
-          class="dialog-input"
-          type="text"
-          v-model="renameValue"
-          ref="renameInput"
-        />
+      <div class="dialog_box2">
+        <div class="dialog_box_con2">
+          <el-input
+            style="width:100%"
+            v-model="renameValue"
+            ref="renameInput"
+          />
+        </div>
       </div>
     </DialogCustome>
 
     <!-- ========== 删除确认弹窗 ========== -->
-    <DialogCustome
-      :visible="showDeleteDialog"
-      title="删除文件"
-      width="400px"
-      height="210px"
-      :showClose="true"
-      cancelText="取消"
-      confirmText="删除"
-      :confirmDanger="true"
-      @cancel="closeDeleteDialog"
-      @confirm="confirmDelete"
-      @close="closeDeleteDialog"
-    >
-      <div class="dialog-delete-content">
-        <p>确定要删除该文件吗？此操作无法撤销。</p>
+    <div class="delete-mask" v-if="showDeleteDialog" @click.self="closeDeleteDialog">
+      <div class="delete-dialog">
+        <div class="delete-dialog-header">
+          <span class="delete-dialog-title">删除文件</span>
+          <div class="delete-dialog-close" @click="closeDeleteDialog">✕</div>
+        </div>
+        <div class="delete-dialog-body">
+          <p>确定要删除该文件吗？此操作无法撤销。</p>
+        </div>
+        <div class="delete-dialog-footer">
+          <button class="delete-btn-cancel" @click="closeDeleteDialog">取消</button>
+          <button class="delete-btn-confirm" @click="confirmDelete">删除</button>
+        </div>
       </div>
-    </DialogCustome>
+    </div>
+
   </div>
 </template>
 
@@ -425,7 +430,7 @@ background: rgba(255,255,255,0.82);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 13px;
+  padding: 7px 13px;
   box-sizing: border-box;
   border: 1px solid #DFE5EE;
   border-radius: 12px;
@@ -468,9 +473,9 @@ background: rgba(255,255,255,0.82);
   font-size: 13px;
   color: #8A93A3;
   .col-name { flex: 1; }
-  .col-size { width: 100px; text-align: center; }
-  .col-date { width: 110px; text-align: center; }
-  .col-action { width: 130px; text-align: center; }
+  .col-size { width: 140px; text-align: center; }
+  .col-date { width: 140px; text-align: center; }
+  .col-action { width: 140px; text-align: center; }
 }
 
 .file-item {
@@ -507,19 +512,19 @@ background: rgba(255,255,255,0.82);
     }
   }
   .col-size {
-    width: 100px;
+    width: 140px;
     text-align: center;
     font-size: 14px;
     color: #5F6878;
   }
   .col-date {
-    width: 110px;
+    width: 140px;
     text-align: center;
     font-size: 14px;
     color: #8A93A3;
   }
   .col-action {
-    width: 130px;
+    width: 140px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -608,39 +613,53 @@ background: rgba(255,255,255,0.82);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+padding: 18px 40px;
+box-sizing: border-box;
+border-top: 1px solid #E9EDF4;
+background: rgba(255,255,255,0.82);
     .group-stats-left {
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
     .stats-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       padding: 7px 16px;
-      border: 1px solid #e8e8e8;
-      border-radius: 20px;
-      font-size: 13px;
-      color: #555;
+      border: 1px solid #DFE5EE;
+      border-radius:12px;
+      font-size: 14px;
+      color: #4A5568;
       background: #fff;
       .badge-icon {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         object-fit: contain;
       }
     }
     .group-stats-right {
       font-size: 13px;
-      color: #bbb;
+      color: #8A93A3;
     }
   }
 }
 
 .group-card-section {
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 20px 24px;
+ flex: 1;
+  height: 0;
+  width: 100%;
+  background: #F3F4F8;
+ 
+  padding: 0 25px 25px 25px;
+  box-sizing: border-box;
+}
+.group-card-section_box{
+  height: 100%;
+  overflow: auto;
+  background: #ffff;
+   border-radius: 10px;
+   padding: 25px;
+   box-sizing: border-box;
 }
 
 .group-card-header {
@@ -650,26 +669,23 @@ background: rgba(255,255,255,0.82);
   .group-card-title-wrap {
     flex: 1;
     .group-card-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #1a1a1a;
+      font-size: 18px;
+      font-weight: bold;
+      color: #202532;
       margin-bottom: 4px;
     }
     .group-card-hint {
       font-size: 13px;
-      color: #bbb;
+      color: #8A93A3;
     }
   }
   .btn-build-library {
     padding: 6px 14px;
-    border: 1px solid #4080FF;
     border-radius: 6px;
     background: #fff;
     color: #4080FF;
     font-size: 13px;
-    cursor: pointer;
     flex-shrink: 0;
-    &:hover { background: #f0f5ff; }
   }
 }
 
@@ -680,30 +696,26 @@ background: rgba(255,255,255,0.82);
 
 .group-card {
   flex: 1;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 18px 18px 18px 18px;
+  padding: 21px;
   cursor: pointer;
   transition: all 0.2s;
   border: 1.5px solid transparent;
-  &:hover { transform: translateY(-1px); }
+  &:hover { transform: translateY(-1px);  border-color: #4080FF !important; }
 
   &.group-card-blue {
-    background: #EEF4FF;
-    border-color: #CCE0FF;
+   background: linear-gradient( 45deg, #E9F0FF 0%, #EBF2FF 14.29%, #EDF3FF 28.57%, #EFF5FF 42.86%, #F2F6FF 57.14%, #F4F8FF 71.43%, #F6F9FF 85.71%, #F8FBFF 100%);
+    border-color: #E5EAF2;
   }
   &.group-card-orange {
-    background: #FFF8EE;
-    border-color: #FFE4BB;
+background: linear-gradient( 45deg, #FFF4E4 0%, #FFF5E7 20%, #FFF6EA 40%, #FFF8EC 60%, #FFF9EF 80%, #FFFAF2 100%);
+    border-color: #E5EAF2;
   }
   &.group-card-green {
-    background: #EDFDF4;
-    border-color: #B8F0D4;
+   background: linear-gradient( 45deg, #EAFBF4 0%, #ECFCF5 16.67%, #EFFCF6 33.33%, #F1FDF7 50%, #F3FEF9 66.67%, #F6FEFA 83.33%, #F8FFFB 100%);
+    border-color: #E5EAF2;
   }
 
-  &.group-card-active {
-    border-style: dashed;
-    border-color: #4080FF !important;
-  }
 
   .group-card-top {
     display: flex;
@@ -712,78 +724,73 @@ background: rgba(255,255,255,0.82);
     margin-bottom: 14px;
   }
   .group-avatar {
-    width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     .group-avatar-icon {
-      width: 28px;
-      height: 28px;
+      width: 48px;
+      height: 48px;
       object-fit: contain;
     }
   }
   .group-card-arrow {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    &.arrow-active {
-      border: 1.5px dashed #ccc;
-      border-radius: 6px;
-    }
+   
     .arrow-icon {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       object-fit: contain;
     }
   }
   .group-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #202532;
+    margin-bottom: 8px;
   }
   .group-info {
-    font-size: 12px;
-    color: #888;
+    font-size: 13px;
+    color: #7B8495;
   }
 }
 
 // 弹窗内容
-.dialog-input-wrap {
-  padding: 8px 0;
-  .dialog-input {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #333;
-    background: #fff;
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-    &:focus { border-color: #4080FF; }
-    &::placeholder { color: #bbb; }
-  }
-}
-
-.dialog-delete-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.dialog_box2 {
+  width: 100%;
   height: 100%;
-  p {
-    font-size: 14px;
-    color: #555;
-    text-align: center;
-    line-height: 1.6;
-    margin: 0;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog_box_con2 {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 20px 17px 20px 29px;
+}
+.dialog_box_con2 :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+}
+.dialog_box_con2 :deep(.el-input__inner) {
+  color: #333333;
+  font-size: 16px;
+  padding: 0 !important;
+}
+.dialog_box_con2 :deep(.el-input__suffix) {
+  color: #999999;
+}
+.dialog_box_con2 ::v-deep .el-input__inner::placeholder {
+  color: #999999 !important;
+  font-size: 16px !important;
 }
 
 .my-resources,.group-resources{
@@ -793,4 +800,88 @@ background: rgba(255,255,255,0.82);
   flex-direction: column;
   gap: 25px;
 }
+
+// 自定义删除确认弹窗
+.delete-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(51, 51, 51, 0.60);
+  z-index: 1022;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.delete-dialog {
+  width: 400px;
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.delete-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px 24px;
+}
+.delete-dialog-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+.delete-dialog-close {
+  width: 28px;
+  height: 28px;
+  border: 1.5px dashed #ccc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  &:hover {
+    border-color: #999;
+    color: #666;
+  }
+}
+.delete-dialog-body {
+  padding: 4px 24px 24px;
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+  }
+}
+.delete-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 20px;
+  button {
+    flex: 1;
+    height: 46px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: opacity 0.2s;
+    &:active { opacity: 0.8; }
+  }
+}
+.delete-btn-cancel {
+  background: #fff;
+  color: #333;
+  border: 1.5px solid #e0e0e0 !important;
+}
+.delete-btn-confirm {
+  background: #F04444;
+  color: #fff;
+}
+
 </style>

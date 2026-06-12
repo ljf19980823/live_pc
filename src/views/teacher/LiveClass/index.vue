@@ -199,7 +199,7 @@
             </el-input>
           </div>
         </div>
-        <div class="ls_top_right">共{{ historyCourses.length }}节课</div>
+        <div class="ls_top_right">共{{ historyTotal }}节课</div>
       </div>
       <div class="ls_last" v-loading="historyLoading">
         <template v-if="!historyLoading">
@@ -232,6 +232,16 @@
           </div>
           <empty-state v-if="historyCourses.length === 0" description="暂无历史课堂" />
         </template>
+      </div>
+      <div class="ls_pagination" v-if="historyTotal > historyPageSize">
+        <el-pagination
+          background
+          layout="prev, pager, next"
+          :total="historyTotal"
+          :page-size="historyPageSize"
+          :current-page="historyPageNum"
+          @current-change="handleHistoryPageChange"
+        />
       </div>
     </div>
 
@@ -713,6 +723,9 @@ export default {
       liveLoading: false,
       historyLoading: false,
       _searchTimer: null,
+      historyPageNum: 1,
+      historyPageSize: 24,
+      historyTotal: 0,
 
       name:'',
       instr:'',
@@ -813,13 +826,16 @@ export default {
       }
     },
     dateRange() {
+      this.historyPageNum = 1
       this.fetchHistoryList()
     },
     selectedClass() {
+      this.historyPageNum = 1
       this.fetchHistoryList()
     },
     searchKeyword() {
       clearTimeout(this._searchTimer)
+      this.historyPageNum = 1
       this._searchTimer = setTimeout(() => this.fetchHistoryList(), 400)
     },
   },
@@ -1299,7 +1315,10 @@ export default {
 
     // ── 历史课堂接口 ────────────────────────────────────────────────────
     async fetchHistoryList() {
-      const params = {}
+      const params = {
+        pageNum: this.historyPageNum,
+        pageSize: this.historyPageSize,
+      }
       if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0]) {
         params.startDate = this.dateRange[0]
         params.endDate = this.dateRange[1]
@@ -1309,10 +1328,17 @@ export default {
       this.historyLoading = true
       try {
         const res = await getHistoryList(params)
-        this.historyCourses = res.data || res || []
+        const data = res.data || res || {}
+        this.historyCourses = data.records || data.list || (Array.isArray(data) ? data : [])
+        this.historyTotal = data.total || 0
       } catch (_) {} finally {
         this.historyLoading = false
       }
+    },
+
+    handleHistoryPageChange(page) {
+      this.historyPageNum = page
+      this.fetchHistoryList()
     },
 
     // ── 班级列表接口 ────────────────────────────────────────────────────
@@ -2003,6 +2029,20 @@ export default {
   flex-wrap: wrap;
   gap: 20px;
   min-height: 120px;
+  padding-bottom: 60px;
+  box-sizing: border-box;
+}
+.ls_pagination {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  background: #fff;
+  box-shadow: 0 -2px 8px 0 rgba(0, 0, 0, 0.06);
+  z-index: 100;
 }
 .ls_last_detail {
   padding: 6px 5px 11px 5px;
