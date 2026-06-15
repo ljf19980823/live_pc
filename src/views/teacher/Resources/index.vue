@@ -387,6 +387,7 @@ export default {
       renameLoading: false,
       deleteLoading: false,
       uploadPendingCount: 0,
+      latestGroupUpdate: '',
     }
   },
   computed: {
@@ -476,6 +477,7 @@ export default {
       this.groupFileParentId = null
       this.groupFileBreadcrumbs = [{ id: null, name: '全部资料' }]
       this.searchKeyword = ''
+      this.fetchGroupList()
     },
 
     // ─── 教研组文件 ──────────────────────────────────────────────
@@ -542,8 +544,12 @@ export default {
         .then(() => {
           this.$message.success('文件夹创建成功')
           this.closeNewFolderDialog()
-          if (isGroup) this.fetchGroupFiles()
-          else this.fetchMyFiles()
+          if (isGroup) {
+            this.fetchGroupList()
+            this.fetchGroupFiles()
+          } else {
+            this.fetchMyFiles()
+          }
         })
         .finally(() => { this.folderLoading = false })
     },
@@ -621,8 +627,12 @@ export default {
           this.uploadPendingCount--
           if (this.uploadPendingCount === 0) {
             this.$message.success('上传成功')
-            if (type === '2') this.fetchGroupFiles()
-            else this.fetchMyFiles()
+            if (type === '2') {
+              this.fetchGroupList()
+              this.fetchGroupFiles()
+            } else {
+              this.fetchMyFiles()
+            }
           }
         })
     },
@@ -643,7 +653,7 @@ export default {
     },
     formatDate(dateStr) {
       if (!dateStr) return '—'
-      return String(dateStr).slice(0, 10)
+      return String(dateStr).slice(0, 19)
     },
   },
 }
