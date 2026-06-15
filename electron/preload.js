@@ -61,6 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getScreenAccessStatus: () => ipcRenderer.invoke('get-screen-access-status'),
   // 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
   openScreenPreferences: () => ipcRenderer.invoke('open-screen-preferences'),
+  // 打开崩溃日志所在目录（用于"反馈崩溃问题"按钮）
+  openCrashLogFolder: () => ipcRenderer.invoke('open-crash-log-folder'),
   // 监听主进程通知：屏幕录制权限被拒绝（getDisplayMedia 被调用但权限不足时触发）
   onScreenPermissionDenied: (callback) => {
     const handler = (_, data) => callback(data)
