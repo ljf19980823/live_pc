@@ -423,6 +423,35 @@ function createWindow () {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  // ─── 渲染进程崩溃监听 ────────────────────────────────────────────────
+  // reason 取值（Electron 文档）：clean-exit / abnormal-exit / killed / crashed /
+  //   oom（内存不足）/ launch-failed / integrity-failure。
+  // 用于排查长时间运行后偶发崩溃：oom 表示内存泄漏，crashed 表示渲染进程异常，
+  // 区分主项目与 iframe 直播子项目责任时直接看此日志。
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    appendCrashLog('renderer', details)
+  })
+}
+
+// ─── 崩溃日志写盘 ─────────────────────────────────────────────────────────
+// 写到 userData 目录，用户可在出问题后通过"打开日志目录"取回。
+// 同时输出到 stdout，开发模式下可在终端直接看到。
+function appendCrashLog (source, details) {
+  try {
+    const userDataPath = app.getPath('userData')
+    const logFile = path.join(userDataPath, 'crash.log')
+    const line = `${new Date().toISOString()} [${source}] ` +
+      `type=${details.type || source} reason=${details.reason} ` +
+      `exitCode=${details.exitCode} name=${details.name || ''}\n`
+    fs.mkdirSync(userDataPath, { recursive: true })
+    fs.appendFileSync(logFile, line)
+    // 同步打印一份，开发模式下方便实时看到
+    // eslint-disable-next-line no-console
+    console.error('[CRASH]', line.trim())
+  } catch (_) {
+    // 写日志失败不能反过来影响主流程
+  }
 }
 
 // ─── 版本更新：工具函数 ───────────────────────────────────────────────────────
@@ -793,6 +822,14 @@ app.on('window-all-closed', () => {
   }
 })
 
+// ─── 全局子进程崩溃监听 ──────────────────────────────────────────────────
+// child-process-gone 覆盖 GPU、Utility、Pepper-Plugin、Zygote 等所有非主进程崩溃；
+// 与 webContents.on('render-process-gone') 互补：渲染进程的 OOM 大多走 render-process-gone，
+// GPU/屏幕共享/视频解码相关的句柄泄漏导致的崩溃则在这里捕获（type=GPU 是关键信号）。
+app.on('child-process-gone', (_event, details) => {
+  appendCrashLog(details.type || 'child', details)
+})
+
 // 监听来自渲染进程的最小化请求
 ipcMain.on('window-minimize', (event) => {
   // 获取发送该消息的窗口并最小化
@@ -814,4 +851,19 @@ ipcMain.handle('get-screen-access-status', () => {
 ipcMain.handle('open-screen-preferences', () => {
   if (process.platform !== 'darwin') return
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+})
+
+// ─── 打开崩溃日志所在目录（方便用户回传 crash.log） ──────────────────────
+ipcMain.handle('open-crash-log-folder', () => {
+  try {
+    const logFile = path.join(app.getPath('userData'), 'crash.log')
+    if (fs.existsSync(logFile)) {
+      shell.showItemInFolder(logFile)
+    } else {
+      shell.openPath(app.getPath('userData'))
+    }
+    return true
+  } catch (_) {
+    return false
+  }
 })
