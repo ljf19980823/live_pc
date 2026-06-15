@@ -178,3 +178,15 @@ export const getAfterQuizUnSubmitList = (examConfigId, classId) => get(`/edu/aft
 
 // 收藏/取消收藏切换
 export const collectToggle = data => post('/edu/recentView/collect/toggle', data)
+
+// 获取资料列表（type: '1' 个人资料 '2' 教研组资料）
+export const getBusinessFileList = params => get('/edu/businessFile/list', params)
+
+// 新建文件夹 / 上传资料（multipart/form-data）
+export const uploadBusinessFile = formData => post('/edu/businessFile/upload', formData)
+
+// 重命名资料
+export const renameBusinessFile = (id, name) => post('/edu/businessFile/rename', {}, { params: { id, name } })
+
+// 删除资料
+export const deleteBusinessFile = id => post('/edu/businessFile/delete', {}, { params: { id } })

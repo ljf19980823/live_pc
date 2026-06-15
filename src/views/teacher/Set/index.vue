@@ -1033,7 +1033,7 @@ export default {
           getTeachingGroupList()
         ])
         this.groupStats = statsRes.data || statsRes || { groupCount: 0, memberCount: 0 }
-        const rawList = listRes.data || listRes || []
+        const rawList = listRes.data ? listRes.data.list:[]
         this.groupList = rawList.map((item, idx) => this.mapGroupListItem(item, idx))
       } catch (_) {
         this.groupList = []
