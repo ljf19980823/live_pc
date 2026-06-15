@@ -1396,7 +1396,8 @@ export default {
         const liveData = result.data || result
         const liveId = liveData.liveId
         const liveLessonId = liveData.liveLessonId
-        const { userId, userName } = getUserInfo()
+        const { userId, userName ,realName} = getUserInfo()
+        console.log(getUserInfo(),'输出一下')
         await createAliyunClass({
           liveId,
           mode: this.allowMic,

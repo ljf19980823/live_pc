@@ -339,16 +339,49 @@
       </div>
     </div>
 
+    <!-- ========== 视频播放弹窗 ========== -->
+    <VideoPlayer
+      :visible="showVideoDialog"
+      :source="currentVideoUrl"
+      :title="currentVideoTitle"
+      @close="showVideoDialog = false; currentVideoUrl = ''"
+    />
+
+    <!-- ========== 图片预览弹窗 ========== -->
+    <el-dialog
+      :title="currentImageTitle"
+      :visible.sync="showImageDialog"
+      width="800px"
+      :append-to-body="true"
+      @close="showImageDialog = false; currentImageUrl = ''"
+    >
+      <img
+        v-if="showImageDialog"
+        :src="currentImageUrl"
+        style="width:100%;max-height:600px;object-fit:contain;display:block;"
+        alt=""
+      />
+    </el-dialog>
+
+    <!-- ========== 文档预览弹窗（ONLYOFFICE）========== -->
+    <FilePreview
+      :visible="filePreviewVisible"
+      :file="filePreviewData"
+      @close="filePreviewVisible = false"
+    />
+
   </div>
 </template>
 
 <script>
 import DialogCustome from '@/components/DialogCustome/index.vue'
+import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import FilePreview from '@/components/FilePreview/index.vue'
 import { getBusinessFileList, uploadBusinessFile, renameBusinessFile, deleteBusinessFile, getTeachingGroupList } from '@/api/modules/teacher'
 
 export default {
   name: 'Resources',
-  components: { DialogCustome },
+  components: { DialogCustome, VideoPlayer, FilePreview },
   data() {
     return {
       activeTab: 'my',
@@ -388,6 +421,16 @@ export default {
       deleteLoading: false,
       uploadPendingCount: 0,
       latestGroupUpdate: '',
+
+      // 文件预览
+      showVideoDialog: false,
+      currentVideoUrl: '',
+      currentVideoTitle: '',
+      showImageDialog: false,
+      currentImageUrl: '',
+      currentImageTitle: '',
+      filePreviewVisible: false,
+      filePreviewData: null,
     }
   },
   computed: {
@@ -440,6 +483,8 @@ export default {
         this.myBreadcrumbs.push({ id: item.id, name: item.name })
         this.myParentId = item.id
         this.fetchMyFiles()
+      } else {
+        this.openFile(item)
       }
     },
     goToMyBreadcrumb(idx) {
@@ -501,6 +546,8 @@ export default {
         this.groupFileBreadcrumbs.push({ id: item.id, name: item.name })
         this.groupFileParentId = item.id
         this.fetchGroupFiles()
+      } else {
+        this.openFile(item)
       }
     },
     goToGroupBreadcrumb(idx) {
@@ -508,6 +555,36 @@ export default {
       this.groupFileBreadcrumbs = this.groupFileBreadcrumbs.slice(0, idx + 1)
       this.groupFileParentId = this.groupFileBreadcrumbs[idx].id
       this.fetchGroupFiles()
+    },
+
+    // ─── 文件打开/预览 ───────────────────────────────────────────
+    openFile(item) {
+      const url = item.url || item.fileUrl || item.path || ''
+      const { fileType, name } = item
+      // 图片
+      if (fileType === '2') {
+        this.currentImageTitle = name || '图片预览'
+        this.currentImageUrl = url
+        this.showImageDialog = true
+        return
+      }
+      // 视频
+      if (fileType === '4') {
+        this.currentVideoTitle = name || '视频播放'
+        this.currentVideoUrl = url
+        this.showVideoDialog = true
+        return
+      }
+      // 文档类（doc/ppt/pdf）→ ONLYOFFICE 预览
+      if (['3', '5', '6'].includes(fileType)) {
+        this.filePreviewData = { name: name || '', path: url }
+        this.filePreviewVisible = true
+        return
+      }
+      // 其他类型 → 下载
+      if (url) {
+        window.location.href = url
+      }
     },
 
     // ─── 菜单控制 ────────────────────────────────────────────────
