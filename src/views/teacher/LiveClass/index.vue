@@ -861,15 +861,16 @@ export default {
       this.showCreateClass = true
     }
     
-    // 监听 iframe 直播退出消息
-    window.addEventListener('message', (event) => {
+    // 监听 iframe 直播退出消息（保存引用以便 beforeDestroy 移除）
+    this._onWindowMessage = (event) => {
       if (event.data?.type === 'CLASSROOM_EXIT') {
-        const { classId } = event.data;
-        this.activeTab = 'live';
+        const { classId } = event.data
+        this.activeTab = 'live'
       } else if (event.data?.type === 'MINIMIZE_WINDOW') {
-        window.electronAPI.minimizeWindow();
+        window.electronAPI && window.electronAPI.minimizeWindow()
       }
-    });
+    }
+    window.addEventListener('message', this._onWindowMessage)
 
     // macOS：监听主进程通知——屏幕录制权限被拒绝
     if (window.electronAPI?.onScreenPermissionDenied) {
@@ -891,6 +892,19 @@ export default {
     this.stopLiveRefreshTimer()
     if (this._onVisibilityChange) {
       document.removeEventListener('visibilitychange', this._onVisibilityChange)
+    }
+    // 卸载全局 message 监听，防止组件重建累积导致渲染进程内存泄漏
+    if (this._onWindowMessage) {
+      window.removeEventListener('message', this._onWindowMessage)
+      this._onWindowMessage = null
+    }
+    if (typeof this._removeScreenPermissionDenied === 'function') {
+      this._removeScreenPermissionDenied()
+      this._removeScreenPermissionDenied = null
+    }
+    if (typeof this._removeScreenCaptureFailed === 'function') {
+      this._removeScreenCaptureFailed()
+      this._removeScreenCaptureFailed = null
     }
   },
   computed: {
