@@ -43,7 +43,7 @@
           </div>
           <div class="course-list-card-header-right">
             <div class="course-task-badge">
-              <img src="@/assets/images/class/clock.png" class="course-task-badge-icon" alt="" />
+              <img src="@/assets/images/task_icon.png" class="course-task-badge-icon" alt="" />
               <span>{{ totalTaskCount }}个学习任务</span>
             </div>
             <div class="course-hide-done">
@@ -81,7 +81,7 @@
       <!-- 顶部返回栏 -->
       <div class="detail-header">
         <div class="detail-header-back" @click="currentView = 'list'">
-          <img src="@/assets/images/student/back.png" class="detail-back-icon" alt="" />
+          <img src="@/assets/images/course_back.png" class="detail-back-icon" alt="" />
           <div class="detail-header-title-group">
             <div class="detail-header-title">课程详情</div>
             <div class="detail-header-subtitle">查看课程简介并继续你的学习任务。</div>
@@ -526,9 +526,10 @@ export default {
   display: flex;
   align-items: center;
   background: #F0F3F6;
-  border-radius: 8px;
-  padding: 3px;
+  border-radius: 10px;
+  padding: 5px 7px;
   gap: 2px;
+  border: 1px solid rgba(229, 234, 242, 0.60);
 }
 
 .course-tab-btn {
@@ -606,7 +607,7 @@ export default {
 .course-list-card-header-left {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .course-list-card-title {
@@ -632,14 +633,13 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  height: 36px;
   padding: 0 12px;
-  background: #FFF8ED;
-  border: 1px solid #FFD591;
-  border-radius: 16px;
+  background: #FFF4E4;
+  border-radius: 10px;
   font-size: 13px;
-  font-weight: 500;
-  color: #FA8C16;
+  font-weight: bold;
+  color: #B96B00;
 }
 
 .course-task-badge-icon {
@@ -723,15 +723,15 @@ export default {
 
 .course-progress-bar {
   flex: 1;
-  height: 4px;
-  background: #E8EEFF;
+  height: 6px;
+  background: #F0F3F6;
   border-radius: 2px;
   overflow: hidden;
 }
 
 .course-progress-bar-fill {
   height: 100%;
-  background: #4D7CFF;
+  background: #A3BFFF;
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -748,9 +748,9 @@ export default {
 .detail-header {
   width: 100%;
   background: #FFFFFF;
-  padding: 0 30px;
+  padding: 26px 30px;
   box-sizing: border-box;
-  height: 68px;
+  // height: 68px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -764,8 +764,8 @@ export default {
 }
 
 .detail-back-icon {
-  width: 7px;
-  height: 14px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
@@ -783,8 +783,9 @@ export default {
 }
 
 .detail-header-subtitle {
-  font-size: 12px;
-  color: #999999;
+  font-size: 13px;
+  color: #8A93A3;
+  margin-top: 4px;
 }
 
 /* 详情主体 */
@@ -806,8 +807,8 @@ export default {
   flex-direction: column;
   gap: 0;
   overflow-y: auto;
-  background: #FFFFFF;
-  border-radius: 12px;
+  // background: #FFFFFF;
+  // border-radius: 12px;
   padding-bottom: 16px;
 }
 
@@ -829,28 +830,32 @@ export default {
 }
 
 .detail-left-info {
-  padding: 16px;
+  padding: 25px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 20px;
+  border-radius: 12px;
+  background: #ffffff;
 }
 
 .detail-left-info-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
-  color: #333333;
+  color: #202532;
 }
 
 .detail-left-info-meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 5px;
 }
 
 .detail-left-info-tag {
   display: inline-block;
   padding: 2px 10px;
-  background: #E8EEFF;
+  background: #F0F5FF;
   color: #0049FF;
   border-radius: 4px;
   font-size: 12px;
@@ -859,25 +864,28 @@ export default {
 
 .detail-left-info-count {
   font-size: 13px;
-  color: #666666;
+  color: #667085;
 }
 
 .detail-left-info-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 16px;
+  padding-top: 25px;
+  box-sizing: border-box;
+  border-top: 1px solid #F0F3F6;
 }
 
 .detail-left-info-section-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: #333333;
+  color: #202532;
 }
 
 .detail-left-info-desc {
   font-size: 13px;
-  color: #666666;
+  color: #667085;
   line-height: 1.7;
 }
 
@@ -888,7 +896,7 @@ export default {
   margin-left: 12px;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
+  // background: #FFFFFF;
   border-radius: 12px;
   overflow: hidden;
 }
