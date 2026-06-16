@@ -206,7 +206,7 @@
         </div>
 
         <!-- 文件列表 -->
-        <div class="file-list" v-loading="groupFileLoading">
+        <div class="file-list file-list2" v-loading="groupFileLoading">
           <div class="file-list-header">
             <div class="col-name breadcrumb-nav">
               <template v-for="(crumb, idx) in groupFileBreadcrumbs">
@@ -907,16 +907,20 @@ export default {
   padding: 0 25px 25px 25px;
   box-sizing: border-box;
 }
+.file-list2{
+ padding: 25px 25px 25px 25px!important;
+  box-sizing: border-box;
+}
 
 .file-list-header {
   display: flex;
   align-items: center;
-  padding: 14px 24px;
+  padding: 14px 22px;
   background: #FBFCFF;
   border-bottom: 1px solid #EDF0F5;
   font-size: 13px;
   color: #8A93A3;
-  .col-name { flex: 1; }
+  .col-name { flex: 1;width: 0; }
   .col-size { width: 140px; text-align: center; }
   .col-date { width: 140px; text-align: center; }
   .col-action { width: 140px; text-align: center; }
@@ -955,7 +959,7 @@ export default {
 .file-item {
   display: flex;
   align-items: center;
-  padding: 15px 24px;
+  padding: 15px 22px;
   background: #ffffff;
   border-bottom: 1px solid #EDF0F5;
   transition: background 0.15s;
@@ -984,6 +988,9 @@ export default {
     .file-name {
       font-size: 14px;
       color: #2D3340;
+      flex: 1;
+      width: 0;
+      word-break: break-all;
     }
     .child-count {
       font-size: 12px;
@@ -1001,7 +1008,7 @@ export default {
     color: #5F6878;
   }
   .col-date {
-    width: 140px;
+    width: 150px;
     text-align: center;
     font-size: 14px;
     color: #8A93A3;
@@ -1139,7 +1146,7 @@ export default {
   height: 0;
   width: 100%;
   background: #F3F4F8;
-  padding: 0 25px 25px 25px;
+  padding: 25px 25px 25px 25px;
   box-sizing: border-box;
 }
 .group-card-section_box {

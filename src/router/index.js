@@ -126,10 +126,10 @@ const routes = [
         meta: { title: '实时课堂', icon: 'el-icon-video-camera-solid', roles: ['student'] }
       },
       {
-        path: 'student/resources',
-        name: 'StudentResources',
-        component: () => import('@/views/Student/Resources/index.vue'),
-        meta: { title: '资料中心', icon: 'el-icon-folder-opened', roles: ['student'] }
+        path: 'student/course',
+        name: 'StudentCourse',
+        component: () => import('@/views/Student/Course/index.vue'),
+        meta: { title: '课程', icon: 'el-icon-folder-opened', roles: ['student'] }
       },
       {
         path: 'student/message',

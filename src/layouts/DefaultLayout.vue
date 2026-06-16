@@ -148,10 +148,10 @@ export default {
             activeIcon: require('@/assets/icons/menu/live-class-active.png')
           },
           {
-            path: '/student/resources',
-            title: '资料中心',
+            path: '/student/course',
+            title: '课程',
             icon: require('@/assets/icons/menu/resources.png'),
-            activeIcon: require('@/assets/icons/menu/resources-active.png')
+            activeIcon: require('@/assets/icons/menu/course-active.png')
           },
           {
             path: '/student/message',
