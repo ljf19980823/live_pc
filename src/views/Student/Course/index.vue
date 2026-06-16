@@ -29,6 +29,8 @@
               v-model="searchText"
               class="course-search-input"
               placeholder="搜索课程名称"
+              @keydown.enter="fetchCourseList"
+              @blur="fetchCourseList"
             />
           </div>
         </div>
@@ -53,15 +55,16 @@
           </div>
         </div>
 
-        <div class="course-grid">
+        <div class="course-grid" v-loading="courseListLoading" element-loading-background="rgba(255,255,255,0.7)">
           <div
-            v-for="(item, index) in filteredCourseList"
-            :key="index"
+            v-for="(item, index) in courseList"
+            :key="item.id || index"
             class="course-card"
             @click="openDetail(item)"
           >
-            <div class="course-card-cover" :style="{ background: item.bgGradient }">
-              <span class="course-card-cover-char">{{ item.coverChar }}</span>
+            <div class="course-card-cover" :style="item.cover ? {} : { background: item.bgGradient }">
+              <img v-if="item.cover" :src="item.cover" class="course-card-cover-img" alt="" />
+              <span v-else class="course-card-cover-char">{{ item.coverChar }}</span>
             </div>
             <div class="course-card-name">{{ item.name }}</div>
             <div class="course-card-tasks">{{ item.taskCount }}个学习任务</div>
@@ -72,6 +75,9 @@
               <span class="course-progress-text">{{ item.progress }}%</span>
             </div>
           </div>
+          <div v-if="!courseListLoading && courseList.length === 0" class="course-empty">
+            暂无课程
+          </div>
         </div>
       </div>
     </template>
@@ -80,7 +86,7 @@
     <template v-else>
       <!-- 顶部返回栏 -->
       <div class="detail-header">
-        <div class="detail-header-back" @click="currentView = 'list'">
+        <div class="detail-header-back" @click="backToList">
           <img src="@/assets/images/course_back.png" class="detail-back-icon" alt="" />
           <div class="detail-header-title-group">
             <div class="detail-header-title">课程详情</div>
@@ -93,13 +99,13 @@
       <div class="detail-body">
         <!-- 左侧：课程信息 -->
         <div class="detail-left">
-          <div class="detail-left-cover" :style="{ background: selectedCourse && selectedCourse.bgGradient }">
-            <span class="detail-left-cover-char">{{ selectedCourse && selectedCourse.coverChar }}</span>
+          <div class="detail-left-cover" :style="selectedCourse && selectedCourse.cover ? { backgroundImage: `url(${selectedCourse.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: selectedCourse && selectedCourse.bgGradient }">
+           
           </div>
           <div class="detail-left-info">
             <div class="detail-left-info-name">{{ selectedCourse && selectedCourse.name }}</div>
             <div class="detail-left-info-meta">
-              <span class="detail-left-info-tag">{{ selectedCourse && selectedCourse.subject }}</span>
+              <span class="detail-left-info-tag">{{ selectedCourse && selectedCourse.subjectName }}</span>
               <span class="detail-left-info-count">共{{ selectedCourse && selectedCourse.taskCount }}个学习任务</span>
             </div>
             <div class="detail-left-info-section">
@@ -116,7 +122,7 @@
             <template v-for="(item, idx) in courseDetail.items">
               <!-- 直播课 -->
               <div v-if="item.type === 'live'" class="cdi-card" :key="idx"
-                @click="handleCardClickWithLoading(`live-${idx}`, () => {})"
+                @click="handleCardClickWithLoading(`live-${idx}`, () => enterLiveRoom(item))"
                 v-loading="activeLoadingKey === `live-${idx}`"
                 element-loading-background="rgba(255,255,255,0.7)">
                 <div class="cdi-main">
@@ -147,7 +153,7 @@
 
               <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
               <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx"
-                @click="handleCardClickWithLoading(`resource-${idx}`, () => {})"
+                @click="handleCardClickWithLoading(`resource-${idx}`, () => handleResourceClick(item))"
                 v-loading="activeLoadingKey === `resource-${idx}`"
                 element-loading-background="rgba(255,255,255,0.7)">
                 <div class="cdi-main">
@@ -202,7 +208,7 @@
                   <template v-if="child.type === 'group' && child.expanded">
                     <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
                       class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
-                      @click="handleCardClickWithLoading(`grandchild-${idx}-${ci}-${gi}`, () => {})"
+                      @click="handleCardClickWithLoading(`grandchild-${idx}-${ci}-${gi}`, () => grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined)"
                       v-loading="activeLoadingKey === `grandchild-${idx}-${ci}-${gi}`" element-loading-background="rgba(255,255,255,0.7)">
                       <div class="cdi-main">
                         <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
@@ -238,7 +244,7 @@
                   </template>
                   <!-- 一级分组下的普通内容（resource / live） -->
                   <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group"
-                    @click="handleCardClickWithLoading(`child-${idx}-${ci}`, () => {})"
+                    @click="handleCardClickWithLoading(`child-${idx}-${ci}`, () => child.type === 'resource' ? handleResourceClick(child) : child.type === 'live' ? enterLiveRoom(child) : undefined)"
                     v-loading="activeLoadingKey === `child-${idx}-${ci}`" element-loading-background="rgba(255,255,255,0.7)">
                     <div class="cdi-main">
                       <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
@@ -279,12 +285,103 @@
       </div>
     </template>
 
+  <!-- 直播 iframe -->
+  <div v-if="showLiveIframe" class="live-iframe-overlay">
+    <div class="live-iframe-back" @click="showLiveIframe = false">
+      <span>← 返回课程</span>
+    </div>
+    <iframe :src="liveUrl" style="flex:1;border:none;width:100%;" allowfullscreen></iframe>
+  </div>
+
+  <!-- 视频播放弹窗 -->
+  <VideoPlayer
+    :visible="showVideoDialog"
+    :source="currentVideoUrl"
+    :title="currentResourceTitle"
+    :allow-multiple="currentAllowMultiple"
+    :allow-fast-forward="currentAllowFastForward"
+    :allow-download="currentAllowDownload"
+    :from-task="fromLearningTask"
+    :collect-params="currentCollectParams"
+    @close="closeVideoDialog"
+    @collect-change="onChildCollectChange"
+  />
+
+  <!-- 历史课堂回放弹窗 -->
+  <history-video-player
+    :visible="playerVisible"
+    :main-source="playerSource"
+    :teacher-source="playerTeacherSource"
+    :title="playerTitle"
+    :allow-download="currentAllowDownload"
+    :from-task="fromLearningTask"
+    :collect-params="currentCollectParams"
+    @close="closeHistoryPlayer"
+    @collect-change="onChildCollectChange"
+  />
+
+  <!-- 文件预览弹窗 -->
+  <FilePreview
+    :visible="filePreviewVisible"
+    :file="filePreviewData"
+    :allow-download="currentAllowDownload"
+    :from-task="fromLearningTask"
+    :collect-params="currentCollectParams"
+    @close="filePreviewVisible = false; fromLearningTask = false; isCollected = false"
+    @collect-change="onChildCollectChange"
+  />
+
+  <!-- 音频播放弹窗 -->
+  <el-dialog
+    :title="currentResourceTitle"
+    :visible.sync="showAudioDialog"
+    width="480px"
+    :append-to-body="true"
+    @close="closeAudioDialog"
+  >
+    <audio v-if="showAudioDialog" :src="currentAudioUrl" controls autoplay style="width:100%;margin:16px 0;display:block;"></audio>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+      <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
+    </div>
+  </el-dialog>
+
+  <!-- 图片预览弹窗 -->
+  <el-dialog
+    :title="currentResourceTitle"
+    :visible.sync="showImageDialog"
+    width="800px"
+    :append-to-body="true"
+    @close="closeImageDialog"
+  >
+    <img v-if="showImageDialog" :src="currentImageUrl" style="width:100%;max-height:600px;object-fit:contain;display:block;" alt="" />
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
+    </div>
+  </el-dialog>
+
   </div>
 </template>
 
 <script>
+import { getAllCourseList, getRecentCourseList } from '@/api/modules/student'
+import { getCourseDetail, updateRecentStudy, updateCourseProgress, collectToggle, checkTempStudentLiveRecord } from '@/api'
+import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import HistoryVideoPlayer from '@/components/HistoryVideoPlayer/index.vue'
+import FilePreview from '@/components/FilePreview/index.vue'
+import { getToken, getUserInfo } from '@/utils/auth'
+
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #E8EDFF 0%, #C8D3FF 100%)',
+  'linear-gradient(135deg, #FFF8E6 0%, #FFE4A0 100%)',
+  'linear-gradient(135deg, #FFE8EE 0%, #FFBFCC 100%)',
+  'linear-gradient(135deg, #E8FFF2 0%, #AAFFD6 100%)',
+  'linear-gradient(135deg, #F0E8FF 0%, #D4AAFF 100%)',
+  'linear-gradient(135deg, #E8F8FF 0%, #AAE0FF 100%)',
+]
+
 export default {
   name: 'StudentCourse',
+  components: { VideoPlayer, HistoryVideoPlayer, FilePreview },
   data() {
     return {
       currentView: 'list',
@@ -294,179 +391,503 @@ export default {
       selectedCourse: null,
       courseDetailLoading: false,
       activeLoadingKey: null,
+      courseListLoading: false,
+      courseList: [],
+      courseDetail: { taskCount: 0, items: [] },
 
-      courseList: [
-        {
-          id: 1,
-          name: '立升备课-管理学',
-          subject: '管理学',
-          taskCount: 8,
-          progress: 0,
-          bgGradient: 'linear-gradient(135deg, #E8EDFF 0%, #C8D3FF 100%)',
-          coverChar: '管',
-          description: '本课程系统讲设管理学基本概念、原理和方法。涵盖计划、组织、领导、控制等核心职能，结合实际案例分析，帮助学生建立管理思维，提升解决实际管理问题的能力，为未来的职业发展打下坚实基础。',
-        },
-        {
-          id: 2,
-          name: '高等数学基础',
-          subject: '数学',
-          taskCount: 12,
-          progress: 35,
-          bgGradient: 'linear-gradient(135deg, #FFF8E6 0%, #FFE4A0 100%)',
-          coverChar: '高',
-          description: '本课程涵盖微积分、线性代数、概率论等高等数学核心内容，通过系统讲解与大量练习，帮助学生掌握高等数学的基本思想与解题方法。',
-        },
-        {
-          id: 3,
-          name: '大学语文阅读',
-          subject: '语文',
-          taskCount: 10,
-          progress: 62,
-          bgGradient: 'linear-gradient(135deg, #FFE8EE 0%, #FFBFCC 100%)',
-          coverChar: '大',
-          description: '本课程以经典文学作品为载体，培养学生的阅读理解能力与文学鉴赏能力，提升语言表达水平，弘扬中华优秀传统文化。',
-        },
-        {
-          id: 4,
-          name: '公共英语听说',
-          subject: '英语',
-          taskCount: 9,
-          progress: 18,
-          bgGradient: 'linear-gradient(135deg, #E8FFF2 0%, #AAFFD6 100%)',
-          coverChar: '公',
-          description: '本课程注重英语听说综合能力的培养，通过场景对话、听力练习与口语训练，帮助学生在实际生活与工作中自如运用英语进行交流。',
-        },
-      ],
+      // 直播
+      showLiveIframe: false,
+      liveUrl: '',
 
-      courseDetail: {
-        taskCount: 8,
-        items: [
-          {
-            type: 'live',
-            title: '管理学备课',
-            isFinish: 1,
-            liveStatus: '已结束',
-            liveMin: '',
-            date: '2024-05-06',
-            timeStart: '08:05',
-            timeEnd: '13:36',
-            progress: 0,
-            isRecent: false,
-          },
-          {
-            type: 'live',
-            title: '管理学备课',
-            isFinish: 0,
-            liveStatus: '直播中',
-            liveMin: '8 分钟',
-            date: '2024-05-06',
-            timeStart: '08:05',
-            timeEnd: '13:36',
-            progress: 25,
-            isRecent: false,
-          },
-          {
-            type: 'live',
-            title: '管理学备课',
-            isFinish: 0,
-            liveStatus: '直播未开始',
-            liveMin: '8 分钟',
-            date: '2024-05-06',
-            timeStart: '08:05',
-            timeEnd: '13:36',
-            progress: 0,
-            isRecent: false,
-          },
-          {
-            type: 'resource',
-            title: '大学语文.pdf',
-            nodeType: '2',
-            size: '136MB',
-            date: '2024-05-06',
-            progress: 100,
-            isRecent: true,
-          },
-          {
-            type: 'group',
-            title: '《铂金班课程》',
-            expanded: false,
-            percent: '100',
-            children: [
-              {
-                type: 'resource',
-                title: '铂金班讲义.pdf',
-                nodeType: '2',
-                size: '48MB',
-                date: '2024-05-06',
-                progress: 100,
-                isRecent: false,
-              },
-              {
-                type: 'live',
-                title: '铂金班专题直播',
-                isFinish: 1,
-                liveStatus: '已结束',
-                liveMin: '',
-                date: '2024-05-07',
-                timeStart: '09:00',
-                timeEnd: '11:00',
-                progress: 100,
-                isRecent: false,
-              },
-            ],
-          },
-          {
-            type: 'resource',
-            title: '大学语文.pdf',
-            nodeType: '2',
-            size: '',
-            date: '',
-            progress: 30,
-            isRecent: false,
-          },
-        ],
-      },
+      // 视频播放
+      showVideoDialog: false,
+      currentVideoUrl: '',
+      currentResourceTitle: '',
+      currentAllowMultiple: '1',
+      currentAllowFastForward: '1',
+      currentAllowDownload: '2',
+      currentPlayingItem: null,
+
+      // 历史回放
+      playerVisible: false,
+      playerSource: '',
+      playerTeacherSource: '',
+      playerTitle: '',
+
+      // 文件预览
+      filePreviewVisible: false,
+      filePreviewData: {},
+
+      // 音频
+      showAudioDialog: false,
+      currentAudioUrl: '',
+
+      // 图片
+      showImageDialog: false,
+      currentImageUrl: '',
+
+      // 收藏
+      fromLearningTask: false,
+      currentCollectParams: {},
+      isCollected: false,
+      collecting: false,
     }
   },
 
   computed: {
     totalTaskCount() {
-      return this.courseList.reduce((sum, item) => sum + item.taskCount, 0)
-    },
-    filteredCourseList() {
-      let list = this.courseList
-      if (this.hideDone) {
-        list = list.filter(item => item.progress < 100)
-      }
-      if (this.searchText.trim()) {
-        list = list.filter(item => item.name.includes(this.searchText.trim()))
-      }
-      if (this.activeTab === 'recent') {
-        list = list.filter(item => item.progress > 0)
-      }
-      return list
+      return this.courseList.reduce((sum, item) => sum + (item.taskCount || 0), 0)
     },
   },
 
+  watch: {
+    activeTab() {
+      this.fetchCourseList()
+    },
+    hideDone() {
+      this.fetchCourseList()
+    },
+    searchText() {
+      this.fetchCourseListDebounced()
+    },
+  },
+
+  created() {
+    this.fetchCourseList()
+  },
+
   methods: {
+    // ─── 列表加载 ──────────────────────────────────────────────
+    backToList() {
+      this.currentView = 'list'
+      this.fetchCourseList()
+    },
+
+    fetchCourseListDebounced() {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => {
+        this.fetchCourseList()
+      }, 400)
+    },
+
+    async fetchCourseList() {
+      this.courseListLoading = true
+      try {
+        const params = { hideStudy: this.hideDone ? '1' : '0' }
+        if (this.searchText.trim()) params.keyword = this.searchText.trim()
+        const res = this.activeTab === 'all'
+          ? await getAllCourseList(params)
+          : await getRecentCourseList(params)
+        this.courseList = (res.data || []).map((item, index) => this.mapCourseItem(item, index))
+      } catch (e) {
+        this.courseList = []
+      } finally {
+        this.courseListLoading = false
+      }
+    },
+
+    mapCourseItem(item, index) {
+      const charCode = item.courseId ? item.courseId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) : index
+      return {
+        ...item,
+        id: item.courseId,
+        taskCount: item.totalLessons || 0,
+        progress: Math.round(item.progressPercent || 0),
+        bgGradient: COVER_GRADIENTS[charCode % COVER_GRADIENTS.length],
+        coverChar: item.name ? item.name.charAt(0) : '课',
+        subject: item.label || '',
+        description: item.describe || '',
+      }
+    },
+
     openDetail(course) {
       this.selectedCourse = course
+      console.log(this.selectedCourse,'看戏')
       this.currentView = 'detail'
+      this.fetchCourseDetail(course.id)
+    },
+
+    // ─── 课程详情加载 ──────────────────────────────────────────
+    async fetchCourseDetail(courseId) {
+      if (!courseId) return
+      this.courseDetailLoading = true
+      const expandedMap = this._saveExpandedState(this.courseDetail.items || [])
+      try {
+        const res = await getCourseDetail({ courseId })
+        const data = res.data || {}
+        if (data.describe) {
+          this.$set(this.selectedCourse, 'description', data.describe)
+        }
+        if (data.subjectName) {
+          this.$set(this.selectedCourse, 'subjectName', data.subjectName)
+        }
+        this.courseDetail = {
+          taskCount: data.totalLessons || 0,
+          items: (data.detailTree || []).map(node => this._mapDetailNode(node)),
+        }
+        this._restoreExpandedState(this.courseDetail.items, expandedMap)
+      } catch (e) {
+        this.courseDetail = { taskCount: 0, items: [] }
+      } finally {
+        this.courseDetailLoading = false
+      }
+    },
+
+    _mapDetailNode(node) {
+      if (node.type === '1') {
+        return {
+          id: node.id || '',
+          type: 'group',
+          nodeType: node.type,
+          title: node.name || '',
+          percent: node.percent || '0',
+          expanded: false,
+          allowMultiple: String(node.allowMultiple || '1'),
+          allowFastForward: String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2'),
+          collectCount: node.collectCount,
+          children: (node.children || []).map(child => this._mapDetailNode(child)),
+        }
+      } else if (node.type === '2') {
+        const live = node.liveInfo || {}
+        const startTime = live.startTime || ''
+        let date = '', timeStart = ''
+        if (startTime) {
+          const parts = startTime.split(' ')
+          date = parts[0] || ''
+          timeStart = (parts[1] || '').substring(0, 8)
+        }
+        return {
+          id: node.id || '',
+          type: 'live',
+          nodeType: node.type,
+          title: node.name || live.name || '',
+          isFinish: live.isFinish,
+          isStart: live.isStart,
+          liveStatus: live.status || '',
+          liveMin: live.liveMin,
+          startTime: live.startTime || '',
+          liveLessonId: live.liveLessonId || '',
+          liveId: live.id || '',
+          fileList: live.fileList || [],
+          date,
+          timeStart,
+          timeEnd: '',
+          progress: Math.round(parseFloat(node.percent)) || 0,
+          isRecent: live.isRecentStudy === '1',
+          allowMultiple: String(node.allowMultiple || '1'),
+          allowFastForward: String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2'),
+          collectCount: node.collectCount,
+        }
+      } else {
+        const res = node.resource || node.historyLesson || {}
+        return {
+          id: node.id || '',
+          type: 'resource',
+          nodeType: node.type,
+          title: node.name || res.name || res.fileName || '',
+          size: res.size ? String(res.size) : '',
+          date: '',
+          isRecent: res.isRecentStudy === '1',
+          progress: Math.round(parseFloat(node.percent)) || 0,
+          filePath: res.fileList && res.fileList.length ? res.fileList[0].filePath : (res.filePath || ''),
+          allowMultiple: node.type === '3' ? '1' : String(node.allowMultiple || '1'),
+          allowFastForward: node.type === '3' ? '1' : String(node.allowFastForward || '1'),
+          allowDownload: String(node.allowDownload || '2'),
+          collectCount: node.collectCount,
+          historyLessonId: node.type === '3' && node.historyLesson ? node.historyLesson.historyLessonId : '',
+        }
+      }
+    },
+
+    _saveExpandedState(items, map = {}) {
+      if (!items) return map
+      items.forEach(item => {
+        if (item.type === 'group') {
+          map[item.id] = item.expanded || false
+          if (item.children) this._saveExpandedState(item.children, map)
+        }
+      })
+      return map
+    },
+
+    _restoreExpandedState(items, map) {
+      if (!items || !map) return
+      items.forEach(item => {
+        if (item.type === 'group') {
+          if (map[item.id] !== undefined) this.$set(item, 'expanded', map[item.id])
+          if (item.children) this._restoreExpandedState(item.children, map)
+        }
+      })
     },
 
     toggleGroup(item) {
-      item.expanded = !item.expanded
+      this.$set(item, 'expanded', !item.expanded)
     },
 
-    handleCardClickWithLoading(key, fn) {
-      if (this.activeLoadingKey) return
+    // ─── 卡片点击 ──────────────────────────────────────────────
+    async handleCardClickWithLoading(key, handler) {
       this.activeLoadingKey = key
       try {
-        fn()
+        await Promise.resolve(handler())
       } finally {
-        setTimeout(() => {
-          this.activeLoadingKey = null
-        }, 800)
+        this.activeLoadingKey = null
+      }
+    },
+
+    // ─── 进入直播间 ────────────────────────────────────────────
+    async enterLiveRoom(item) {
+      if (item.isFinish == 1 && item.liveStatus === '已结束已开播') {
+        this.openVideoPlayer(item, true, true)
+        return
+      }
+      if (item.isFinish == 1 && item.liveStatus === '已结束未开播') {
+        this.$message.warning('该课程暂无回放地址')
+        return
+      }
+      const now = Date.now()
+      const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+      if (!startTime || now < startTime - 30 * 60 * 1000) {
+        this.$message.warning('时间还未到，请耐心等候')
+        return
+      }
+      if (window.electronAPI) {
+        try {
+          const [camStatus, micStatus] = await Promise.all([
+            window.electronAPI.getMediaAccessStatus('camera'),
+            window.electronAPI.getMediaAccessStatus('microphone'),
+          ])
+          const needsRequest = []
+          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
+          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
+          if (needsRequest.length) await Promise.all(needsRequest)
+        } catch (_) {}
+      }
+      try {
+        const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+        const lessonId = String(item.id || '')
+        await updateRecentStudy({ courseId, lessonId })
+        this.fetchCourseDetail(this.selectedCourse.id)
+      } catch (_) {}
+
+      const { userId, realName, role } = getUserInfo()
+      const token = getToken()
+      const liveId = item.liveId
+      const roleNumber = role === 'STUDENT' ? 0 : 1
+      if (role === 'STUDENT') {
+        try {
+          const res = await checkTempStudentLiveRecord(liveId)
+          if (res.data == false) {
+            this.$message.warning(res.message)
+            return
+          }
+        } catch (_) {}
+      }
+      let liveBaseUrl = 'https://live.fjlsjy123.com'
+      if (process.env.NODE_ENV === 'development') liveBaseUrl = 'http://localhost:8000'
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      this.showLiveIframe = true
+    },
+
+    // ─── 资源点击 ──────────────────────────────────────────────
+    async handleResourceClick(item) {
+      const url = item.filePath
+      if (!url) {
+        this.$message.warning('资源地址不存在')
+        return
+      }
+      const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+      const lessonId = String(item.id || '')
+      const videoTypes = ['3', '4']
+      const imageTypes = ['5']
+      const audioTypes = ['6']
+
+      try {
+        const apiCalls = [updateRecentStudy({ courseId, lessonId })]
+        if (item.progress < 100) {
+          const isVideo = videoTypes.includes(item.nodeType)
+          const percent = isVideo ? String(item.progress || 0) : '100'
+          apiCalls.push(updateCourseProgress({ courseId, lessonId, type: String(item.nodeType || ''), percent }))
+        }
+        await Promise.all(apiCalls)
+      } catch (_) {}
+      this.fetchCourseDetail(courseId)
+
+      const collectBase = {
+        courseId,
+        lessonId,
+        type: String(item.nodeType || ''),
+        collectCount: String(item.collectCount || 0),
+        historyLessonId: String(item.historyLessonId || ''),
+      }
+      const initCollected = collectBase.collectCount == 1
+
+      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+      this.fromLearningTask = true
+      this.currentCollectParams = collectBase
+      this.isCollected = initCollected
+
+      if (videoTypes.includes(item.nodeType)) {
+        this.currentResourceTitle = item.title || '视频播放'
+        this.currentVideoUrl = url
+        this.currentPlayingItem = item
+        this.showVideoDialog = true
+      } else if (imageTypes.includes(item.nodeType)) {
+        this.currentResourceTitle = item.title || '图片预览'
+        this.currentImageUrl = url
+        this.showImageDialog = true
+      } else if (audioTypes.includes(item.nodeType)) {
+        this.currentResourceTitle = item.title || '音频播放'
+        this.currentAudioUrl = url
+        this.showAudioDialog = true
+      } else {
+        this.filePreviewData = { name: item.title || '', path: url }
+        this.filePreviewVisible = true
+      }
+    },
+
+    // ─── 历史视频回放 ──────────────────────────────────────────
+    async openVideoPlayer(item, updateRecent = false, fromTask = false) {
+      if (updateRecent) {
+        try {
+          const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+          await updateRecentStudy({ courseId, lessonId: String(item.id || '') })
+          this.fetchCourseDetail(this.selectedCourse.id)
+        } catch (_) {}
+      }
+      const fileList = item.fileList || []
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
+      this.playerSource = mainFile ? mainFile.filePath || '' : ''
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.playerTitle = item.name || item.title || '视频回放'
+      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+      this.currentPlayingItem = item
+      this.fromLearningTask = fromTask
+      this.isCollected = fromTask ? String(item.collectCount || 0) == 1 : false
+      if (fromTask) {
+        this.currentCollectParams = {
+          courseId: this.selectedCourse ? String(this.selectedCourse.id || '') : '',
+          lessonId: String(item.id || ''),
+          historyLessonId: String(item.historyLessonId || ''),
+          type: '3',
+          collectCount: String(item.collectCount || 0),
+        }
+      } else {
+        this.currentCollectParams = {}
+      }
+      this.playerVisible = true
+    },
+
+    async closeVideoDialog(percent = 0) {
+      this.showVideoDialog = false
+      this.currentVideoUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+      await this.saveVideoProgress(percent)
+    },
+
+    async closeHistoryPlayer(percent = 0) {
+      this.playerVisible = false
+      this.fromLearningTask = false
+      this.isCollected = false
+      await this.saveVideoProgress(percent)
+    },
+
+    async saveVideoProgress(percent) {
+      const item = this.currentPlayingItem
+      this.currentPlayingItem = null
+      if (!item) return
+      const newPercent = Math.max(percent, item.progress || 0)
+      if (newPercent <= (item.progress || 0)) return
+      try {
+        const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+        await updateCourseProgress({
+          courseId,
+          lessonId: String(item.id || ''),
+          type: String(item.nodeType || ''),
+          percent: String(newPercent),
+        })
+        this.fetchCourseDetail(courseId)
+      } catch (_) {}
+    },
+
+    closeAudioDialog() {
+      this.showAudioDialog = false
+      this.currentAudioUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+    },
+
+    async handleAudioDownload() {
+      const url = this.currentAudioUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '音频'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl; a.download = filename
+        document.body.appendChild(a); a.click()
+        document.body.removeChild(a); URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url; a.download = filename
+        document.body.appendChild(a); a.click()
+        document.body.removeChild(a)
+      }
+    },
+
+    closeImageDialog() {
+      this.showImageDialog = false
+      this.currentImageUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+    },
+
+    async handleImageDownload() {
+      const url = this.currentImageUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '图片'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl; a.download = filename
+        document.body.appendChild(a); a.click()
+        document.body.removeChild(a); URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url; a.download = filename
+        document.body.appendChild(a); a.click()
+        document.body.removeChild(a)
+      }
+    },
+
+    onChildCollectChange() {
+      if (this.selectedCourse) this.fetchCourseDetail(this.selectedCourse.id)
+    },
+
+    async handleCollect() {
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.currentCollectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        if (this.selectedCourse) this.fetchCourseDetail(this.selectedCourse.id)
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
       }
     },
   },
@@ -474,6 +895,30 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* ===== 直播 iframe 覆盖层 ===== */
+.live-iframe-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.live-iframe-back {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  cursor: pointer;
+  background: #f5f7fa;
+  font-size: 14px;
+  color: #333;
+}
+
 /* ===== 整体页面 ===== */
 .course-page {
   width: 100%;
@@ -691,12 +1136,26 @@ export default {
   margin-bottom: 10px;
 }
 
+.course-card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .course-card-cover-char {
   font-size: 52px;
   font-weight: bold;
   color: rgba(255, 255, 255, 0.55);
   user-select: none;
   letter-spacing: 0;
+}
+
+.course-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 0;
+  font-size: 14px;
+  color: #BBBBBB;
 }
 
 .course-card-name {

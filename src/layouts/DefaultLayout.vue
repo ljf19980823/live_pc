@@ -150,7 +150,7 @@ export default {
           {
             path: '/student/course',
             title: '课程',
-            icon: require('@/assets/icons/menu/resources.png'),
+            icon: require('@/assets/icons/menu/course.png'),
             activeIcon: require('@/assets/icons/menu/course-active.png')
           },
           {

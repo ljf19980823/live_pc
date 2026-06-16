@@ -15,3 +15,9 @@ export const checkTempStudentLiveRecord = (liveId) => post('/edu/sso/checkEnterL
 
 // 获取课后测验排行榜
 export const getQuizLeaderboard = (examConfigId, classId) => get(`/edu/after/quiz/leaderboard/${examConfigId}/${classId}`)
+
+// 获取全部课程列表
+export const getAllCourseList = (params) => get('/edu/recentView/courses', params)
+
+// 获取最近学习课程列表
+export const getRecentCourseList = (params) => get('/edu/recentView/recent', params)
