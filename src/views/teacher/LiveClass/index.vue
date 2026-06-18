@@ -824,6 +824,13 @@ export default {
       } else {
         this.stopLiveRefreshTimer()
       }
+      // 离开直播间时清空 liveUrl：
+      // v-if="activeTab === 'liveui'" 已经销毁 iframe DOM，
+      // 同时清空 URL 字符串，让 V8 能尽快 GC 掉 iframe 内的
+      // WebRTC 连接、摄像头/麦克风流等重量级资源的引用
+      if (val !== 'liveui') {
+        this.$nextTick(() => { this.liveUrl = '' })
+      }
     },
     dateRange() {
       this.historyPageNum = 1
@@ -887,6 +894,8 @@ export default {
     }
   },
   beforeDestroy() {
+    // 确保 iframe 及其 WebRTC 资源在组件销毁时被完全释放
+    this.liveUrl = ''
     this.removeIpcListeners()
     clearTimeout(this._searchTimer)
     this.stopLiveRefreshTimer()

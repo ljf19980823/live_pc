@@ -102,7 +102,9 @@
       <!-- 页面内容 -->
       <main class="layout-content">
         <keep-alive :include="cachedViews" :key="cacheKey">
-          <router-view :key="$route.fullPath" />
+          <!-- 使用路由 name 而非 fullPath 作为 key，避免相同路由在不同 query 下
+               创建多个缓存实例导致内存持续增长 -->
+          <router-view :key="$route.name" />
         </keep-alive>
       </main>
     </div>

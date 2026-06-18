@@ -7,6 +7,15 @@ const fs = require('fs')
 const os = require('os')
 const isDev = process.env.NODE_ENV === 'development'
 
+// ─── V8 / Chromium 性能标志（必须在 app.whenReady 之前调用）─────────────────
+// --expose-gc：暴露 global.gc()，允许代码主动触发垃圾回收
+// --max-semi-space-size=64：限制 V8 新生代大小，降低内存碎片
+app.commandLine.appendSwitch('js-flags', '--expose-gc --max-semi-space-size=64')
+// 渲染进程退到后台时允许降低优先级，节省内存和 CPU
+app.commandLine.appendSwitch('disable-renderer-backgrounding')
+// 开启精确内存占用信息（便于调试 performance.memory）
+app.commandLine.appendSwitch('enable-precise-memory-info')
+
 // ─── 版本检查接口地址（请修改为实际的版本检查 API）────────────────────────────
 // 接口需返回 JSON，格式示例：
 // {
@@ -405,6 +414,20 @@ function createWindow () {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
     startScreenGuard()
+
+    // ─── 周期性内存清理：每 20 分钟执行一次 ──────────────────────────────
+    // 1. 清理 HTTP 磁盘缓存，防止长时间运行后缓存文件无限增长
+    // 2. 通过 executeJavaScript 触发渲染进程 V8 GC（依赖 --expose-gc 标志）
+    const _memCleanTimer = setInterval(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        clearInterval(_memCleanTimer)
+        return
+      }
+      mainWindow.webContents.session.clearCache().catch(() => {})
+      mainWindow.webContents.executeJavaScript(
+        'typeof gc === "function" && gc()'
+      ).catch(() => {})
+    }, 20 * 60 * 1000)
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
