@@ -6,7 +6,7 @@
         <img src="@/assets/images/class/back_icon.png" class="exam-back-icon" alt="返回">
         <span class="exam-back-text">返回</span>
       </div>
-      <div class="exam-header-title">考试 - {{ examInfo.name }}</div>
+      <div class="exam-header-title">{{ examInfo.name }}</div>
       <div class="exam-header-right">
         <img src="@/assets/images/class/clock.png" class="exam-timer-icon" alt="">
         <span class="exam-timer-text" :class="{ 'exam-timer-warning': remainTime <= 300 }">{{ formatTime(remainTime) }}</span>
