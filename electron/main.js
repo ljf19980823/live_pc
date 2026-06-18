@@ -455,6 +455,64 @@ function createWindow () {
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     appendCrashLog('renderer', details)
   })
+
+  // ─── 渲染进程"假死"监听（窗口外壳在但内容卡住）─────────────────────
+  // unresponsive 触发时，渲染进程还活着但事件循环被阻塞（死循环、长 GC、IPC 卡死）；
+  // 此时 render-process-gone 不会触发。配合 responsive 可估算卡顿时长。
+  let unresponsiveAt = 0
+  let autoReloadTimer = null
+  mainWindow.webContents.on('unresponsive', () => {
+    unresponsiveAt = Date.now()
+    appendCrashLog('hang', { type: 'unresponsive', reason: 'hang', exitCode: 0 })
+    // 自救：卡顿超 15 秒主动 reload，避免用户面对一个永远黑屏/无响应的窗口
+    // （iframe 直播页 GPU 崩 / 长时间运行后内容全黑等场景）
+    clearTimeout(autoReloadTimer)
+    autoReloadTimer = setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        appendCrashLog('hang', {
+          type: 'auto-reload',
+          reason: 'hang>15s',
+          exitCode: 0,
+          name: '',
+        })
+        mainWindow.webContents.reloadIgnoringCache()
+      }
+    }, 30 * 1000)
+  })
+  mainWindow.webContents.on('responsive', () => {
+    const dur = unresponsiveAt ? Date.now() - unresponsiveAt : -1
+    appendCrashLog('hang', { type: 'responsive', reason: `recovered-after-${dur}ms`, exitCode: 0 })
+    unresponsiveAt = 0
+    clearTimeout(autoReloadTimer)
+    autoReloadTimer = null
+  })
+
+  // ─── 页面加载失败监听（iframe 直播页加载不出来时会触发）──────────────
+  // isMainFrame=false 表示 iframe 失败，最有可能命中你"内容全黑"的场景：
+  // iframe 自身渲染进程崩 / 网络断 / 资源 404 时，iframe 区域不会自动恢复。
+  mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    appendCrashLog('load-fail', {
+      type: isMainFrame ? 'main-frame' : 'iframe',
+      reason: `${errorCode}:${errorDescription}`,
+      exitCode: 0,
+      name: validatedURL,
+    })
+  })
+
+  // ─── 渲染层 console.error 抓取（捕获 JS 异常 / WebGL context lost 等）──
+  // level: 0=debug 1=info 2=warning 3=error。只记录 warning+ 防止刷屏。
+  mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    if (level >= 2) {
+      // 截断超长消息防止日志爆掉
+      const msg = String(message).slice(0, 500).replace(/\n/g, ' ')
+      appendCrashLog('console', {
+        type: level === 3 ? 'error' : 'warn',
+        reason: msg,
+        exitCode: 0,
+        name: `${sourceId}:${line}`,
+      })
+    }
+  })
 }
 
 // ─── 崩溃日志写盘 ─────────────────────────────────────────────────────────
@@ -718,6 +776,26 @@ async function clearDataOnReinstall () {
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
   await clearDataOnReinstall()
+
+  // ─── 启动标记 + GPU 状态写入 crash.log ──────────────────────────────
+  // 每次启动都打一行，帮你从日志反推应用最近运行了几次、上次启动到这次之间是否有崩溃；
+  // 同时记录 GPU 信息（vendor/driver），排查"内容全黑"时区分软件渲染 vs 硬件加速失败。
+  appendCrashLog('startup', {
+    type: 'startup',
+    reason: `electron=${process.versions.electron} chrome=${process.versions.chrome} platform=${process.platform}`,
+    exitCode: 0,
+    name: app.getVersion(),
+  })
+  app.getGPUInfo('basic').then(info => {
+    const gpu = (info?.auxAttributes && info.auxAttributes.glRenderer) ||
+      (info?.gpuDevice && info.gpuDevice[0] && JSON.stringify(info.gpuDevice[0])) || 'unknown'
+    appendCrashLog('startup', {
+      type: 'gpu',
+      reason: String(gpu).slice(0, 300),
+      exitCode: 0,
+      name: '',
+    })
+  }).catch(() => {})
 
   // ─── macOS 摄像头 / 麦克风 / 屏幕等权限处理 ─────────────────────────────
   // Electron 默认拒绝所有渲染进程的权限请求，需手动放行媒体权限。
