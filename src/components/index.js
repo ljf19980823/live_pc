@@ -10,8 +10,9 @@ import DialogCustome from './DialogCustome/index.vue'
 import StudentDetail from './StudentDetail/index.vue'
 import VideoPlayer from './VideoPlayer/index.vue'
 import HistoryVideoPlayer from './HistoryVideoPlayer/index.vue'
+import LiveClassroomFrame from './LiveClassroomFrame/index.vue'
 
-const components = { Pagination, SvgIcon, EmptyState, DialogCustome, StudentDetail, VideoPlayer, HistoryVideoPlayer }
+const components = { Pagination, SvgIcon, EmptyState, DialogCustome, StudentDetail, VideoPlayer, HistoryVideoPlayer, LiveClassroomFrame }
 
 Object.keys(components).forEach(name => {
   Vue.component(name, components[name])

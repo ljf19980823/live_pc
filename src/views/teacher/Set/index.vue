@@ -590,7 +590,7 @@
 
     <!-- 直播间 -->
     <div v-if="showLiveIframe" class="live-iframe-overlay">
-      <iframe :src="liveUrl" style="width: 100%; height: 100vh; background: #1E1E1E;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
+      <LiveClassroomFrame :src="liveUrl" @exit="showLiveIframe = false" />
     </div>
 
     <!-- 历史课堂回放 -->
