@@ -67,6 +67,7 @@
               <span v-if="idx < myBreadcrumbs.length - 1" :key="'ms-' + idx" class="crumb-sep">/</span>
             </template>
           </div>
+          <span class="col-operator">上传人</span>
           <span class="col-size">大小</span>
           <span class="col-date">日期</span>
           <span class="col-action">操作</span>
@@ -89,8 +90,9 @@
               <span class="file-name">{{ item.name }}</span>
               <span v-if="item.fileType === '1' && item.childCount > 0" class="child-count">{{ item.childCount }} 个</span>
             </div>
+            <div class="col-operator">{{ item.operator || '—' }}</div>
             <div class="col-size">{{ item.size || '—' }}</div>
-            <div class="col-date">{{ formatDate(item.updateTime || item.createTime) }}</div>
+            <div class="col-date">{{ item.dateDesc || item.createTime || '—'}}</div>
             <div class="col-action" @click.stop>
               <button
                 class="btn-delete"
@@ -219,6 +221,7 @@
                 <span v-if="idx < groupFileBreadcrumbs.length - 1" :key="'gs-' + idx" class="crumb-sep">/</span>
               </template>
             </div>
+            <span class="col-operator">上传人</span>
             <span class="col-size">大小</span>
             <span class="col-date">日期</span>
             <span class="col-action">操作</span>
@@ -241,10 +244,12 @@
                 <span class="file-name">{{ item.name }}</span>
                 <span v-if="item.fileType === '1' && item.childCount > 0" class="child-count">{{ item.childCount }} 个</span>
               </div>
+              <div class="col-operator">{{ item.operator || '—' }}</div>
               <div class="col-size">{{ item.size || '—' }}</div>
-              <div class="col-date">{{ formatDate(item.updateTime || item.createTime) }}</div>
+              <div class="col-date">{{ item.dateDesc || item.createTime || '—'}}</div>
               <div class="col-action" @click.stop>
                 <button
+                  v-if="item.myRole == 1 || currentUserId == item.userId"
                   class="btn-delete"
                   :class="{ 'btn-delete-active': item.deleteActive }"
                   @mouseenter="item.deleteActive = true"
@@ -378,7 +383,7 @@ import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import FilePreview from '@/components/FilePreview/index.vue'
 import { getBusinessFileList, uploadBusinessFile, renameBusinessFile, deleteBusinessFile, getTeachingGroupList } from '@/api/modules/teacher'
-
+import { getUserInfo } from '@/utils/auth'
 export default {
   name: 'Resources',
   components: { DialogCustome, VideoPlayer, FilePreview },
@@ -444,10 +449,15 @@ export default {
     },
     uploadLoading() {
       return this.uploadPendingCount > 0
-    },
-   
+    }
+
   },
   created() {
+     
+      const userInfo = getUserInfo() || {}
+     
+      this.currentUserId = userInfo.userId
+       console.log( this.currentUserId,'用户id')
     this.fetchMyFiles()
     this.fetchGroupList()
   },
@@ -921,8 +931,9 @@ export default {
   font-size: 13px;
   color: #8A93A3;
   .col-name { flex: 1;width: 0; }
+  .col-operator { width: 120px; text-align: center; }
   .col-size { width: 140px; text-align: center; }
-  .col-date { width: 140px; text-align: center; }
+  .col-date { width: 150px; text-align: center; }
   .col-action { width: 140px; text-align: center; }
 }
 
@@ -1000,6 +1011,12 @@ export default {
       border-radius: 10px;
       flex-shrink: 0;
     }
+  }
+  .col-operator {
+    width: 120px;
+    text-align: center;
+    font-size: 14px;
+    color: #5F6878;
   }
   .col-size {
     width: 140px;

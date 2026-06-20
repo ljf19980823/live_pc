@@ -1413,9 +1413,14 @@ export default {
           classIds: this.createClassId.length ? this.createClassId : undefined,
           isAllowMic,
           isPlayBack: this.isPlayBack,
-          playbackSettings: playbackSettings
+          playbackSettings: playbackSettings,
+          // mode: this.allowMic,
+          // extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
+          // im_server: ['aliyun_new'],
         }
+        // await createLiveClass(params)
         const result = await createLiveClass(params)
+       
         const liveData = result.data || result
         const liveId = liveData.liveId
         const liveLessonId = liveData.liveLessonId
