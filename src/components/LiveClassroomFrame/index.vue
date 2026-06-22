@@ -7,7 +7,7 @@
       class="live-classroom-frame__iframe"
       frameborder="0"
       allowfullscreen
-      allow="camera;microphone;autoplay;display-capture;"
+      allow="camera;microphone;autoplay;display-capture;unload;"
       allowusermedia
       @load="handleFrameLoad"
     />
