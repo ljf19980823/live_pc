@@ -1023,7 +1023,23 @@ export default {
     },
 
     openVideoPlayer(item) {
-      console.log(item,'输出')
+      // taskUuid 有值 → 跳转 AI听记页面
+      if (item.taskUuid) {
+        const fileList = item.fileList || []
+        const mainFile = fileList.find(f => f.videoType == '1')
+        this.$router.push({
+          name: 'AIListening',
+          query: {
+            videoUrl: mainFile ? mainFile.filePath || '' : '',
+            meetingId: item.taskUuid,
+            meetingTitle: item.name || '',
+            scopeText: item.taskUuid
+          }
+        })
+        return
+      }
+
+      // taskUuid 无值 → 沿用原有双视频回放逻辑
       const fileList = item.fileList || []
       const mainFile = fileList.find(f => f.videoType == '1')
       const teacherFile = fileList.find(f => f.videoType == '2')

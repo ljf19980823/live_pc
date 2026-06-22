@@ -61,6 +61,12 @@ const routes = [
       return role === 'STUDENT' ? '/student/home' : '/home'
     },
     children: [
+        {
+        path: 'ai-listening',
+        name: 'AIListening',
+        component: () => import('@/components/AIListening/index.vue'),
+        meta: { title: 'AI听记', hidden: true }
+      },
       // ── 教师端 ──
       {
         path: 'home',
