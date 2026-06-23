@@ -77,4 +77,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('screen-capture-failed', handler)
   },
 
+  // 监听直播 iframe 文档级加载失败
+  onIframeLoadFailed: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('iframe-load-failed', handler)
+    return () => ipcRenderer.removeListener('iframe-load-failed', handler)
+  },
+
 })

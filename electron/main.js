@@ -497,6 +497,14 @@ function createWindow () {
       exitCode: 0,
       name: validatedURL,
     })
+    // -3(ERR_ABORTED) 常见于 iframe 主动刷新或路由切换，不应提示为网络异常。
+    if (!isMainFrame && errorCode !== -3 && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('iframe-load-failed', {
+        code: errorCode,
+        description: errorDescription,
+        url: validatedURL,
+      })
+    }
   })
 
   // ─── 渲染层 console.error 抓取（捕获 JS 异常 / WebGL context lost 等）──
@@ -889,21 +897,37 @@ app.whenReady().then(async () => {
     ]).catch(() => {})
   }
 
-  // ─── 清除上次遗留的 HTTP 磁盘缓存，确保 iframe 直播页始终拉取最新版本 ───
-  try {
-    await session.defaultSession.clearCache()
-  } catch (_) {}
-
-  // ─── 拦截直播域名的响应头，强制禁用缓存 ────────────────────────────────
-  // 原因：Electron/Chromium 会将 iframe 加载的外部 JS/CSS/HTML 写入磁盘缓存，
-  // 导致服务端更新后客户端仍展示旧版本。通过覆盖响应头可彻底避免。
+  // ─── 直播页缓存策略 ────────────────────────────────────────────────────
+  // HTML 每次校验更新；带内容 hash 或版本号的 JS/CSS 长期缓存。
+  // 这样新版本入口始终生效，同时弱网下无需重复下载未变化的课堂资源。
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
     (details, callback) => {
       const headers = Object.assign({}, details.responseHeaders)
-      headers['cache-control'] = ['no-cache, no-store, must-revalidate']
-      headers['pragma'] = ['no-cache']
-      headers['expires'] = ['0']
+      Object.keys(headers).forEach(key => {
+        const lowerKey = key.toLowerCase()
+        if (lowerKey === 'cache-control' || lowerKey === 'pragma' || lowerKey === 'expires') {
+          delete headers[key]
+        }
+      })
+
+      let pathname = ''
+      try {
+        pathname = new URL(details.url).pathname
+      } catch (_) {}
+
+      const isDocument = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame'
+      const isScriptOrStyle = details.resourceType === 'script' || details.resourceType === 'stylesheet'
+      const hasContentHash = /[.-][a-f0-9]{8,}(?:\.async|\.chunk)?\.(?:js|css)$/i.test(pathname)
+      const hasExplicitVersion = /(?:_v|-)(?:\d+\.){2}\d+(?:\.min)?\.js$/i.test(pathname)
+
+      if (isDocument) {
+        headers['cache-control'] = ['no-cache, must-revalidate']
+      } else if (isScriptOrStyle && (hasContentHash || hasExplicitVersion)) {
+        headers['cache-control'] = ['public, max-age=31536000, immutable']
+      } else if (isScriptOrStyle) {
+        headers['cache-control'] = ['no-cache, must-revalidate']
+      }
       callback({ responseHeaders: headers })
     }
   )

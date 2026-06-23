@@ -86,7 +86,7 @@
 
     <!-- 直播全屏页面 -->
     <div class="page-placeholder_last full-screen" v-if="activeTab === 'liveui'">
-       <iframe :src="liveUrl" style="width: 100%; height: 100vh; background: #1E1E1E;" frameborder="0" allowfullscreen allow="camera;microphone;autoplay;display-capture;" allowusermedia></iframe>
+      <LiveClassroomFrame :src="liveUrl" @exit="activeTab = 'live'" />
     </div>
     
     <!-- 实时课堂 -->
@@ -682,6 +682,7 @@
       @close="playerVisible = false"
     />
 
+
   </div>
 </template>
 
@@ -751,6 +752,7 @@ export default {
       playerTeacherSource: '',
       playerTitle: '',
       playerAllowDownload: '2',
+
 
       showSchedule: false,
       scheduleYear: new Date().getFullYear(),
@@ -1054,8 +1056,6 @@ export default {
 
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
-      console.log(this.playerSource)
-      console.log(this.playerTeacherSource)
       this.playerTitle = item.name || '视频回放'
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true

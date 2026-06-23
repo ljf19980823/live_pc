@@ -110,6 +110,12 @@ const routes = [
         component: () => import('@/views/Profile/index.vue'),
         meta: { title: '个人中心', hidden: true }
       },
+      {
+        path: 'ai-listening',
+        name: 'AIListening',
+        component: () => import('@/components/AIListening/index.vue'),
+        meta: { title: 'AI听记', hidden: true }
+      },
        
       // ── 学生端 ──
       {
