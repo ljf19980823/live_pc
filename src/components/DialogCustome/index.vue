@@ -2,7 +2,7 @@
   <div class="mask" v-if="visible" @click.self="handleCancel">
      <div class="mask_con">
        <div class="masl_con_dialog" :style="{ width: width, height: height }">
-           <img src="@/assets/images/close.png" v-if="showClose" class="dialog_close" alt="" @click="handleClose">
+           <img src="@/assets/images/close2.png" v-if="showClose" class="dialog_close" alt="" @click="handleClose">
            <div class="masl_con_dialog_top">{{ title }}</div>
            <div class="masl_con_dialog_center"  :style="{ backgroundColor: bgColor }">
              <slot></slot>
@@ -175,10 +175,10 @@ cursor: pointer;
 }
 .dialog_close{
   position: absolute;
-  width: 30px;
-  height: 30px;
-  top: -30px;
-  right: -30px;
+  width: 20px;
+  height: 20px;
+  top: 15px;
+  right: 30px;
   cursor: pointer;
 }
 .masl_con_dialog_last_cobfirm.is-loading,

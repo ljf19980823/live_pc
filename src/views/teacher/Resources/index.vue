@@ -110,6 +110,7 @@
                 </button>
                 <div class="more-menu" v-if="item.showMore" @click.stop>
                   <div class="more-menu-item" @click="openRenameDialog(item)">重命名</div>
+                  <div v-if="item.fileType !== '1'" class="more-menu-item" @click="handleDownloadFile(item)">下载</div>
                 </div>
               </div>
             </div>
@@ -265,6 +266,7 @@
                   </button>
                   <div class="more-menu" v-if="item.showMore" @click.stop>
                     <div class="more-menu-item" @click="openRenameDialog(item)">重命名</div>
+                    <div v-if="item.fileType !== '1'" class="more-menu-item" @click="handleDownloadFile(item)">下载</div>
                   </div>
                 </div>
               </div>
@@ -742,6 +744,32 @@ export default {
       if (!dateStr) return '—'
       return String(dateStr).slice(0, 19)
     },
+
+    // ─── 下载文件 ────────────────────────────────────────────────
+    async handleDownloadFile(item) {
+      const url = item.url || item.fileUrl || item.path || ''
+      if (!url) return
+      item.showMore = false
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = item.name || '文件'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = item.name || '文件'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
+    },
   },
 }
 </script>
@@ -918,8 +946,9 @@ export default {
   box-sizing: border-box;
 }
 .file-list2{
- padding: 25px 25px 25px 25px!important;
+ padding: 0 25px 25px 25px!important;
   box-sizing: border-box;
+    margin-top: 25px;
 }
 
 .file-list-header {

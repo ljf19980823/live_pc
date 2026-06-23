@@ -55,7 +55,7 @@
               @click="selectSingleAnswer(currentQuestion.id, 'A')"
             >
               <span class="exam-option-label">A</span>
-              <span class="exam-option-text">正确</span>
+              <span class="exam-option-text">对</span>
             </div>
             <div
               class="exam-option"
@@ -63,7 +63,7 @@
               @click="selectSingleAnswer(currentQuestion.id, 'B')"
             >
               <span class="exam-option-label">B</span>
-              <span class="exam-option-text">错误</span>
+              <span class="exam-option-text">错</span>
             </div>
           </div>
 

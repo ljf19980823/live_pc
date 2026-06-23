@@ -734,8 +734,8 @@ export default {
       classDuration: 240,
       durationOptions: [15, 30, 40, 45, 60, 75, 90, 120, 135, 150, 180, 200, 240, 300],
       recordMode: 1,
-      allowMic: 1,
-      allowMicOptions: [{ label: '支持', value: 1 }, { label: '不支持', value: 0 }],
+      allowMic: 0,
+      allowMicOptions: [ { label: '不支持', value: 0 },{ label: '支持', value: 1 },],
       isPlayBack: 1,
       isPlayBackOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
       createClassId: [],
@@ -788,28 +788,31 @@ export default {
         this.fetchScheduleData(this.scheduleYear, val + 1)
       }
     },
-    showCreateClass(val) {
+    async showCreateClass(val) {
       if (val) {
         const now = new Date()
         const pad = n => String(n).padStart(2, '0')
         this.classStartTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
         this.classDuration = 240
         this.recordMode = 1
-        this.allowMic = 1
+        this.allowMic = 0
         this.isPlayBack = 1
         this.createClassId = []
         const userName = this.$store.getters['user/realName'] || ''
       
         const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
         this.name = userName ? `${userName}的课堂${dateStr}` : ''
-        this.fetchClassList()
+        await this.fetchClassList()
+        if (this.classList.length) {
+          this.createClassId = this.classList.map(c => c.value)
+        }
       } else {
         this.name = ''
         this.instr = ''
         this.classStartTime = ''
         this.classDuration = 240
         this.recordMode = 1
-        this.allowMic = 1
+        this.allowMic = 0
         this.isPlayBack = 1
         this.createClassId = []
       }
@@ -1027,13 +1030,18 @@ export default {
       if (item.taskUuid) {
         const fileList = item.fileList || []
         const mainFile = fileList.find(f => f.videoType == '1')
+        const teacherFile = fileList.find(f => f.videoType == '2')
+        const { userId } = getUserInfo()
         this.$router.push({
           name: 'AIListening',
           query: {
             videoUrl: mainFile ? mainFile.filePath || '' : '',
+            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
             meetingId: item.taskUuid,
             meetingTitle: item.name || '',
-            scopeText: item.taskUuid
+            scopeText: item.taskUuid,
+            liveLessonId: item.liveLessonId || '',
+            teacherId: userId || ''
           }
         })
         return
@@ -1430,28 +1438,28 @@ export default {
           isAllowMic,
           isPlayBack: this.isPlayBack,
           playbackSettings: playbackSettings,
-          // mode: this.allowMic,
-          // extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
-          // im_server: ['aliyun_new'],
-        }
-        // await createLiveClass(params)
-        const result = await createLiveClass(params)
-       
-        const liveData = result.data || result
-        const liveId = liveData.liveId
-        const liveLessonId = liveData.liveLessonId
-        const { userId, userName ,realName} = getUserInfo()
-        console.log(getUserInfo(),'输出一下')
-        await createAliyunClass({
-          liveId,
           mode: this.allowMic,
-          teacher_id: userId,
-          teacher_nick: userName,
-          title: this.name.trim(),
           extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
           im_server: ['aliyun_new'],
-          id: liveLessonId
-        })
+        }
+        await createLiveClass(params)
+        // const result = await createLiveClass(params)
+       
+        // const liveData = result.data || result
+        // const liveId = liveData.liveId
+        // const liveLessonId = liveData.liveLessonId
+        // const { userId, userName ,realName} = getUserInfo()
+        // console.log(getUserInfo(),'输出一下')
+        // await createAliyunClass({
+        //   liveId,
+        //   mode: this.allowMic,
+        //   teacher_id: userId,
+        //   teacher_nick: userName,
+        //   title: this.name.trim(),
+        //   extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
+        //   im_server: ['aliyun_new'],
+        //   id: liveLessonId
+        // })
         this.$message.success('课堂创建成功')
         this.showCreateClass = false
         this.fetchLiveList()

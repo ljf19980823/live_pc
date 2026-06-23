@@ -433,7 +433,7 @@
       <!-- 课后测tab列表 -->
       <div class="app_container_box_right_last quiz-list-wrap" v-if="rightTab === 'quiz'" v-loading="afterQuizLoading">
         <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
-        <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index">
+        <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index" @click="startExam(item)">
           <div class="quiz-item-left">
             <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
             <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item)">
@@ -458,13 +458,13 @@
                 <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
                   {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
                 </span>
-                <span class="quiz-score-done" style="cursor:pointer;" @click="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
+                <span class="quiz-score-done" style="cursor:pointer;" @click.stop="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
               </span>
             </div>
           </div>
           <div class="quiz-item-actions">
-            <button class="quiz-btn-primary" @click="startExam(item)">去考试</button>
-            <button class="quiz-btn-outline" @click="openExamRecord(item)">考试记录</button>
+            <button class="quiz-btn-primary" @click.stop="startExam(item)">去考试</button>
+            <button class="quiz-btn-outline" @click.stop="openExamRecord(item)">考试记录</button>
           </div>
         </div>
       </div>
@@ -1461,6 +1461,26 @@ export default {
         this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
         console.log(item.allowMultiple,'视频地址')
+         // taskUuid 有值 → 跳转 AI听记页面
+        // if(item.taskUuid){
+        //   const fileList = item.fileList || []
+        //   const mainFile = fileList.find(f => f.videoType == '1')
+        //   const teacherFile = fileList.find(f => f.videoType == '2')
+        //   const { userId } = getUserInfo()
+        //   this.$router.push({
+        //     name: 'AIListening',
+        //     query: {
+        //       videoUrl: mainFile ? mainFile.filePath || '' : '',
+        //       teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+        //       meetingId: item.taskUuid,
+        //       meetingTitle: item.title || '',
+        //       scopeText: item.taskUuid,
+        //       liveLessonId: item.historyLessonId || '',
+        //       teacherId: userId || ''
+        //     }
+        //   })
+        //   return
+        // }
         this.currentVideoUrl = url
         this.currentPlayingItem = item
         this.fromLearningTask = true
@@ -1684,7 +1704,9 @@ export default {
           allowFastForward:node.type=='3'?'1':  String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
           collectCount:node.collectCount,
-          historyLessonId:node.type=='3'?node.historyLesson.historyLessonId:""
+          historyLessonId:node.type=='3'?node.historyLesson.historyLessonId:"",
+          taskUuid:node.type=='3'?node.historyLesson.taskUuid:"",
+          fileList: res.fileList || []
         }
       }
     },

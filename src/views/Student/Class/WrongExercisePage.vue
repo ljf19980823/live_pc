@@ -51,7 +51,7 @@
               class="wep__content-img"
               alt="材料图片"
             />
-            <div v-else class="rich-text-content" v-html="currentQuestion.material"></div>
+            <div v-else class="rich-text-content wep__opt-text rich-text-content" v-html="currentQuestion.material"></div>
           </div>
 
           <!-- 题干 -->
@@ -62,7 +62,7 @@
               class="wep__content-img"
               alt="题目图片"
             />
-            <div v-else class="rich-text-content" v-html="currentQuestion.name"></div>
+            <div v-else class="rich-text-content wep__opt-text rich-text-content" v-html="currentQuestion.name"></div>
           </div>
 
           <!-- 判断题 questType=3 -->
@@ -185,7 +185,7 @@
               <span v-if="currentQuestion.answerIsImg === '1'" class="wep__analysis-correct-val">
                 <img :src="currentQuestion.answer" class="wep__content-img" alt="答案图片" />
               </span>
-              <span v-else class="wep__analysis-correct-val" v-html="currentQuestion.answer || '-'"></span>
+              <span v-else class="wep__analysis-correct-val wep__opt-text rich-text-content" v-html="currentQuestion.answer || '-'"></span>
             </div>
             <div v-if="currentQuestion.analysis" class="wep__analysis-text">
               <img
@@ -194,7 +194,7 @@
                 class="wep__content-img"
                 alt="解析图片"
               />
-              <span v-else v-html="currentQuestion.analysis"></span>
+              <span v-else v-html="currentQuestion.analysis" class="wep__opt-text rich-text-content"></span>
             </div>
           </div>
         </div>
@@ -301,8 +301,8 @@ export default {
       // 每题的对错结果: { id: 'correct'|'wrong'|'submitted' }
       results: {},
       judgeOptions: [
-        { id: 'A', text: '正确' },
-        { id: 'B', text: '错误' }
+        { id: 'A', text: '对' },
+        { id: 'B', text: '错' }
       ]
     }
   },
@@ -854,8 +854,8 @@ export default {
   line-height: 1.7;
 }
 ::v-deep .wep__analysis-text img {
-  max-width: 100%; max-height: 300px;
-  object-fit: contain; display: block; border-radius: 4px; margin: 4px 0;
+  max-width: 100%; 
+  object-fit: contain; 
   mix-blend-mode: multiply !important;
 }
 

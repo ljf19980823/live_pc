@@ -12,7 +12,7 @@
           <span class="al-breadcrumb-sep">/</span>
           <span class="al-breadcrumb-current">{{ meetingTitle || '未命名笔记' }}</span>
         </div>
-        <div class="al-topbar-right">
+        <!-- <div class="al-topbar-right">
           <button class="al-tb-btn al-tb-btn--outline">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
               <circle cx="12" cy="8" r="4"/>
@@ -28,7 +28,7 @@
               <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
             </svg>
           </button>
-        </div>
+        </div> -->
       </div>
 
       <!-- ===== 主体（左右分栏） ===== -->
@@ -36,83 +36,18 @@
       <!-- ===== 左侧：视频 + 内容 ===== -->
       <div class="al-left">
         <!-- 视频播放器 -->
-        <div class="al-player-wrap" ref="playerWrap">
-          <video
-            ref="videoEl"
-            class="al-video"
-            :src="videoUrl || ''"
-            preload="metadata"
-            @timeupdate="onTimeUpdate"
-            @loadedmetadata="onLoadedMetadata"
-            @play="isPlaying = true"
-            @pause="isPlaying = false"
-            @ended="isPlaying = false"
-            @waiting="isBuffering = true"
-            @canplay="isBuffering = false"
-          ></video>
-
-          <!-- 中心播放按钮 -->
-          <transition name="al-fade">
-            <div class="al-center-play" v-show="!isPlaying" @click="togglePlay">
-              <div class="al-play-circle">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                  <polygon points="6,3 20,12 6,21"/>
-                </svg>
-              </div>
-            </div>
-          </transition>
-
-          <!-- 缓冲中 -->
-          <div class="al-buffering" v-show="isBuffering && isPlaying">
-            <div class="al-spinner"></div>
-          </div>
-
-          <!-- 底部控制栏 -->
-          <div class="al-controls-overlay">
-            <!-- 进度条 -->
-            <div class="al-progress-bar" @click="onProgressClick" ref="progressBar">
-              <div class="al-progress-track">
-                <div class="al-progress-fill" :style="{ width: progressPct + '%' }"></div>
-                <div class="al-progress-dot" :style="{ left: progressPct + '%' }"></div>
-              </div>
-            </div>
-            <!-- 控制按钮行 -->
-            <div class="al-controls-row">
-              <button class="al-ctrl-btn" @click="togglePlay">
-                <svg v-if="isPlaying" width="14" height="14" viewBox="0 0 24 24" fill="white">
-                  <rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="white">
-                  <polygon points="6,3 20,12 6,21"/>
-                </svg>
-              </button>
-              <span class="al-ctrl-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
-              <button class="al-ctrl-btn al-ctrl-vol" @click="toggleMute">
-                <svg v-if="!isMuted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
-                  <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
-                </svg>
-              </button>
-              <div class="al-ctrl-spacer"></div>
-              <button class="al-ctrl-btn" title="设置">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
-              </button>
-              <button class="al-ctrl-btn" @click="toggleFullscreen" title="全屏">
-                <svg v-if="!isFullscreen" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-                </svg>
-              </button>
-            </div>
+        <div class="al-player-wrap">
+          <ListenVideoPlayer
+            v-if="videoUrl || teacherVideoUrl"
+            ref="videoPlayer"
+            :inline="true"
+            :main-source="videoUrl"
+            :teacher-source="teacherVideoUrl"
+            :title="meetingTitle"
+            @timeupdate="onVideoTimeUpdate"
+          />
+          <div v-else class="al-no-video">
+            <span>暂无视频</span>
           </div>
         </div>
 
@@ -131,14 +66,14 @@
         </div>
 
         <!-- 内容区 -->
-        <div class="al-content-area">
+        <div class="al-content-area" ref="transcriptArea" @scroll="onTranscriptScroll">
           <!-- 图文纪要按钮 -->
-          <div class="al-pictxt-row">
+          <!-- <div class="al-pictxt-row">
             <button class="al-pictxt-btn" @click="handlePicTxt">
               图文纪要
               <span class="al-new-badge">NEW</span>
             </button>
-          </div>
+          </div> -->
 
           <!-- ===== 转写内容 ===== -->
           <div v-if="activeTab === 'transcript'" class="al-transcript-list">
@@ -148,14 +83,18 @@
             <div
               v-else
               v-for="(item, index) in transcriptList"
-              :key="index"
+              :key="item.paragraphId || index"
               class="al-tran-entry"
+              :class="{ 'al-tran-entry--active': activeParagraphIndex === index }"
+              :ref="'tran_' + index"
+              @click="seekToTranscript(item)"
             >
               <div class="al-tran-meta">
-                <span class="al-speaker-badge" :class="'speaker-color-' + ((item.speakerId - 1) % 6 + 1)">
-                  {{ item.speakerId }}
+                <img v-if="item.avatarUrl" :src="item.avatarUrl" class="al-speaker-avatar" />
+                <span v-else class="al-speaker-badge" :class="'speaker-color-' + item.speakerColorIndex">
+                  {{ item.speakerName.slice(-1) }}
                 </span>
-                <span class="al-speaker-name">发言人 {{ item.speakerId }}</span>
+                <span class="al-speaker-name">{{ item.speakerName }}</span>
                 <span class="al-tran-sep">·</span>
                 <span class="al-tran-ts">{{ item.displayTime }}</span>
               </div>
@@ -168,23 +107,43 @@
             <div v-if="summaryLoading" class="al-loading-placeholder">
               <div class="al-skeleton" v-for="i in 4" :key="i" style="margin-bottom:10px;"></div>
             </div>
-            <template v-else>
-              <div class="al-summary-meta">
-                <div class="al-summary-meta-row">
-                  <span class="al-meta-key">主题：</span>
-                  <span class="al-meta-val">{{ summaryInfo.title }}</span>
-                </div>
-                <div class="al-summary-meta-row">
-                  <span class="al-meta-key">时间：</span>
-                  <span class="al-meta-val">{{ summaryInfo.time }}</span>
-                </div>
-                <div class="al-summary-meta-row">
-                  <span class="al-meta-key">参与人：</span>
-                  <span class="al-meta-val">{{ summaryInfo.participants }}</span>
+            <div v-else-if="summaryHtmlUrl" class="al-summary-iframe-wrap">
+              <button class="al-summary-fullscreen-btn" @click="summaryFullscreen = true" title="全屏查看">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+                放大查看
+              </button>
+              <iframe
+                :src="summaryHtmlUrl"
+                class="al-summary-iframe"
+                frameborder="0"
+                allowfullscreen
+              ></iframe>
+            </div>
+             <div v-else class="al-summary-empty">
+              <span>暂无AI纪要</span>
+            </div>
+            <!-- 全屏遮罩 -->
+            <transition name="al-fs-fade">
+              <div v-if="summaryFullscreen" class="al-summary-fs-mask" @click.self="summaryFullscreen = false">
+                <div class="al-summary-fs-box">
+                  <button class="al-summary-fs-close" @click="summaryFullscreen = false" title="关闭">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                  <iframe
+                    :src="summaryHtmlUrl"
+                    class="al-summary-fs-iframe"
+                    frameborder="0"
+                    allowfullscreen
+                  ></iframe>
                 </div>
               </div>
-              <div class="al-summary-content">{{ summaryInfo.content }}</div>
-            </template>
+            </transition>
+           
           </div>
         </div>
       </div>
@@ -363,75 +322,13 @@
 </template>
 
 <script>
+import ListenVideoPlayer from '@/components/ListenVideoPlayer/index.vue'
+import { get } from '@/utils/request'
+
 /**
  * AIListening — AI 听记组件
  * 包含：视频播放器、转写/AI纪要标签页、右侧 AI 问答对话面板
  */
-
-// ===== 模拟 API =====
-const mockGetTranscript = (meetingId) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 200,
-        data: [
-          {
-            speakerId: 1,
-            displayTime: '00:01',
-            startSeconds: 12,
-            text: '[00:12] 大家好，今天我们要讨论的主题是直播数字编辑与传化路径。这是一个非常重要的议题。'
-          },
-          {
-            speakerId: 1,
-            displayTime: '00:01',
-            startSeconds: 85,
-            text: '[01:25] 数字化编辑在当今的传播环境中扮演着关键角色，我们需要关注用户体验和内容质量的平衡。'
-          },
-          {
-            speakerId: 2,
-            displayTime: '00:01',
-            startSeconds: 158,
-            text: '[02:38] 另外，技术架构的可扩展性也非常重要，这将确保系统能够应对未来的增长需求。'
-          },
-          {
-            speakerId: 1,
-            displayTime: '00:03',
-            startSeconds: 210,
-            text: '[03:30] 关于用户增长策略，我们应该重点关注社区运营和口碑传播，这两个维度对于直播平台来说至关重要。'
-          },
-          {
-            speakerId: 3,
-            displayTime: '00:04',
-            startSeconds: 270,
-            text: '[04:30] 我同意这个观点，同时我认为内容分发算法的优化也不可忽视，它直接影响到内容的曝光率和用户留存。'
-          },
-          {
-            speakerId: 2,
-            displayTime: '00:05',
-            startSeconds: 320,
-            text: '[05:20] 数据分析工具的引入将帮助我们更好地理解用户行为，从而制定更精准的内容策略。'
-          }
-        ]
-      })
-    }, 800)
-  })
-}
-
-const mockGetSummary = (meetingId) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 200,
-        data: {
-          title: '直播教学的痛点与优化路径',
-          time: '2026-03-21  23:58:03',
-          participants: '霸王龙',
-          content: ''
-        }
-      })
-    }, 600)
-  })
-}
 
 const mockAiChat = (question, deepThink, history) => {
   const thinkSec = deepThink ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 3) + 1
@@ -472,15 +369,13 @@ const mockAiChat = (question, deepThink, history) => {
 
 export default {
   name: 'AIListening',
+  components: { ListenVideoPlayer },
   data() {
     return {
-      // ===== 视频播放器状态 =====
-      isPlaying: false,
-      isMuted: false,
-      isBuffering: false,
-      isFullscreen: false,
+      // ===== 转写同步状态 =====
       currentTime: 0,
-      duration: 0,
+      activeParagraphIndex: -1,
+      userScrolling: false,
 
       // ===== 内容标签 =====
       activeTab: 'transcript',
@@ -491,12 +386,8 @@ export default {
 
       // ===== AI纪要数据 =====
       summaryLoading: false,
-      summaryInfo: {
-        title: '',
-        time: '',
-        participants: '',
-        content: ''
-      },
+      summaryHtmlUrl: '',
+      summaryFullscreen: false,
 
       // ===== AI问答 =====
       chatMessages: [],
@@ -516,6 +407,9 @@ export default {
     videoUrl() {
       return this.$route.query.videoUrl || ''
     },
+    teacherVideoUrl() {
+      return this.$route.query.teacherVideoUrl || ''
+    },
     meetingId() {
       return this.$route.query.meetingId || ''
     },
@@ -525,14 +419,15 @@ export default {
     scopeText() {
       return this.$route.query.scopeText || ''
     },
-    progressPct() {
-      if (!this.duration) return 0
-      return (this.currentTime / this.duration) * 100
+    liveLessonId() {
+      return this.$route.query.liveLessonId || ''
+    },
+    teacherId() {
+      return this.$route.query.teacherId || ''
     }
   },
   mounted() {
     this.loadData()
-    document.addEventListener('fullscreenchange', this.onFullscreenChange)
   },
   methods: {
     // ===== 初始化加载 =====
@@ -542,12 +437,45 @@ export default {
     },
 
     async fetchTranscript() {
+        console.log(this.meetingId,'输出看下')
+      if (!this.meetingId) return
       this.transcriptLoading = true
+      const speakerColorMap = new Map()
+      const allParagraphs = []
+      let nextToken = null
+      let hasNext = true
       try {
-        const res = await mockGetTranscript(this.meetingId)
-        if (res.code === 200) {
-          this.transcriptList = res.data
+        while (hasNext) {
+          const params = { maxResults: 50, direction: 0 }
+          if (nextToken) params.nextToken = nextToken
+          const res = await get(`/dingTalk/flashMinutes/${this.meetingId}/textInfos`, params)
+          const data = (res && res.data) || {}
+          const list = data.paragraphList || []
+          list.forEach(item => {
+            const speakerName = (item.speakerDisplay && item.speakerDisplay.nickName) || item.nickName || '发言人'
+            // 优先使用子发言人ID → unionId → 显示名，确保不同发言人分到不同颜色
+            const speakerKey = item.nickName 
+            if (!speakerColorMap.has(speakerKey)) {
+              speakerColorMap.set(speakerKey, (speakerColorMap.size % 10) + 1)
+            }
+            console.log('[转写发言人]', speakerKey, '→ color', speakerColorMap.get(speakerKey), item)
+            allParagraphs.push({
+              paragraphId: item.paragraphId || '',
+              speakerName,
+              avatarUrl: (item.speakerDisplay && item.speakerDisplay.avatarUrl) || '',
+              unionId: item.unionId || '',
+              startTime: item.startTime || 0,
+              endTime: item.endTime || 0,
+              startSeconds: (item.startTime || 0) / 1000,
+              displayTime: this.formatMs(item.startTime || 0),
+              text: item.paragraph || '',
+              speakerColorIndex: speakerColorMap.get(speakerKey) || 1
+            })
+          })
+          hasNext = !!data.hasNext
+          nextToken = data.nextToken || null
         }
+        this.transcriptList = allParagraphs
       } catch (e) {
         console.error('转写数据加载失败', e)
       } finally {
@@ -557,10 +485,14 @@ export default {
 
     async fetchSummary() {
       this.summaryLoading = true
+      this.summaryHtmlUrl = ''
       try {
-        const res = await mockGetSummary(this.meetingId)
-        if (res.code === 200) {
-          this.summaryInfo = res.data
+        const params = {}
+        if (this.liveLessonId) params.liveLessonId = this.liveLessonId
+        if (this.teacherId) params.teacherId = this.teacherId
+        const res = await get('/dingTalk/notes/html/path', params)
+        if (res && res.code === 200 && res.data) {
+          this.summaryHtmlUrl = res.data
         }
       } catch (e) {
         console.error('AI纪要加载失败', e)
@@ -569,74 +501,61 @@ export default {
       }
     },
 
-    // ===== 视频播放控制 =====
-    togglePlay() {
-      const video = this.$refs.videoEl
-      if (!video) return
-      if (this.isPlaying) {
-        video.pause()
-      } else {
-        video.play().catch(() => {})
+    // ===== 视频与转写联动 =====
+    onVideoTimeUpdate(time) {
+      this.currentTime = time
+      const timeMs = time * 1000
+      let newActiveIndex = -1
+      for (let i = 0; i < this.transcriptList.length; i++) {
+        if (this.transcriptList[i].startTime <= timeMs) {
+          newActiveIndex = i
+        } else {
+          break
+        }
+      }
+      if (newActiveIndex !== this.activeParagraphIndex) {
+        this.activeParagraphIndex = newActiveIndex
+        if (newActiveIndex >= 0 && !this.userScrolling) {
+          this.$nextTick(() => this.scrollToActiveParagraph())
+        }
       }
     },
 
-    pauseVideo() {
-      const video = this.$refs.videoEl
-      if (video && this.isPlaying) {
-        video.pause()
+    seekToTranscript(item) {
+      const player = this.$refs.videoPlayer
+      if (player && typeof player.seekTo === 'function') {
+        player.seekTo(item.startSeconds)
       }
     },
 
-    toggleMute() {
-      const video = this.$refs.videoEl
-      if (!video) return
-      this.isMuted = !this.isMuted
-      video.muted = this.isMuted
+    scrollToActiveParagraph() {
+      const refs = this.$refs['tran_' + this.activeParagraphIndex]
+      const el = Array.isArray(refs) ? refs[0] : refs
+      const container = this.$refs.transcriptArea
+      if (!el || !container) return
+      const containerRect = container.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      const offset = elRect.top - containerRect.top - containerRect.height / 2 + elRect.height / 2
+      container.scrollTop += offset
     },
 
-    toggleFullscreen() {
-      const wrap = this.$refs.playerWrap
-      if (!wrap) return
-      if (!document.fullscreenElement) {
-        wrap.requestFullscreen().catch(() => {})
-      } else {
-        document.exitFullscreen()
+    onTranscriptScroll() {
+      this.userScrolling = true
+      clearTimeout(this._scrollTimer)
+      this._scrollTimer = setTimeout(() => {
+        this.userScrolling = false
+      }, 3000)
+    },
+
+    formatMs(ms) {
+      if (!ms && ms !== 0) return '00:00'
+      const totalSec = Math.floor(ms / 1000)
+      const h = Math.floor(totalSec / 3600)
+      const m = Math.floor((totalSec % 3600) / 60)
+      const s = totalSec % 60
+      if (h > 0) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
       }
-    },
-
-    onFullscreenChange() {
-      this.isFullscreen = !!document.fullscreenElement
-    },
-
-    onTimeUpdate() {
-      const video = this.$refs.videoEl
-      if (video) {
-        this.currentTime = video.currentTime
-      }
-    },
-
-    onLoadedMetadata() {
-      const video = this.$refs.videoEl
-      if (video) {
-        this.duration = video.duration
-      }
-    },
-
-    onProgressClick(e) {
-      const bar = this.$refs.progressBar
-      if (!bar || !this.duration) return
-      const rect = bar.getBoundingClientRect()
-      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-      const video = this.$refs.videoEl
-      if (video) {
-        video.currentTime = ratio * this.duration
-      }
-    },
-
-    formatTime(sec) {
-      if (!sec || isNaN(sec)) return '00:00'
-      const m = Math.floor(sec / 60)
-      const s = Math.floor(sec % 60)
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
     },
 
@@ -746,13 +665,12 @@ export default {
 
     // ===== 返回 =====
     handleClose() {
-      this.pauseVideo()
       this.$router.back()
     }
   },
 
   beforeDestroy() {
-    document.removeEventListener('fullscreenchange', this.onFullscreenChange)
+    clearTimeout(this._scrollTimer)
   }
 }
 </script>
@@ -900,7 +818,7 @@ $white: #fff;
 // 左侧面板
 // ===================================================================
 .al-left {
-  flex: 0 0 580px;
+  flex: 0 0 721px;
   width: 580px;
   display: flex;
   flex-direction: column;
@@ -913,152 +831,23 @@ $white: #fff;
 .al-player-wrap {
   position: relative;
   width: 100%;
-  background: #0f0f1a;
+  background: #ffffff;
   flex-shrink: 0;
   aspect-ratio: 16 / 9;
   overflow: hidden;
+  padding: 18px 51px;
+  box-sizing: border-box;
+}
 
-  .al-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-
-  // 中心播放按钮
-  .al-center-play {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-
-    .al-play-circle {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.18);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.28);
-      }
-    }
-  }
-
-  // 缓冲动画
-  .al-buffering {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    .al-spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top-color: $white;
-      border-radius: 50%;
-      animation: al-spin 0.8s linear infinite;
-    }
-  }
-
-  // 控制栏覆盖层
-  .al-controls-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
-    padding: 16px 12px 8px;
-
-    // 进度条
-    .al-progress-bar {
-      width: 100%;
-      padding: 4px 0;
-      cursor: pointer;
-      margin-bottom: 4px;
-
-      &:hover .al-progress-dot {
-        opacity: 1;
-        transform: translateX(-50%) scale(1);
-      }
-
-      .al-progress-track {
-        position: relative;
-        width: 100%;
-        height: 3px;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 2px;
-
-        .al-progress-fill {
-          height: 100%;
-          background: $primary;
-          border-radius: 2px;
-          transition: width 0.1s linear;
-        }
-
-        .al-progress-dot {
-          position: absolute;
-          top: 50%;
-          width: 10px;
-          height: 10px;
-          background: $white;
-          border-radius: 50%;
-          transform: translateX(-50%) translateY(-50%) scale(0);
-          opacity: 0;
-          transition: opacity 0.15s, transform 0.15s;
-          pointer-events: none;
-        }
-      }
-    }
-
-    // 控制按钮行
-    .al-controls-row {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-
-      .al-ctrl-btn {
-        background: none;
-        border: none;
-        padding: 4px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: $white;
-        border-radius: 4px;
-        opacity: 0.9;
-        transition: opacity 0.15s;
-
-        &:hover {
-          opacity: 1;
-        }
-      }
-
-      .al-ctrl-time {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.9);
-        font-family: monospace;
-        white-space: nowrap;
-        margin-left: 2px;
-      }
-
-      .al-ctrl-vol {
-        margin-left: 2px;
-      }
-
-      .al-ctrl-spacer {
-        flex: 1;
-      }
-    }
-  }
+// 无视频占位
+.al-no-video {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 13px;
 }
 
 // ===== 标签页 =====
@@ -1066,7 +855,7 @@ $white: #fff;
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 16px;
+  padding: 0 40px;
   border-bottom: 1px solid $border;
   flex-shrink: 0;
 
@@ -1096,7 +885,7 @@ $white: #fff;
 .al-content-area {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px 16px;
+  padding: 14px 24px 16px;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -1150,12 +939,41 @@ $white: #fff;
 }
 
 .al-tran-entry {
-  padding: 10px 0;
+  padding: 10px 8px;
   border-bottom: 1px solid #F5F5F5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
 
   &:last-child {
     border-bottom: none;
   }
+
+  &:hover {
+    background: $bg-hover;
+  }
+
+  &--active {
+    background: $primary-light;
+    border-bottom-color: transparent;
+
+    .al-tran-ts {
+      color: $primary;
+    }
+
+    .al-tran-text {
+      color: $primary;
+    }
+  }
+}
+
+// 发言人头像
+.al-speaker-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .al-tran-meta {
@@ -1177,12 +995,16 @@ $white: #fff;
   color: $white;
   flex-shrink: 0;
 
-  &.speaker-color-1 { background: #3B6FFF; }
-  &.speaker-color-2 { background: #7B5EA7; }
-  &.speaker-color-3 { background: #FF7043; }
-  &.speaker-color-4 { background: #26A69A; }
-  &.speaker-color-5 { background: #EF5350; }
-  &.speaker-color-6 { background: #FFA726; }
+  &.speaker-color-1  { background: #3B6FFF; }
+  &.speaker-color-2  { background: #7B5EA7; }
+  &.speaker-color-3  { background: #FF7043; }
+  &.speaker-color-4  { background: #26A69A; }
+  &.speaker-color-5  { background: #EF5350; }
+  &.speaker-color-6  { background: #FFA726; }
+  &.speaker-color-7  { background: #29B6F6; }
+  &.speaker-color-8  { background: #66BB6A; }
+  &.speaker-color-9  { background: #EC407A; }
+  &.speaker-color-10 { background: #8D6E63; }
 }
 
 .al-speaker-name {
@@ -1214,37 +1036,126 @@ $white: #fff;
   padding: 4px 0;
 }
 
-.al-summary-meta {
-  margin-bottom: 14px;
-}
-
-.al-summary-meta-row {
+.al-summary-iframe-wrap {
+  flex: 1;
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  position: relative;
+}
+
+.al-summary-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-end;
   margin-bottom: 8px;
-  font-size: 13.5px;
-}
-
-.al-meta-key {
-  color: $text-sub;
-  flex-shrink: 0;
-  min-width: 52px;
-}
-
-.al-meta-val {
-  color: $text-main;
-}
-
-.al-summary-content {
-  font-size: 13.5px;
-  color: #444;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  background: #FAFAFA;
-  border-radius: 8px;
-  padding: 12px;
+  padding: 4px 10px;
+  height: 28px;
   border: 1px solid $border;
-  min-height: 80px;
+  border-radius: 6px;
+  background: $white;
+  color: $text-sub;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: $bg-hover;
+    border-color: #c0c0c0;
+    color: $text-main;
+  }
+}
+
+.al-summary-iframe {
+  width: 100%;
+  flex: 1;
+  min-height: 400px;
+  border: 1px solid $border;
+  border-radius: 6px;
+  background: #fff;
+}
+
+// ===== 全屏遮罩 =====
+.al-summary-fs-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.al-summary-fs-box {
+  position: relative;
+  width: 90vw;
+  height: 90vh;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.al-summary-fs-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.14);
+    color: #111;
+  }
+}
+
+.al-summary-fs-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+// ===== 全屏遮罩过渡动画 =====
+.al-fs-fade-enter-active,
+.al-fs-fade-leave-active {
+  transition: opacity 0.2s ease;
+
+  .al-summary-fs-box {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+}
+
+.al-fs-fade-enter,
+.al-fs-fade-leave-to {
+  opacity: 0;
+
+  .al-summary-fs-box {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+}
+
+.al-summary-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: $text-hint;
+  font-size: 13px;
 }
 
 // ===== 骨架屏 =====

@@ -56,7 +56,7 @@
           <!-- 题目题干 -->
           <div class="sad__q-stem">
             <img v-if="q.stemIsImg" :src="q.stem" class="sad__rich-img" />
-            <span v-else v-html="q.stem"></span>
+            <span v-else v-html="q.stem"  class="wep__opt-text rich-text-content" ></span>
           </div>
 
           <!-- 单选题 / 多选题 / 判断题 选项 -->
@@ -70,7 +70,7 @@
               <span class="sad__q-opt-key">{{ opt.key }}.</span>
               <span class="sad__q-opt-text">
                 <img v-if="opt.isImg" :src="opt.text" class="sad__rich-img" />
-                <span v-else v-html="opt.text"></span>
+                <span v-else v-html="opt.text"  class="wep__opt-text rich-text-content" ></span>
               </span>
               <span v-if="isStudentChose(q, opt) && isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--correct">✓</span>
               <span v-else-if="isStudentChose(q, opt) && !isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--wrong">✗</span>
@@ -132,13 +132,13 @@
               <!-- 简答/主观 -->
               <span  class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.answer" class="sad__rich-img" />
-                <span v-else v-html="q.answer || '-'"></span>
+                <span v-else v-html="q.answer || '-'"  class="wep__opt-text rich-text-content" ></span>
               </span>
             </div>
             <!-- 解析文字 -->
             <div v-if="q.analysis" class="sad__analysis-text">
               <img v-if="q.analysisIsImg" :src="q.analysis" class="sad__rich-img" />
-              <span v-else v-html="q.analysis"></span>
+              <span v-else v-html="q.analysis"  class="wep__opt-text rich-text-content" ></span>
             </div>
           </div>
         </div>
@@ -269,7 +269,7 @@ export default {
             .map((key, i) => ({ key, text: item[optFields[i]], isImg: item[optIsImgFields[i]] === '1' }))
             .filter(opt => opt.text)
           if (type === 'judge' && q.options.length === 0) {
-            q.options = [{ key: 'A', text: '正确', isImg: false }, { key: 'B', text: '错误', isImg: false }]
+            q.options = [{ key: 'A', text: '对', isImg: false }, { key: 'B', text: '错', isImg: false }]
           }
           q.studentAnswer = this.parseAnswer(item.studentAnswer)
           q.correctAnswer = this.parseAnswer( item.answer|| item.correctAnswer)
@@ -504,6 +504,7 @@ export default {
   color: #333333;
   line-height: 1.7;
   margin-bottom: 14px;
+  
 }
 
 /* ===== 选项样式 ===== */
@@ -639,24 +640,25 @@ export default {
 }
 
 /* ===== 富文本 / 图片 ===== */
-.sad__rich-img {
+ ::v-deep  .sad__rich-img {
   max-width: 100%;
   max-height: 320px;
   object-fit: contain;
   display: block;
   border-radius: 4px;
   margin: 4px 0;
-    mix-blend-mode: multiply!important;
+
 }
 /* 题干、选项内嵌 HTML 中的图片自动限宽 */
 .sad__q-stem img,
 .sad__q-opt-text img,
-.sad__analysis-text img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 4px;
-  margin: 4px 0;
+.sad__analysis-correct-val img,
+
+::v-deep .wep__opt-text.rich-text-content p { margin: 0 }
+::v-deep .wep__opt-text.rich-text-content img {
+  max-width: 100%;border-radius: 4px;
+  object-fit: contain; vertical-align: middle;
+  mix-blend-mode: multiply !important;
 }
 
 /* ===== 空状态 ===== */

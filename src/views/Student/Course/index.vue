@@ -66,13 +66,16 @@
               <img v-if="item.cover" :src="item.cover" class="course-card-cover-img" alt="" />
               <span v-else class="course-card-cover-char">{{ item.coverChar }}</span>
             </div>
-            <div class="course-card-name">{{ item.name }}</div>
-            <div class="course-card-tasks">{{ item.taskCount }}个学习任务</div>
-            <div class="course-card-progress">
-              <div class="course-progress-bar">
-                <div class="course-progress-bar-fill" :style="{ width: item.progress + '%' }"></div>
+            <div  class="course-card-box" >
+              <div class="course-card-name">{{ item.name }}</div>
+              <div class="course-card-tasks">{{ item.taskCount }}个学习任务</div>
+              <div class="course-card-progress">
+                <div class="course-progress-bar">
+                  <div class="course-progress-bar-fill" :style="{ width: item.progress + '%' }"></div>
+                </div>
+                <span class="course-progress-text">{{ item.progress }}%</span>
               </div>
-              <span class="course-progress-text">{{ item.progress }}%</span>
+
             </div>
           </div>
           <div v-if="!courseListLoading && courseList.length === 0" class="course-empty">
@@ -105,12 +108,12 @@
           <div class="detail-left-info">
             <div class="detail-left-info-name">{{ selectedCourse && selectedCourse.name }}</div>
             <div class="detail-left-info-meta">
-              <span class="detail-left-info-tag">{{ selectedCourse && selectedCourse.subjectName }}</span>
+              <span class="detail-left-info-tag" v-if="selectedCourse && selectedCourse.subjectName">{{ selectedCourse && selectedCourse.subjectName }}</span>
               <span class="detail-left-info-count">共{{ selectedCourse && selectedCourse.taskCount }}个学习任务</span>
             </div>
             <div class="detail-left-info-section">
               <div class="detail-left-info-section-title">课程简介</div>
-              <div class="detail-left-info-desc">{{ selectedCourse && selectedCourse.description }}</div>
+              <div class="detail-left-info-desc"  v-html="selectedCourse && selectedCourse.description"></div>
             </div>
           </div>
         </div>
@@ -597,6 +600,8 @@ export default {
           allowDownload: String(node.allowDownload || '2'),
           collectCount: node.collectCount,
           historyLessonId: node.type === '3' && node.historyLesson ? node.historyLesson.historyLessonId : '',
+          taskUuid:node.type=='3'?node.historyLesson.taskUuid:"",
+          fileList: res.fileList || []
         }
       }
     },
@@ -731,6 +736,26 @@ export default {
       this.isCollected = initCollected
 
       if (videoTypes.includes(item.nodeType)) {
+           // taskUuid 有值 → 跳转 AI听记页面
+        // if(item.taskUuid){
+        //   const fileList = item.fileList || []
+        //   const mainFile = fileList.find(f => f.videoType == '1')
+        //   const teacherFile = fileList.find(f => f.videoType == '2')
+        //   const { userId } = getUserInfo()
+        //   this.$router.push({
+        //     name: 'AIListening',
+        //     query: {
+        //       videoUrl: mainFile ? mainFile.filePath || '' : '',
+        //       teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+        //       meetingId: item.taskUuid,
+        //       meetingTitle: item.title || '',
+        //       scopeText: item.taskUuid,
+        //       liveLessonId: item.historyLessonId || '',
+        //       teacherId: userId || ''
+        //     }
+        //   })
+        //   return
+        // }
         this.currentResourceTitle = item.title || '视频播放'
         this.currentVideoUrl = url
         this.currentPlayingItem = item
@@ -1135,7 +1160,11 @@ export default {
   overflow: hidden;
   margin-bottom: 10px;
 }
-
+.course-card-box{
+  width: 100%;
+  padding: 0 10px 10px 10px;
+  box-sizing: border-box;
+}
 .course-card-cover-img {
   width: 100%;
   height: 100%;

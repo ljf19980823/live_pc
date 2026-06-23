@@ -490,8 +490,14 @@
             class="after-test-item"
             v-for="(item, index) in afterTestList"
             :key="index"
+            @click="openAfterTestDetail(item)"
           >
-            <img :src="item.cover" class="after-test-item__cover" alt="" />
+            <div class="after-test-item__cover-wrap">
+              <img :src="item.cover" class="after-test-item__cover" alt="" />
+              <div class="after-test-item__play-icon" v-if="item.fileList && item.fileList.length != 0" @click.stop="openVideoPlayer(item)">
+                <img src="@/assets/images/class/play.png" class="after-test-item__play-btn" alt="" />
+              </div>
+            </div>
             <div class="after-test-item__info">
               <div class="after-test-item__label">课程标题</div>
               <div class="after-test-item__title" :title="item.name">{{ item.name }}</div>
@@ -2948,6 +2954,9 @@ color: #333333;
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  flex: 1;
+  height: 0;
+  overflow-y: auto;
 }
 .after-test-item {
   display: flex;
@@ -2962,12 +2971,31 @@ color: #333333;
 .after-test-item:hover {
   background: #F8F9FF;
 }
-.after-test-item__cover {
+.after-test-item__cover-wrap {
+  position: relative;
   width: 178px;
   height: 100px;
-
-  border-radius: 8px 0px 0px 8px;
   flex-shrink: 0;
+}
+.after-test-item__cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px 0px 0px 8px;
+  display: block;
+}
+.after-test-item__play-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px 0px 0px 8px;
+  cursor: pointer;
+}
+.after-test-item__play-btn {
+  width: 40px;
+  height: 40px;
 }
 .after-test-item__info {
   flex: 1;
