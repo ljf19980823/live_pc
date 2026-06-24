@@ -7,7 +7,7 @@
       <div class="course-page-header">
         <div class="course-page-title-group">
           <div class="course-page-title">课程</div>
-          <div class="course-page-subtitle">管理课程与学习任务。</div>
+          <div class="course-page-subtitle">管理课程与学习任务</div>
         </div>
         <div class="course-page-header-right">
           <div class="course-tab-group">
@@ -41,7 +41,7 @@
         <div class="course-list-card-header">
           <div class="course-list-card-header-left">
             <div class="course-list-card-title">我的课程</div>
-            <div class="course-list-card-subtitle">按课程卡片进入课程详情，继续管理对应学习任务。</div>
+            <div class="course-list-card-subtitle">按课程卡片进入课程详情，继续管理对应学习任务</div>
           </div>
           <div class="course-list-card-header-right">
             <div class="course-task-badge">
@@ -93,7 +93,7 @@
           <img src="@/assets/images/course_back.png" class="detail-back-icon" alt="" />
           <div class="detail-header-title-group">
             <div class="detail-header-title">课程详情</div>
-            <div class="detail-header-subtitle">查看课程简介并继续你的学习任务。</div>
+            <div class="detail-header-subtitle">查看课程简介并继续你的学习任务</div>
           </div>
         </div>
       </div>

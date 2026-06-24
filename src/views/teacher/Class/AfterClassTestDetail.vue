@@ -29,6 +29,9 @@
           :class="{ 'act-detail__filter-btn--active': filterTab === 'undone' }"
           @click="filterTab = 'undone'"
         >未做题</button>
+        <button class="act-detail__export-btn" :disabled="exporting" @click="handleExport">
+          {{ exporting ? '导出中...' : '全部导出' }}
+        </button>
       </div>
     </div>
 
@@ -73,6 +76,8 @@
               <td class="act-detail__td-time">{{ formatDuration(row.examDuration) }}</td>
               <td>
                 <button class="act-detail__detail-btn" @click="openStudentDetail(row)">做题详情</button>
+                <button class="act-detail__report-btn" @click="openReport(row)">查看报告</button>
+                <button class="act-detail__share-btn" @click="shareReport(row)">分享报告</button>
               </td>
             </tr>
           </tbody>
@@ -119,16 +124,44 @@
       :attempt-index="currentStudent.attemptIndex || 1"
       @close="studentDetailVisible = false"
     />
+
+    <!-- 分享报告弹窗 -->
+    <div v-if="shareDialogVisible" class="share-report__mask" @click.self="shareDialogVisible = false">
+      <div class="share-report__dialog">
+        <div class="share-report__header">
+          <span>分享报告</span>
+          <span class="share-report__close" @click="shareDialogVisible = false">✕</span>
+        </div>
+        <div class="share-report__body">
+          <p class="share-report__tip">将以下链接发给学生，即可查看报告：</p>
+          <div class="share-report__link-row">
+            <span class="share-report__link-text">{{ shareReportUrl }}</span>
+            <button class="share-report__copy-btn" @click="copyShareLink">
+              {{ shareCopied ? '已复制' : '复制链接' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 课后测报告子组件 -->
+    <AfterClassReport
+      :visible="reportVisible"
+      :class-id="reportClassId"
+      :record-id="reportRecordId"
+      @close="reportVisible = false"
+    />
   </div>
 </template>
 
 <script>
 import StudentAnswerDetail from './StudentAnswerDetail.vue'
-import { getAfterQuizLeaderboard, getAfterQuizUnSubmitList } from '@/api'
+import AfterClassReport from './AfterClassReport.vue'
+import { getAfterQuizLeaderboard, getAfterQuizUnSubmitList, exportAfterQuizLeaderboard } from '@/api'
 
 export default {
   name: 'AfterClassTestDetail',
-  components: { StudentAnswerDetail },
+  components: { StudentAnswerDetail, AfterClassReport },
   props: {
     visible: {
       type: Boolean,
@@ -158,7 +191,14 @@ export default {
       },
       unSubmitList: [],
       studentDetailVisible: false,
-      currentStudent: {}
+      currentStudent: {},
+      shareDialogVisible: false,
+      shareReportUrl: '',
+      shareCopied: false,
+      reportVisible: false,
+      reportClassId: '',
+      reportRecordId: '',
+      exporting: false
     }
   },
   computed: {
@@ -255,6 +295,45 @@ export default {
         examId: row.examId
       }
       this.studentDetailVisible = true
+    },
+    openReport(row) {
+      this.reportClassId = (this.courseInfo && this.courseInfo.classId) || ''
+      this.reportRecordId = row.recordId || ''
+      this.reportVisible = true
+    },
+    async handleExport() {
+      const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      const classId = this.courseInfo && this.courseInfo.classId
+      if (!examConfigId || !classId) return
+      this.exporting = true
+      try {
+        await exportAfterQuizLeaderboard(examConfigId, classId)
+      } catch (e) {
+        console.error('导出失败', e)
+      } finally {
+        this.exporting = false
+      }
+    },
+    shareReport(row) {
+      const classId = (this.courseInfo && this.courseInfo.classId) || ''
+      const recordId = row.recordId || ''
+      this.shareReportUrl = `https://test.fjlsjy123.com/afterClassReport.html?classId=${classId}&recordId=${recordId}`
+      this.shareCopied = false
+      this.shareDialogVisible = true
+    },
+    async copyShareLink() {
+      try {
+        await navigator.clipboard.writeText(this.shareReportUrl)
+      } catch (_) {
+        const input = document.createElement('input')
+        input.value = this.shareReportUrl
+        document.body.appendChild(input)
+        input.select()
+        document.execCommand('copy')
+        document.body.removeChild(input)
+      }
+      this.shareCopied = true
+      setTimeout(() => { this.shareCopied = false }, 2000)
     }
   }
 }
@@ -345,8 +424,8 @@ export default {
 .act-detail__filter-btns {
   display: flex;
   align-items: center;
-  border: 1px solid #E0E0E0;
-  border-radius: 6px;
+ gap:20px;
+  /* border-radius: 6px; */
   overflow: hidden;
 }
 .act-detail__filter-btn {
@@ -358,9 +437,10 @@ export default {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   outline: none;
+  border-radius:6px
 }
 .act-detail__filter-btn + .act-detail__filter-btn {
-  border-left: 1px solid #E0E0E0;
+  border: 1px solid #E0E0E0;
 }
 .act-detail__filter-btn--active {
   background: #0049FF;
@@ -490,6 +570,62 @@ export default {
   background: #003de0;
 }
 
+/* 查看报告按钮 */
+.act-detail__report-btn {
+  margin-left: 8px;
+  padding: 5px 14px;
+  background: #fff;
+  color: #0049FF;
+  border: 1.5px solid #0049FF;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  white-space: nowrap;
+}
+.act-detail__report-btn:hover {
+  background: #e8eeff;
+}
+
+/* 全部导出按钮 */
+.act-detail__export-btn {
+  padding: 5px 16px;
+  background: #fff;
+  color: #FF6B00;
+  border: 1.5px solid #FF6B00;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  white-space: nowrap;
+}
+.act-detail__export-btn:hover {
+  background: #fff5ee;
+}
+.act-detail__export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* 查看报告按钮 */
+.act-detail__share-btn {
+  margin-left: 8px;
+  padding: 5px 14px;
+  background: #fff;
+  color: #333;
+  border: 1.5px solid #999;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  white-space: nowrap;
+}
+.act-detail__share-btn:hover {
+    color: #0049FF;
+  border: 1.5px solid #0049FF;
+}
 /* 空状态 */
 .act-detail__empty {
   text-align: center;
@@ -498,4 +634,80 @@ export default {
   font-size: 14px;
 }
 
+/* 分享报告弹窗 */
+.share-report__mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-report__dialog {
+  background: #fff;
+  border-radius: 12px;
+  width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.share-report__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+.share-report__close {
+  cursor: pointer;
+  font-size: 14px;
+  color: #999;
+  line-height: 1;
+}
+.share-report__close:hover {
+  color: #333;
+}
+.share-report__body {
+  padding: 24px 20px;
+}
+.share-report__tip {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 12px;
+}
+.share-report__link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f7ff;
+  border: 1px solid #d0d9ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.share-report__link-text {
+  flex: 1;
+  font-size: 13px;
+  color: #0049FF;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.share-report__copy-btn {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  background: #0049FF;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  outline: none;
+}
+.share-report__copy-btn:hover {
+  background: #003de0;
+}
 </style>

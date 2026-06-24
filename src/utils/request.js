@@ -37,6 +37,11 @@ service.interceptors.request.use(
 // ─── 响应拦截器 ───────────────────────────────────────────────
 service.interceptors.response.use(
   response => {
+    // 文件流直接透传完整 response，不走业务码校验
+    if (response.config?.responseType === 'blob') {
+      return response
+    }
+
     const res = response.data
 
     // 根据业务状态码处理（按实际后端约定修改 code 字段名和成功值）
@@ -217,16 +222,29 @@ export function upload(url, formData, onProgress) {
  * @param {string} filename - 下载文件名
  */
 export async function download(url, params = {}, filename = 'download') {
-  const res = await service.get(url, {
+  const response = await service.get(url, {
     params,
     responseType: 'blob'
   })
-  const blob = new Blob([res])
+  // 拦截器透传了完整 response，data 是 Blob
+  const blob = new Blob([response.data])
+
+  // 尝试从 Content-Disposition 读取服务端文件名
+  let finalFilename = filename
+  const disposition = response.headers?.['content-disposition'] || ''
+  const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+  if (match && match[1]) {
+    finalFilename = decodeURIComponent(match[1].replace(/['"]/g, '').trim())
+  }
+
+  const objectUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = filename
+  link.href = objectUrl
+  link.download = finalFilename
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(link.href)
+  document.body.removeChild(link)
+  URL.revokeObjectURL(objectUrl)
 }
 
 export default service

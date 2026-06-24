@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { get, post, put, del } from '@/utils/request'
+import { get, post, put, del, download } from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
 /**
@@ -175,6 +175,9 @@ export const getAfterQuizLeaderboard = (examConfigId, classId) => get(`/edu/afte
 
 // 获取课后测未提交学生列表（Path 参数 examConfigId, classId）
 export const getAfterQuizUnSubmitList = (examConfigId, classId) => get(`/edu/after/quiz/student/unSubmit/list/${examConfigId}/${classId}`)
+
+// 导出课后测排行榜（Path 参数 examConfigId, classId）
+export const exportAfterQuizLeaderboard = (examConfigId, classId) => download(`/edu/after/quiz/leaderboard/export/${examConfigId}/${classId}`, {}, '课后测报告.xlsx')
 
 // 收藏/取消收藏切换
 export const collectToggle = data => post('/edu/recentView/collect/toggle', data)
