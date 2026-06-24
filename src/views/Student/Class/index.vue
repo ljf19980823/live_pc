@@ -436,7 +436,7 @@
         <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index" @click="startExam(item)">
           <div class="quiz-item-left">
             <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
-            <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item)">
+            <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item, false, false, true)">
               <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
             </div>
           </div>
@@ -838,6 +838,7 @@ export default {
       isStudent: userInfo.role === 'STUDENT',
       // 收藏相关：标记是否从"学习任务"入口打开，以及当前收藏接口所需参数
       fromLearningTask: false,
+      skipProgressOnClose: false,
       currentCollectParams: {},
       isCollected: false,
       collecting: false,
@@ -1524,7 +1525,11 @@ export default {
       this.playerVisible = false
       this.fromLearningTask = false
       this.isCollected = false
-      await this.saveVideoProgress(percent)
+      const skip = this.skipProgressOnClose
+      this.skipProgressOnClose = false
+      if (!skip) {
+        await this.saveVideoProgress(percent)
+      }
     },
     async saveVideoProgress(percent) {
       const item = this.currentPlayingItem
@@ -1755,7 +1760,7 @@ export default {
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
     },
-    async openVideoPlayer(item, updateRecent = false, fromTask = false) {
+    async openVideoPlayer(item, updateRecent = false, fromTask = false, skipProgress = false) {
       if (updateRecent) {
         try {
           const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
@@ -1790,6 +1795,7 @@ export default {
         this.currentCollectParams = {}
       }
       console.log(this.currentAllowMultiple,'currentAllowMultiple')
+      this.skipProgressOnClose = skipProgress
       this.playerVisible = true
     },
     async enterLiveRoom(item) {

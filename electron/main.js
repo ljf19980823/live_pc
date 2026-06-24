@@ -992,3 +992,10 @@ ipcMain.handle('open-crash-log-folder', () => {
     return false
   }
 })
+
+// ─── 用系统默认浏览器打开外部链接 ────────────────────────────────────────
+ipcMain.handle('open-external-url', (_, url) => {
+  if (!url || !url.startsWith('http')) return false
+  shell.openExternal(url)
+  return true
+})
