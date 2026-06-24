@@ -820,7 +820,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord, collectToggle } from '@/api'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'
@@ -903,6 +903,12 @@ export default {
       // 课后测
       afterQuizList: [],
       afterQuizLoading: false,
+      afterQuizFilter: { subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' },
+      afterQuizTimeRange: [],
+      afterQuizDatePickerOptions: { disabledDate: (time) => time.getTime() > Date.now() },
+      subjectOptions: [],
+      afterQuizOptions: [],
+      teacherOptions: [],
 
       // 考试
       showExam: false,
@@ -944,7 +950,7 @@ export default {
     },
     rightTab(val) {
       if (val === 'course') this.fetchCourseList()
-      if (val === 'quiz') this.fetchAfterQuizList()
+      if (val === 'quiz') { this.fetchAfterQuizFilterOptions(); this.fetchAfterQuizList() }
     },
     rightCourseSearch(val) {
       clearTimeout(this._courseSearchTimer)
@@ -1142,7 +1148,13 @@ export default {
       const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
       this.afterQuizLoading = true
       try {
-        const res = await getAfterQuizList({ classId: this.selectedClassId, studentId })
+        const params = { classId: this.selectedClassId, studentId }
+        if (this.afterQuizFilter.subjectId) params.subjectId = this.afterQuizFilter.subjectId
+        if (this.afterQuizFilter.quizStartTime) params.quizStartTime = this.afterQuizFilter.quizStartTime
+        if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
+        if (this.afterQuizFilter.examConfigId) params.examConfigId = this.afterQuizFilter.examConfigId
+        if (this.afterQuizFilter.teacherId) params.teacherId = this.afterQuizFilter.teacherId
+        const res = await getAfterQuizList(params)
         this.afterQuizList = res.data || []
       } catch (e) {
         console.error(e)
@@ -1150,6 +1162,31 @@ export default {
       } finally {
         this.afterQuizLoading = false
       }
+    },
+    async fetchAfterQuizFilterOptions() {
+      if (!this.selectedClassId) return
+      try {
+        const [subjectRes, quizRes, teacherRes] = await Promise.all([
+          getSubjectOptions(),
+          getAfterQuizOptions({ classId: this.selectedClassId }),
+          getTeacherOptions({ classId: this.selectedClassId })
+        ])
+        this.subjectOptions = (subjectRes && subjectRes.data) ? subjectRes.data : []
+        this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
+        this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
+      } catch (e) {
+        console.log(e, 'fetchAfterQuizFilterOptions error')
+      }
+    },
+    handleAfterQuizSearch() {
+      if (this.afterQuizTimeRange && this.afterQuizTimeRange.length === 2) {
+        this.afterQuizFilter.quizStartTime = this.afterQuizTimeRange[0]
+        this.afterQuizFilter.quizEndTime = this.afterQuizTimeRange[1]
+      } else {
+        this.afterQuizFilter.quizStartTime = ''
+        this.afterQuizFilter.quizEndTime = ''
+      }
+      this.fetchAfterQuizList()
     },
     openRanking(item) {
       this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')

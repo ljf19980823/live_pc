@@ -149,6 +149,15 @@ export const updateCourseProgress = data => post('/edu/course/progress', data)
 
 // 获取教师课后测列表
 export const getAfterQuizTeacherList = params => get('/edu/after/quiz/teacher/list', params)
+
+// 科目下拉选项
+export const getSubjectOptions = () => get('/edu/subject/options')
+
+// 课后测下拉选项
+export const getAfterQuizOptions = params => get('/edu/after/quiz/options', params)
+
+// 上课老师下拉选项
+export const getTeacherOptions = params => get('/edu/sso/teacher/options', params)
 // 获取课后测列表
 export const getAfterQuizList = params => get('/edu/after/quiz/list', params)
 

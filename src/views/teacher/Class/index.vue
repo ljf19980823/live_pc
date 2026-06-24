@@ -485,7 +485,79 @@
       </div>
       <!-- 课后测试tab列表 -->
       <div class="app_container_box_right_last" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
+        <!-- 筛选条件 -->
+        <div class="after-test-filter">
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterTestFilter.subjectId"
+              placeholder="请选择科目"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterTestSearch"
+            >
+              <el-option
+                v-for="opt in subjectOptions"
+                :key="opt.id"
+                :label="opt.name"
+                :value="opt.id"
+              />
+            </el-select>
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-date-picker
+              v-model="afterTestTimeRange"
+              type="datetimerange"
+              range-separator="-"
+              start-placeholder="直播开始时间"
+              end-placeholder="直播结束时间"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              :picker-options="afterTestDatePickerOptions"
+              class="after-test-filter__datepicker"
+              @change="handleAfterTestSearch"
+            />
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterTestFilter.examConfigId"
+              placeholder="请选择课后测"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterTestSearch"
+            >
+              <el-option
+                v-for="opt in afterQuizOptions"
+                :key="opt.examConfigId"
+                :label="opt.name"
+                :value="opt.examConfigId"
+              />
+            </el-select>
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterTestFilter.teacherId"
+              placeholder="请选择上课老师"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterTestSearch"
+            >
+              <el-option
+                v-for="opt in teacherOptions"
+                :key="opt.teacherId"
+                :label="opt.realName"
+                :value="opt.teacherId"
+              />
+            </el-select>
+          </div>
+        </div>
         <div class="after-test-list" v-loading="afterTestLoading">
+         
+          <EmptyState v-if="!afterTestLoading && afterTestList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
           <div
             class="after-test-item"
             v-for="(item, index) in afterTestList"
@@ -516,6 +588,10 @@
             <div class="after-test-item__col">
               <div class="after-test-item__label">题目数量</div>
               <div class="after-test-item__val">{{ item.topicNum }}题</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">上课老师</div>
+              <div class="after-test-item__val">{{ item.teacherName || item.teacherId || '-' }}</div>
             </div>
             <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
           </div>
@@ -859,7 +935,7 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList } from '@/api'
+import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import AfterClassTestDetail from './AfterClassTestDetail.vue'
@@ -915,6 +991,76 @@ export default {
       currentAfterTestCourse: null,
       afterTestList: [],
       afterTestLoading: false,
+      // 课后测筛选条件
+      afterTestFilter: {
+        subjectId: '',
+        quizStartTime: '',
+        quizEndTime: '',
+        examConfigId: '',
+        teacherId: '',
+      },
+      afterTestTimeRange: [],
+      subjectOptions: [],
+      afterQuizOptions: [],
+      teacherOptions: [],
+      afterTestFilterLoading: false,
+      afterTestDatePickerOptions: {
+        shortcuts: [
+          {
+            text: '本周',
+            onClick(picker) {
+              const now = new Date()
+              const day = now.getDay() || 7
+              const start = new Date(now)
+              start.setDate(now.getDate() - day + 1)
+              start.setHours(0, 0, 0, 0)
+              const end = new Date(start)
+              end.setDate(start.getDate() + 6)
+              end.setHours(23, 59, 59, 999)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '本月',
+            onClick(picker) {
+              const now = new Date()
+              const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0)
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近三月',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 3)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近半年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 6)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近一年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setFullYear(start.getFullYear() - 1)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          }
+        ]
+      },
       courseDetail: {
         taskCount: 0,
         items: []
@@ -975,7 +1121,7 @@ export default {
     rightTab(val) {
       if (val === 'student') this.fetchStudentList()
       else if (val === 'course') this.fetchCourseList()
-      else if (val === 'afterTest') this.fetchAfterTestList()
+      else if (val === 'afterTest') { this.fetchAfterTestFilterOptions(); this.fetchAfterTestList() }
     },
     rightStudentSearch(val) {
       clearTimeout(this._studentSearchTimer)
@@ -1087,7 +1233,13 @@ export default {
       const { userId } = getUserInfo()
       this.afterTestLoading = true
       try {
-        const res = await getAfterQuizTeacherList({ classId: this.selectedClassId, teacherId: userId })
+        const params = { classId: this.selectedClassId, teacherId: userId }
+        if (this.afterTestFilter.subjectId) params.subjectId = this.afterTestFilter.subjectId
+        if (this.afterTestFilter.quizStartTime) params.quizStartTime = this.afterTestFilter.quizStartTime
+        if (this.afterTestFilter.quizEndTime) params.quizEndTime = this.afterTestFilter.quizEndTime
+        if (this.afterTestFilter.examConfigId) params.examConfigId = this.afterTestFilter.examConfigId
+        if (this.afterTestFilter.teacherId) params.teacherId = this.afterTestFilter.teacherId
+        const res = await getAfterQuizTeacherList(params)
         this.afterTestList = (res && res.data) ? res.data : []
       } catch (e) {
         console.log(e,'呼呼')
@@ -1095,6 +1247,36 @@ export default {
       } finally {
         this.afterTestLoading = false
       }
+    },
+    async fetchAfterTestFilterOptions() {
+      if (!this.selectedClassId) return
+      try {
+        const [subjectRes, quizRes, teacherRes] = await Promise.all([
+          getSubjectOptions(),
+          getAfterQuizOptions({ classId: this.selectedClassId }),
+          getTeacherOptions({ classId: this.selectedClassId })
+        ])
+        this.subjectOptions = (subjectRes && subjectRes.data) ? subjectRes.data : []
+        this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
+        this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
+      } catch (e) {
+        console.log(e, 'fetchAfterTestFilterOptions error')
+      }
+    },
+    handleAfterTestSearch() {
+      if (this.afterTestTimeRange && this.afterTestTimeRange.length === 2) {
+        this.afterTestFilter.quizStartTime = this.afterTestTimeRange[0]
+        this.afterTestFilter.quizEndTime = this.afterTestTimeRange[1]
+      } else {
+        this.afterTestFilter.quizStartTime = ''
+        this.afterTestFilter.quizEndTime = ''
+      }
+      this.fetchAfterTestList()
+    },
+    handleAfterTestReset() {
+      this.afterTestFilter = { subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' }
+      this.afterTestTimeRange = []
+      this.fetchAfterTestList()
     },
     _mapClassItem(item) {
       const sourceMap = { '1': '后台创建', '0': '' }
@@ -2948,6 +3130,91 @@ color: #333333;
 }
 
 /* ─── 课后测试 tab 列表 ──────────────────────────────────────── */
+.after-test-filter {
+  display: flex;
+  align-items: center;
+  height: 49px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.after-test-filter__group {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 100%;
+  &:first-child {
+    padding-left: 0;
+  }
+}
+.after-test-filter__divider {
+  width: 1px;
+  height: 20px;
+  background: #d9d9d9;
+  flex-shrink: 0;
+}
+.after-test-filter__select {
+  width: 130px;
+  ::v-deep .el-input__inner {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    font-size: 14px;
+    color: #333333;
+    padding-left: 0;
+    &:focus {
+      border: none;
+      box-shadow: none;
+    }
+  }
+  ::v-deep .el-input.is-focus .el-input__inner {
+    border: none;
+    box-shadow: none;
+  }
+  ::v-deep .el-select__caret {
+    color: #999;
+  }
+  ::v-deep .el-select__input {
+    margin-left: 0 !important;
+  }
+}
+.after-test-filter__datepicker {
+  width: auto !important;
+  ::v-deep .el-range-editor {
+    width: auto !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    background: transparent;
+    &:hover,
+    &.is-active {
+      border: none;
+      box-shadow: none;
+    }
+  }
+  ::v-deep .el-range-input {
+    font-size: 14px;
+    color: #333333;
+    background: transparent;
+    width: 130px;
+  }
+  ::v-deep .el-range-separator {
+    font-size: 14px;
+    color: #333333;
+    padding: 0 4px;
+    line-height: 2;
+  }
+  ::v-deep .el-range__icon {
+    display: none;
+  }
+  ::v-deep .el-range__close-icon {
+    font-size: 14px;
+  }
+}
 .after-test-list {
   display: flex;
   flex-direction: column;
@@ -2956,6 +3223,14 @@ color: #333333;
   flex: 1;
   height: 0;
   overflow-y: auto;
+}
+.after-test-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #999;
 }
 .after-test-item {
   display: flex;
