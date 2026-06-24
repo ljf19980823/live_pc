@@ -431,43 +431,112 @@
       </div>
 
       <!-- 课后测tab列表 -->
-      <div class="app_container_box_right_last quiz-list-wrap" v-if="rightTab === 'quiz'" v-loading="afterQuizLoading">
-        <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
-        <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index" @click="startExam(item)">
-          <div class="quiz-item-left">
-            <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
-            <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item, false, false, true)">
-              <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
-            </div>
+      <template v-if="rightTab === 'quiz'">
+      
+        <div class="app_container_box_right_last quiz-list-wrap" v-loading="afterQuizLoading">
+          <div class="after-test-filter">
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.subjectId"
+              placeholder="请选择科目"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in subjectOptions"
+                :key="opt.id"
+                :label="opt.name"
+                :value="opt.id"
+              />
+            </el-select>
           </div>
-          <div class="quiz-item-body">
-            <div class="quiz-item-title-row">
-              <span class="quiz-item-name">{{ item.name }}</span>
-              <span class="quiz-item-status" :class="item.finishStatus === '1' ? 'quiz-status-done' : 'quiz-status-todo'">
-                {{ item.finishStatus === '1' ? '已做题' : '未做题' }}
-              </span>
-              <span class="quiz-item-date">发布时间: {{ item.createTime }}</span>
-            </div>
-            <div class="quiz-item-meta-row">
-              <span class="quiz-item-meta">做题次数: {{ item.finishNum }}次</span>
-              
-              <span class="quiz-item-meta">题目数量: {{ item.topicNum }}题</span>
-
-              <span class="quiz-item-meta">
-                
-                <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
-                  {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
-                </span>
-                <span class="quiz-score-done" style="cursor:pointer;" @click.stop="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
-              </span>
-            </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-date-picker
+              v-model="afterQuizTimeRange"
+              type="datetimerange"
+              range-separator="-"
+              start-placeholder="直播开始时间"
+              end-placeholder="直播结束时间"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              :picker-options="afterQuizDatePickerOptions"
+              class="after-test-filter__datepicker"
+              @change="handleAfterQuizSearch"
+            />
           </div>
-          <div class="quiz-item-actions">
-            <button class="quiz-btn-primary" @click.stop="startExam(item)">去考试</button>
-            <button class="quiz-btn-outline" @click.stop="openExamRecord(item)">考试记录</button>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.examConfigId"
+              placeholder="请选择课后测"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in afterQuizOptions"
+                :key="opt.examConfigId"
+                :label="opt.name"
+                :value="opt.examConfigId"
+              />
+            </el-select>
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.teacherId"
+              placeholder="请选择上课老师"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in teacherOptions"
+                :key="opt.teacherId"
+                :label="opt.realName"
+                :value="opt.teacherId"
+              />
+            </el-select>
           </div>
         </div>
-      </div>
+          <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
+          <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index" @click="startExam(item)">
+            <div class="quiz-item-left">
+              <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
+              <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item, false, false, true)">
+                <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
+              </div>
+            </div>
+            <div class="quiz-item-body">
+              <div class="quiz-item-title-row">
+                <span class="quiz-item-name">{{ item.name }}</span>
+                <span class="quiz-item-status" :class="item.finishStatus === '1' ? 'quiz-status-done' : 'quiz-status-todo'">
+                  {{ item.finishStatus === '1' ? '已做题' : '未做题' }}
+                </span>
+                <span class="quiz-item-date">发布时间: {{ item.createTime }}</span>
+              </div>
+              <div class="quiz-item-meta-row">
+                <span class="quiz-item-meta">做题次数: {{ item.finishNum }}次</span>
+                <span class="quiz-item-meta">题目数量: {{ item.topicNum }}题</span>
+                <span class="quiz-item-meta">
+                  <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
+                    {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
+                  </span>
+                  <span class="quiz-score-done" style="cursor:pointer;" @click.stop="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
+                </span>
+              </div>
+            </div>
+            <div class="quiz-item-actions">
+              <button class="quiz-btn-primary" @click.stop="startExam(item)">去考试</button>
+              <button class="quiz-btn-outline" @click.stop="openExamRecord(item)">考试记录</button>
+            </div>
+          </div>
+        </div>
+      </template>
       </template>
       </template>
     </div>
@@ -1153,7 +1222,7 @@ export default {
         if (this.afterQuizFilter.quizStartTime) params.quizStartTime = this.afterQuizFilter.quizStartTime
         if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
         if (this.afterQuizFilter.examConfigId) params.examConfigId = this.afterQuizFilter.examConfigId
-        if (this.afterQuizFilter.teacherId) params.teacherId = this.afterQuizFilter.teacherId
+        if (this.afterQuizFilter.teacherId) params.quizTeacherId = this.afterQuizFilter.teacherId
         const res = await getAfterQuizList(params)
         this.afterQuizList = res.data || []
       } catch (e) {
@@ -3139,6 +3208,73 @@ color: #333333;
 }
 .class-detail-drawer__value--bold {
   font-weight: 600;
+}
+
+/* 课后测筛选栏 */
+.after-test-filter {
+  display: flex;
+  align-items: center;
+  height: 49px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+.after-test-filter__group {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 100%;
+  &:first-child { padding-left: 0; }
+}
+.after-test-filter__divider {
+  width: 1px;
+  height: 20px;
+  background: #d9d9d9;
+  flex-shrink: 0;
+}
+.after-test-filter__select {
+  width: 130px;
+  ::v-deep .el-input__inner {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    font-size: 14px;
+    color: #333333;
+    padding-left: 0;
+    &:focus { border: none; box-shadow: none; }
+  }
+  ::v-deep .el-input.is-focus .el-input__inner { border: none; box-shadow: none; }
+  ::v-deep .el-select__caret { color: #999; }
+  ::v-deep .el-select__input { margin-left: 0 !important; }
+}
+.after-test-filter__datepicker {
+  width: auto !important;
+  ::v-deep .el-range-editor {
+    width: auto !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    background: transparent;
+    &:hover, &.is-active { border: none; box-shadow: none; }
+  }
+  ::v-deep .el-range-input {
+    font-size: 14px;
+    color: #333333;
+    background: transparent;
+    width: 130px;
+  }
+  ::v-deep .el-range-separator {
+    font-size: 14px;
+    color: #333333;
+    padding: 0 4px;
+    line-height: 2;
+  }
+  ::v-deep .el-range__icon { display: none; }
+  ::v-deep .el-range__close-icon { font-size: 14px; }
 }
 
 /* 课后测列表 */
