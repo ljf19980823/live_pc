@@ -900,37 +900,37 @@ app.whenReady().then(async () => {
   // ─── 直播页缓存策略 ────────────────────────────────────────────────────
   // HTML 每次校验更新；带内容 hash 或版本号的 JS/CSS 长期缓存。
   // 这样新版本入口始终生效，同时弱网下无需重复下载未变化的课堂资源。
-  session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
-    (details, callback) => {
-      const headers = Object.assign({}, details.responseHeaders)
-      Object.keys(headers).forEach(key => {
-        const lowerKey = key.toLowerCase()
-        if (lowerKey === 'cache-control' || lowerKey === 'pragma' || lowerKey === 'expires') {
-          delete headers[key]
-        }
-      })
+  // session.defaultSession.webRequest.onHeadersReceived(
+  //   { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
+  //   (details, callback) => {
+  //     const headers = Object.assign({}, details.responseHeaders)
+  //     Object.keys(headers).forEach(key => {
+  //       const lowerKey = key.toLowerCase()
+  //       if (lowerKey === 'cache-control' || lowerKey === 'pragma' || lowerKey === 'expires') {
+  //         delete headers[key]
+  //       }
+  //     })
 
-      let pathname = ''
-      try {
-        pathname = new URL(details.url).pathname
-      } catch (_) {}
+  //     let pathname = ''
+  //     try {
+  //       pathname = new URL(details.url).pathname
+  //     } catch (_) {}
 
-      const isDocument = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame'
-      const isScriptOrStyle = details.resourceType === 'script' || details.resourceType === 'stylesheet'
-      const hasContentHash = /[.-][a-f0-9]{8,}(?:\.async|\.chunk)?\.(?:js|css)$/i.test(pathname)
-      const hasExplicitVersion = /(?:_v|-)(?:\d+\.){2}\d+(?:\.min)?\.js$/i.test(pathname)
+  //     const isDocument = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame'
+  //     const isScriptOrStyle = details.resourceType === 'script' || details.resourceType === 'stylesheet'
+  //     const hasContentHash = /[.-][a-f0-9]{8,}(?:\.async|\.chunk)?\.(?:js|css)$/i.test(pathname)
+  //     const hasExplicitVersion = /(?:_v|-)(?:\d+\.){2}\d+(?:\.min)?\.js$/i.test(pathname)
 
-      if (isDocument) {
-        headers['cache-control'] = ['no-cache, must-revalidate']
-      } else if (isScriptOrStyle && (hasContentHash || hasExplicitVersion)) {
-        headers['cache-control'] = ['public, max-age=31536000, immutable']
-      } else if (isScriptOrStyle) {
-        headers['cache-control'] = ['no-cache, must-revalidate']
-      }
-      callback({ responseHeaders: headers })
-    }
-  )
+  //     if (isDocument) {
+  //       headers['cache-control'] = ['no-cache, must-revalidate']
+  //     } else if (isScriptOrStyle && (hasContentHash || hasExplicitVersion)) {
+  //       headers['cache-control'] = ['public, max-age=31536000, immutable']
+  //     } else if (isScriptOrStyle) {
+  //       headers['cache-control'] = ['no-cache, must-revalidate']
+  //     }
+  //     callback({ responseHeaders: headers })
+  //   }
+  // )
 
   createWindow()
 
