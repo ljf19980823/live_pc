@@ -1,7 +1,7 @@
 {
   "name": "lisheng-live-pc",
   "chname": "立升云播",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
