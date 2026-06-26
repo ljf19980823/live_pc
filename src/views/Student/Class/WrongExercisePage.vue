@@ -672,7 +672,7 @@ export default {
   flex-direction: column;
   gap: 12px;
 }
-::v-deep .wep__options img { mix-blend-mode: multiply !important; }
+::v-deep .wep__options img { mix-blend-mode: multiply !important; float:none!important; }
 
 .wep__option {
   display: flex;
@@ -732,6 +732,7 @@ export default {
   max-width: 100%; max-height: 160px; border-radius: 4px;
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 
 .wep__opt-icon {
@@ -750,6 +751,7 @@ export default {
   object-fit: contain;
   display: block;
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 .wep__content-img {
   max-width: 100%;
@@ -759,6 +761,7 @@ export default {
   display: block;
   margin-top: 8px;
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 
 /* 提交答案按钮 */
@@ -857,6 +860,7 @@ export default {
   max-width: 100%; 
   object-fit: contain; 
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 
 /* 空状态 */

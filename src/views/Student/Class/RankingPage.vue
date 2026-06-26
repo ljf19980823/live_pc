@@ -36,7 +36,7 @@
         <div class="ranking-col ranking-col-name">姓名</div>
         <div class="ranking-col ranking-col-score">分数</div>
         <div class="ranking-col ranking-col-time">用时</div>
-        <div class="ranking-col ranking-col-action"></div>
+        <!-- <div class="ranking-col ranking-col-action"></div> -->
       </div>
 
       <!-- 列表 -->
@@ -84,9 +84,9 @@
           </div>
 
           <!-- 操作 -->
-          <div class="ranking-col ranking-col-action">
+          <!-- <div class="ranking-col ranking-col-action">
             <button  class="ranking-detail-btn" @click="openStudentDetail(item)">做题详情</button>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>

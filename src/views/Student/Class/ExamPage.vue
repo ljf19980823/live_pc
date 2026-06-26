@@ -696,6 +696,7 @@ export default {
 }
 ::v-deep .exam-options  img{
     mix-blend-mode: multiply!important;
+    float:none!important; 
   }
 .exam-option {
   display: flex;

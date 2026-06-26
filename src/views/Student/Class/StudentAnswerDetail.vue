@@ -659,6 +659,7 @@ export default {
   max-width: 100%;border-radius: 4px;
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 
 /* ===== 空状态 ===== */

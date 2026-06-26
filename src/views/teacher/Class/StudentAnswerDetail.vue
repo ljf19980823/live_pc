@@ -648,6 +648,7 @@ export default {
   border-radius: 4px;
   margin: 4px 0;
     mix-blend-mode: multiply!important;
+    float:none!important; 
 }
 /* 题干、选项内嵌 HTML 中的图片自动限宽 */
 .sad__q-stem img,
@@ -785,5 +786,6 @@ export default {
   max-width: 100%;border-radius: 4px;
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
+  float:none!important; 
 }
 </style>
