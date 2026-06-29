@@ -42,6 +42,10 @@ service.interceptors.response.use(
       return response
     }
 
+    if (response.config?.rawResponse) {
+      return response.data
+    }
+
     const res = response.data
 
     // 根据业务状态码处理（按实际后端约定修改 code 字段名和成功值）

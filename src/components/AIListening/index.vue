@@ -157,29 +157,25 @@
             <!-- 有对话时显示新建对话，无对话时显示搜索 -->
             <button
               class="al-hd-btn"
-              :title="chatMessages.length > 0 ? '新建对话' : '搜索'"
-              @click="chatMessages.length > 0 ? newChatSession() : null"
+              title="新建对话"
+              @click="newChatSession()"
             >
               <!-- 新建图标（有对话状态） -->
-              <svg v-if="chatMessages.length > 0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <svg  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="16"/>
                 <line x1="8" y1="12" x2="16" y2="12"/>
               </svg>
-              <!-- 搜索图标（无对话状态） -->
-              <!-- <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg> -->
+             
             </button>
             <!-- 菜单按钮 -->
-            <!-- <button class="al-hd-btn" title="更多">
+            <button class="al-hd-btn" title="会话列表" @click="toggleQaSessionList">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
-            </button> -->
+            </button>
             <!-- 关闭按钮 -->
             <button class="al-hd-btn al-hd-close-btn" @click="handleClose" title="关闭">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -192,13 +188,61 @@
 
         <!-- Chat Body -->
         <div class="al-chat-body" ref="chatBodyEl">
+          <transition name="al-session-slide">
+            <div v-if="showQaSessionList" class="al-session-panel">
+              <div class="al-session-panel-hd">
+                <span>全部会话</span>
+                <button class="al-session-refresh" title="刷新" @click="fetchQaSessions">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <polyline points="1 20 1 14 7 14"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/>
+                  </svg>
+                </button>
+              </div>
+              <div v-if="qaSessionLoading" class="al-session-empty">加载中...</div>
+              <div v-else-if="qaSessionList.length === 0" class="al-session-empty">暂无会话</div>
+              <div v-else class="al-session-list">
+                <div
+                  v-for="session in qaSessionList"
+                  :key="session.session_id"
+                  class="al-session-item"
+                  :class="{ active: currentQaSessionId === session.session_id }"
+                  @click="selectQaSession(session)"
+                >
+                  <div class="al-session-main">
+                    <div class="al-session-title">{{ session.title || '未命名会话' }}</div>
+                    <div class="al-session-meta">
+                      <span>{{ formatQaSessionTime(session.updated_at || session.created_at) }}</span>
+                      <span>{{ session.message_count || 0 }}条消息</span>
+                    </div>
+                  </div>
+                  <button
+                    class="al-session-delete"
+                    title="删除会话"
+                    :disabled="deletingQaSessionId === session.session_id"
+                    @click.stop="deleteQaSession(session)"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6"/>
+                      <path d="M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </transition>
           <!-- ===== 欢迎态（无对话） ===== -->
           <div v-if="chatMessages.length === 0 && !aiLoading" class="al-welcome-area">
             <div class="al-welcome-greeting">
               <span class="al-welcome-emoji">👋</span>
               <span class="al-welcome-text">Hi，我可以帮你干什么？</span>
             </div>
-            <p class="al-scope-hint">问答范围：{{ scopeText }}</p>
+            <p class="al-scope-hint">问答范围：{{ meetingTitle || '未命名笔记' }}</p>
             <div class="al-quick-questions">
               <button
                 v-for="q in quickQuestions"
@@ -219,15 +263,15 @@
             >
               <!-- 用户消息 -->
               <div v-if="msg.role === 'user'" class="al-msg-user-wrap">
-                <div class="al-bubble-user">{{ msg.content }}</div>
+                <div class="al-bubble-user al-markdown-body" v-html="renderMarkdown(msg.content)"></div>
               </div>
 
               <!-- AI消息 -->
               <div v-else class="al-msg-ai-wrap">
                 <div v-if="msg.thinking" class="al-thinking-label">已思考{{ msg.thinkSec }}秒</div>
                 <div class="al-bubble-ai">
-                  <span v-if="msg.streaming" class="al-typing-cursor">{{ msg.content }}</span>
-                  <span v-else>{{ msg.content }}</span>
+                  <span v-if="msg.streaming" class="al-typing-cursor al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
+                  <span v-else class="al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
                 </div>
                 <div v-if="!msg.streaming" class="al-msg-ops">
                   <!-- <button class="al-op-btn" @click="shareMsg(msg.content)">
@@ -283,12 +327,12 @@
             ></textarea>
           </div>
           <div class="al-ft-toolbar">
-            <button class="al-ft-btn al-ft-attach" title="附件">
+            <!-- <button class="al-ft-btn al-ft-attach" title="附件">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-            </button>
+            </button> -->
             <button
               class="al-ft-btn al-deep-think-btn"
               :class="{ active: deepThinkMode }"
@@ -323,49 +367,29 @@
 
 <script>
 import ListenVideoPlayer from '@/components/ListenVideoPlayer/index.vue'
-import { get } from '@/utils/request'
+import { del, get, post } from '@/utils/request'
+import { getToken } from '@/utils/auth'
+import MarkdownIt from 'markdown-it'
+import texmath from 'markdown-it-texmath'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 /**
  * AIListening — AI 听记组件
  * 包含：视频播放器、转写/AI纪要标签页、右侧 AI 问答对话面板
  */
 
-const mockAiChat = (question, deepThink, history) => {
-  const thinkSec = deepThink ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 3) + 1
-
-  const responses = {
-    '用30字概括': {
-      answer: '对话聚焦音频设备连接问题，最终确认使用耳机解决声音输出，达成"能用就行"共识。',
-      followUp: ['插线后延迟具体指什么？', '切换音频设备怎么操作？']
-    },
-    'AI一键生成思维导图': {
-      answer: '已为您生成思维导图，本次直播主要围绕以下几个核心议题展开：\n\n1. 直播数字编辑技术（数字化工具应用、内容制作流程）\n2. 传播路径优化（算法分发、用户增长策略）\n3. 技术架构建设（可扩展性设计、数据分析体系）\n4. 用户体验提升（界面优化、互动功能增强）',
-      followUp: ['导出为 PDF 格式', '思维导图能否按时间轴排列？']
-    },
-    '帮我提炼一下重点内容': {
-      answer: '本次直播的重点内容如下：\n\n① 直播数字编辑是当今传播环境的核心竞争力\n② 用户体验与内容质量需要保持动态平衡\n③ 技术架构的可扩展性决定了平台的长期发展潜力\n④ 社区运营和口碑传播是用户增长的关键\n⑤ 数据分析工具的引入可显著提升内容策略精准度',
-      followUp: ['这些内容如何形成方案？', '哪个方向最值得优先投入？']
-    },
-    'default': {
-      answer: '根据本次直播内容，关于您的问题，主要观点如下：直播数字化编辑需要关注内容质量、技术架构和用户体验三个核心维度，缺一不可。建议从用户需求出发，结合数据分析逐步迭代优化。',
-      followUp: ['能否举个具体案例？', '如何制定实施路线图？']
-    }
+const markdownRenderer = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true
+}).use(texmath, {
+  engine: katex,
+  delimiters: 'dollars',
+  katexOptions: {
+    throwOnError: false
   }
-
-  const resp = responses[question] || responses['default']
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 200,
-        data: {
-          answer: resp.answer,
-          thinkSec,
-          followUp: resp.followUp
-        }
-      })
-    }, deepThink ? 2500 : 1200)
-  })
-}
+})
 
 export default {
   name: 'AIListening',
@@ -393,6 +417,14 @@ export default {
       chatMessages: [],
       inputText: '',
       aiLoading: false,
+      qaSessionLoading: false,
+      qaSessionList: [],
+      currentQaSessionId: '',
+      showQaSessionList: false,
+      deletingQaSessionId: '',
+      currentStreamController: null,
+      typingTimer: null,
+      typingQueue: [],
       deepThinkMode: false,
       followUpList: [],
 
@@ -420,10 +452,10 @@ export default {
       return this.$route.query.scopeText || ''
     },
     liveLessonId() {
-      return this.$route.query.liveLessonId || ''
+      return 'cbe643ebcc5e4fe094c26e17b353e8a5'
     },
     teacherId() {
-      return this.$route.query.teacherId || ''
+      return '35ea4b1fa8e842c586ea1449ad522ec5'
     }
   },
   mounted() {
@@ -434,6 +466,157 @@ export default {
     loadData() {
       this.fetchTranscript()
       this.fetchSummary()
+      this.fetchQaSessions()
+    },
+
+    getQaRequestConfig() {
+      return {
+        baseURL: 'http://47.122.53.79:8000',
+        rawResponse: true,
+        headers: {
+          'X-User-Id': this.teacherId
+        }
+      }
+    },
+
+    getQaBaseUrl() {
+      return 'http://47.122.53.79:8000'
+    },
+
+    getQaHeaders() {
+      const headers = {
+        'Content-Type': 'application/json;charset=utf-8',
+        'X-User-Id': this.teacherId
+      }
+      const token = getToken()
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      return headers
+    },
+
+    getResponseData(res) {
+      return res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res
+    },
+
+    async fetchQaSessions() {
+      if (!this.liveLessonId || !this.teacherId) {
+        console.warn('AI问答会话列表缺少参数', {
+          lesson_id: this.liveLessonId,
+          teacherId: this.teacherId
+        })
+        return
+      }
+      this.qaSessionLoading = true
+      try {
+        const res = await get('/qa/sessions', {
+          lesson_id: this.liveLessonId
+        }, this.getQaRequestConfig())
+        const data = this.getResponseData(res)
+        const list = Array.isArray(data) ? data : (data && Array.isArray(data.sessions) ? data.sessions : [])
+        this.qaSessionList = list
+        if (list.length === 0) {
+          this.currentQaSessionId = ''
+          console.log('AI问答暂无历史会话')
+          return
+        }
+
+        const currentSession = list.find(item => {
+          const itemSessionId = item.session_id || item.sessionId || item.id || ''
+          return itemSessionId === this.currentQaSessionId
+        })
+        const targetSession = currentSession || list[0] || {}
+        const sessionId = targetSession.session_id || targetSession.sessionId || targetSession.id || ''
+        const shouldLoadDetail = sessionId && sessionId !== this.currentQaSessionId
+        this.currentQaSessionId = sessionId
+        if (shouldLoadDetail) {
+          await this.fetchQaSessionDetail(sessionId)
+        }
+      } catch (e) {
+        console.error('AI问答会话列表加载失败', e)
+      } finally {
+        this.qaSessionLoading = false
+      }
+    },
+
+    async fetchQaSessionDetail(sessionId) {
+      if (!sessionId || !this.teacherId) return
+      try {
+        const res = await get(`/qa/sessions/${sessionId}`, {}, this.getQaRequestConfig())
+        const data = this.getResponseData(res)
+        console.log('AI问答会话详情', data)
+        this.chatMessages = this.normalizeQaMessages(data && data.messages)
+        this.followUpList = []
+        this.$nextTick(() => this.scrollChatToBottom())
+      } catch (e) {
+        console.error('AI问答会话详情加载失败', e)
+      }
+    },
+
+    normalizeQaMessages(messages) {
+      if (!Array.isArray(messages)) return []
+      return messages.map(item => ({
+        role: item.role === 'assistant' ? 'assistant' : 'user',
+        content: item.content || '',
+        sources: item.sources || [],
+        timestamp: item.timestamp || '',
+        thinking: false,
+        thinkSec: 0,
+        streaming: false
+      }))
+    },
+
+    renderMarkdown(content) {
+      return markdownRenderer.render(content || '')
+    },
+
+    toggleQaSessionList() {
+      this.showQaSessionList = !this.showQaSessionList
+      if (this.showQaSessionList) {
+        this.fetchQaSessions()
+      }
+    },
+
+    async selectQaSession(session) {
+      const sessionId = session && (session.session_id || session.sessionId || session.id)
+      if (!sessionId) return
+      this.currentQaSessionId = sessionId
+      this.showQaSessionList = false
+      await this.fetchQaSessionDetail(sessionId)
+    },
+
+    async deleteQaSession(session) {
+      const sessionId = session && session.session_id
+      if (!sessionId || this.deletingQaSessionId) return
+      this.deletingQaSessionId = sessionId
+      try {
+        const deletedIndex = this.qaSessionList.findIndex(item => item.session_id === sessionId)
+        await del(`/qa/sessions/${sessionId}`, {}, this.getQaRequestConfig())
+        this.qaSessionList = this.qaSessionList.filter(item => item.session_id !== sessionId)
+        if (this.currentQaSessionId === sessionId) {
+          this.chatMessages = []
+          this.followUpList = []
+          const nextSession = this.qaSessionList[deletedIndex] || this.qaSessionList[deletedIndex - 1] || null
+          const nextSessionId = nextSession && (nextSession.session_id || nextSession.sessionId || nextSession.id)
+          this.currentQaSessionId = nextSessionId || ''
+          if (nextSessionId) {
+            await this.fetchQaSessionDetail(nextSessionId)
+          }
+        }
+        this.$message && this.$message.success('会话已删除')
+      } catch (e) {
+        console.error('AI问答删除会话失败', e)
+      } finally {
+        this.deletingQaSessionId = ''
+      }
+    },
+
+    formatQaSessionTime(value) {
+      if (!value) return ''
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return value
+      const pad = num => String(num).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
     },
 
     async fetchTranscript() {
@@ -569,6 +752,11 @@ export default {
       if (!text || !text.trim() || this.aiLoading) return
       const question = text.trim()
 
+      if (!this.liveLessonId || !this.teacherId) {
+        this.$message && this.$message.warning('缺少课程或教师信息，暂时无法提问')
+        return
+      }
+
       // 清空输入
       this.inputText = ''
       this.followUpList = []
@@ -586,42 +774,222 @@ export default {
 
       // 开始加载
       this.aiLoading = true
+      let aiMessage = null
 
       try {
-        const res = await mockAiChat(question, this.deepThinkMode, this.chatMessages)
-        if (res.code === 200) {
-          const { answer, thinkSec, followUp } = res.data
-
-          this.chatMessages.push({
-            role: 'ai',
-            content: answer,
-            thinking: this.deepThinkMode,
-            thinkSec,
-            streaming: false
-          })
-
-          this.followUpList = followUp || []
-        }
-      } catch (e) {
-        this.chatMessages.push({
-          role: 'ai',
-          content: '抱歉，请求失败，请稍后重试。',
+        const sessionId = await this.ensureQaSession(question)
+        aiMessage = {
+          role: 'assistant',
+          content: '',
           thinking: false,
           thinkSec: 0,
-          streaming: false
-        })
+          streaming: true
+        }
+        this.chatMessages.push(aiMessage)
+        await this.askQaStream(sessionId, question, aiMessage)
+        await this.flushTypingQueue()
+        aiMessage.streaming = false
+        await this.fetchQaSuggestions(aiMessage.content)
+      } catch (e) {
+        console.error('AI问答请求失败', e)
+        if (aiMessage) {
+          aiMessage.content = aiMessage.content || '抱歉，请求失败，请稍后重试。'
+          aiMessage.streaming = false
+        } else {
+          this.chatMessages.push({
+            role: 'assistant',
+            content: '抱歉，请求失败，请稍后重试。',
+            thinking: false,
+            thinkSec: 0,
+            streaming: false
+          })
+        }
       } finally {
+        await this.flushTypingQueue()
         this.aiLoading = false
+        if (aiMessage) {
+          aiMessage.streaming = false
+        }
+        this.currentStreamController = null
         this.$nextTick(() => {
           this.scrollChatToBottom()
         })
       }
     },
 
-    newChatSession() {
-      this.chatMessages = []
-      this.followUpList = []
-      this.inputText = ''
+    async fetchQaSuggestions(lastAnswer) {
+      const answer = (lastAnswer || '').trim()
+      if (!answer) return
+      try {
+        const res = await post('/qa/suggestions', {
+          lesson_id: this.liveLessonId,
+          last_answer: answer
+        }, this.getQaRequestConfig())
+        const data = this.getResponseData(res)
+        const suggestions = Array.isArray(data)
+          ? data
+          : (data && (data.suggestions || data.questions || data.items))
+        this.followUpList = Array.isArray(suggestions) ? suggestions.filter(Boolean) : []
+      } catch (e) {
+        console.error('AI问答继续提问建议加载失败', e)
+        this.followUpList = []
+      }
+    },
+
+    async ensureQaSession(question) {
+      if (this.currentQaSessionId) return this.currentQaSessionId
+
+      if (this.qaSessionList.length > 0) {
+        const firstSession = this.qaSessionList[0] || {}
+        const sessionId = firstSession.session_id || firstSession.sessionId || firstSession.id || ''
+        if (sessionId) {
+          this.currentQaSessionId = sessionId
+          return sessionId
+        }
+      }
+
+      return this.createQaSession(question)
+    },
+
+    async createQaSession(question) {
+      const res = await post('/qa/sessions', {
+        lesson_id: this.liveLessonId,
+        title: question || this.meetingTitle || '新建会话'
+      }, this.getQaRequestConfig())
+      const data = this.getResponseData(res)
+      const sessionId = data && (data.session_id || data.sessionId || data.id)
+      if (!sessionId) {
+        throw new Error('创建会话接口未返回 session_id')
+      }
+
+      this.currentQaSessionId = sessionId
+      this.qaSessionList.unshift({
+        session_id: sessionId,
+        title: question || this.meetingTitle || '新建会话',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        message_count: 0
+      })
+      return sessionId
+    },
+
+    async askQaStream(sessionId, question, aiMessage) {
+      const controller = new AbortController()
+      this.currentStreamController = controller
+
+      const response = await fetch(`${this.getQaBaseUrl()}/qa/ask/stream`, {
+        method: 'POST',
+        headers: this.getQaHeaders(),
+        body: JSON.stringify({
+          lesson_id: this.liveLessonId,
+          session_id: sessionId,
+          question,
+          deep_thinking: this.deepThinkMode
+        }),
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        throw new Error(`AI问答流式接口异常：${response.status}`)
+      }
+      if (!response.body || !response.body.getReader) {
+        throw new Error('当前环境不支持读取 SSE 流')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        buffer = this.consumeSseBuffer(buffer, aiMessage)
+      }
+
+      buffer += decoder.decode()
+      if (buffer.trim()) {
+        this.consumeSseBuffer(`${buffer}\n\n`, aiMessage)
+      }
+    },
+
+    consumeSseBuffer(buffer, aiMessage) {
+      const events = buffer.split(/\r?\n\r?\n/)
+      const rest = events.pop() || ''
+      events.forEach(eventText => {
+        const dataLines = eventText
+          .split(/\r?\n/)
+          .filter(line => line.startsWith('data:'))
+          .map(line => line.replace(/^data:\s?/, ''))
+        if (dataLines.length === 0) return
+
+        const dataText = dataLines.join('\n')
+        if (!dataText || dataText === '[DONE]') return
+
+        const content = this.parseSseContent(dataText)
+        if (content) {
+          this.enqueueTyping(content, aiMessage)
+        }
+      })
+      return rest
+    },
+
+    parseSseContent(dataText) {
+      try {
+        const data = JSON.parse(dataText)
+        return data.content || data.answer || data.delta || data.text || data.message || ''
+      } catch (e) {
+        return dataText
+      }
+    },
+
+    enqueueTyping(content, aiMessage) {
+      this.typingQueue.push(...String(content).split(''))
+      if (this.typingTimer) return
+
+      this.typingTimer = setInterval(() => {
+        const chunk = this.typingQueue.splice(0, 2).join('')
+        if (chunk) {
+          aiMessage.content += chunk
+          this.$nextTick(() => this.scrollChatToBottom())
+        }
+        if (this.typingQueue.length === 0) {
+          clearInterval(this.typingTimer)
+          this.typingTimer = null
+        }
+      }, 24)
+    },
+
+    flushTypingQueue() {
+      return new Promise(resolve => {
+        const flush = () => {
+          if (!this.typingTimer && this.typingQueue.length === 0) {
+            resolve()
+            return
+          }
+          setTimeout(flush, 30)
+        }
+        flush()
+      })
+    },
+
+    async newChatSession() {
+      if (!this.liveLessonId || !this.teacherId) {
+        this.$message && this.$message.warning('缺少课程或教师信息，暂时无法新建会话')
+        return
+      }
+      try {
+        const sessionId = await this.createQaSession(this.meetingTitle || '新建会话')
+        if (sessionId) {
+          this.currentQaSessionId = sessionId
+          this.chatMessages = []
+          this.followUpList = []
+          this.inputText = ''
+        }
+        this.fetchQaSessions()
+      } catch (e) {
+        console.error('AI问答新建会话失败', e)
+      }
     },
 
     shareMsg(content) {
@@ -671,6 +1039,12 @@ export default {
 
   beforeDestroy() {
     clearTimeout(this._scrollTimer)
+    if (this.currentStreamController) {
+      this.currentStreamController.abort()
+    }
+    if (this.typingTimer) {
+      clearInterval(this.typingTimer)
+    }
   }
 }
 </script>
@@ -1185,6 +1559,8 @@ $white: #fff;
   flex-direction: column;
   background: $white;
   min-width: 0;
+  padding-bottom: 16px;
+  box-sizing: border-box;
 }
 
 // ===== AI问答 Header =====
@@ -1243,6 +1619,7 @@ $white: #fff;
 
 // ===== Chat Body =====
 .al-chat-body {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   padding: 16px 16px 8px;
@@ -1255,6 +1632,145 @@ $white: #fff;
     background: #ddd;
     border-radius: 2px;
   }
+}
+
+.al-session-panel {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-bottom: 14px;
+  border: 1px solid #E4E7EF;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 10px 28px rgba(20, 34, 66, 0.12);
+  overflow: hidden;
+}
+
+.al-session-panel-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 42px;
+  padding: 0 12px 0 14px;
+  border-bottom: 1px solid #EEF0F5;
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.al-session-refresh,
+.al-session-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: $text-hint;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.al-session-refresh {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+
+  &:hover {
+    background: $bg-hover;
+    color: $primary;
+  }
+}
+
+.al-session-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.al-session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $bg-hover;
+
+    .al-session-delete {
+      opacity: 1;
+    }
+  }
+
+  &.active {
+    background: $primary-light;
+
+    .al-session-title {
+      color: $primary;
+      font-weight: 600;
+    }
+  }
+}
+
+.al-session-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.al-session-title {
+  font-size: 14px;
+  color: $text-main;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-session-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: $text-hint;
+}
+
+.al-session-delete {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  opacity: 0.72;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #FFF0F0;
+    color: #FF5252;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+}
+
+.al-session-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: $text-hint;
+}
+
+.al-session-slide-enter-active,
+.al-session-slide-leave-active {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.al-session-slide-enter,
+.al-session-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
 }
 
 // 欢迎状态
@@ -1339,7 +1855,8 @@ border-radius: 48px 48px 48px 48px;
     justify-content: flex-end;
   }
 
-  &.msg-ai {
+  &.msg-ai,
+  &.msg-assistant {
     display: flex;
     justify-content: flex-start;
   }
@@ -1377,8 +1894,88 @@ border-radius: 48px 48px 48px 48px;
   font-size: 13.5px;
   color: $text-main;
   line-height: 1.75;
-  white-space: pre-wrap;
   word-break: break-word;
+}
+
+.al-markdown-body {
+  ::v-deep p {
+    margin: 0 0 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  ::v-deep ul,
+  ::v-deep ol {
+    margin: 6px 0 8px;
+    padding-left: 20px;
+  }
+
+  ::v-deep li + li {
+    margin-top: 4px;
+  }
+
+  ::v-deep code {
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: #F1F3F6;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+  }
+
+  ::v-deep pre {
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #F7F8FA;
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: transparent;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+  }
+
+  ::v-deep blockquote {
+    margin: 8px 0;
+    padding: 6px 10px;
+    border-left: 3px solid #D7DEEA;
+    color: $text-sub;
+    background: #F8FAFD;
+  }
+
+  ::v-deep table {
+    width: 100%;
+    margin: 8px 0;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  ::v-deep th,
+  ::v-deep td {
+    border: 1px solid #E5E8EF;
+    padding: 6px 8px;
+    text-align: left;
+  }
+
+  ::v-deep th {
+    background: #F6F8FC;
+    font-weight: 600;
+  }
+
+  ::v-deep a {
+    color: $primary;
+    text-decoration: none;
+  }
+
+  ::v-deep .katex-display {
+    margin: 10px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 .al-typing-cursor::after {
