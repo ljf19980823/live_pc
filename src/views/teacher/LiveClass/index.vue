@@ -1029,25 +1029,25 @@ export default {
 
     openVideoPlayer(item) {
       // taskUuid 有值 → 跳转 AI听记页面
-      // if (item.taskUuid) {
-      //   const fileList = item.fileList || []
-      //   const mainFile = fileList.find(f => f.videoType == '1')
-      //   const teacherFile = fileList.find(f => f.videoType == '2')
-      //   const { userId } = getUserInfo()
-      //   this.$router.push({
-      //     name: 'AIListening',
-      //     query: {
-      //       videoUrl: mainFile ? mainFile.filePath || '' : '',
-      //       teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
-      //       meetingId: item.taskUuid,
-      //       meetingTitle: item.name || '',
-      //       scopeText: item.taskUuid,
-      //       liveLessonId: item.liveLessonId || '',
-      //       teacherId: userId || ''
-      //     }
-      //   })
-      //   return
-      // }
+      if (item.taskUuid) {
+        const fileList = item.fileList || []
+        const mainFile = fileList.find(f => f.videoType == '1')
+        const teacherFile = fileList.find(f => f.videoType == '2')
+        const { userId } = getUserInfo()
+        this.$router.push({
+          name: 'AIListening',
+          query: {
+            videoUrl: mainFile ? mainFile.filePath || '' : '',
+            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+            meetingId: item.taskUuid,
+            meetingTitle: item.name || '',
+            scopeText: item.taskUuid,
+            liveLessonId: item.liveLessonId || '',
+            teacherId: userId || ''
+          }
+        })
+        return
+      }
 
       // taskUuid 无值 → 沿用原有双视频回放逻辑
       const fileList = item.fileList || []

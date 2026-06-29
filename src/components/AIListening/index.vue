@@ -167,19 +167,19 @@
                 <line x1="8" y1="12" x2="16" y2="12"/>
               </svg>
               <!-- 搜索图标（无对话状态） -->
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <!-- <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
+              </svg> -->
             </button>
             <!-- 菜单按钮 -->
-            <button class="al-hd-btn" title="更多">
+            <!-- <button class="al-hd-btn" title="更多">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
-            </button>
+            </button> -->
             <!-- 关闭按钮 -->
             <button class="al-hd-btn al-hd-close-btn" @click="handleClose" title="关闭">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -230,15 +230,15 @@
                   <span v-else>{{ msg.content }}</span>
                 </div>
                 <div v-if="!msg.streaming" class="al-msg-ops">
-                  <button class="al-op-btn" @click="shareMsg(msg.content)">
+                  <!-- <button class="al-op-btn" @click="shareMsg(msg.content)">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                       <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                       <polyline points="16 6 12 2 8 6"/>
                       <line x1="12" y1="2" x2="12" y2="15"/>
                     </svg>
                     分享
-                  </button>
-                  <span class="al-op-divider">|</span>
+                  </button> -->
+                  <!-- <span class="al-op-divider">|</span> -->
                   <button class="al-op-btn" @click="copyMsg(msg.content)">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                       <rect x="9" y="9" width="13" height="13" rx="2"/>
@@ -262,7 +262,7 @@
               <button
                 v-for="q in followUpList"
                 :key="q"
-                class="al-quick-btn"
+                class="al-quick-btn2"
                 @click="sendChat(q)"
               >{{ q }}</button>
             </div>
@@ -1280,39 +1280,52 @@ $white: #fff;
 }
 
 .al-scope-hint {
-  font-size: 12px;
+  font-size: 14px;
   color: $text-hint;
-  margin: 0 0 16px;
+  margin: 21px 0 16px;
   line-height: 1.6;
   word-break: break-all;
 }
 
 .al-quick-questions {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 30px;
+  margin-top: 30px;
 }
 
 .al-quick-btn {
   display: block;
-  width: 100%;
   text-align: left;
-  padding: 10px 14px;
-  background: #F2F5FF;
+  padding: 10px 23px;
+  box-sizing: border-box;
+ background: linear-gradient( 90deg, #DFF6FF 0%, rgba(255,255,255,0) 71.63%);
+border-radius: 48px 48px 48px 48px;
   border: none;
-  border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 16px;
   color: $text-main;
   cursor: pointer;
   transition: background 0.2s;
   line-height: 1.5;
 
-  &:hover {
-    background: #E8EFFE;
-    color: $primary;
-  }
 }
 
+.al-quick-btn2 {
+  display: block;
+  text-align: left;
+  padding: 10px 23px;
+  box-sizing: border-box;
+ background:#F3F4F8;
+border-radius: 48px 48px 48px 48px;
+  border: none;
+  font-size: 16px;
+  color: $text-main;
+  cursor: pointer;
+  transition: background 0.2s;
+  line-height: 1.5;
+  margin-bottom: 13px;
+
+}
 // 消息列表
 .al-msg-list {
   display: flex;
@@ -1339,11 +1352,11 @@ $white: #fff;
 
 .al-bubble-user {
   display: inline-block;
-  background: #F0F0F0;
-  color: $text-main;
-  padding: 9px 14px;
-  border-radius: 12px 12px 2px 12px;
-  font-size: 13.5px;
+  background: #F3F4F8;
+  color: #333333;
+  padding: 8px 12px;
+  border-radius:16px 16px 8px 16px;
+  font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
 }
@@ -1355,8 +1368,8 @@ $white: #fff;
 }
 
 .al-thinking-label {
-  font-size: 12px;
-  color: $text-hint;
+  font-size: 14px;
+  color:#333333;
   margin-bottom: 6px;
 }
 
@@ -1379,7 +1392,7 @@ $white: #fff;
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: 21px;
 }
 
 .al-op-btn {
@@ -1389,7 +1402,7 @@ $white: #fff;
   background: none;
   border: none;
   color: $text-hint;
-  font-size: 12px;
+  font-size: 16px;
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
@@ -1432,29 +1445,35 @@ $white: #fff;
 
 // 继续提问区域
 .al-followup-area {
-  margin-top: 8px;
+  margin-top: 25px;
+  border-top: 1px solid  #D9D9D9;
+  padding-top: 25px;
 }
 
 .al-followup-title {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
-  color: $text-main;
-  margin-bottom: 8px;
+  color: #333333;
+  margin-bottom: 15px;
 }
 
 // ===== Chat Footer =====
 .al-chat-ft {
   flex-shrink: 0;
-  padding: 10px 12px 12px;
-  border-top: 1px solid $border;
+  padding:21px 21px 18px 21px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+border-radius: 24px 24px 24px 24px;
+border: 2px solid #D9D9D9;
+margin:0 28px
 }
 
 .al-input-box {
-  background: #F7F8FA;
-  border-radius: 10px;
-  padding: 10px 12px;
+  // background: #F7F8FA;
+  // border-radius: 10px;
+  // padding: 10px 12px;
   margin-bottom: 8px;
-  border: 1px solid transparent;
+  // border: 1px solid transparent;
   transition: border-color 0.2s;
 
   &:focus-within {
@@ -1468,11 +1487,11 @@ $white: #fff;
     border: none;
     outline: none;
     resize: none;
-    font-size: 13.5px;
-    color: $text-main;
+    font-size: 16px;
+    color: #666666;
     line-height: 1.6;
     font-family: inherit;
-    min-height: 22px;
+    min-height: 40px;
     max-height: 120px;
     overflow-y: auto;
 
