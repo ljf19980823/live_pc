@@ -77,6 +77,17 @@
 
           <!-- ===== 转写内容 ===== -->
           <div v-if="activeTab === 'transcript'" class="al-transcript-list">
+            <div class="al-transcript-actions" v-if="transcriptList.length > 0">
+              <button class="al-transcript-expand-btn" @click="transcriptFullscreen = true" title="放大查看转写">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+                放大查看
+              </button>
+            </div>
             <div v-if="transcriptLoading" class="al-loading-placeholder">
               <div class="al-skeleton" v-for="i in 3" :key="i"></div>
             </div>
@@ -102,19 +113,58 @@
             </div>
           </div>
 
+          <transition name="al-fs-fade">
+            <div v-if="transcriptFullscreen" class="al-summary-fs-mask" @click.self="transcriptFullscreen = false">
+              <div class="al-transcript-fs-box">
+                <button class="al-summary-fs-close" @click="transcriptFullscreen = false" title="关闭">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="al-transcript-fs-header">
+                  <div class="al-transcript-fs-title">转写内容</div>
+                  <div class="al-transcript-fs-subtitle">展示更大范围的转写段落，便于快速浏览。</div>
+                </div>
+                <div class="al-transcript-fs-list">
+                  <div
+                    v-for="(item, index) in transcriptList"
+                    :key="'fs-' + (item.paragraphId || index)"
+                    class="al-tran-entry al-tran-entry--fs"
+                    :class="{ 'al-tran-entry--active': activeParagraphIndex === index }"
+                  >
+                    <div class="al-tran-meta">
+                      <img v-if="item.avatarUrl" :src="item.avatarUrl" class="al-speaker-avatar" />
+                      <span v-else class="al-speaker-badge" :class="'speaker-color-' + item.speakerColorIndex">
+                        {{ item.speakerName.slice(-1) }}
+                      </span>
+                      <span class="al-speaker-name">{{ item.speakerName }}</span>
+                      <span class="al-tran-sep">·</span>
+                      <span class="al-tran-ts">{{ item.displayTime }}</span>
+                    </div>
+                    <p class="al-tran-text">{{ item.text }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
+
           <!-- ===== AI纪要内容 ===== -->
           <div v-if="activeTab === 'summary'" class="al-summary-area">
             <div v-if="summaryLoading" class="al-loading-placeholder">
               <div class="al-skeleton" v-for="i in 4" :key="i" style="margin-bottom:10px;"></div>
             </div>
             <div v-else-if="summaryHtmlUrl" class="al-summary-iframe-wrap">
-              <button class="al-summary-fullscreen-btn" @click="summaryFullscreen = true" title="全屏查看">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
-                放大查看
-              </button>
+              <div class="al-summary-actions">
+                <button class="al-summary-download-btn" @click="handleDownloadSummary">下载纪要</button>
+                <button class="al-summary-fullscreen-btn" @click="summaryFullscreen = true" title="全屏查看">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                  放大查看
+                </button>
+              </div>
               <iframe
                 :src="summaryHtmlUrl"
                 class="al-summary-iframe"
@@ -413,6 +463,8 @@ export default {
       summaryHtmlUrl: '',
       summaryFullscreen: false,
 
+      transcriptFullscreen: false,
+
       // ===== AI问答 =====
       chatMessages: [],
       inputText: '',
@@ -682,6 +734,33 @@ export default {
       } finally {
         this.summaryLoading = false
       }
+    },
+
+    handleDownloadSummary() {
+      const url = this.summaryHtmlUrl
+      if (!url) return
+
+      const fileName = `${this.meetingTitle || 'AI纪要'}.html`
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`下载失败：${response.status}`)
+          }
+          return response.blob()
+        })
+        .then(blob => {
+          const objectUrl = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = objectUrl
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(objectUrl)
+        })
+        .catch(() => {
+          window.location.href = url
+        })
     },
 
     // ===== 视频与转写联动 =====
@@ -1312,6 +1391,32 @@ $white: #fff;
   gap: 0;
 }
 
+.al-transcript-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.al-transcript-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid $primary;
+  border-radius: 6px;
+  background: $white;
+  color: $primary;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: $primary-light;
+  }
+}
+
 .al-tran-entry {
   padding: 10px 8px;
   border-bottom: 1px solid #F5F5F5;
@@ -1405,9 +1510,85 @@ $white: #fff;
   padding-left: 26px;
 }
 
+.al-transcript-fs-box {
+  position: relative;
+  width: 92vw;
+  height: 90vh;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.al-transcript-fs-header {
+  padding: 18px 56px 12px 20px;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+}
+
+.al-transcript-fs-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.al-transcript-fs-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: $text-hint;
+}
+
+.al-transcript-fs-list {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 20px 20px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d6dbe3;
+    border-radius: 3px;
+  }
+}
+
+.al-tran-entry--fs {
+  padding: 12px 12px;
+}
+
 // ===== AI纪要区域 =====
 .al-summary-area {
   padding: 4px 0;
+}
+
+.al-summary-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.al-summary-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid $primary;
+  border-radius: 6px;
+  background: $white;
+  color: $primary;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: $primary-light;
+  }
 }
 
 .al-summary-iframe-wrap {
@@ -1423,8 +1604,6 @@ $white: #fff;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  align-self: flex-end;
-  margin-bottom: 8px;
   padding: 4px 10px;
   height: 28px;
   border: 1px solid $border;
