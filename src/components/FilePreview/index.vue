@@ -29,8 +29,14 @@
           <div class="file-preview-error-text">该文件类型暂不支持在线预览</div>
           <div class="file-preview-error-btn" @click="handleDownload">点击下载查看</div>
         </div>
-        <div v-else class="file-preview-editor-wrap">
+        <div
+          v-else
+          class="file-preview-editor-wrap"
+          :class="{ 'file-preview-editor-wrap--presentation': isPreviewPresentation }"
+        >
           <div :id="editorContainerId" class="file-preview-editor"></div>
+          <div v-if="isPreviewPresentation" class="presentation-top-mask"></div>
+          <div v-if="isPreviewPresentation" class="presentation-left-menu-mask"></div>
           <div class="toolbar-right-mask"></div>
         </div>
       </div>
@@ -205,6 +211,14 @@ export default {
     }
   },
 
+  computed: {
+    isPreviewPresentation() {
+      if (!this.file || !this.file.path) return false
+      const ext = this.file.path.split('.').pop().toLowerCase()
+      return ext === 'ppt' || ext === 'pptx'
+    }
+  },
+
   watch: {
     /**
      * 监听 visible 变化：
@@ -263,12 +277,90 @@ export default {
         return
       }
       this.destroyEditor()
+      const isPresentation = fileInfo.documentType === 'slide'
+      const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      const customization = {
+        loaderName: ' ',
+        loaderLogo: emptyImage,
+        customer: {
+          name: '',
+          address: '',
+          mail: '',
+          www: '',
+          info: '',
+          logo: emptyImage
+        },
+        logo: {
+          // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
+          image: emptyImage,
+          imageDark: emptyImage,
+          imageEmbedded: emptyImage,
+          url: ''
+        }
+      }
+      if (isPresentation) {
+        Object.assign(customization, {
+          compactHeader: true,
+          compactToolbar: true,
+          toolbarNoTabs: true,
+          toolbarHideFileName: true,
+          hideRightMenu: true,
+          hideRulers: true,
+          plugins: false,
+          help: false,
+          feedback: false,
+          goback: false,
+          review: false,
+          layout: {
+            header: {
+              editMode: false,
+              save: false,
+              users: false
+            },
+            leftMenu: {
+              mode: false,
+              navigation: true,
+              search: false,
+              comments: false,
+              chat: false,
+              spellcheck: false
+            },
+            rightMenu: {
+              mode: false
+            },
+            statusBar: {
+              actionStatus: false,
+              docLang: false,
+              textLang: false
+            },
+            toolbar: {
+              collaboration: false,
+              draw: false,
+              file: false,
+              home: false,
+              layout: false,
+              plugins: false,
+              protect: false,
+              references: false,
+              save: false,
+              view: false
+            }
+          }
+        })
+      } else {
+        customization.embedded = {
+          toolbarDocked: 'hidden',  // 嵌入模式下隐藏浮动工具栏
+          saveUrl: '',              // 隐藏右侧"保存"按钮
+          shareUrl: '',             // 隐藏右侧"分享"按钮
+          embedUrl: ''              // 隐藏右侧"嵌入"按钮
+        }
+      }
       const config = {
         /**
-         * type: 'embedded' — 嵌入模式
+         * PPT 使用 desktop 模式保留左侧幻灯片目录，其他文件继续使用 embedded 模式
          * 仅渲染文档内容区，完全去掉顶部工具栏、左侧面板、标题栏等所有操作 UI
          */
-        type: 'embedded',
+        type: isPresentation ? 'desktop' : 'embedded',
         documentType: fileInfo.documentType,
         width: '100%',
         height: '100%',
@@ -289,20 +381,7 @@ export default {
         editorConfig: {
           mode: 'view',
           lang: 'zh-CN',
-          customization: {
-            embedded: {
-              toolbarDocked: 'hidden',  // 嵌入模式下隐藏浮动工具栏
-              saveUrl: '',              // 隐藏右侧"保存"按钮
-              shareUrl: '',             // 隐藏右侧"分享"按钮
-              embedUrl: ''              // 隐藏右侧"嵌入"按钮
-            },
-            logo: {
-              // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
-              image: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-              imageEmbedded: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-              url: ''
-            }
-          }
+          customization
         }
       }
       console.log(config,'对象')
@@ -492,9 +571,35 @@ export default {
   height: 100%;
 }
 
+.file-preview-editor-wrap--presentation {
+  background: #F7F7F7;
+}
+
 .file-preview-editor {
   width: 100%;
   height: 100%;
+}
+
+.presentation-top-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px;
+  background: #F7F7F7;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.presentation-left-menu-mask {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  background: #F7F7F7;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .toolbar-right-mask {
