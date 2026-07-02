@@ -1028,6 +1028,10 @@ export default {
     },
 
     openVideoPlayer(item) {
+      console.log(item, 'item')
+      //  const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+      //   const lessonId = String(item.id || '')
+      //   updateRecentStudy({ courseId, lessonId })
       // taskUuid 有值 → 跳转 AI听记页面
       if (item.taskUuid) {
         const fileList = item.fileList || []

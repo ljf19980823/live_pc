@@ -320,7 +320,7 @@
               <div v-else class="al-msg-ai-wrap">
                 <div v-if="msg.thinking" class="al-thinking-label">已思考{{ msg.thinkSec }}秒</div>
                 <div class="al-bubble-ai">
-                  <span v-if="msg.streaming" class="al-typing-cursor al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
+                  <span v-if="msg.streaming" class="al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
                   <span v-else class="al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
                 </div>
                 <div v-if="!msg.streaming" class="al-msg-ops">
@@ -2155,12 +2155,6 @@ border-radius: 48px 48px 48px 48px;
     overflow-x: auto;
     overflow-y: hidden;
   }
-}
-
-.al-typing-cursor::after {
-  content: '|';
-  animation: al-blink 1s step-end infinite;
-  margin-left: 1px;
 }
 
 // 消息操作按钮

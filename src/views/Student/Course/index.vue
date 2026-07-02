@@ -165,7 +165,7 @@
                   <div class="cdi-info">
                     <div class="cdi-name">{{ item.title }}</div>
                     <div class="cdi-file-row">
-                      <span class="cdi-file-meta">{{ item.size }}</span>
+                      <span class="cdi-file-meta">{{ item.nodeType=='3'|| item.nodeType=='4' ? formatDuration(item.duration) :  item.size  }}</span>
                       <span class="cdi-file-meta">{{ item.date }}</span>
                       <img v-if="item.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                     </div>
@@ -234,7 +234,7 @@
                             <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }}{{ grandchild.timeEnd ? ' - ' + grandchild.timeEnd : '' }}</span>
                           </div>
                           <div v-else class="cdi-file-row">
-                            <span class="cdi-file-meta">{{ grandchild.size }}</span>
+                            <span class="cdi-file-meta">{{ grandchild.nodeType=='3'|| grandchild.nodeType=='4' ? formatDuration(grandchild.duration) :  grandchild.size  }}</span>
                             <span class="cdi-file-meta">{{ grandchild.date }}</span>
                             <img v-if="grandchild.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                           </div>
@@ -270,7 +270,7 @@
                           <span class="cdi-date-row">{{ child.date }}&nbsp;&nbsp;{{ child.timeStart }}{{ child.timeEnd ? ' - ' + child.timeEnd : '' }}</span>
                         </div>
                         <div v-else class="cdi-file-row">
-                          <span class="cdi-file-meta">{{ child.size }}</span>
+                          <span class="cdi-file-meta">{{ child.nodeType=='3'|| child.nodeType=='4' ? formatDuration(child.duration) :  child.size  }}</span>
                           <span class="cdi-file-meta">{{ child.date }}</span>
                           <img v-if="child.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
                         </div>
@@ -372,7 +372,7 @@ import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import HistoryVideoPlayer from '@/components/HistoryVideoPlayer/index.vue'
 import FilePreview from '@/components/FilePreview/index.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
-
+import { formatDuration } from '@/utils'
 const COVER_GRADIENTS = [
   'linear-gradient(135deg, #E8EDFF 0%, #C8D3FF 100%)',
   'linear-gradient(135deg, #FFF8E6 0%, #FFE4A0 100%)',
@@ -460,6 +460,7 @@ export default {
   },
 
   methods: {
+    formatDuration,
     // ─── 列表加载 ──────────────────────────────────────────────
     backToList() {
       this.currentView = 'list'
@@ -595,13 +596,14 @@ export default {
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
           filePath: res.fileList && res.fileList.length ? res.fileList[0].filePath : (res.filePath || ''),
-          allowMultiple: node.type === '3' ? '1' : String(node.allowMultiple || '1'),
-          allowFastForward: node.type === '3' ? '1' : String(node.allowFastForward || '1'),
+          allowMultiple:  String(node.allowMultiple || '1'),
+          allowFastForward:String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
           collectCount: node.collectCount,
           historyLessonId: node.type === '3' && node.historyLesson ? node.historyLesson.historyLessonId : '',
           taskUuid:node.type=='3'?node.historyLesson.taskUuid:"",
-          fileList: res.fileList || []
+          fileList: res.fileList || [],
+          duration:node.type=='3'?(node.historyLesson.fileList ? node.historyLesson.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
         }
       }
     },
