@@ -586,6 +586,7 @@ export default {
         }
       } else {
         const res = node.resource || node.historyLesson || {}
+        const history = node.historyLesson || {}
         return {
           id: node.id || '',
           type: 'resource',
@@ -600,10 +601,10 @@ export default {
           allowFastForward:String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
           collectCount: node.collectCount,
-          historyLessonId: node.type === '3' && node.historyLesson ? node.historyLesson.historyLessonId : '',
-          taskUuid:node.type=='3'?node.historyLesson.taskUuid:"",
+          historyLessonId: node.type === '3'  ? history.historyLessonId : '',
+          taskUuid:node.type=='3'?history.taskUuid:"",
           fileList: res.fileList || [],
-          duration:node.type=='3'?(node.historyLesson.fileList ? node.historyLesson.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
+          duration:node.type=='3'?(history.fileList ? history.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
         }
       }
     },

@@ -1800,7 +1800,9 @@ export default {
         }
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
+        console.log(node,'node')
         const res = node.resource || node.historyLesson || {}
+        const history = node.historyLesson || {}
         const sizeStr = res.size ? `${res.size}` : ''
         return {
           id: node.id || node.lessonId||  '',
@@ -1817,10 +1819,10 @@ export default {
           allowFastForward: String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
           collectCount:node.collectCount,
-          historyLessonId:node.type=='3'?node.historyLesson.historyLessonId:"",
-          taskUuid:node.type=='3'?node.historyLesson.taskUuid:"",
+          historyLessonId:node.type=='3'?history.historyLessonId:"",
+          taskUuid:node.type=='3'?history.taskUuid:"",
           fileList: res.fileList || [],
-          duration:node.type=='3'?(node.historyLesson.fileList ? node.historyLesson.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
+          duration:node.type=='3'?(history.fileList ? history.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
         }
       }
     },
