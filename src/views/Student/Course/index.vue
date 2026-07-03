@@ -693,7 +693,7 @@ export default {
         } catch (_) {}
       }
       let liveBaseUrl = 'https://live.fjlsjy123.com'
-      if (process.env.NODE_ENV === 'development') liveBaseUrl = 'http://localhost:8000'
+      if (process.env.NODE_ENV === 'development') liveBaseUrl = 'http://192.168.2.16:8000'
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       this.showLiveIframe = true
     },

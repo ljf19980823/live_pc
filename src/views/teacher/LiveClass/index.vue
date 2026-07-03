@@ -1187,7 +1187,7 @@ export default {
 
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
-        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+        liveBaseUrl = "http://192.168.2.16:8000";  //本地开发环境
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
       console.log(this.liveUrl,'直播地址')
@@ -1263,7 +1263,7 @@ export default {
 
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
-        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+        liveBaseUrl = "http://192.168.2.16:8000";  //本地开发环境
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
@@ -1291,7 +1291,7 @@ export default {
 
       let liveBaseUrl = 'https://live.fjlsjy123.com'
       if (process.env.NODE_ENV === 'development') {
-        liveBaseUrl = 'http://localhost:8000'
+        liveBaseUrl = 'http://192.168.2.16:8000'
       }
 
       this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`

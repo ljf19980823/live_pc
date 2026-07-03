@@ -112,7 +112,7 @@ export default {
       if (!examId) return
       this.loading = true
       try {
-        const res = await getAfterQuizRecordList({ examId })
+        const res = await getAfterQuizRecordList({ examId ,classId:this.classId})
         this.recordList = res.data.map(item => ({
             ...item,
             examTime: item.startTime || item.createTime || '',
