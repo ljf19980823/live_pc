@@ -418,7 +418,8 @@
 <script>
 import ListenVideoPlayer from '@/components/ListenVideoPlayer/index.vue'
 import { del, get, post } from '@/utils/request'
-import { getToken } from '@/utils/auth'
+import { getToken, getUserInfo } from '@/utils/auth'
+import { batchLiveStatisticsLog } from '@/api'
 import MarkdownIt from 'markdown-it'
 import texmath from 'markdown-it-texmath'
 import katex from 'katex'
@@ -440,6 +441,8 @@ const markdownRenderer = new MarkdownIt({
     throwOnError: false
   }
 })
+
+const REPLAY_HEARTBEAT_INTERVAL = 30000
 
 export default {
   name: 'AIListening',
@@ -476,6 +479,9 @@ export default {
       deletingQaSessionId: '',
       currentStreamController: null,
       typingTimer: null,
+      heartbeatTimer: null,
+      logSessionActive: false,
+      replayHistoryLessonId: '',
       typingQueue: [],
       deepThinkMode: false,
       followUpList: [],
@@ -504,16 +510,77 @@ export default {
       return this.$route.query.scopeText || ''
     },
     liveLessonId() {
-      return 'cbe643ebcc5e4fe094c26e17b353e8a5'
+      return this.$route.query.liveLessonId || ''
     },
     teacherId() {
-      return '35ea4b1fa8e842c586ea1449ad522ec5'
+      const userInfo = getUserInfo() || {}
+      return this.$route.query.teacherId || userInfo.userId || userInfo.id || ''
     }
   },
   mounted() {
+    this.startReplayLogSession()
     this.loadData()
   },
   methods: {
+    // ===== 历史课堂回放埋点 =====
+    getReplayRole(role) {
+      const roleMap = {
+        STUDENT: '1',
+        TEACHER: '2',
+        VISITOR: '3'
+      }
+      return roleMap[role] || '3'
+    },
+
+    buildReplayLog(eventType) {
+      const userInfo = getUserInfo() || {}
+      const historyLessonId = this.replayHistoryLessonId || this.liveLessonId
+      return {
+        role: this.getReplayRole(userInfo.role),
+        eventType,
+        mediaType: 'REPLAY',
+        historyLessonId: String(historyLessonId || ''),
+        userId: String(userInfo.userId || userInfo.id || ''),
+        userName: userInfo.userName || '',
+        realName: userInfo.realName || '',
+        institutionId: String(userInfo.institutionId || ''),
+        campusId: String(userInfo.campusId || ''),
+        ts: Date.now(),
+        liveState: 0,
+        isMic: false
+      }
+    },
+
+    async sendReplayLog(eventType) {
+      const log = this.buildReplayLog(eventType)
+      const payload = { logs: [log] }
+      console.log('[AIListening ReplayLog]', eventType, payload)
+      try {
+        await batchLiveStatisticsLog(payload)
+      } catch (e) {
+        console.error('[AIListening ReplayLog] 上报失败:', e)
+      }
+    },
+
+    startReplayLogSession() {
+      if (this.logSessionActive) return
+      this.replayHistoryLessonId = this.liveLessonId
+      this.logSessionActive = true
+      this.sendReplayLog('ENTER')
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = setInterval(() => {
+        this.sendReplayLog('HEARTBEAT')
+      }, REPLAY_HEARTBEAT_INTERVAL)
+    },
+
+    stopReplayLogSession() {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+      if (!this.logSessionActive) return
+      this.logSessionActive = false
+      this.sendReplayLog('LEAVE')
+    },
+
     // ===== 初始化加载 =====
     loadData() {
       this.fetchTranscript()
@@ -1117,6 +1184,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.stopReplayLogSession()
     clearTimeout(this._scrollTimer)
     if (this.currentStreamController) {
       this.currentStreamController.abort()

@@ -705,6 +705,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
@@ -1069,6 +1070,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerHistoryLessonId: '',
       playerAllowDownload: '2',
       showVideoDialog: false,
       currentVideoUrl: '',
@@ -1949,6 +1951,7 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = item.name || item.title || '视频回放'
+      this.playerHistoryLessonId = String(item.historyLessonId || '')
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
     },
@@ -1982,7 +1985,7 @@ export default {
       const roleNumber = role === 'STUDENT' ? 0 : 1
       let liveBaseUrl = 'https://live.fjlsjy123.com'
       if (process.env.NODE_ENV === 'development') {
-        liveBaseUrl = 'http://192.168.2.16:8000'
+        liveBaseUrl = 'http://localhost:8000'
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       console.log(this.liveUrl,'直播地址')

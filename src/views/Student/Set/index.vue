@@ -462,6 +462,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :history-lesson-id="playerHistoryLessonId"
       :allow-download="currentAllowDownload"
       @close="playerVisible = false"
     />
@@ -561,6 +562,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerHistoryLessonId: '',
       currentAllowMultiple: '2',
       currentAllowFastForward: '2',
       currentAllowDownload: '2',
@@ -1020,7 +1022,7 @@ export default {
       }
       let liveBaseUrl = 'https://live.fjlsjy123.com'
       if (process.env.NODE_ENV === 'development') {
-        liveBaseUrl = 'http://192.168.2.16:8000'
+        liveBaseUrl = 'http://localhost:8000'
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       console.log(this.liveUrl,'地址')
@@ -1037,6 +1039,7 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = course.name || '视频回放'
+      this.playerHistoryLessonId = String(course.historyLessonId || '')
       this.currentAllowMultiple = course.allowMultiple != null ? String(course.allowMultiple) : '2'
       this.currentAllowFastForward = course.allowFastForward != null ? String(course.allowFastForward) : '2'
       this.currentAllowDownload = course.allowDownload != null ? String(course.allowDownload) : '2'

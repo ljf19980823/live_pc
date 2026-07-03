@@ -678,6 +678,7 @@
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
+      :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
@@ -751,6 +752,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerHistoryLessonId: '',
       playerAllowDownload: '2',
 
 
@@ -1061,6 +1063,7 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = item.name || '视频回放'
+      this.playerHistoryLessonId = String(item.historyLessonId || item.liveLessonId || '')
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
     },
@@ -1187,7 +1190,7 @@ export default {
 
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
-        liveBaseUrl = "http://192.168.2.16:8000";  //本地开发环境
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
       console.log(this.liveUrl,'直播地址')
@@ -1263,7 +1266,7 @@ export default {
 
       let liveBaseUrl = "https://live.fjlsjy123.com"; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
-        liveBaseUrl = "http://192.168.2.16:8000";  //本地开发环境
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
@@ -1291,7 +1294,7 @@ export default {
 
       let liveBaseUrl = 'https://live.fjlsjy123.com'
       if (process.env.NODE_ENV === 'development') {
-        liveBaseUrl = 'http://192.168.2.16:8000'
+        liveBaseUrl = 'http://localhost:8000'
       }
 
       this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`

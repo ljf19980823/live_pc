@@ -102,7 +102,7 @@
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
-import { collectToggle } from '@/api'
+import { collectToggle, batchLiveStatisticsLog } from '@/api'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -114,6 +114,9 @@ let idCounter = 0
 
 /** 进度漂移修正阈值（秒）：双流时间差超过该值时强制同步 */
 const DRIFT_THRESHOLD = 1.5
+
+/** 历史课堂回放埋点心跳间隔（毫秒） */
+const REPLAY_HEARTBEAT_INTERVAL = 30000
 
 export default {
   name: 'HistoryVideoPlayer',
@@ -137,6 +140,12 @@ export default {
     /** 弹窗标题 */
     title: {
       type: String,
+      default: ''
+    },
+
+    /** 历史课堂 ID（埋点必填） */
+    historyLessonId: {
+      type: [String, Number],
       default: ''
     },
 
@@ -184,6 +193,8 @@ export default {
       mainLoading: false,
       teacherError: false,
       syncTimer: null,
+      heartbeatTimer: null,
+      logSessionActive: false,
       isSyncing: false,
       isFullscreen: false,
       _onFsChange: null,
@@ -196,8 +207,10 @@ export default {
     visible(val) {
       if (val) {
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
+        this.startReplayLogSession()
         this.$nextTick(() => this.initPlayers())
       } else {
+        this.stopReplayLogSession()
         this.destroyPlayers()
       }
     },
@@ -208,6 +221,68 @@ export default {
     }
   },
   methods: {
+    // ─────────────── 历史课堂回放埋点 ───────────────
+
+    getReplayHistoryLessonId() {
+      return String(this.historyLessonId || this.collectParams.historyLessonId || '')
+    },
+
+    getReplayRole(role) {
+      const roleMap = {
+        STUDENT: '1',
+        TEACHER: '2',
+        VISITOR: '3'
+      }
+      return roleMap[role] || '3'
+    },
+
+    buildReplayLog(eventType) {
+      const userInfo = getUserInfo() || {}
+      return {
+        role: this.getReplayRole(userInfo.role),
+        eventType,
+        mediaType: 'REPLAY',
+        historyLessonId: this.getReplayHistoryLessonId(),
+        userId: String(userInfo.userId || userInfo.id || ''),
+        userName: userInfo.userName || '',
+        realName: userInfo.realName || '',
+        institutionId: String(userInfo.institutionId || ''),
+        campusId: String(userInfo.campusId || ''),
+        ts: Date.now(),
+        liveState: 0,
+        isMic: false
+      }
+    },
+
+    async sendReplayLog(eventType) {
+      const log = this.buildReplayLog(eventType)
+      const payload = { logs: [log] }
+      console.log('[HistoryVideoPlayer ReplayLog]', eventType, payload)
+      try {
+        await batchLiveStatisticsLog(payload)
+      } catch (e) {
+        console.error('[HistoryVideoPlayer ReplayLog] 上报失败:', e)
+      }
+    },
+
+    startReplayLogSession() {
+      if (this.logSessionActive) return
+      this.logSessionActive = true
+      this.sendReplayLog('ENTER')
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = setInterval(() => {
+        this.sendReplayLog('HEARTBEAT')
+      }, REPLAY_HEARTBEAT_INTERVAL)
+    },
+
+    stopReplayLogSession() {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+      if (!this.logSessionActive) return
+      this.logSessionActive = false
+      this.sendReplayLog('LEAVE')
+    },
+
     // ─────────────── 播放器初始化 ───────────────
 
     initPlayers() {
@@ -512,6 +587,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.stopReplayLogSession()
     this.destroyPlayers()
   }
 }

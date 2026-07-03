@@ -316,6 +316,7 @@
     :main-source="playerSource"
     :teacher-source="playerTeacherSource"
     :title="playerTitle"
+    :history-lesson-id="playerHistoryLessonId"
     :allow-download="currentAllowDownload"
     :from-task="fromLearningTask"
     :collect-params="currentCollectParams"
@@ -416,6 +417,7 @@ export default {
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
+      playerHistoryLessonId: '',
 
       // 文件预览
       filePreviewVisible: false,
@@ -693,7 +695,7 @@ export default {
         } catch (_) {}
       }
       let liveBaseUrl = 'https://live.fjlsjy123.com'
-      if (process.env.NODE_ENV === 'development') liveBaseUrl = 'http://192.168.2.16:8000'
+      if (process.env.NODE_ENV === 'development') liveBaseUrl = 'http://localhost:8000'
       this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       this.showLiveIframe = true
     },
@@ -792,6 +794,7 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.playerTitle = item.name || item.title || '视频回放'
+      this.playerHistoryLessonId = String(item.historyLessonId || '')
       this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
       this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
       this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
