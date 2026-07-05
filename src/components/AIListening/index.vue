@@ -205,19 +205,19 @@
           <span class="al-chat-title">AI问答</span>
           <div class="al-chat-hd-btns">
             <!-- 有对话时显示新建对话，无对话时显示搜索 -->
-            <button
+            <!-- <button
               class="al-hd-btn"
               title="新建对话"
               @click="newChatSession()"
             >
-              <!-- 新建图标（有对话状态） -->
+           
               <svg  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="16"/>
                 <line x1="8" y1="12" x2="16" y2="12"/>
               </svg>
              
-            </button>
+            </button> -->
             <!-- 菜单按钮 -->
             <button class="al-hd-btn" title="会话列表" @click="toggleQaSessionList">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">

@@ -677,7 +677,7 @@ export default {
       try {
         const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
         const lessonId = String(item.id || '')
-        await updateRecentStudy({ courseId, lessonId })
+        await updateRecentStudy({ courseId, lessonId ,type:'2'})
         this.fetchCourseDetail(this.selectedCourse.id)
       } catch (_) {}
 
@@ -714,7 +714,7 @@ export default {
       const audioTypes = ['6']
 
       try {
-        const apiCalls = [updateRecentStudy({ courseId, lessonId })]
+        const apiCalls = [updateRecentStudy({ courseId, lessonId ,type:'4'})]
         if (item.progress < 100) {
           const isVideo = videoTypes.includes(item.nodeType)
           const percent = isVideo ? String(item.progress || 0) : '100'
@@ -784,7 +784,7 @@ export default {
       if (updateRecent) {
         try {
           const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
-          await updateRecentStudy({ courseId, lessonId: String(item.id || '') })
+          await updateRecentStudy({ courseId, lessonId: String(item.id || ''),type:'3' })
           this.fetchCourseDetail(this.selectedCourse.id)
         } catch (_) {}
       }

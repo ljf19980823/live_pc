@@ -1538,7 +1538,7 @@ export default {
 
       // 更新最近学习记录 + 学习进度，完成后刷新课时列表
       try {
-        const apiCalls = [updateRecentStudy({ courseId, lessonId })]
+        const apiCalls = [updateRecentStudy({ courseId, lessonId,type:'4' })]
         if (item.progress < 100) {
           const isVideo = videoTypes.includes(item.nodeType)
           const percent = isVideo ? String(item.progress || 0) : '100'
@@ -1878,7 +1878,7 @@ export default {
         try {
           const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
           const lessonId = String(item.id || '')
-          await updateRecentStudy({ courseId, lessonId })
+          await updateRecentStudy({ courseId, lessonId,type:'3' })
           if (this.selectedCourse) {
             this.fetchCourseDetail(this.selectedCourse.id)
           }
@@ -1946,7 +1946,7 @@ export default {
       try {
         const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
         const lessonId = String(item.id || '')
-        await updateRecentStudy({ courseId, lessonId })
+        await updateRecentStudy({ courseId, lessonId,type:'2' })
         if (this.selectedCourse) {
           this.fetchCourseDetail(this.selectedCourse.id)
         }
