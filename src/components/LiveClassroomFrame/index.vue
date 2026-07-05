@@ -28,7 +28,7 @@
         <p>{{ errorMessage }}</p>
         <div class="live-classroom-frame__actions">
           <el-button icon="el-icon-back" @click="$emit('exit')">
-            返回课程列表
+            返回
           </el-button>
           <el-button
             type="primary"

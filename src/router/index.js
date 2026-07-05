@@ -8,7 +8,7 @@ import { getToken } from '@/utils/auth'
 Vue.use(VueRouter)
 
 // 无需登录即可访问的白名单路由
-const WHITE_LIST = ['/login','/forget', '/codeLogin','/register', '/404', '/403']
+const WHITE_LIST = ['/login','/forget', '/codeLogin', '/visitorLogin','/register', '/404', '/403']
 
 /**
  * 路由配置
@@ -38,6 +38,12 @@ const routes = [
     name: 'CodeLogin',
     component: () => import('@/views/Login/codeLogin.vue'),
     meta: { title: '登录', requireAuth: false, hidden: true }
+  },
+  {
+    path: '/visitorLogin',
+    name: 'VisitorLogin',
+    component: () => import('@/views/Login/visitorLogin.vue'),
+    meta: { title: '访客登录', requireAuth: false, hidden: true }
   },
   {
     path: '/announcement',
