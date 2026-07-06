@@ -18,7 +18,7 @@
               v-model="form.userName"
               type="text"
               maxlength="20"
-              placeholder="请输入用户名"
+              placeholder="请输入姓名"
               @keyup.enter="handleVisitorLogin"
             >
           </div>
@@ -182,7 +182,7 @@ export default {
     async handleVisitorLogin() {
       if (this.loginLoading || !this.validatePhone()) return
       if (!this.form.userName.trim()) {
-        this.$message.warning('请输入用户名')
+        this.$message.warning('请输入姓名')
         return
       }
       if (!this.form.code.trim()) {
@@ -242,7 +242,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${data.userId}&username=${data.realName || data.userName || this.form.userName.trim()}&liveid=${this.liveId}&classroomId=${this.classroomId || ''}&_t=${Date.now()}&token=${data.token}`
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=3&userid=${data.userId}&username=${data.realName || data.userName || this.form.userName.trim()}&liveid=${this.liveId}&classroomId=${this.classroomId || ''}&_t=${Date.now()}&token=${data.token}`
       console.log(this.liveUrl,'地址')
       this.showLiveIframe = true
     }

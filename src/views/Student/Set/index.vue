@@ -1024,7 +1024,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       console.log(this.liveUrl,'地址')
       this.showLiveIframe = true
     },

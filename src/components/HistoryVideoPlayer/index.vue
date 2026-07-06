@@ -269,15 +269,23 @@ export default {
       if (this.logSessionActive) return
       this.logSessionActive = true
       this.sendReplayLog('ENTER')
+    },
+
+    startReplayHeartbeat() {
+      if (!this.logSessionActive || this.heartbeatTimer) return
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = setInterval(() => {
         this.sendReplayLog('HEARTBEAT')
       }, REPLAY_HEARTBEAT_INTERVAL)
     },
 
-    stopReplayLogSession() {
+    stopReplayHeartbeat() {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    },
+
+    stopReplayLogSession() {
+      this.stopReplayHeartbeat()
       if (!this.logSessionActive) return
       this.logSessionActive = false
       this.sendReplayLog('LEAVE')
@@ -373,12 +381,15 @@ export default {
 
       // ── Aliplayer 文档事件 ──
       mainPlayer.on('pause', () => {
+        this.stopReplayHeartbeat()
         if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
       })
       mainPlayer.on('play', () => {
+        this.startReplayHeartbeat()
         if (this.teacherPlayer && !this.isSyncing) this.safePlay(this.teacherPlayer)
       })
       mainPlayer.on('ended', () => {
+        this.stopReplayHeartbeat()
         if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
       })
       // 倍速同步（Aliplayer settingSelected 事件，type==='speed' 时同步）
@@ -411,9 +422,11 @@ export default {
         this._mainVideoEl = videoEl
 
         const onPlay = () => {
+          this.startReplayHeartbeat()
           if (this.teacherPlayer && !this.isSyncing) this.safePlay(this.teacherPlayer)
         }
         const onPause = () => {
+          this.stopReplayHeartbeat()
           if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
         }
         const onSeeked = () => {
@@ -423,6 +436,7 @@ export default {
           setTimeout(() => { this.isSyncing = false }, 1000)
         }
         const onEnded = () => {
+          this.stopReplayHeartbeat()
           if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
         }
         const onRateChange = () => {
@@ -436,6 +450,9 @@ export default {
         videoEl.addEventListener('seeked', onSeeked)
         videoEl.addEventListener('ended', onEnded)
         videoEl.addEventListener('ratechange', onRateChange)
+        if (!videoEl.paused && !videoEl.ended) {
+          this.startReplayHeartbeat()
+        }
         this._removeVideoListeners = () => {
           videoEl.removeEventListener('play', onPlay)
           videoEl.removeEventListener('pause', onPause)

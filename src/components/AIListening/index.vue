@@ -45,6 +45,9 @@
             :teacher-source="teacherVideoUrl"
             :title="meetingTitle"
             @timeupdate="onVideoTimeUpdate"
+            @play="startReplayHeartbeat"
+            @pause="stopReplayHeartbeat"
+            @ended="stopReplayHeartbeat"
           />
           <div v-else class="al-no-video">
             <span>暂无视频</span>
@@ -567,15 +570,23 @@ export default {
       this.replayHistoryLessonId = this.liveLessonId
       this.logSessionActive = true
       this.sendReplayLog('ENTER')
+    },
+
+    startReplayHeartbeat() {
+      if (!this.logSessionActive || this.heartbeatTimer) return
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = setInterval(() => {
         this.sendReplayLog('HEARTBEAT')
       }, REPLAY_HEARTBEAT_INTERVAL)
     },
 
-    stopReplayLogSession() {
+    stopReplayHeartbeat() {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    },
+
+    stopReplayLogSession() {
+      this.stopReplayHeartbeat()
       if (!this.logSessionActive) return
       this.logSessionActive = false
       this.sendReplayLog('LEAVE')

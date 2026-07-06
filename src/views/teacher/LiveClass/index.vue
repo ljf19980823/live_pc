@@ -655,7 +655,7 @@
             <img v-if="qrCodeUrl" :src="qrCodeUrl" class="cdc-qr-img" alt="二维码" @click="openQrPreview" />
             <div v-else class="cdc-qr-placeholder"></div>
           </div>
-          <div class="cdc-qr-hint">用微信/QQ扫码分享给任意学员</div>
+          <div class="cdc-qr-save-btn" @click="saveQrCode">保存二维码</div>
         </template>
 
         <div class="cdc-bottom">
@@ -1213,7 +1213,7 @@ export default {
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
       console.log(this.liveUrl,'直播地址')
     this.activeTab = 'liveui'
     },
@@ -1238,6 +1238,55 @@ export default {
       document.execCommand('copy')
       document.body.removeChild(el)
       this.$message.success('链接已复制')
+    },
+    async saveQrCode() {
+      if (!this.qrCodeUrl) return
+
+      try {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.src = this.qrCodeUrl
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+        })
+
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth || 138
+        canvas.height = img.naturalHeight || 138
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+
+        const blob = await new Promise((resolve, reject) => {
+          if (typeof canvas.toBlob === 'function') {
+            canvas.toBlob(data => data ? resolve(data) : reject(new Error('toBlob failed')), 'image/png')
+          } else {
+            const dataURL = canvas.toDataURL('image/png')
+            const arr = dataURL.split(',')
+            const mime = arr[0].match(/:(.*?);/)[1]
+            const bstr = atob(arr[1])
+            let n = bstr.length
+            const u8arr = new Uint8Array(n)
+            while (n--) u8arr[n] = bstr.charCodeAt(n)
+            resolve(new Blob([u8arr], { type: mime }))
+          }
+        })
+
+        const name = (this.selectedCourseItem && this.selectedCourseItem.title) || '直播分享'
+        const fileName = `${name}二维码.png`.replace(/[\\/:*?"<>|]/g, '')
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.download = fileName
+        link.href = url
+        link.style.display = 'none'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+        this.$message.success('二维码已保存')
+      } catch (e) {
+        this.$message.error('保存失败，请重试')
+      }
     },
    async enterLiveFromDetail() {
       const item = this.selectedCourseItem
@@ -1289,7 +1338,7 @@ export default {
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
       console.log(this.liveUrl,'直播地址')
      this.activeTab = 'liveui'
     },
@@ -3242,10 +3291,10 @@ border-radius: 14px 14px 14px 14px;
 border: 1px solid #E5E7EB;
 }
 .cdc-qr-img {
-  width: 128px;
-  height: 128px;
+  width: 138px;
+  height: 138px;
   border-radius: 10px 10px 10px 10px;
-  background: #1E2939;
+  // background: #1E2939;
   display: block;
   padding: 8px;
   box-sizing: border-box;
@@ -3257,11 +3306,18 @@ border: 1px solid #E5E7EB;
   border-radius: 10px;
   background: #1E2939;
 }
-.cdc-qr-hint {
-  font-size: 12px;
-  color: #99A1AF;
+.cdc-qr-save-btn {
+  width: 125px;
+  height: 36px;
+  margin: 0 auto 8px;
+  border: 1px solid #0049FF;
+  border-radius: 4px;
+  background: #CAD9FF;
+  color: #0049FF;
+  font-size: 14px;
+  line-height: 36px;
   text-align: center;
-  margin-bottom: 8px;
+  cursor: pointer;
 }
 .qr-preview-mask {
   position: fixed;
