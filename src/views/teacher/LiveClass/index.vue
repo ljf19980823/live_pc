@@ -652,7 +652,7 @@
           </div>
           <div class="cdc-share-hint">分享直播链接，通过网页观看直播</div>
           <div class="cdc-qr-wrap">
-            <img v-if="qrCodeUrl" :src="qrCodeUrl" class="cdc-qr-img" alt="二维码" />
+            <img v-if="qrCodeUrl" :src="qrCodeUrl" class="cdc-qr-img" alt="二维码" @click="openQrPreview" />
             <div v-else class="cdc-qr-placeholder"></div>
           </div>
           <div class="cdc-qr-hint">用微信/QQ扫码分享给任意学员</div>
@@ -682,6 +682,15 @@
       :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
+
+    <transition name="mask-fade">
+      <div v-if="showQrPreview" class="qr-preview-mask" @click.self="closeQrPreview">
+        <div class="qr-preview-panel">
+          <img :src="qrCodeUrl" class="qr-preview-img" alt="二维码预览">
+          <div class="qr-preview-close" @click="closeQrPreview">关闭</div>
+        </div>
+      </div>
+    </transition>
 
 
   </div>
@@ -747,6 +756,7 @@ export default {
       selectedCourseItem: null,
       detailShareEnabled: false,
       detailLoading: false,
+      showQrPreview: false,
 
       playerVisible: false,
       playerSource: '',
@@ -775,6 +785,8 @@ export default {
       isTeacher: false
     }
   },
+      
+
   watch: {
     allowMic(val) {
       const validValues = this.recordModeOptions.map(o => o.value)
@@ -792,6 +804,7 @@ export default {
         this.fetchScheduleData(this.scheduleYear, val + 1)
       }
     },
+   
     async showCreateClass(val) {
       if (val) {
         const now = new Date()
@@ -1019,6 +1032,14 @@ export default {
     }
   },
   methods: {
+     openQrPreview() {
+       
+        this.showQrPreview = true
+      },
+
+      closeQrPreview() {
+        this.showQrPreview = false
+      },
     handleStartTimeChange(val) {
       if (!val) return
       const selected = new Date(val.replace(' ', 'T'))
@@ -1684,6 +1705,7 @@ export default {
     },
     onDialogCloseAdd(){
       this.showDetailDialog = false
+      this.showQrPreview = false
     }
   }
 }
@@ -3227,6 +3249,7 @@ border: 1px solid #E5E7EB;
   display: block;
   padding: 8px;
   box-sizing: border-box;
+  cursor: zoom-in;
 }
 .cdc-qr-placeholder {
   width: 128px;
@@ -3239,6 +3262,43 @@ border: 1px solid #E5E7EB;
   color: #99A1AF;
   text-align: center;
   margin-bottom: 8px;
+}
+.qr-preview-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.58);
+}
+.qr-preview-panel {
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  padding: 28px 28px 22px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+.qr-preview-img {
+  width: 300px;
+  height: 300px;
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto 20px;
+}
+.qr-preview-close {
+  width: 96px;
+  height: 36px;
+  line-height: 36px;
+  margin: 0 auto;
+  border-radius: 6px;
+  color: #fff;
+  background: #0049FF;
+  font-size: 14px;
+  cursor: pointer;
 }
 .cdc-bottom {
   margin-top: auto;
