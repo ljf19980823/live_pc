@@ -2612,7 +2612,7 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(51, 51, 51, 0.60);
-  z-index: 2001;
+  z-index: 1999;
   overflow: hidden;
 }
 .mask_con{
