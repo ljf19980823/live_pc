@@ -1098,7 +1098,7 @@ export default {
             const res = await getLiveShare(this.selectedCourseItem.id)
             const d = res.data || {}
             this.$set(this.selectedCourseItem, 'qrcodeUrl', d.qrcodeUrl || '')
-            this.$set(this.selectedCourseItem, 'shareUrl', d.qrcodeUrl || '')
+            this.$set(this.selectedCourseItem, 'shareUrl', d.shareUrl || '')
           }
         } catch (e) {
           // 错误由请求拦截器统一处理
@@ -1126,7 +1126,7 @@ export default {
           minutes: d.liveMin || item.minutes || '',
           status:  d.status == '直播中'  ? 'living' : 'soon',
           qrcodeUrl: d.qrcodeUrl || '',
-          shareUrl: d.qrcodeUrl || '',
+          shareUrl: d.shareUrl || '',
           ifShare: d.ifShare || '2',
           classInfos:d.classInfos || [],
           classInfosName:d.classInfos && d.classInfos.length ? d.classInfos.map(item => item.className).join('、') : '-' 

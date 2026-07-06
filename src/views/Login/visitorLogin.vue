@@ -127,8 +127,9 @@ export default {
       const query = window.location.href.split('?')[1] || ''
       const normalizedQuery = query.replace(/&&/g, '&')
       const params = new URLSearchParams(normalizedQuery)
+      console.log('URL参数', params.toString())
       return {
-        liveId: params.get('liveId') || '',
+        liveId: params.get('liveid') || '',
         classroomId: params.get('classroomId') || ''
       }
     },
