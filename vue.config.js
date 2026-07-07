@@ -21,7 +21,7 @@ module.exports = defineConfig({
     proxy: {
       '/api': {
         // target: 'http://47.92.30.163:8085',
-        target: 'https://live.fjlsjy123.com/portal',
+        target: 'https://live.fjlsjy123.com/portal/api',
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
       }

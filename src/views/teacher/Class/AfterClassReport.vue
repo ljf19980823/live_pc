@@ -23,7 +23,7 @@ export default {
   computed: {
     reportUrl() {
       if (!this.classId || !this.recordId) return ''
-      return `https://live.fjlsjy123.com/portal/afterClassReport.html?classId=${this.classId}&recordId=${this.recordId}`
+      return `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${this.classId}&recordId=${this.recordId}`
     }
   },
   watch: {

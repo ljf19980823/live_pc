@@ -25,7 +25,7 @@
       <template v-else>
         <i class="el-icon-warning-outline live-classroom-frame__warning" />
         <h2>直播课堂暂时未加载成功</h2>
-        <p>{{ errorMessage }}</p>
+        <p>{{ errorMessage =='InBlackList' ?'您已被老师移除教室':errorMessage}}</p>
         <div class="live-classroom-frame__actions">
           <el-button icon="el-icon-back" @click="$emit('exit')">
             返回

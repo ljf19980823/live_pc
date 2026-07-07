@@ -25,7 +25,7 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 //   "description": "更快、更稳定的2.0客户端"
 // }
 // const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
-const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/edu/sso/latestVersion'
+const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
 
 let mainWindow
 let screenGuardInterval = null
