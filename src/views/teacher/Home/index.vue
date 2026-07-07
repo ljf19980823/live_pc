@@ -1,7 +1,12 @@
 <template>
   <div class="app_container">
-    <div class="app_container_top">
-      <el-carousel
+    <div class="app_container_show">
+      <div class="app_container_show_title">{{ greetingText }}，{{ teacherDisplayName }}</div>
+      <div class="app_container_show_content">{{ currentDateText }}</div>
+    </div>
+    <div class="app_container_first">
+      <div class="app_container_first_banner">
+        <el-carousel
         height="100%"
         :autoplay="false"
         arrow="always"
@@ -12,7 +17,26 @@
           <img :src="item.url" class="app_container_top_img" alt="">
         </el-carousel-item>
       </el-carousel>
+      </div>
+      <div class="app_container_first_course">
+        <div class="app_container_first_course_top">
+          <div class="app_container_first_course_tag">
+          课堂进行中
+          <div class="app_container_first_course_tag_fill"></div>
+        </div> 
+        <div class="app_container_first_course_title">
+         已直播 26 分钟
+        </div>
+        </div>
+        <div class="app_container_first_course_name">英语阅读精讲直播课</div>
+        <div class="app_container_first_course_third">
+          <div class="app_container_first_course_third_time">今天 19:30-20:15</div>
+          <div class="app_container_first_course_third_teacher">主讲  林老师</div>
+        </div>
+        <div class="app_container_first_course_btn">进入直播</div>
+      </div>
     </div>
+   
     <div class="app_container_last">
       <div class="app_container_last_left">
         <div class="app_container_last_left_top" @click="toMessage()">
@@ -46,25 +70,49 @@
 <script>
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList } from '@/api'
+import { formatDate } from '@/utils'
 
 export default {
   data () {
     return {
       messageList: [],
-      carouselList: []
+      carouselList: [],
+      greetingText: '',
+      currentDateText: ''
     }
   },
   computed: {
     ...mapGetters('user', ['userInfo']),
     isAdd () {
       return this.userInfo?.isAdd === '1'
+    },
+    teacherDisplayName () {
+      return this.userInfo?.realName || this.userInfo?.userName || '升升老师'
     }
   },
   created () {
+    this.updateCurrentTimeInfo()
     this.fetchMessageList()
     this.fetchCarouselList()
   },
+  activated () {
+    this.updateCurrentTimeInfo()
+  },
   methods: {
+    updateCurrentTimeInfo () {
+      const now = new Date()
+      const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+
+      this.greetingText = this.getGreetingText(now)
+      this.currentDateText = `今天是${formatDate(now, 'YYYY年MM月DD日')}，星期${weekDays[now.getDay()]}`
+    },
+    getGreetingText (date) {
+      const minutes = date.getHours() * 60 + date.getMinutes()
+
+      if (minutes >= 6 * 60 + 1 && minutes <= 12 * 60) return '上午好'
+      if (minutes >= 12 * 60 + 1 && minutes <= 18 * 60) return '下午好'
+      return '晚上好'
+    },
     toMessage () {
       this.$router.push('/message')
     },
@@ -99,10 +147,43 @@ export default {
   flex-direction: column;
   justify-content: flex-start;
   gap: 16px;
-    padding: 16px 16px 16px 0;
+    padding: 35px 24px 16px 24px;
   box-sizing: border-box;
 
 }
+.app_container_show{
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  align-items: center;
+  gap:20px
+}
+.app_container_show_title{
+  font-weight: bold;
+font-size: 24px;
+color: #020618;
+line-height: 1;
+}
+.app_container_show_content{
+  font-weight: 400;
+font-size: 14px;
+color: #62748E;
+line-height: 1;
+}
+.app_container_first{
+  width: 100%;
+  display: flex;
+  height: 26.8%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.app_container_first_banner{
+  width: 61%;
+  height:100%;
+  overflow: hidden;
+}
+
 .app_container_top{
   width: 100%;
   height: 36.8%;
@@ -128,6 +209,56 @@ export default {
   height: 100%;
   border-radius: 12px;
 }
+.app_container_first_course{
+  flex: 1;
+  width: 0;
+  height:100%;
+  border-radius: 12px;
+  background-size: 100% 100%;
+  background-image: url("@/assets/images/home/bg.png");
+  background-repeat: no-repeat;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.app_container_first_course_top{
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items:center;
+  gap: 10px;
+
+}
+.app_container_first_course_tag{
+  width: 84px;
+height: 24px;
+background: #6DB7FD;
+border-radius: 30px;
+font-weight: normal;
+font-size: 12px;
+color: #FFFFFF;
+display: flex;
+justify-content: center;
+align-items: center;
+position: relative;
+}
+.app_container_first_course_tag_fill{
+  width: 6px;
+height: 6px;
+background: #45D483;
+border-radius: 50%;
+border: 1px solid #FFFFFF;
+position: absolute;
+right: 0;
+top: 0;
+}
+.app_container_first_course_title{
+  color: #FFFFFF;
+  font-size: 12px;
+}
+
 .app_container_last{
   flex: 1;
   height: 0;
@@ -138,8 +269,7 @@ export default {
 .app_container_last_left{
   background: #ffffff;
   border-radius: 12px;
-  flex:1;
-  width:0;
+   width: 61%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -254,5 +384,47 @@ gap: 15px;
 .app_container_last_right_last_icon{
   width: 16px;
   height: 16px;
+}
+.app_container_first_course_name{
+  font-size: 18px;
+  color: #FFFFFF;
+  line-height:1;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+.app_container_first_course_third{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 15px;
+
+}
+.app_container_first_course_third_time{
+  font-size: 14px;
+  color: #FFFFFF;
+}
+.app_container_first_course_third_teacher{
+  padding: 0 10px;
+height: 24px;
+background: rgba(255,255,255,0.16);
+border-radius: 29px 29px 29px 29px;
+font-size: 14px;
+color: #FFFFFF;
+display: inline-flex;
+justify-content: center;
+align-items: center;
+}
+.app_container_first_course_btn{
+  width: 121px;
+height: 40px;
+background: linear-gradient( 90deg, #4496FF 0%, #439AFF 7.14%, #429FFF 14.29%, #41A3FF 21.43%, #40A8FF 28.57%, #3FACFF 35.71%, #3EB0FF 42.86%, #3DB4FF 50%, #3CB9FF 57.14%, #3BBDFF 64.29%, #3AC1FF 71.43%, #39C5FF 78.57%, #38CAFF 85.71%, #36CEFF 92.86%, #35D2FF 100%);
+border-radius: 24px 24px 24px 24px;
+font-size: 14px;
+color: #FFFFFF;
+display:flex;
+justify-content: center; 
+align-items: center;
 }
 </style>

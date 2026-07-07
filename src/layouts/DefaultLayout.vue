@@ -167,32 +167,32 @@ export default {
         {
           path: '/home',
           title: '首页',
-          icon: require('@/assets/icons/menu/home.png'),
-          activeIcon: require('@/assets/icons/menu/home-active.png')
+          icon: require('@/assets/icons/menu/new_zy.png'),
+          activeIcon: require('@/assets/icons/menu/new_zy_active.png')
         },
         {
           path: '/class',
           title: '班级',
-          icon: require('@/assets/icons/menu/class.png'),
-          activeIcon: require('@/assets/icons/menu/class-active.png')
+          icon: require('@/assets/icons/menu/new_zxkt.png'),
+          activeIcon: require('@/assets/icons/menu/new_zxkt_active.png')
         },
         {
           path: '/live-class',
           title: '实时课堂',
-          icon: require('@/assets/icons/menu/live-class.png'),
-          activeIcon: require('@/assets/icons/menu/live-class-active.png')
+          icon: require('@/assets/icons/menu/new_kcb.png'),
+          activeIcon: require('@/assets/icons/menu/new_kcb_active.png')
         },
         {
           path: '/resources',
-          title: '资料中心',
-          icon: require('@/assets/icons/menu/resources.png'),
-          activeIcon: require('@/assets/icons/menu/resources-active.png')
+          title: '资源库',
+          icon: require('@/assets/icons/menu/new_zyk.png'),
+          activeIcon: require('@/assets/icons/menu/new_zyk_active.png')
         },
         {
           path: '/message',
           title: '消息',
-          icon: require('@/assets/icons/menu/message.png'),
-          activeIcon: require('@/assets/icons/menu/message-active.png')
+          icon: require('@/assets/icons/menu/new_xx.png'),
+          activeIcon: require('@/assets/icons/menu/new_xx_active.png')
         }
       ]
     },
@@ -265,7 +265,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$nav-width: 121px;
+$nav-width: 160px;
 $header-h: $header-height;
 
 // ─── 整体布局 ─────────────────────────────────────────────────
@@ -286,7 +286,7 @@ $header-h: $header-height;
   padding: 60px 16px 45px;
   box-sizing: border-box;
   height: 100%;
-  background: #F0F3F6;
+  background: #ffffff;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -336,12 +336,14 @@ $header-h: $header-height;
 // 通用菜单项
 .nav-item {
   margin-bottom: 25px;
-  @include flex-column;
+  // @include flex-column;
   gap: 5px;
   width: 100%;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 10px 6px;
+  gap: 12px;
+  justify-content: flex-start;
+  padding: 12px 12px;
   border-radius: 12px;
   cursor: pointer;
   transition: background $transition-fast, color $transition-fast;
@@ -349,15 +351,15 @@ $header-h: $header-height;
 
   .nav-icon {
     @include flex-center;
-    width: 22px;
-    height: 22px;
+    width: 21px;
+    height: 21px;
     border-radius: 10px;
     margin-bottom: 4px;
     transition: background $transition-fast;
 
     img {
-      width: 22px;
-      height: 22px;
+      width: 21px;
+      height: 21px;
       object-fit: contain;
       display: block;
       -webkit-user-drag: none;
@@ -367,7 +369,7 @@ $header-h: $header-height;
 
   .nav-label {
     font-size: 14px;
-    color: #787F8D;
+    color: #62748E;
     text-align: center;
     white-space: nowrap;
     font-weight: 500;
@@ -385,14 +387,14 @@ $header-h: $header-height;
   }
 
   &:hover:not(.active) {
-    background: #F5F7FF;
+    background: #EFF6FF;
 
     .nav-label { color: $color-primary; font-weight: 600; }
   }
 
   // 激活
   &.active {
-    background: #FFFFFF;
+    background: #EFF6FF;
 
     .nav-icon {
       i { color: $color-primary; }
@@ -505,7 +507,7 @@ $header-h: $header-height;
   flex: 1;
   overflow-y: auto;
   @include scrollbar;
-  background: #F0F3F6;
+  background: #F7FBFF;
 }
 
 .nav-icon_last {

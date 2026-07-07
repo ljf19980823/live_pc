@@ -203,6 +203,11 @@ router.beforeEach(async (to, from, next) => {
 
   document.title = '立升云播'
 
+  if (to.path === '/visitorLogin') {
+    next()
+    return
+  }
+
   if (token) {
     if (to.path === '/login') {
       // 已登录，回到根路由，由 redirect 函数按角色分流
