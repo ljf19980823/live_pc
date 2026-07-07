@@ -24,7 +24,8 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 //   "mac_download_url": "https://example.com/app-2.0.0.dmg",
 //   "description": "更快、更稳定的2.0客户端"
 // }
-const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
+// const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
+const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/edu/sso/latestVersion'
 
 let mainWindow
 let screenGuardInterval = null

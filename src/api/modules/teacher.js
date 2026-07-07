@@ -68,7 +68,7 @@ export const createLiveClass = params => post('/edu/live/create', params)
 
 // 创建阿里云互动课堂（固定域名）
 export const createAliyunClass = params =>
-  axios.post('https://live.fjlsjy123.com/api/v2/class/create', params, {
+  axios.post('https://live.fjlsjy123.com/auikits/v2/class/create', params, {
     headers: {
       'Content-Type': 'application/json;charset=utf-8',
       'Authorization': `Bearer ${getToken()}`

@@ -317,7 +317,7 @@ export default {
     shareReport(row) {
       const classId = (this.courseInfo && this.courseInfo.classId) || ''
       const recordId = row.recordId || ''
-      this.shareReportUrl = `https://test.fjlsjy123.com/afterClassReport.html?classId=${classId}&recordId=${recordId}`
+      this.shareReportUrl = `https://live.fjlsjy123.com/portal/afterClassReport.html?classId=${classId}&recordId=${recordId}`
       this.shareCopied = false
       this.shareDialogVisible = true
     },

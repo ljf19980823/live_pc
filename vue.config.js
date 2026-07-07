@@ -20,8 +20,8 @@ module.exports = defineConfig({
     // target 需要填写实际后端服务地址
     proxy: {
       '/api': {
-        target: 'http://47.92.30.163:8085',
-        // target: 'https://test.fjlsjy123.com',
+        // target: 'http://47.92.30.163:8085',
+        target: 'https://live.fjlsjy123.com/portal',
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
       }

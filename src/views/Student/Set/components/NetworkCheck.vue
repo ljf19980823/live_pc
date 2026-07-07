@@ -56,7 +56,7 @@ import platformMixin from '@/mixins/platform'
 
 const BASE = process.env.VUE_APP_BASE_API && !process.env.VUE_APP_BASE_API.startsWith('/')
   ? process.env.VUE_APP_BASE_API
-  : 'http://47.92.30.163:8085'
+  : 'https://live.fjlsjy123.com/portal'
 
 const SERVERS = [
   { name: '业务服务器',     url: `${BASE}/actuator/health` },
