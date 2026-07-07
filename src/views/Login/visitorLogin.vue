@@ -238,7 +238,7 @@ export default {
       const roleNumber =  0
    
 
-      let liveBaseUrl = 'https://live.fjlsjy123.com'
+      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
