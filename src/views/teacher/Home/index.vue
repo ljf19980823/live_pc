@@ -39,13 +39,42 @@
    
     <div class="app_container_last">
       <div class="app_container_last_left">
+        <div class="app_container_last_left_header">
+          <div class="app_container_last_left_header_left"  v-if="isAdd" @click="toCreateClass">
+            <div class="app_container_last_left_header_left_title">创建班级</div>
+            <img src="@/assets/images/home/add2.png" class="app_container_last_left_header_left_btn" alt="">
+          </div>
+          <div class="app_container_last_left_header_sx" v-if="isAdd"></div>
+          <div class="app_container_last_left_header_nav">
+            <div class="app_container_last_left_header_nav_list" @click="toClass()">
+              <img src="@/assets/images/home/bj.png" class="app_container_last_left_header_nav_list_icon" alt="">
+
+              <div class="app_container_last_left_header_nav_list_text">班级</div>
+            </div>
+            <div class="app_container_last_left_header_nav_list">
+              <img src="@/assets/images/home/kcb.png" class="app_container_last_left_header_nav_list_icon" alt="">
+
+              <div class="app_container_last_left_header_nav_list_text">课程表</div>
+            </div>
+            <div class="app_container_last_left_header_nav_list">
+              <img src="@/assets/images/home/khc.png" class="app_container_last_left_header_nav_list_icon" alt="">
+
+              <div class="app_container_last_left_header_nav_list_text">课后测</div>
+            </div>
+          </div>
+        </div>
+        <div class="app_container_last_left_line">
         <div class="app_container_last_left_top" @click="toMessage()">
-          <div class="app_container_last_left_top_title">新消息</div>
-          <img src="@/assets/images/home/right.png" class="app_container_last_left_top_icon" alt="">
+          <div class="app_container_last_left_top_title">消息中心</div>
+          <div class="app_container_last_left_top_icon">更多</div>
+          <!-- <img src="@/assets/images/home/right.png" class="app_container_last_left_top_icon" alt=""> -->
         </div>
         <div class="app_container_last_left_list">
           <div class="app_container_last_left_list_detail" v-for="(item,index) in messageList" :key="item.id || index">
-            <!-- <img src="@/assets/images/head.png" class="app_container_last_left_list_detail_img" alt=""> -->
+            <img v-if="item.sendPersonImg" :src="item.sendPersonImg" class="app_container_last_left_list_detail_img" alt="">
+            <div v-else class="app_container_last_left_list_detail_img app_container_last_left_list_detail_avatar_text">
+              {{ getAvatarText(item.sendPersonName) }}
+            </div>
             <div class="app_container_last_left_list_detail_mess">
               <div class="app_container_last_left_list_detail_mess_top">
                 <div class="app_container_last_left_list_detail_mess_top_name">{{ item.sendPersonName }}</div>
@@ -55,13 +84,20 @@
             </div>
           </div>
           <EmptyState description="暂无消息数据" v-if="messageList.length==0"/>
+        </div>  
         </div>
       </div>
-      <div class="app_container_last_right" v-if="isAdd" @click="toCreateClass">
-        <img class="app_container_last_right_icon" src="@/assets/images/home/such.png" alt="">
-        <div class="app_container_last_right_last">
-          <div class="app_container_last_right_last_title">新建实时课堂</div>
-          <img src="@/assets/images/home/add.png" class="app_container_last_right_last_icon" alt="">
+      <div class="app_container_last_right">
+        <div class="app_container_last_right_title">待启课堂</div>
+        <div class="app_container_last_right_list" >
+          <div class="app_container_last_right_list_detail" v-for="(item,index) in 3" :key="index">
+            <div class="app_container_last_right_list_detail_name">高三语文 · 行测申论冲刺课</div>
+            <div class="app_container_last_right_list_detail_time">2026.07.16(周四) 13:07-17:07</div>
+            <div class="app_container_last_right_list_detail_last">
+              <div class="app_container_last_right_list_detail_last_text">开播提醒</div>
+              <div class="app_container_last_right_list_detail_last_title">距离开播 3 小时</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -113,6 +149,9 @@ export default {
       if (minutes >= 12 * 60 + 1 && minutes <= 18 * 60) return '下午好'
       return '晚上好'
     },
+    getAvatarText (name) {
+      return (name || '用户').trim().slice(0, 2)
+    },
     toMessage () {
       this.$router.push('/message')
     },
@@ -135,6 +174,9 @@ export default {
       } catch (e) {
         console.error('获取轮播图失败', e)
       }
+    },
+    toClass(){
+      this.$router.push('/class')
     }
   }
 }
@@ -267,16 +309,14 @@ top: 0;
   gap: 16px;
 }
 .app_container_last_left{
-  background: #ffffff;
+ 
   border-radius: 12px;
    width: 61%;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 21px;
-  padding: 13px 20px;
-  box-sizing: border-box;
+  gap: 16px;
 }
 .app_container_last_left_top{
   width: 100%;
@@ -287,13 +327,23 @@ top: 0;
 }
 .app_container_last_left_top_title{
   font-weight: bold;
-font-size: 20px;
-color: #333333;
+font-weight: bold;
+font-size: 16px;
+color: #020618;
 }
 .app_container_last_left_top_icon{
-  width: 9px;
-  height: 18px;
+  width: 48px;
+height: 24px;
+background: #EFF6FF;
+border-radius: 36px;
+font-weight: 400;
+font-size: 12px;
+color: #2B7FFF;
+display: flex;
+justify-content: center;
+align-items: center;
 }
+
 .app_container_last_left_list{
   width: 100%;
   flex: 1;
@@ -301,13 +351,16 @@ color: #333333;
   display: flex;
   justify-content: flex-start;
   flex-direction: column;
-  gap: 19px;
+  gap: 8px;
   overflow: auto;
 }
 .app_container_last_left_list_detail{
   width: 100%;
-  border-bottom: 1px solid #F3F4F8;
-  padding-bottom: 12px;
+  background: rgba(248,250,252,0.4);
+border-radius: 12px 12px 12px 12px;
+border: 1px solid rgba(219,234,254,0.7);
+ 
+  padding: 12px 13px;
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -315,9 +368,20 @@ color: #333333;
   /* cursor: pointer; */
 }
 .app_container_last_left_list_detail_img{
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.app_container_last_left_list_detail_avatar_text{
+  flex-shrink: 0;
+  background: #0049FF;
+  color: #FFFFFF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  font-weight: bold;
+  overflow: hidden;
 }
 .app_container_last_left_list_detail_mess{
   flex: 1;
@@ -329,23 +393,23 @@ color: #333333;
   display: flex;
   justify-content: flex-start;
   align-items: flex-end;
-  gap: 5px;
+  gap: 8px;
 }
 .app_container_last_left_list_detail_mess_top_name{
-  font-weight: bold;
-  color: #333333;
-  font-size: 16px;
+  font-weight: bolder;
+font-size: 16px;
+color: #0F172B;
 
 }
 .app_container_last_left_list_detail_mess_top_time{
   font-weight: 400;
 font-size: 12px;
-color: #999999;
+color:#90A1B9 ;
 }
 .app_container_last_left_list_detail_mess_content{
   margin-top: 10px;
   font-size: 14px;
-  color: #999999;
+  color: #62748E;
   font-weight: 500;
   width: 100%;
   text-overflow: ellipsis;
@@ -356,16 +420,72 @@ color: #999999;
   cursor: pointer;
   flex: 1;
   width: 0;
-  height: 155px;
+  height: 100%;
   background: #FFFFFF;
 border-radius: 12px 12px 12px 12px;
-padding: 14px 0;
+padding: 16px;
 box-sizing: border-box;
-display: inline-flex;
+display: flex;
 flex-direction: column;
 justify-content: flex-start;
+gap: 12px;
+}
+.app_container_last_right_title{
+font-weight: bold;
+font-size: 16px;
+color: #020618;
+}
+.app_container_last_right_list{
+  flex: 1;
+  width: 100%;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: auto;
+  gap: 12px;
+}
+.app_container_last_right_list_detail{
+  padding: 13px;
+  box-sizing: border-box;
+  width: 100%;
+  background: rgba(239,246,255,0.45);
+border-radius: 12px 12px 12px 12px;
+border: 1px solid #DBEAFE;
+}
+.app_container_last_right_list_detail_name{
+  font-weight: bold;
+font-size: 14px;
+color: #020618;
+line-height: 20px;
+width: 100%;
+}
+.app_container_last_right_list_detail_time{
+  width: 100%;
+font-weight: 400;
+font-size: 12px;
+color: #62748E;
+margin-top: 8px;
+}
+.app_container_last_right_list_detail_last{
+  width: 100%;
+  margin-top: 12px;
+  height: 32px;
+background: #FFFFFF;
+border-radius: 12px 12px 12px 12px;
+display: flex;
+justify-content: space-between;
 align-items: center;
-gap: 15px;
+}
+.app_container_last_right_list_detail_last_text{
+  font-weight: 400;
+font-size: 12px;
+color: #62748E;
+}
+.app_container_last_right_list_detail_last_title{
+  font-weight: bold;
+font-size: 12px;
+color: #0F172B;
 }
 .app_container_last_right_icon{
   width: 104px;
@@ -427,4 +547,83 @@ display:flex;
 justify-content: center; 
 align-items: center;
 }
+.app_container_last_left_header{
+  width: 100%;
+  
+  padding:12px 12px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+border-radius: 12px 12px 12px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.app_container_last_left_header_left{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  width: 184px;
+height: 58px;
+cursor: pointer;
+background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
+box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
+border-radius: 12px 12px 12px 12px;
+}
+.app_container_last_left_header_left_title{
+  font-weight: bold;
+font-size: 16px;
+color: #FFFFFF;
+}
+.app_container_last_left_header_left_btn{
+  width: 36px;
+  height: 36px;
+}
+.app_container_last_left_line{
+  
+  border-radius: 12px;
+   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 20px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 12px 12px 12px 12px;
+}
+.app_container_last_left_header_sx{
+  width: 1px;
+height: 44px;
+background: #DBEAFE;
+border-radius: 0px 0px 0px 0px;
+}
+.app_container_last_left_header_nav{
+  flex: 1;
+  width: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.app_container_last_left_header_nav_list{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+}
+.app_container_last_left_header_nav_list_icon{
+  width:44px;
+  height:36px;
+}
+.app_container_last_left_header_nav_list_text{
+  font-weight: normal;
+font-size: 12px;
+color: #0F172B;
+
+font-weight: bold;}
 </style>

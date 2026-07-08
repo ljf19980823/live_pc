@@ -736,7 +736,8 @@ export default {
           allowDownload: live.allowDownload,
           status: live.status,
           isStart: live.isStart,
-          isFinish: live.isFinish
+          isFinish: live.isFinish,
+          historyLessonId: live.historyLessonId || '',
         }))
       })
       return map

@@ -594,9 +594,13 @@ export default {
           liveId: live.liveId || live.id,
           liveLessonId: live.liveLessonId || '',
           fileList: live.fileList || [],
+          allowMultiple: live.allowMultiple,
+          allowFastForward: live.allowFastForward,
+          allowDownload: live.allowDownload,
           status: live.status,
           isStart: live.isStart,
-          isFinish: live.isFinish
+          isFinish: live.isFinish,
+          historyLessonId: live.historyLessonId || '',
         }))
       })
       return map
