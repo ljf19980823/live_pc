@@ -999,39 +999,62 @@ app.whenReady().then(async () => {
   }
 
   // ─── 直播页缓存策略 ────────────────────────────────────────────────────
-  // HTML 每次校验更新；带内容 hash 或版本号的 JS/CSS 长期缓存。
-  // 这样新版本入口始终生效，同时弱网下无需重复下载未变化的课堂资源。
-  // session.defaultSession.webRequest.onHeadersReceived(
-  //   { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
-  //   (details, callback) => {
-  //     const headers = Object.assign({}, details.responseHeaders)
-  //     Object.keys(headers).forEach(key => {
-  //       const lowerKey = key.toLowerCase()
-  //       if (lowerKey === 'cache-control' || lowerKey === 'pragma' || lowerKey === 'expires') {
-  //         delete headers[key]
-  //       }
-  //     })
+  // HTML 每次校验更新；带内容 hash 或显式版本号的 JS/CSS/字体/图片长期缓存。
+  // Electron 与 Chrome 缓存隔离，iframe 首次冷启动尤其依赖这里减少重复下载。
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
+    (details, callback) => {
+      const headers = Object.assign({}, details.responseHeaders)
+      Object.keys(headers).forEach(key => {
+        const lowerKey = key.toLowerCase()
+        if (
+          lowerKey === 'cache-control' ||
+          lowerKey === 'pragma' ||
+          lowerKey === 'expires'
+        ) {
+          delete headers[key]
+        }
+      })
 
-  //     let pathname = ''
-  //     try {
-  //       pathname = new URL(details.url).pathname
-  //     } catch (_) {}
+      let pathname = ''
+      try {
+        pathname = new URL(details.url).pathname
+      } catch (_) {}
 
-  //     const isDocument = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame'
-  //     const isScriptOrStyle = details.resourceType === 'script' || details.resourceType === 'stylesheet'
-  //     const hasContentHash = /[.-][a-f0-9]{8,}(?:\.async|\.chunk)?\.(?:js|css)$/i.test(pathname)
-  //     const hasExplicitVersion = /(?:_v|-)(?:\d+\.){2}\d+(?:\.min)?\.js$/i.test(pathname)
+      const isDocument =
+        details.resourceType === 'mainFrame' ||
+        details.resourceType === 'subFrame'
+      const isScriptOrStyle =
+        details.resourceType === 'script' ||
+        details.resourceType === 'stylesheet'
+      const isStaticAsset = ['script', 'stylesheet', 'font', 'image']
+        .includes(details.resourceType)
+      const hasContentHash =
+        /[.-][a-f0-9]{8,}(?:\.async|\.chunk)?\.(?:js|css|woff2?|ttf|png|jpe?g|gif|svg|webp|ico)$/i
+          .test(pathname)
+      const hasExplicitVersion =
+        /(?:_v|-)(?:\d+\.){2}\d+(?:\.min)?\.js$/i.test(pathname)
 
-  //     if (isDocument) {
-  //       headers['cache-control'] = ['no-cache, must-revalidate']
-  //     } else if (isScriptOrStyle && (hasContentHash || hasExplicitVersion)) {
-  //       headers['cache-control'] = ['public, max-age=31536000, immutable']
-  //     } else if (isScriptOrStyle) {
-  //       headers['cache-control'] = ['no-cache, must-revalidate']
-  //     }
-  //     callback({ responseHeaders: headers })
-  //   }
-  // )
+      if (isDocument) {
+        headers['cache-control'] = ['no-cache, must-revalidate']
+      } else if (isStaticAsset && (hasContentHash || hasExplicitVersion)) {
+        headers['cache-control'] = ['public, max-age=31536000, immutable']
+      } else if (isScriptOrStyle) {
+        headers['cache-control'] = ['no-cache, must-revalidate']
+      }
+      callback({ responseHeaders: headers })
+    }
+  )
+
+  // 提前建立直播站点和 SDK CDN 的连接，减少用户点击进入课堂后的 DNS/TCP/TLS 等待。
+  // preconnect 只做连接预热，不请求业务数据，失败时静默降级为正常加载。
+  if (typeof session.defaultSession.preconnect === 'function') {
+    ;['https://live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
+      try {
+        session.defaultSession.preconnect({ url, numSockets: 6 })
+      } catch (_) {}
+    })
+  }
 
   createWindow()
 

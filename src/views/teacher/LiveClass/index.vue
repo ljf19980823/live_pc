@@ -870,6 +870,8 @@ export default {
     this.isTeacher = getUserInfo().role === 'TEACHER'
   },
   mounted() {
+    console.log('[缓存优化0708]');
+    this.preconnectLiveClassroomOrigins()
     this.checkUpdate()
     this.fetchLiveList()
     this.fetchClassList()
@@ -1032,6 +1034,63 @@ export default {
     }
   },
   methods: {
+    /**
+     * 预连接直播课堂入口和阿里云 SDK CDN。
+     * 课程列表页通常早于用户点击进入课堂渲染完成，
+     * 这里利用这段空窗期完成 DNS、TCP、TLS 预热，减少 iframe 首次建连等待。
+     */
+    preconnectLiveClassroomOrigins() {
+      const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
+      const origins = ['https://g.alicdn.com']
+
+      try {
+        origins.unshift(new URL(liveBaseUrl).origin)
+      } catch (_) {}
+
+      origins.forEach(origin => {
+        if (!origin || document.head.querySelector(`link[data-live-preconnect="${origin}"]`)) {
+          return
+        }
+
+        const preconnect = document.createElement('link')
+        preconnect.rel = 'preconnect'
+        preconnect.href = origin
+        preconnect.crossOrigin = 'anonymous'
+        preconnect.setAttribute('data-live-preconnect', origin)
+        document.head.appendChild(preconnect)
+
+        const dnsPrefetch = document.createElement('link')
+        dnsPrefetch.rel = 'dns-prefetch'
+        dnsPrefetch.href = `//${new URL(origin).host}`
+        dnsPrefetch.setAttribute('data-live-preconnect', origin)
+        document.head.appendChild(dnsPrefetch)
+      })
+    },
+
+    /**
+     * 预热 Electron 摄像头和麦克风权限。
+     * 该流程不阻塞 iframe 创建，
+     * 避免系统权限查询或首次授权弹窗拉长直播课堂首屏加载时间。
+     */
+    prepareElectronMediaPermissions() {
+      if (!window.electronAPI) return
+
+      Promise.all([
+        window.electronAPI.getMediaAccessStatus('camera'),
+        window.electronAPI.getMediaAccessStatus('microphone')
+      ])
+        .then(([camStatus, micStatus]) => {
+          const requests = []
+          if (camStatus !== 'granted') {
+            requests.push(window.electronAPI.askForMediaAccess('camera'))
+          }
+          if (micStatus !== 'granted') {
+            requests.push(window.electronAPI.askForMediaAccess('microphone'))
+          }
+          return requests.length ? Promise.all(requests) : undefined
+        })
+        .catch(() => {})
+    },
     handleStartTimeChange(val) {
       if (!val) return
       const selected = new Date(val.replace(' ', 'T'))
@@ -1171,20 +1230,7 @@ export default {
           return
         }
       }
-      // macOS：进入直播间前先确保摄像头、麦克风已获得系统授权
-      if (window.electronAPI) {
-        try {
-          const [camStatus, micStatus] = await Promise.all([
-            window.electronAPI.getMediaAccessStatus('camera'),
-            window.electronAPI.getMediaAccessStatus('microphone'),
-          ])
-          const needsRequest = []
-          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
-          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
-          if (needsRequest.length) await Promise.all(needsRequest)
-        } catch (_) {}
-
-      }
+      this.prepareElectronMediaPermissions()
 
       const {userId,realName,userName,role}=getUserInfo();
       const token =  getToken();
@@ -1313,19 +1359,7 @@ export default {
           return
         }
       }
-      // macOS：进入直播间前先确保摄像头和麦克风已获得系统授权
-      if (window.electronAPI) {
-        try {
-          const [camStatus, micStatus] = await Promise.all([
-            window.electronAPI.getMediaAccessStatus('camera'),
-            window.electronAPI.getMediaAccessStatus('microphone'),
-          ])
-          const needsRequest = []
-          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
-          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
-          if (needsRequest.length) await Promise.all(needsRequest)
-        } catch (_) {}
-      }
+      this.prepareElectronMediaPermissions()
 
       const token =  getToken();
       const courseid = this.selectedCourseItem.id;
@@ -1351,18 +1385,7 @@ export default {
     },
 
     async publishAfterClassTest(item) {
-      if (window.electronAPI) {
-        try {
-          const [camStatus, micStatus] = await Promise.all([
-            window.electronAPI.getMediaAccessStatus('camera'),
-            window.electronAPI.getMediaAccessStatus('microphone'),
-          ])
-          const needsRequest = []
-          if (camStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('camera'))
-          if (micStatus !== 'granted') needsRequest.push(window.electronAPI.askForMediaAccess('microphone'))
-          if (needsRequest.length) await Promise.all(needsRequest)
-        } catch (_) {}
-      }
+      this.prepareElectronMediaPermissions()
 
       const token =  getToken()
       console.log(token,'token值')
