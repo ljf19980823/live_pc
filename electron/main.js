@@ -7,6 +7,16 @@ const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
 const { fileURLToPath } = require('url')
+const {
+  appendCrashLog,
+  getCrashDumpsDirectory,
+  isLocalCrashReporterStarted,
+  markRunStateExited,
+  registerLiveResourceDiagnostics,
+  registerMainProcessDiagnostics,
+  startLocalCrashReporter,
+  startRunStateDiagnostics,
+} = require('./crash-logger')
 const isDev = process.env.NODE_ENV === 'development'
 
 // ─── V8 / Chromium 性能标志（必须在 app.whenReady 之前调用）─────────────────
@@ -34,23 +44,9 @@ let screenGuardInterval = null
 // 连续检测到威胁的次数，需达到阈值才显示警告（防止瞬时误报）
 let consecutiveDetections = 0
 const DETECTION_THRESHOLD = 2
-// 北京时间固定为 UTC+8，日志排查时不依赖用户电脑的本地时区设置。
-const BEIJING_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
 
-/**
- * 将日期格式化为 crash.log 使用的北京时间前缀。
- * @param {Date} date 需要格式化的日期对象，默认使用当前时间。
- * @returns {string} 格式：YYYY-MM-DD HH:mm:ss.SSS UTC+08:00。
- */
-function formatBeijingLogTime (date = new Date()) {
-  const beijingDate = new Date(date.getTime() + BEIJING_TIME_OFFSET_MS)
-  const pad2 = value => String(value).padStart(2, '0')
-  const pad3 = value => String(value).padStart(3, '0')
-
-  return `${beijingDate.getUTCFullYear()}-${pad2(beijingDate.getUTCMonth() + 1)}-${pad2(beijingDate.getUTCDate())} ` +
-    `${pad2(beijingDate.getUTCHours())}:${pad2(beijingDate.getUTCMinutes())}:${pad2(beijingDate.getUTCSeconds())}.` +
-    `${pad3(beijingDate.getUTCMilliseconds())}`
-}
+startLocalCrashReporter()
+registerMainProcessDiagnostics()
 
 // ─── 需要检测的录屏软件进程名（精确匹配白名单） ───────────────────────────
 // 注意：gamebar.exe / gamebarpresencewriter.exe 是 Windows 系统后台常驻进程，
@@ -371,6 +367,12 @@ function showExitConfirmDialog () {
   }
 
   const onConfirm = () => {
+    appendCrashLog('app-exit', {
+      type: 'user-confirm',
+      reason: 'window close confirmed',
+      exitCode: 0,
+      name: app.getVersion(),
+    })
     cleanup()
     stopScreenGuard()
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy()
@@ -473,7 +475,11 @@ function createWindow () {
   // 用于排查长时间运行后偶发崩溃：oom 表示内存泄漏，crashed 表示渲染进程异常，
   // 区分主项目与 iframe 直播子项目责任时直接看此日志。
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
-    appendCrashLog('renderer', details)
+    appendCrashLog('renderer', Object.assign({}, details, {
+      name: mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getURL() : '',
+      processId: mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getOSProcessId() : '',
+      crashDumpsDir: getCrashDumpsDirectory(),
+    }))
   })
 
   // ─── 渲染进程"假死"监听（窗口外壳在但内容卡住）─────────────────────
@@ -483,7 +489,13 @@ function createWindow () {
   let autoReloadTimer = null
   mainWindow.webContents.on('unresponsive', () => {
     unresponsiveAt = Date.now()
-    appendCrashLog('hang', { type: 'unresponsive', reason: 'hang', exitCode: 0 })
+    appendCrashLog('hang', {
+      type: 'unresponsive',
+      reason: 'hang',
+      exitCode: 0,
+      name: mainWindow.webContents.getURL(),
+      processId: mainWindow.webContents.getOSProcessId(),
+    })
     // 自救：卡顿超 15 秒主动 reload，避免用户面对一个永远黑屏/无响应的窗口
     // （iframe 直播页 GPU 崩 / 长时间运行后内容全黑等场景）
     clearTimeout(autoReloadTimer)
@@ -493,7 +505,8 @@ function createWindow () {
           type: 'auto-reload',
           reason: 'hang>15s',
           exitCode: 0,
-          name: '',
+          name: mainWindow.webContents.getURL(),
+          processId: mainWindow.webContents.getOSProcessId(),
         })
         mainWindow.webContents.reloadIgnoringCache()
       }
@@ -501,7 +514,13 @@ function createWindow () {
   })
   mainWindow.webContents.on('responsive', () => {
     const dur = unresponsiveAt ? Date.now() - unresponsiveAt : -1
-    appendCrashLog('hang', { type: 'responsive', reason: `recovered-after-${dur}ms`, exitCode: 0 })
+    appendCrashLog('hang', {
+      type: 'responsive',
+      reason: `recovered-after-${dur}ms`,
+      exitCode: 0,
+      name: mainWindow.webContents.getURL(),
+      processId: mainWindow.webContents.getOSProcessId(),
+    })
     unresponsiveAt = 0
     clearTimeout(autoReloadTimer)
     autoReloadTimer = null
@@ -516,6 +535,7 @@ function createWindow () {
       reason: `${errorCode}:${errorDescription}`,
       exitCode: 0,
       name: validatedURL,
+      currentUrl: mainWindow.webContents.getURL(),
     })
     // -3(ERR_ABORTED) 常见于 iframe 主动刷新或路由切换，不应提示为网络异常。
     if (!isMainFrame && errorCode !== -3 && mainWindow && !mainWindow.isDestroyed()) {
@@ -538,29 +558,22 @@ function createWindow () {
         reason: msg,
         exitCode: 0,
         name: `${sourceId}:${line}`,
+        currentUrl: mainWindow.webContents.getURL(),
       })
     }
   })
-}
 
-// ─── 崩溃日志写盘 ─────────────────────────────────────────────────────────
-// 写到 userData 目录，用户可在出问题后通过"打开日志目录"取回。
-// 同时输出到 stdout，开发模式下可在终端直接看到。
-function appendCrashLog (source, details) {
-  try {
-    const userDataPath = app.getPath('userData')
-    const logFile = path.join(userDataPath, 'crash.log')
-    const line = `${formatBeijingLogTime()} [${source}] ` +
-      `type=${details.type || source} reason=${details.reason} ` +
-      `exitCode=${details.exitCode} name=${details.name || ''}\n`
-    fs.mkdirSync(userDataPath, { recursive: true })
-    fs.appendFileSync(logFile, line)
-    // 同步打印一份，开发模式下方便实时看到
-    // eslint-disable-next-line no-console
-    console.error('[CRASH]', line.trim())
-  } catch (_) {
-    // 写日志失败不能反过来影响主流程
-  }
+  // ─── preload 异常监听 ────────────────────────────────────────────────
+  // preload 失败通常发生在打包路径、asar、权限或语法错误场景，会导致渲染侧能力缺失。
+  mainWindow.webContents.on('preload-error', (_event, preloadPath, error) => {
+    appendCrashLog('preload', {
+      type: 'preload-error',
+      reason: error,
+      exitCode: '',
+      name: preloadPath,
+      currentUrl: mainWindow.webContents.getURL(),
+    })
+  })
 }
 
 // ─── 版本更新：工具函数 ───────────────────────────────────────────────────────
@@ -902,6 +915,7 @@ async function clearDataOnReinstall () {
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
   await clearDataOnReinstall()
+  startRunStateDiagnostics()
 
   // ─── 启动标记 + GPU 状态写入 crash.log ──────────────────────────────
   // 每次启动都打一行，帮你从日志反推应用最近运行了几次、上次启动到这次之间是否有崩溃；
@@ -911,6 +925,12 @@ app.whenReady().then(async () => {
     reason: `electron=${process.versions.electron} chrome=${process.versions.chrome} platform=${process.platform}`,
     exitCode: 0,
     name: app.getVersion(),
+  })
+  appendCrashLog('startup', {
+    type: 'crash-reporter',
+    reason: isLocalCrashReporterStarted() ? 'started' : 'start-failed',
+    exitCode: 0,
+    name: getCrashDumpsDirectory(),
   })
   app.getGPUInfo('basic').then(info => {
     const gpu = (info?.auxAttributes && info.auxAttributes.glRenderer) ||
@@ -1018,6 +1038,7 @@ app.whenReady().then(async () => {
   // ─── 直播页缓存策略 ────────────────────────────────────────────────────
   // HTML 每次校验更新；带内容 hash 或显式版本号的 JS/CSS/字体/图片长期缓存。
   // Electron 与 Chrome 缓存隔离，iframe 首次冷启动尤其依赖这里减少重复下载。
+  registerLiveResourceDiagnostics()
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
     (details, callback) => {
@@ -1088,12 +1109,33 @@ app.on('window-all-closed', () => {
   }
 })
 
+app.on('before-quit', () => {
+  appendCrashLog('app-exit', {
+    type: 'before-quit',
+    reason: 'app is quitting',
+    exitCode: 0,
+    name: app.getVersion(),
+  })
+})
+
+app.on('will-quit', () => {
+  appendCrashLog('app-exit', {
+    type: 'will-quit',
+    reason: 'app will quit',
+    exitCode: 0,
+    name: app.getVersion(),
+  })
+  markRunStateExited('will-quit')
+})
+
 // ─── 全局子进程崩溃监听 ──────────────────────────────────────────────────
 // child-process-gone 覆盖 GPU、Utility、Pepper-Plugin、Zygote 等所有非主进程崩溃；
 // 与 webContents.on('render-process-gone') 互补：渲染进程的 OOM 大多走 render-process-gone，
 // GPU/屏幕共享/视频解码相关的句柄泄漏导致的崩溃则在这里捕获（type=GPU 是关键信号）。
 app.on('child-process-gone', (_event, details) => {
-  appendCrashLog(details.type || 'child', details)
+  appendCrashLog(details.type || 'child', Object.assign({}, details, {
+    crashDumpsDir: getCrashDumpsDirectory(),
+  }))
 })
 
 // 监听来自渲染进程的最小化请求
