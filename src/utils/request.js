@@ -44,11 +44,15 @@ async function getDeviceInfo() {
   return deviceInfoPromise
 }
 
+function normalizeHeaderValue(value) {
+  return encodeURIComponent(String(value))
+}
+
 function setDeviceHeaders(headers, deviceInfo) {
   if (!headers || !deviceInfo) return
   ;['deviceId', 'deviceModel', 'systemVersion', 'osName', 'deviceType'].forEach(key => {
     if (deviceInfo[key]) {
-      headers[key] = deviceInfo[key]
+      headers[key] = normalizeHeaderValue(deviceInfo[key])
     }
   })
 }
