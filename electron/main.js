@@ -5,6 +5,7 @@ const https = require('https')
 const http = require('http')
 const fs = require('fs')
 const os = require('os')
+const crypto = require('crypto')
 const { fileURLToPath } = require('url')
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -678,6 +679,69 @@ ipcMain.handle('copy-image-to-clipboard', async (_, source) => {
     return { success: true }
   } catch (err) {
     return { success: false, message: err.message || '复制失败' }
+  }
+})
+
+function execCommand (command, timeout = 5000) {
+  return new Promise((resolve) => {
+    exec(command, { timeout }, (err, stdout) => {
+      if (err) { resolve(''); return }
+      resolve(String(stdout || '').trim())
+    })
+  })
+}
+
+function getPlatformName () {
+  if (process.platform === 'win32') return 'Windows'
+  if (process.platform === 'darwin') return 'macOS'
+  return os.type() || process.platform
+}
+
+function getDeviceId () {
+  const deviceFile = path.join(app.getPath('userData'), 'device-id')
+  try {
+    if (fs.existsSync(deviceFile)) {
+      const savedId = fs.readFileSync(deviceFile, 'utf8').trim()
+      if (savedId) return savedId
+    }
+  } catch (err) {}
+
+  const deviceId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex')
+  try {
+    fs.writeFileSync(deviceFile, deviceId, 'utf8')
+  } catch (err) {}
+  return deviceId
+}
+
+async function getDeviceModel () {
+  if (process.platform === 'win32') {
+    const output = await execCommand('wmic csproduct get name')
+    const model = output.split(/\r?\n/).map(line => line.trim()).filter(Boolean).find(line => line.toLowerCase() !== 'name')
+    return model || os.cpus()?.[0]?.model?.trim() || 'Windows PC'
+  }
+
+  if (process.platform === 'darwin') {
+    const output = await execCommand('sysctl -n hw.model')
+    return output || os.cpus()?.[0]?.model?.trim() || 'Mac'
+  }
+
+  return os.cpus()?.[0]?.model?.trim() || os.type() || 'Desktop'
+}
+
+// ─── 获取请求头设备信息 ───────────────────────────────────────────────────────
+ipcMain.handle('get-device-info', async () => {
+  const osName = os.hostname()
+  const systemVersion = app.getVersion()
+  const deviceType = process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'windows' : process.platform
+  const deviceModel = await getDeviceModel()
+
+  return {
+    deviceId: getDeviceId(),
+    deviceModel,
+    systemVersion,
+    osName,
+    deviceType,
+    os: getPlatformName()
   }
 })
 

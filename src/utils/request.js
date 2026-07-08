@@ -12,10 +12,53 @@ const service = axios.create({
   }
 })
 
+let deviceInfoPromise = null
+
+function getFallbackDeviceInfo() {
+  const userAgent = navigator.userAgent || ''
+  const isMac = /Macintosh|Mac OS X/i.test(userAgent)
+  const isWindows = /Windows/i.test(userAgent)
+
+  return {
+    deviceId: localStorage.getItem('deviceId') || '',
+    deviceModel: navigator.platform || '',
+    systemVersion: userAgent,
+    osName: navigator.platform || '',
+    deviceType: isMac ? 'mac' : isWindows ? 'windows' : 'web'
+  }
+}
+
+async function getDeviceInfo() {
+  if (!deviceInfoPromise) {
+    deviceInfoPromise = (async () => {
+      if (window.electronAPI?.getDeviceInfo) {
+        return window.electronAPI.getDeviceInfo()
+      }
+      return getFallbackDeviceInfo()
+    })().catch(error => {
+      console.warn('[Device Info Error]', error)
+      return getFallbackDeviceInfo()
+    })
+  }
+
+  return deviceInfoPromise
+}
+
+function setDeviceHeaders(headers, deviceInfo) {
+  if (!headers || !deviceInfo) return
+  ;['deviceId', 'deviceModel', 'systemVersion', 'osName', 'deviceType'].forEach(key => {
+    if (deviceInfo[key]) {
+      headers[key] = deviceInfo[key]
+    }
+  })
+}
+
 // ─── 请求拦截器 ───────────────────────────────────────────────
 service.interceptors.request.use(
-  config => {
-   
+  async config => {
+    const deviceInfo = await getDeviceInfo()
+    setDeviceHeaders(config.headers, deviceInfo)
+
     // 携带 Token
     const token = getToken()
     if (token) {

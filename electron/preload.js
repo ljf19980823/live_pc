@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ─── 系统信息 ─────────────────────────────────────────────────────────────
   // 获取操作系统、CPU、内存信息
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+  // 获取接口请求头所需的设备信息
+  getDeviceInfo: () => ipcRenderer.invoke('get-device-info'),
 
   // ─── 版本更新 ─────────────────────────────────────────────────────────────
   // 获取当前应用版本号
