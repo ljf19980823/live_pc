@@ -195,6 +195,7 @@ export default {
       syncTimer: null,
       heartbeatTimer: null,
       logSessionActive: false,
+      replayPlaybackStatus: '',
       isSyncing: false,
       isFullscreen: false,
       _onFsChange: null,
@@ -236,9 +237,9 @@ export default {
       return roleMap[role] || '3'
     },
 
-    buildReplayLog(eventType) {
+    buildReplayLog(eventType, liveState) {
       const userInfo = getUserInfo() || {}
-      return {
+      const log = {
         role: this.getReplayRole(userInfo.role),
         eventType,
         mediaType: 'REPLAY',
@@ -249,13 +250,14 @@ export default {
         institutionId: String(userInfo.institutionId || ''),
         campusId: String(userInfo.campusId || ''),
         ts: Date.now(),
-        liveState: 0,
+        liveState: liveState !== undefined ? liveState : 0,
         isMic: false
       }
+      return log
     },
 
-    async sendReplayLog(eventType) {
-      const log = this.buildReplayLog(eventType)
+    async sendReplayLog(eventType, liveState) {
+      const log = this.buildReplayLog(eventType, liveState)
       const payload = { logs: [log] }
       console.log('[HistoryVideoPlayer ReplayLog]', eventType, payload)
       try {
@@ -271,12 +273,26 @@ export default {
       this.sendReplayLog('ENTER')
     },
 
-    startReplayHeartbeat() {
-      if (!this.logSessionActive || this.heartbeatTimer) return
+    startReplayHeartbeat(liveState) {
+      if (!this.logSessionActive) return
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = setInterval(() => {
-        this.sendReplayLog('HEARTBEAT')
+        this.sendReplayLog('HEARTBEAT', liveState)
       }, REPLAY_HEARTBEAT_INTERVAL)
+    },
+
+    handleReplayPlayHeartbeat() {
+      if (this.replayPlaybackStatus === 'playing') return
+      this.replayPlaybackStatus = 'playing'
+      this.sendReplayLog('HEARTBEAT', 2)
+      this.startReplayHeartbeat(0)
+    },
+
+    handleReplayPauseHeartbeat() {
+      if (this.replayPlaybackStatus === 'paused') return
+      this.replayPlaybackStatus = 'paused'
+      this.sendReplayLog('HEARTBEAT', 0)
+      this.startReplayHeartbeat(2)
     },
 
     stopReplayHeartbeat() {
@@ -286,6 +302,7 @@ export default {
 
     stopReplayLogSession() {
       this.stopReplayHeartbeat()
+      this.replayPlaybackStatus = ''
       if (!this.logSessionActive) return
       this.logSessionActive = false
       this.sendReplayLog('LEAVE')
@@ -381,15 +398,16 @@ export default {
 
       // ── Aliplayer 文档事件 ──
       mainPlayer.on('pause', () => {
-        this.stopReplayHeartbeat()
+        this.handleReplayPauseHeartbeat()
         if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
       })
       mainPlayer.on('play', () => {
-        this.startReplayHeartbeat()
+        this.handleReplayPlayHeartbeat()
         if (this.teacherPlayer && !this.isSyncing) this.safePlay(this.teacherPlayer)
       })
       mainPlayer.on('ended', () => {
         this.stopReplayHeartbeat()
+        this.replayPlaybackStatus = ''
         if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
       })
       // 倍速同步（Aliplayer settingSelected 事件，type==='speed' 时同步）
@@ -422,11 +440,11 @@ export default {
         this._mainVideoEl = videoEl
 
         const onPlay = () => {
-          this.startReplayHeartbeat()
+          this.handleReplayPlayHeartbeat()
           if (this.teacherPlayer && !this.isSyncing) this.safePlay(this.teacherPlayer)
         }
         const onPause = () => {
-          this.stopReplayHeartbeat()
+          this.handleReplayPauseHeartbeat()
           if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
         }
         const onSeeked = () => {
@@ -437,6 +455,7 @@ export default {
         }
         const onEnded = () => {
           this.stopReplayHeartbeat()
+          this.replayPlaybackStatus = ''
           if (this.teacherPlayer) try { this.teacherPlayer.pause() } catch (e) {}
         }
         const onRateChange = () => {
@@ -451,7 +470,7 @@ export default {
         videoEl.addEventListener('ended', onEnded)
         videoEl.addEventListener('ratechange', onRateChange)
         if (!videoEl.paused && !videoEl.ended) {
-          this.startReplayHeartbeat()
+          this.handleReplayPlayHeartbeat()
         }
         this._removeVideoListeners = () => {
           videoEl.removeEventListener('play', onPlay)

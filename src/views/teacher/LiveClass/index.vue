@@ -1070,6 +1070,7 @@ export default {
             meetingTitle: item.name || '',
             scopeText: item.taskUuid,
             liveLessonId: item.liveLessonId || '',
+            historyLessonId: item.historyLessonId || '',
             teacherId: userId || ''
           }
         })

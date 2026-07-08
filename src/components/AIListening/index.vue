@@ -45,8 +45,8 @@
             :teacher-source="teacherVideoUrl"
             :title="meetingTitle"
             @timeupdate="onVideoTimeUpdate"
-            @play="startReplayHeartbeat"
-            @pause="stopReplayHeartbeat"
+            @play="handleReplayPlayHeartbeat"
+            @pause="handleReplayPauseHeartbeat"
             @ended="stopReplayHeartbeat"
           />
           <div v-else class="al-no-video">
@@ -484,6 +484,7 @@ export default {
       typingTimer: null,
       heartbeatTimer: null,
       logSessionActive: false,
+      replayPlaybackStatus: '',
       replayHistoryLessonId: '',
       typingQueue: [],
       deepThinkMode: false,
@@ -515,6 +516,9 @@ export default {
     liveLessonId() {
       return this.$route.query.liveLessonId || ''
     },
+    historyLessonId() {
+      return this.$route.query.historyLessonId || ''
+    },
     teacherId() {
       const userInfo = getUserInfo() || {}
       return this.$route.query.teacherId || userInfo.userId || userInfo.id || ''
@@ -535,10 +539,10 @@ export default {
       return roleMap[role] || '3'
     },
 
-    buildReplayLog(eventType) {
+    buildReplayLog(eventType, liveState) {
       const userInfo = getUserInfo() || {}
       const historyLessonId = this.replayHistoryLessonId || this.liveLessonId
-      return {
+      const log = {
         role: this.getReplayRole(userInfo.role),
         eventType,
         mediaType: 'REPLAY',
@@ -549,13 +553,14 @@ export default {
         institutionId: String(userInfo.institutionId || ''),
         campusId: String(userInfo.campusId || ''),
         ts: Date.now(),
-        liveState: 0,
+        liveState: liveState !== undefined ? liveState : 0,
         isMic: false
       }
+      return log
     },
 
-    async sendReplayLog(eventType) {
-      const log = this.buildReplayLog(eventType)
+    async sendReplayLog(eventType, liveState) {
+      const log = this.buildReplayLog(eventType, liveState)
       const payload = { logs: [log] }
       console.log('[AIListening ReplayLog]', eventType, payload)
       try {
@@ -567,22 +572,37 @@ export default {
 
     startReplayLogSession() {
       if (this.logSessionActive) return
-      this.replayHistoryLessonId = this.liveLessonId
+      this.replayHistoryLessonId = this.historyLessonId || this.liveLessonId
       this.logSessionActive = true
       this.sendReplayLog('ENTER')
     },
 
-    startReplayHeartbeat() {
-      if (!this.logSessionActive || this.heartbeatTimer) return
+    startReplayHeartbeat(liveState) {
+      if (!this.logSessionActive) return
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = setInterval(() => {
-        this.sendReplayLog('HEARTBEAT')
+        this.sendReplayLog('HEARTBEAT', liveState)
       }, REPLAY_HEARTBEAT_INTERVAL)
+    },
+
+    handleReplayPlayHeartbeat() {
+      if (this.replayPlaybackStatus === 'playing') return
+      this.replayPlaybackStatus = 'playing'
+      this.sendReplayLog('HEARTBEAT', 2)
+      this.startReplayHeartbeat(0)
+    },
+
+    handleReplayPauseHeartbeat() {
+      if (this.replayPlaybackStatus === 'paused') return
+      this.replayPlaybackStatus = 'paused'
+      this.sendReplayLog('HEARTBEAT', 0)
+      this.startReplayHeartbeat(2)
     },
 
     stopReplayHeartbeat() {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+      this.replayPlaybackStatus = ''
     },
 
     stopReplayLogSession() {

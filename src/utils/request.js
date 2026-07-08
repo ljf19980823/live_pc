@@ -15,6 +15,7 @@ const service = axios.create({
 // ─── 请求拦截器 ───────────────────────────────────────────────
 service.interceptors.request.use(
   config => {
+   
     // 携带 Token
     const token = getToken()
     if (token) {
@@ -54,6 +55,28 @@ service.interceptors.response.use(
       return res
     }
 
+    const businessMsgMap = {
+      4011: '账号已在其他设备登录，当前登录已失效',
+      4012: '当前账号正在直播中，无法顶号',
+      4013: '当前账号正在直播中，无法顶号'
+    }
+
+    if ([4011, '4011'].includes(res.code)) {
+      handleAccountInvalidated(businessMsgMap[4011])
+      return Promise.reject(new Error(res.message || res.msg || businessMsgMap[4011]))
+    }
+
+    if ([4012, 4013, '4012', '4013'].includes(res.code)) {
+      if (!response.config?.skipErrorMessage) {
+        Message({
+          message: businessMsgMap[res.code] || businessMsgMap[Number(res.code)],
+          type: 'error',
+          duration: 3000
+        })
+      }
+      return Promise.reject(new Error(res.message || res.msg || businessMsgMap[res.code] || businessMsgMap[Number(res.code)]))
+    }
+
     // Token 失效 / 未授权
     if ([401, 403, 'UNAUTHORIZED'].includes(res.code)) {
       handleUnauthorized()
@@ -86,13 +109,18 @@ service.interceptors.response.use(
       500: '服务器内部错误',
       502: '网关错误',
       503: '服务不可用',
-      504: '网关超时'
+      4011: '账号已在其他设备登录，当前登录已失效',
+      4012: '当前账号正在直播中，无法顶号',
+      4013: '当前账号正在直播中，无法顶号'
+
     }
 
     const message = msgMap[status] || error.message || '网络异常，请检查网络连接'
 
     if (status === 401) {
       handleUnauthorized()
+    } else if (status === 4011) {
+      handleAccountInvalidated(message)
     } else if (!error.config?.skipErrorMessage) {
       Message({ message, type: 'error', duration: 3000 })
     }
@@ -114,6 +142,27 @@ function handleUnauthorized() {
     closeOnClickModal: false
   }).finally(() => {
     isShowUnauthorizedDialog = false
+    clearAuth()
+    router.push('/login')
+  })
+}
+let isAccountDialog = false
+function handleAccountInvalidated(message) {
+
+  if (isAccountDialog || isShowUnauthorizedDialog) return
+  isAccountDialog = true
+  isShowUnauthorizedDialog = true
+  MessageBox.confirm(message, '提示', {
+    confirmButtonText: '重新登录',
+    cancelButtonText: '取消',
+    type: 'warning',
+    showCancelButton: false,
+    closeOnClickModal: false
+  }).finally(() => {
+    isAccountDialog = false
+    setTimeout(() => {
+      isShowUnauthorizedDialog = false
+    }, 3000)
     clearAuth()
     router.push('/login')
   })
