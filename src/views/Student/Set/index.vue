@@ -1024,7 +1024,7 @@ export default {
           }
         } catch (_) {}
       }
-      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits'
+      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
