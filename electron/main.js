@@ -34,6 +34,23 @@ let screenGuardInterval = null
 // 连续检测到威胁的次数，需达到阈值才显示警告（防止瞬时误报）
 let consecutiveDetections = 0
 const DETECTION_THRESHOLD = 2
+// 北京时间固定为 UTC+8，日志排查时不依赖用户电脑的本地时区设置。
+const BEIJING_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
+
+/**
+ * 将日期格式化为 crash.log 使用的北京时间前缀。
+ * @param {Date} date 需要格式化的日期对象，默认使用当前时间。
+ * @returns {string} 格式：YYYY-MM-DD HH:mm:ss.SSS UTC+08:00。
+ */
+function formatBeijingLogTime (date = new Date()) {
+  const beijingDate = new Date(date.getTime() + BEIJING_TIME_OFFSET_MS)
+  const pad2 = value => String(value).padStart(2, '0')
+  const pad3 = value => String(value).padStart(3, '0')
+
+  return `${beijingDate.getUTCFullYear()}-${pad2(beijingDate.getUTCMonth() + 1)}-${pad2(beijingDate.getUTCDate())} ` +
+    `${pad2(beijingDate.getUTCHours())}:${pad2(beijingDate.getUTCMinutes())}:${pad2(beijingDate.getUTCSeconds())}.` +
+    `${pad3(beijingDate.getUTCMilliseconds())}`
+}
 
 // ─── 需要检测的录屏软件进程名（精确匹配白名单） ───────────────────────────
 // 注意：gamebar.exe / gamebarpresencewriter.exe 是 Windows 系统后台常驻进程，
@@ -533,7 +550,7 @@ function appendCrashLog (source, details) {
   try {
     const userDataPath = app.getPath('userData')
     const logFile = path.join(userDataPath, 'crash.log')
-    const line = `${new Date().toISOString()} [${source}] ` +
+    const line = `${formatBeijingLogTime()} [${source}] ` +
       `type=${details.type || source} reason=${details.reason} ` +
       `exitCode=${details.exitCode} name=${details.name || ''}\n`
     fs.mkdirSync(userDataPath, { recursive: true })
