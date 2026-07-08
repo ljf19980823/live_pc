@@ -1,7 +1,7 @@
 # Lisheng-Live-PC
 
 #### Description
-立升云播系统PC端
+Learn InClass系统PC端
 
 #### Software Architecture
 Software architecture description

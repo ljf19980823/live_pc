@@ -2,7 +2,7 @@
      <div class="app_container">
         <div class="app_container_box">
             <img src="@/assets/images/login/logo.png" class="app_container_logo" alt="">
-            <div class="app_container_box_title">请使用 <span>立升云播APP</span> 扫码授课/登录</div>
+            <div class="app_container_box_title">请使用 <span>Learn InClassAPP</span> 扫码授课/登录</div>
             <div class="app_container_box_code_box">
                 <img src="@/assets/images/login/code_such.png" class="app_container_box_code_img" alt="">
             </div>

@@ -652,10 +652,20 @@
           </div>
           <div class="cdc-share-hint">分享直播链接，通过网页观看直播</div>
           <div class="cdc-qr-wrap">
-            <img v-if="qrCodeUrl" :src="qrCodeUrl" class="cdc-qr-img" alt="二维码" @click="openQrPreview" />
+            <el-image
+              v-if="qrCodeUrl"
+              :src="qrCodeUrl"
+              class="cdc-qr-img"
+              :preview-src-list="[qrCodeUrl]"
+              fit="contain"
+              alt="二维码"
+            />
             <div v-else class="cdc-qr-placeholder"></div>
           </div>
-          <div class="cdc-qr-save-btn" @click="saveQrCode">保存二维码</div>
+          <div class="cdc-qr-actions">
+            <div class="cdc-qr-action-btn" @click="copyQrCode">复制二维码</div>
+            <div class="cdc-qr-action-btn" @click="saveQrCode">保存二维码</div>
+          </div>
         </template>
 
         <div class="cdc-bottom">
@@ -682,15 +692,6 @@
       :allow-download="playerAllowDownload"
       @close="playerVisible = false"
     />
-
-    <transition name="mask-fade">
-      <div v-if="showQrPreview" class="qr-preview-mask" @click.self="closeQrPreview">
-        <div class="qr-preview-panel">
-          <img :src="qrCodeUrl" class="qr-preview-img" alt="二维码预览">
-          <div class="qr-preview-close" @click="closeQrPreview">关闭</div>
-        </div>
-      </div>
-    </transition>
 
 
   </div>
@@ -756,7 +757,6 @@ export default {
       selectedCourseItem: null,
       detailShareEnabled: false,
       detailLoading: false,
-      showQrPreview: false,
 
       playerVisible: false,
       playerSource: '',
@@ -1032,14 +1032,6 @@ export default {
     }
   },
   methods: {
-     openQrPreview() {
-       
-        this.showQrPreview = true
-      },
-
-      closeQrPreview() {
-        this.showQrPreview = false
-      },
     handleStartTimeChange(val) {
       if (!val) return
       const selected = new Date(val.replace(' ', 'T'))
@@ -1239,6 +1231,20 @@ export default {
       document.execCommand('copy')
       document.body.removeChild(el)
       this.$message.success('链接已复制')
+    },
+    async copyQrCode() {
+      if (!this.qrCodeUrl) return
+      if (!window.electronAPI?.copyImageToClipboard) {
+        this.$message.warning('当前环境不支持复制图片')
+        return
+      }
+
+      const result = await window.electronAPI.copyImageToClipboard(this.qrCodeUrl)
+      if (result && result.success) {
+        this.$message.success('二维码已复制')
+      } else {
+        this.$message.error((result && result.message) || '复制失败，请重试')
+      }
     },
     async saveQrCode() {
       if (!this.qrCodeUrl) return
@@ -1755,7 +1761,6 @@ export default {
     },
     onDialogCloseAdd(){
       this.showDetailDialog = false
-      this.showQrPreview = false
     }
   }
 }
@@ -3307,10 +3312,15 @@ border: 1px solid #E5E7EB;
   border-radius: 10px;
   background: #1E2939;
 }
-.cdc-qr-save-btn {
-  width: 125px;
-  height: 36px;
+.cdc-qr-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
   margin: 0 auto 8px;
+}
+.cdc-qr-action-btn {
+  width: 96px;
+  height: 36px;
   border: 1px solid #0049FF;
   border-radius: 4px;
   background: #CAD9FF;
@@ -3318,43 +3328,6 @@ border: 1px solid #E5E7EB;
   font-size: 14px;
   line-height: 36px;
   text-align: center;
-  cursor: pointer;
-}
-.qr-preview-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 4000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.58);
-}
-.qr-preview-panel {
-  width: 360px;
-  max-width: calc(100vw - 48px);
-  padding: 28px 28px 22px;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
-  text-align: center;
-}
-.qr-preview-img {
-  width: 300px;
-  height: 300px;
-  max-width: 100%;
-  border-radius: 8px;
-  display: block;
-  margin: 0 auto 20px;
-}
-.qr-preview-close {
-  width: 96px;
-  height: 36px;
-  line-height: 36px;
-  margin: 0 auto;
-  border-radius: 6px;
-  color: #fff;
-  background: #0049FF;
-  font-size: 14px;
   cursor: pointer;
 }
 .cdc-bottom {

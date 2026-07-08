@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 用系统默认浏览器打开外部链接
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+  // 复制图片到系统剪贴板
+  copyImageToClipboard: (url) => ipcRenderer.invoke('copy-image-to-clipboard', url),
   // 监听主进程通知：屏幕录制权限被拒绝（getDisplayMedia 被调用但权限不足时触发）
   onScreenPermissionDenied: (callback) => {
     const handler = (_, data) => callback(data)

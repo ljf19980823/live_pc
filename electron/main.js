@@ -1,10 +1,11 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences, desktopCapturer } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences, desktopCapturer, clipboard, nativeImage } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const https = require('https')
 const http = require('http')
 const fs = require('fs')
 const os = require('os')
+const { fileURLToPath } = require('url')
 const isDev = process.env.NODE_ENV === 'development'
 
 // ─── V8 / Chromium 性能标志（必须在 app.whenReady 之前调用）─────────────────
@@ -386,7 +387,7 @@ function createWindow () {
     minWidth: 1320, //1280
     minHeight: 720,
     show: false,
-    title: '立升云播',
+    title: 'Learn InClass',
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -642,6 +643,41 @@ ipcMain.handle('ask-for-media-access', async (_, mediaType) => {
     return await systemPreferences.askForMediaAccess(mediaType)
   } catch {
     return false
+  }
+})
+
+async function createImageFromSource (source) {
+  if (!source || typeof source !== 'string') {
+    throw new Error('图片地址为空')
+  }
+
+  if (source.startsWith('data:image/')) {
+    return nativeImage.createFromDataURL(source)
+  }
+
+  if (/^https?:\/\//i.test(source)) {
+    const response = await fetch(source)
+    if (!response.ok) {
+      throw new Error(`图片下载失败：${response.status}`)
+    }
+    const arrayBuffer = await response.arrayBuffer()
+    return nativeImage.createFromBuffer(Buffer.from(arrayBuffer))
+  }
+
+  const filePath = source.startsWith('file://') ? fileURLToPath(source) : source
+  return nativeImage.createFromBuffer(fs.readFileSync(filePath))
+}
+
+ipcMain.handle('copy-image-to-clipboard', async (_, source) => {
+  try {
+    const image = await createImageFromSource(source)
+    if (image.isEmpty()) {
+      return { success: false, message: '图片读取失败' }
+    }
+    clipboard.writeImage(image)
+    return { success: true }
+  } catch (err) {
+    return { success: false, message: err.message || '复制失败' }
   }
 })
 

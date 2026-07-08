@@ -7,7 +7,7 @@
         <div class="logo-icon-wrap">
           <i class="el-icon-video-camera" />
         </div>
-        <span class="logo-name">立升云播</span>
+        <span class="logo-name">Learn InClass</span>
       </div> -->
      
       <!-- 菜单列表 --> 

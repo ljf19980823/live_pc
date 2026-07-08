@@ -201,7 +201,7 @@ router.beforeEach(async (to, from, next) => {
   const token = getToken()
   const requireAuth = to.meta?.requireAuth !== false
 
-  document.title = '立升云播'
+  document.title = 'Learn InClass'
 
   if (to.path === '/visitorLogin') {
     next()
