@@ -585,6 +585,7 @@ export default {
           allowFastForward: String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
           collectCount: node.collectCount,
+          historyLessonId:live.historyLessonId || ''
         }
       } else {
         const res = node.resource || node.historyLesson || {}

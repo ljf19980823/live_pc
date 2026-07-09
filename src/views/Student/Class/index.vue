@@ -1798,7 +1798,8 @@ export default {
           allowMultiple: String(node.allowMultiple || '1'),
           allowFastForward: String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
-          collectCount:node.collectCount
+          collectCount:node.collectCount,
+          historyLessonId:live.historyLessonId || ''
         }
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料

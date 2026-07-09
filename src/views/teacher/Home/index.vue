@@ -18,22 +18,39 @@
         </el-carousel-item>
       </el-carousel>
       </div>
-      <div class="app_container_first_course">
+      <div class="app_container_first_course" v-if="latestLive" @click="enterLiveRoom(latestLive)">
         <div class="app_container_first_course_top">
           <div class="app_container_first_course_tag">
-          课堂进行中
-          <div class="app_container_first_course_tag_fill"></div>
+          {{ latestLive.status=='living' ?'课堂进行中':'课堂未开始'}}
+          <div class="app_container_first_course_tag_fill" v-if=" latestLive.status=='living'"></div>
         </div> 
-        <div class="app_container_first_course_title">
-         已直播 26 分钟
+        <div class="app_container_first_course_title"  v-if="latestLive.status === 'living'">
+        已直播 {{ latestLive.minutes }} 
+        </div>
+         <div class="app_container_first_course_title"  v-else>
+        距离直播还有 {{ latestLive.minutes }} 
         </div>
         </div>
-        <div class="app_container_first_course_name">英语阅读精讲直播课</div>
+        <div class="app_container_first_course_name">{{ latestLive.title }}</div>
         <div class="app_container_first_course_third">
-          <div class="app_container_first_course_third_time">今天 19:30-20:15</div>
-          <div class="app_container_first_course_third_teacher">主讲  林老师</div>
+          <div class="app_container_first_course_third_time">{{ latestLive.time }}</div>
+          <div class="app_container_first_course_third_teacher">主讲  {{ latestLive.teacherName2 }}</div>
         </div>
-        <div class="app_container_first_course_btn">进入直播</div>
+        <div class="app_container_first_course_btn_Box">
+          <div class="app_container_first_course_btn">进入直播</div>
+        </div>
+      </div>
+      <div class="app_container_first_course" v-else>
+        <div class="app_container_first_course_top">
+            <div class="app_container_first_course_tag">
+          今日无课堂
+          </div> 
+       
+        </div>
+       
+         <div class="app_container_first_course_btn_Box">
+          合理安排时间，认真备课哦
+         </div>
       </div>
     </div>
    
@@ -41,7 +58,7 @@
       <div class="app_container_last_left">
         <div class="app_container_last_left_header">
           <div class="app_container_last_left_header_left"  v-if="isAdd" @click="toCreateClass">
-            <div class="app_container_last_left_header_left_title">创建班级</div>
+            <div class="app_container_last_left_header_left_title">创建实时课堂</div>
             <img src="@/assets/images/home/add2.png" class="app_container_last_left_header_left_btn" alt="">
           </div>
           <div class="app_container_last_left_header_sx" v-if="isAdd"></div>
@@ -101,20 +118,41 @@
         </div>
       </div>
     </div>
+
+    
+    <!-- 直播全屏页面 -->
+    <div class="page-placeholder_last full-screen" v-if="showLiveIframe">
+      <LiveClassroomFrame :src="liveUrl" @exit="showLiveIframe = false" />
+    </div>
+    
   </div>
 </template>
 <script>
 import { mapGetters } from 'vuex'
-import { getTeacherNoticeList, getCarouselList } from '@/api'
+import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
 import { formatDate } from '@/utils'
+import { getToken, getUserInfo } from '@/utils/auth'
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
 
 export default {
   data () {
     return {
       messageList: [],
       carouselList: [],
+      latestLive: null,
       greetingText: '',
-      currentDateText: ''
+      currentDateText: '',
+      isTeacher: false,
+      liveUrl:"",
+      showLiveIframe: false,
+
+       // macOS 屏幕录制权限引导弹窗
+      showScreenPermissionDialog: false,
+      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
+      _removeScreenPermissionDenied: null,
+      // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
+      showScreenCaptureFailedDialog: false,
+      _removeScreenCaptureFailed: null,
     }
   },
   computed: {
@@ -124,12 +162,40 @@ export default {
     },
     teacherDisplayName () {
       return this.userInfo?.realName || this.userInfo?.userName || '升升老师'
-    }
+    },
+   
   },
   created () {
+     this.isTeacher = getUserInfo().role === 'TEACHER'
     this.updateCurrentTimeInfo()
     this.fetchMessageList()
     this.fetchCarouselList()
+    this.fetchLatestLive()
+  },
+  mounted () {
+     // 监听 iframe 直播退出消息
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'CLASSROOM_EXIT') {
+        const { classId } = event.data;
+        this.showLiveIframe =false;
+      } else if (event.data?.type === 'MINIMIZE_WINDOW') {
+        window.electronAPI.minimizeWindow();
+      }
+    });
+
+    // macOS：监听主进程通知——屏幕录制权限被拒绝
+    if (window.electronAPI?.onScreenPermissionDenied) {
+      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
+        this.screenPermissionStatus = data?.status || 'denied'
+        this.showScreenPermissionDialog = true
+      })
+    }
+    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
+    if (window.electronAPI?.onScreenCaptureFailed) {
+      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
+        this.showScreenCaptureFailedDialog = true
+      })
+    }
   },
   activated () {
     this.updateCurrentTimeInfo()
@@ -151,6 +217,17 @@ export default {
     },
     getAvatarText (name) {
       return (name || '用户').trim().slice(0, 2)
+    },
+    getLiveDateText (time) {
+      if (!time) return ''
+      const date = new Date(time.replace(/-/g, '/'))
+      if (Number.isNaN(date.getTime())) return time.substring(0, 10)
+
+      const today = new Date()
+      const isToday = date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate()
+      if (isToday) return '今天'
+
+      return `${date.getMonth() + 1}月${date.getDate()}日`
     },
     toMessage () {
       this.$router.push('/message')
@@ -175,9 +252,132 @@ export default {
         console.error('获取轮播图失败', e)
       }
     },
+    async fetchLatestLive () {
+      try {
+        const res = await getLatestLive()
+        if (!res || !res.data) {
+          this.latestLive = null
+          return
+        }
+          const isLiving = res.data.status == '直播中' ? true : false
+          const now = Date.now()
+          const startMs = res.data.startTime ? new Date(res.data.startTime.replace(' ', 'T')).getTime() : null
+          const isWithin30Min = startMs !== null && !isLiving && (startMs - now) <= 30 * 60 * 1000 && (startMs - now) >= 0
+        this.latestLive = {
+          ...res.data,
+           title: res.data.name,
+            time: this.formatTimeRange(res.data.startTime, res.data.endTime),
+            status: isLiving ? 'living' : 'soon',
+            minutes: res.data.liveMin,
+        }
+
+      
+        console.log('获取最近一场直播成功', this.latestLive)
+      } catch (e) {
+        console.error('获取最近一场直播失败', e)
+        this.latestLive = null
+      }
+    },
+    // ── 工具方法 ─────────────────────────────────────────────────────────
+    formatTimeRange(startTime, endTime) {
+      if (!startTime) return ''
+      const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      const todayStr = new Date().toISOString().substring(0, 10)
+
+      const formatDateLabel = (dateStr, hideYear = false) => {
+        if (dateStr === todayStr) return '今天'
+        const d = new Date(dateStr)
+        const label = hideYear ? dateStr.substring(5) : dateStr
+        return `${label}(${WEEK[d.getDay()]})`
+      }
+
+      const startDateStr = startTime.substring(0, 10)
+      const startHM = startTime.substring(11, 16)
+
+      if (!endTime) return `${formatDateLabel(startDateStr)} ${startHM}`
+
+      const endDateStr = endTime.substring(0, 10)
+      const endHM = endTime.substring(11, 16)
+
+      if (startDateStr === endDateStr) {
+        return `${formatDateLabel(startDateStr)} ${startHM} - ${endHM}`
+      }
+      return `${formatDateLabel(startDateStr)} ${startHM} - ${formatDateLabel(endDateStr, true)} ${endHM}`
+    },
+
     toClass(){
       this.$router.push('/class')
-    }
+    },
+
+     async enterLiveRoom(item) {
+      console.log(item)
+      const now = Date.now()
+      const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+
+      if (this.isTeacher) {
+        // 老师：距开始时间30分钟以内（含）或已开始，均可进入
+        if (!startTime || now < startTime - 30 * 60 * 1000) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
+      } else {
+        // 学生：当前时间 >= 直播开始时间 才可进入
+        if (!startTime|| now < startTime - 30 * 60 * 1000) {
+          this.$message.warning('时间还未到，请耐心等候')
+          return
+        }
+      }
+      this.prepareElectronMediaPermissions()
+
+      const {userId,realName,userName,role}=getUserInfo();
+      const token =  getToken();
+      const liveId = item.id;
+      const roleNumber = role === "STUDENT" ? 0 : 1;
+
+      if (role === "STUDENT") {
+        try {
+          const res = await checkTempStudentLiveRecord(liveId)
+          console.log(res,'呼呼呼')
+         if (res.data==false) {
+             this.$message.warning(res.message)
+            return
+          }
+        } catch (_) {}
+      }
+
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      if(process.env.NODE_ENV === 'development'){
+        liveBaseUrl = "http://localhost:8000";  //本地开发环境
+      }
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
+      console.log(this.liveUrl,'直播地址')
+   this.showLiveIframe = true
+    },
+
+    /**
+     * 预热 Electron 摄像头和麦克风权限。
+     * 该流程不阻塞 iframe 创建，
+     * 避免系统权限查询或首次授权弹窗拉长直播课堂首屏加载时间。
+     */
+    prepareElectronMediaPermissions() {
+      if (!window.electronAPI) return
+
+      Promise.all([
+        window.electronAPI.getMediaAccessStatus('camera'),
+        window.electronAPI.getMediaAccessStatus('microphone')
+      ])
+        .then(([camStatus, micStatus]) => {
+          const requests = []
+          if (camStatus !== 'granted') {
+            requests.push(window.electronAPI.askForMediaAccess('camera'))
+          }
+          if (micStatus !== 'granted') {
+            requests.push(window.electronAPI.askForMediaAccess('microphone'))
+          }
+          return requests.length ? Promise.all(requests) : undefined
+        })
+        .catch(() => {})
+    },
   }
 }
 </script>
@@ -252,6 +452,7 @@ line-height: 1;
   border-radius: 12px;
 }
 .app_container_first_course{
+  cursor: pointer;
   flex: 1;
   width: 0;
   height:100%;
@@ -536,6 +737,19 @@ display: inline-flex;
 justify-content: center;
 align-items: center;
 }
+.app_container_first_course_btn_Box{
+  width: 100%;
+  height: 57px;
+background: rgba(255,255,255,0.1);
+border-radius: 16px 16px 16px 16px;
+display: flex;
+justify-content: flex-start;
+align-items: center;
+padding-left: 14px;
+box-sizing: border-box;
+color: #FFFFFF;
+font-size: 14px;
+}
 .app_container_first_course_btn{
   width: 121px;
 height: 40px;
@@ -626,4 +840,15 @@ font-size: 12px;
 color: #0F172B;
 
 font-weight: bold;}
+
+.full-screen{
+  position: fixed;
+  width: 100vw;
+  height: 100%;
+  top: 0;
+  left: 0;
+  padding: 0;
+  z-index: 99999;
+  overflow: hidden;
+}
 </style>

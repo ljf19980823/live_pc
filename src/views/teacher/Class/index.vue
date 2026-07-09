@@ -1902,7 +1902,8 @@ export default {
           timeStart,
           timeEnd: '',
           progress: Math.round(parseFloat(node.percent)) || 0,
-          isRecent: live.isRecentStudy === '1'
+          isRecent: live.isRecentStudy === '1',
+           historyLessonId:live.historyLessonId || ''
         }
       } else {
         // 3=历史课程 4=视频 5=图片 6=音频 7=资料
@@ -1918,7 +1919,11 @@ export default {
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
-          filePath: res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath
+          filePath: res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath,
+          historyLessonId:node.type=='3'?history.historyLessonId:"",
+          taskUuid:node.type=='3'?history.taskUuid:"",
+          fileList: res.fileList || [],
+          duration:node.type=='3'?(history.fileList ? history.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
         }
       }
     },

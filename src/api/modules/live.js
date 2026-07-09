@@ -37,5 +37,8 @@ export const getLiveStats = (id, params) => get(`/live/${id}/stats`, params)
 // 获取观看记录
 export const getWatchHistory = params => get('/live/watch/history', params)
 
+// 获取最近一场直播
+export const getLatestLive = () => get('/edu/live/latest')
+
 // 批量上报直播/回放埋点日志
 export const batchLiveStatisticsLog = data => post('/edu/live/statistics/log/batch', data)
