@@ -708,6 +708,8 @@ border-radius: 12px 12px 12px 12px;
 display: flex;
 justify-content: space-between;
 align-items: center;
+padding: 0 12px;
+box-sizing: border-box;
 }
 .app_container_last_right_list_detail_last_text{
   font-weight: 400;

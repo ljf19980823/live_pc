@@ -41,6 +41,9 @@
           <div class="nav-icon_img" >
             <img v-if="avatar" :src="avatar" class="nav-icon_img_img" alt="头像">
             <div v-else class="nav-icon_img_placeholder">{{ (realName || '').slice(0, 2) }}</div>
+            <span class="nav-icon_img_badge" :class="role === 'STUDENT' ? 'student' : 'teacher'">
+              {{ role === 'STUDENT' ? '学生' : '老师' }}
+            </span>
           </div>
           
           <!-- <span class="nav-icon_last-label">{{ realName || '设置' }}</span> -->
@@ -526,6 +529,7 @@ $header-h: $header-height;
   border: 1px solid transparent;
   padding: 1px;
   box-sizing: border-box;
+  position: relative;
 }
 .nav-icon_img_img{
   width: 100%;
@@ -544,6 +548,33 @@ $header-h: $header-height;
   justify-content: center;
   font-size: 14px;
   font-weight: bold;
+}
+.nav-icon_img_badge{
+  position: absolute;
+  top: -4px;
+  right: -11px;
+  min-width: 34px;
+  height: 19px;
+  padding: 0 7px;
+  border-radius: 10px 10px 10px 2px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 19px;
+  white-space: nowrap;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 73, 255, 0.18);
+}
+.nav-icon_img_badge.teacher{
+  background: linear-gradient(135deg, #0049FF 0%, #2F7BFF 100%);
+}
+.nav-icon_img_badge.student{
+  background: linear-gradient(135deg, #00A870 0%, #26C58A 100%);
+  box-shadow: 0 4px 10px rgba(0, 168, 112, 0.18);
 }
 .nav-icon_img:hover{
     border: 1px solid #0049FF!important;
