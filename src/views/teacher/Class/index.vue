@@ -1825,7 +1825,8 @@ export default {
         this.$message.warning('资源地址不存在')
         return
       }
-      const videoTypes = ['3', '4']
+     const videoTypes = ['4']
+      const historyVideoTypes = ['3']
       const imageTypes = ['5']
       const audioTypes = ['6']
       if (videoTypes.includes(item.nodeType)) {
@@ -1834,6 +1835,8 @@ export default {
         console.log(url,'视频地址')
         this.currentVideoUrl = url
         this.showVideoDialog = true
+      } else if (historyVideoTypes.includes(item.nodeType)) {
+        this.openVideoPlayer(item, false, true)
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
         this.currentImageUrl = url
@@ -1920,10 +1923,10 @@ export default {
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
           filePath: res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath,
-          historyLessonId:node.type=='3'?history.historyLessonId:"",
-          taskUuid:node.type=='3'?history.taskUuid:"",
+          historyLessonId:node.type=='3'?res.historyLessonId:"",
+          taskUuid:node.type=='3'?res.taskUuid:"",
           fileList: res.fileList || [],
-          duration:node.type=='3'?(history.fileList ? history.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
+          duration:node.type=='3'?(res.fileList ? res.fileList[0].duration : 0):(node.type=='4'?node.resource.duration:0),
         }
       }
     },

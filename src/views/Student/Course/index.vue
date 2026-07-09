@@ -710,14 +710,15 @@ export default {
       }
       const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       const lessonId = String(item.id || '')
-      const videoTypes = ['3', '4']
+const videoTypes = ['4']
+      const historyVideoTypes = ['3']
       const imageTypes = ['5']
       const audioTypes = ['6']
 
       try {
         const apiCalls = [updateRecentStudy({ courseId, lessonId ,type:'4'})]
         if (item.progress < 100) {
-          const isVideo = videoTypes.includes(item.nodeType)
+          const isVideo = videoTypes.includes(item.nodeType) || historyVideoTypes.includes(item.nodeType)
           const percent = isVideo ? String(item.progress || 0) : '100'
           apiCalls.push(updateCourseProgress({ courseId, lessonId, type: String(item.nodeType || ''), percent }))
         }
@@ -766,7 +767,9 @@ export default {
         this.currentVideoUrl = url
         this.currentPlayingItem = item
         this.showVideoDialog = true
-      } else if (imageTypes.includes(item.nodeType)) {
+      }else if (historyVideoTypes.includes(item.nodeType)) {
+        this.openVideoPlayer(item, false, true)
+      }  else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
         this.currentImageUrl = url
         this.showImageDialog = true
