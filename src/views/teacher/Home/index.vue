@@ -106,15 +106,17 @@
       </div>
       <div class="app_container_last_right">
         <div class="app_container_last_right_title">待启课堂</div>
-        <div class="app_container_last_right_list" >
-          <div class="app_container_last_right_list_detail" v-for="(item,index) in 3" :key="index">
-            <div class="app_container_last_right_list_detail_name">高三语文 · 行测申论冲刺课</div>
-            <div class="app_container_last_right_list_detail_time">2026.07.16(周四) 13:07-17:07</div>
+        <div class="app_container_last_right_list" v-loading="pendingLiveLoading">
+          <div class="app_container_last_right_list_detail" v-for="(item,index) in pendingLiveList" :key="item.id || index" @click="enterLiveRoom(item)">
+            <div class="app_container_last_right_list_detail_name">{{ item.title }}</div>
+            <div class="app_container_last_right_list_detail_time">{{ item.time }}</div>
             <div class="app_container_last_right_list_detail_last">
               <div class="app_container_last_right_list_detail_last_text">开播提醒</div>
-              <div class="app_container_last_right_list_detail_last_title">距离开播 3 小时</div>
+              <div class="app_container_last_right_list_detail_last_title"  v-if="item.status === 'living'">已直播 {{ item.minutes }}</div>
+              <div class="app_container_last_right_list_detail_last_title"  v-else>距离直播还有 {{ item.minutes }}</div>
             </div>
           </div>
+          <EmptyState description="暂无待启课堂" v-if="!pendingLiveLoading && pendingLiveList.length==0"/>
         </div>
       </div>
     </div>
@@ -130,6 +132,7 @@
 <script>
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
+import { getLiveList } from '@/api/modules/teacher'
 import { formatDate } from '@/utils'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
@@ -139,6 +142,8 @@ export default {
     return {
       messageList: [],
       carouselList: [],
+      pendingLiveList: [],
+      pendingLiveLoading: false,
       latestLive: null,
       greetingText: '',
       currentDateText: '',
@@ -171,6 +176,7 @@ export default {
     this.fetchMessageList()
     this.fetchCarouselList()
     this.fetchLatestLive()
+    this.fetchPendingLiveList()
   },
   mounted () {
      // 监听 iframe 直播退出消息
@@ -276,6 +282,31 @@ export default {
       } catch (e) {
         console.error('获取最近一场直播失败', e)
         this.latestLive = null
+      }
+    },
+    async fetchPendingLiveList () {
+      this.pendingLiveLoading = true
+      try {
+        const res = await getLiveList()
+        const list = res.data || res || []
+         this.pendingLiveList = list.map(item => {
+          const isLiving = item.status == '直播中' ? true : false
+         
+          return {
+            ...item,
+            title: item.name,
+            time: this.formatTimeRange(item.startTime, item.endTime),
+            status: isLiving ? 'living' : 'soon',
+            minutes: item.liveMin,
+
+          }
+        })
+       
+      } catch (e) {
+        console.error('获取待启课堂失败', e)
+        this.pendingLiveList = []
+      } finally {
+        this.pendingLiveLoading = false
       }
     },
     // ── 工具方法 ─────────────────────────────────────────────────────────
