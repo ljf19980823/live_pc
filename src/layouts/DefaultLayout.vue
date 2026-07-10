@@ -174,8 +174,8 @@ export default {
           activeIcon: require('@/assets/icons/menu/new_zy_active.png')
         },
         {
-          path: '/class',
-          title: '班级',
+          path: '/online',
+          title: '在线课堂',
           icon: require('@/assets/icons/menu/new_zxkt.png'),
           activeIcon: require('@/assets/icons/menu/new_zxkt_active.png')
         },

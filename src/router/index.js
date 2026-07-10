@@ -80,6 +80,12 @@ const routes = [
         component: () => import('@/views/teacher/Home/index.vue'),
         meta: { title: '首页', icon: 'el-icon-s-home', roles: ['teacher'] }
       },
+       {
+        path: 'online',
+        name: 'Online',
+        component: () => import('@/views/teacher/Online/index.vue'),
+        meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['teacher'] }
+      },
       {
         path: 'class',
         name: 'Class',
