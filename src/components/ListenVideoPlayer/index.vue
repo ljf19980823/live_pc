@@ -54,6 +54,11 @@
             </div>
           </transition>
         </template>
+        <video-watermark
+          ref="videoWatermark"
+          :user-info="currentUserInfo"
+          :disabled="isTeacher"
+        />
 
         <!-- 讲师画中画（右上角固定，仅显示，不可操作，不可拖拽） -->
         <transition name="hrp-pip-fade">
@@ -107,6 +112,7 @@ import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { collectToggle } from '@/api'
+import VideoWatermark from '@/components/VideoWatermark'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -121,6 +127,10 @@ const DRIFT_THRESHOLD = 1.5
 
 export default {
   name: 'HistoryVideoPlayer',
+
+  components: {
+    VideoWatermark
+  },
 
   props: {
     /** 是否显示播放弹窗 */
@@ -188,8 +198,11 @@ export default {
   data() {
     const uid = ++idCounter
     const userInfo = getUserInfo() || {}
+    const userRole = String(userInfo.role || '').toUpperCase()
     return {
       isStudent: userInfo.role === 'STUDENT',
+      isTeacher: userRole === 'TEACHER',
+      currentUserInfo: userInfo,
       mainPlayerId: `hrp-main-${uid}`,
       teacherPlayerId: `hrp-teacher-${uid}`,
       mainPlayer: null,
@@ -432,6 +445,7 @@ export default {
       if (fsEl && pipEl && pipEl.parentNode !== fsEl) {
         fsEl.appendChild(pipEl)
       }
+      this.$refs.videoWatermark?.moveTo(fsEl)
       this.isFullscreen = true
     },
 
@@ -441,6 +455,7 @@ export default {
       if (bodyEl && pipEl && pipEl.parentNode !== bodyEl) {
         bodyEl.appendChild(pipEl)
       }
+      this.$refs.videoWatermark?.restoreTo(bodyEl)
       this.isFullscreen = false
     },
 
