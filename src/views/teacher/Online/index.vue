@@ -222,7 +222,23 @@
           class="replay-card"
         >
           <div class="replay-card__cover" >
-           
+            <div class="replay-card__more_box" @click.stop v-if="isTeacher">
+              <el-popover
+                placement="bottom-end"
+                trigger="click"
+                popper-class="ls_options_popover"
+                :visible-arrow="false"
+              >
+                <div class="ls_options_menu">
+                  <div class="ls_options_menu_item" @click.stop="publishAfterClassTest(item)">
+                    <span>发布课后测</span>
+                  </div>
+                </div>
+                <div slot="reference" class="replay-card__more">
+                  <img src="@/assets/images/online/options.png" alt="" />
+                </div>
+              </el-popover>
+            </div>
             <img :src="item.cover" alt="">
           </div>
           <div class="replay-card__body">
@@ -2600,6 +2616,30 @@ border: 1px solid #DBEAFE;
     width: 100%;
     height: 100%;
    }
+  }
+
+  &__more_box {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+  }
+
+  &__more {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 10px;
+    flex-shrink: 0;
+
+    img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
   }
 
   &__tag {
