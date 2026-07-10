@@ -3,8 +3,29 @@
     v-if="visible"
     ref="watermark"
     class="video-watermark"
-    :style="watermarkStyle"
-  ></div>
+  >
+    <svg
+      v-if="watermarkItems.length"
+      class="video-watermark__svg"
+      :viewBox="`0 0 ${containerWidth} ${containerHeight}`"
+      preserveAspectRatio="none"
+    >
+      <text
+        v-for="item in watermarkItems"
+        :key="item.id"
+        :x="item.x"
+        :y="item.y"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :transform="`rotate(-24 ${item.x} ${item.y})`"
+        font-family="Arial, Helvetica, sans-serif"
+        :font-size="WATERMARK_FONT_SIZE"
+        font-weight="600"
+        fill="#000"
+        :fill-opacity="item.opacity"
+      >{{ watermarkText }}</text>
+    </svg>
+  </div>
 </template>
 
 <script>
@@ -20,11 +41,22 @@ const WATERMARK_FONT_SIZE = 14
 /** 水印瓦片宽高比，控制铺满播放器区域时的纵向密度 */
 const WATERMARK_TILE_HEIGHT_RATIO = 1.05
 
+/** 水印位置随机变化范围，单个方向整体控制在 120px 内 */
+const WATERMARK_RANDOM_RANGE = 120
+
 /** 单个瓦片中的水印错位坐标，避免整体呈现规整的网格感 */
 const WATERMARK_POINTS = [
   { xRatio: 0.28, yRatio: 0.24, opacity: 0.3 },
   { xRatio: 0.74, yRatio: 0.64, opacity: 0.3 }
 ]
+
+function getRandomOffset() {
+  return Math.round((Math.random() - 0.5) * WATERMARK_RANDOM_RANGE)
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
 
 export default {
   name: 'VideoWatermark',
@@ -40,6 +72,19 @@ export default {
     disabled: {
       type: Boolean,
       default: false
+    }
+  },
+
+  data() {
+    return {
+      containerWidth: 0,
+      containerHeight: 0,
+      watermarkPointOffsets: WATERMARK_POINTS.map(() => ({
+        x: getRandomOffset(),
+        y: getRandomOffset()
+      })),
+      resizeObserver: null,
+      WATERMARK_FONT_SIZE
     }
   },
 
@@ -67,49 +112,89 @@ export default {
       return !this.disabled && !!this.watermarkText
     },
 
-    /** 基于 SVG 背景图生成错位、低密度的重复水印样式 */
-    watermarkStyle() {
-      if (!this.watermarkText) return {}
-
+    tileSize() {
       const textLength = Array.from(this.watermarkText).length
       const estimatedTextWidth = textLength * WATERMARK_FONT_SIZE
       const width = Math.min(
         Math.max(estimatedTextWidth * 2.6, WATERMARK_MIN_TILE_WIDTH),
         WATERMARK_MAX_TILE_WIDTH
       )
-      const height = Math.round(width * WATERMARK_TILE_HEIGHT_RATIO)
-      const safeText = this.escapeSvgText(this.watermarkText)
-      const watermarkTexts = WATERMARK_POINTS.map(point => {
-        const x = Math.round(width * point.xRatio)
-        const y = Math.round(height * point.yRatio)
-        return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-24 ${x} ${y})" font-family="Arial, Helvetica, sans-serif" font-size="${WATERMARK_FONT_SIZE}" font-weight="600" fill="#000" fill-opacity="${point.opacity}">${safeText}</text>`
-      }).join('')
-      const svg = [
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-        watermarkTexts,
-        '</svg>'
-      ].join('')
 
       return {
-        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}")`,
-        backgroundSize: `${width}px ${height}px`
+        width,
+        height: Math.round(width * WATERMARK_TILE_HEIGHT_RATIO)
       }
+    },
+
+    /** 按容器尺寸生成水印点，过滤掉边缘会被裁切的水印 */
+    watermarkItems() {
+      if (!this.watermarkText || !this.containerWidth || !this.containerHeight) {
+        return []
+      }
+
+      const items = []
+      const edgeSafeX = 150
+      const edgeSafeY = 90
+      const { width, height } = this.tileSize
+
+      for (let baseY = 0; baseY < this.containerHeight; baseY += height) {
+        for (let baseX = 0; baseX < this.containerWidth; baseX += width) {
+          WATERMARK_POINTS.forEach((point, index) => {
+            const offset = this.watermarkPointOffsets[index] || { x: 0, y: 0 }
+            const x = baseX + clamp(Math.round(width * point.xRatio + offset.x), edgeSafeX, width - edgeSafeX)
+            const y = baseY + clamp(Math.round(height * point.yRatio + offset.y), edgeSafeY, height - edgeSafeY)
+
+            if (
+              x < edgeSafeX ||
+              x > this.containerWidth - edgeSafeX ||
+              y < edgeSafeY ||
+              y > this.containerHeight - edgeSafeY
+            ) {
+              return
+            }
+
+            items.push({
+              id: `${baseX}-${baseY}-${index}`,
+              x,
+              y,
+              opacity: point.opacity
+            })
+          })
+        }
+      }
+
+      return items
+    }
+  },
+
+  mounted() {
+    this.$nextTick(this.updateContainerSize)
+
+    if (window.ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(this.updateContainerSize)
+      if (this.$refs.watermark) {
+        this.resizeObserver.observe(this.$refs.watermark)
+      }
+    } else {
+      window.addEventListener('resize', this.updateContainerSize)
+    }
+  },
+
+  beforeDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+    } else {
+      window.removeEventListener('resize', this.updateContainerSize)
     }
   },
 
   methods: {
-    /**
-     * 转义 SVG 文本节点内容，防止用户名中的特殊字符破坏 SVG 结构。
-     * @param {String} text 原始水印文本
-     * @returns {String} 可安全写入 SVG text 节点的文本
-     */
-    escapeSvgText(text) {
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
+    updateContainerSize() {
+      const watermarkEl = this.$refs.watermark
+      if (!watermarkEl) return
+
+      this.containerWidth = Math.round(watermarkEl.clientWidth)
+      this.containerHeight = Math.round(watermarkEl.clientHeight)
     },
 
     /**
@@ -120,6 +205,7 @@ export default {
       const watermarkEl = this.$refs.watermark
       if (container && watermarkEl && watermarkEl.parentNode !== container) {
         container.appendChild(watermarkEl)
+        this.$nextTick(this.updateContainerSize)
       }
     },
 
@@ -131,6 +217,7 @@ export default {
       const watermarkEl = this.$refs.watermark
       if (container && watermarkEl && watermarkEl.parentNode !== container) {
         container.appendChild(watermarkEl)
+        this.$nextTick(this.updateContainerSize)
       }
     }
   }
@@ -145,7 +232,11 @@ export default {
   pointer-events: none;
   user-select: none;
   overflow: hidden;
-  background-repeat: repeat;
-  background-position: 0 0;
+}
+
+.video-watermark__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 </style>
