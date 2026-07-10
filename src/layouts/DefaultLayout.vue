@@ -179,17 +179,18 @@ export default {
           icon: require('@/assets/icons/menu/new_zxkt.png'),
           activeIcon: require('@/assets/icons/menu/new_zxkt_active.png')
         },
-        {
-          path: '/live-class',
-          title: '实时课堂',
-          icon: require('@/assets/icons/menu/new_kcb.png'),
-          activeIcon: require('@/assets/icons/menu/new_kcb_active.png')
-        },
+        
         {
           path: '/resources',
           title: '资源库',
           icon: require('@/assets/icons/menu/new_zyk.png'),
           activeIcon: require('@/assets/icons/menu/new_zyk_active.png')
+        },
+        {
+          path: '/schedule',
+          title: '课程表',
+          icon: require('@/assets/icons/menu/new_kcb.png'),
+          activeIcon: require('@/assets/icons/menu/new_kcb_active.png')
         },
         {
           path: '/message',

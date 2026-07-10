@@ -931,7 +931,7 @@ export default {
       historyLoading: false,
       _searchTimer: null,
       historyPageNum: 1,
-      historyPageSize: 1,
+      historyPageSize:8,
       historyTotal: 0,
 
       name:'',

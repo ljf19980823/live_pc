@@ -87,6 +87,12 @@ const routes = [
         meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['teacher'] }
       },
       {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/teacher/Schedule/index.vue'),
+        meta: { title: '课程表', icon: 'el-icon-office-building',  roles: ['teacher'] }
+      },
+      {
         path: 'class',
         name: 'Class',
         component: () => import('@/views/teacher/Class/index.vue'),

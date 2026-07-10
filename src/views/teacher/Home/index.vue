@@ -240,7 +240,7 @@ export default {
     },
     toCreateClass () {
       localStorage.setItem('openCreateClass', '1')
-      this.$router.push('/live-class')
+      this.$router.push('/online')
     },
     async fetchMessageList () {
       try {
