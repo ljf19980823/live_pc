@@ -9,21 +9,21 @@
 
 <script>
 /** 水印图案瓦片的最小宽度，瓦片越大，画面中的水印数量越少 */
-const WATERMARK_MIN_TILE_WIDTH = 600
+const WATERMARK_MIN_TILE_WIDTH = 720
 
 /** 水印图案瓦片的最大宽度，避免长用户名导致重复间距过大 */
-const WATERMARK_MAX_TILE_WIDTH = 900
+const WATERMARK_MAX_TILE_WIDTH = 1080
 
 /** 水印文字基础字号，需在清晰可辨和不影响观看之间保持平衡 */
 const WATERMARK_FONT_SIZE = 14
 
 /** 水印瓦片宽高比，控制铺满播放器区域时的纵向密度 */
-const WATERMARK_TILE_HEIGHT_RATIO = 0.76
+const WATERMARK_TILE_HEIGHT_RATIO = 1.05
 
 /** 单个瓦片中的水印错位坐标，避免整体呈现规整的网格感 */
 const WATERMARK_POINTS = [
-  { xRatio: 0.24, yRatio: 0.18, opacity: 0.3 },
-  { xRatio: 0.72, yRatio: 0.68, opacity: 0.3 }
+  { xRatio: 0.28, yRatio: 0.24, opacity: 0.3 },
+  { xRatio: 0.74, yRatio: 0.64, opacity: 0.3 }
 ]
 
 export default {
@@ -146,6 +146,6 @@ export default {
   user-select: none;
   overflow: hidden;
   background-repeat: repeat;
-  background-position: -120px -80px;
+  background-position: 0 0;
 }
 </style>
