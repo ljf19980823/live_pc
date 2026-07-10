@@ -150,8 +150,8 @@ export const updateCourseProgress = data => post('/edu/course/progress', data)
 // 获取教师课后测列表
 export const getAfterQuizTeacherList = params => get('/edu/after/quiz/teacher/list', params)
 
-// 科目下拉选项
-export const getSubjectOptions = () => get('/edu/subject/options')
+// 科目下拉选项（可按 classId 筛选）
+export const getSubjectOptions = params => get('/edu/subject/options', params)
 
 // 课后测下拉选项
 export const getAfterQuizOptions = params => get('/edu/after/quiz/options', params)

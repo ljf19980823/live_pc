@@ -259,62 +259,145 @@
     </template>
 
     <!-- 课后测试 -->
-    <template v-if="activeTab === 'quiz'">
+    <template v-if="activeTab === 'quiz' && !showQuizDetail">
       <div class="filter-bar">
         <div class="filter-bar__left">
           <div class="filter-item">
             <span class="filter-item__label">时间</span>
-            <div class="filter-item__control">
-              <span class="filter-item__value">全部时间</span>
+            <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
+              <el-date-picker
+                v-model="quizDateRange"
+                type="datetimerange"
+                range-separator="-"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                value-format="yyyy-MM-dd HH:mm:ss"
+                :picker-options="quizDatePickerOptions"
+                class="ls_date_picker"
+                size="mini"
+                @change="handleQuizSearch"
+              />
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
           </div>
           <div class="filter-item">
             <span class="filter-item__label">班级</span>
-            <div class="filter-item__control">
-              <span class="filter-item__value">全部班级</span>
-              <i class="el-icon-arrow-down filter-item__arrow" />
+            <div class="filter-item__control filter-item__control--select">
+              <div class="ls_class_select_wrap">
+                <el-select
+                  v-model="quizClassId"
+                  placeholder="请选择班级"
+                  size="mini"
+                  filterable
+                  class="ls_class_select"
+                  @change="handleQuizClassChange"
+                >
+                  <el-option
+                    v-for="cls in classList"
+                    :key="cls.value"
+                    :label="cls.label"
+                    :value="cls.value"
+                  />
+                </el-select>
+                <i class="el-icon-arrow-down ls_class_select_arrow" />
+              </div>
             </div>
           </div>
           <div class="filter-item">
             <span class="filter-item__label">科目</span>
-            <div class="filter-item__control">
-              <span class="filter-item__value">全部科目</span>
-              <i class="el-icon-arrow-down filter-item__arrow" />
+            <div class="filter-item__control filter-item__control--select">
+              <div class="ls_class_select_wrap">
+                <el-select
+                  v-model="quizSubjectId"
+                  placeholder="全部科目"
+                  size="mini"
+                  filterable
+                  clearable
+                  class="ls_class_select"
+                  @change="handleQuizSearch"
+                >
+                  <el-option
+                    v-for="opt in quizSubjectOptions"
+                    :key="opt.id"
+                    :label="opt.name"
+                    :value="opt.id"
+                  />
+                </el-select>
+                <i class="el-icon-arrow-down ls_class_select_arrow" />
+              </div>
             </div>
           </div>
-          <div class="filter-search filter-search--wide">
+          <div class="filter-search filter-search--wide" v-clickoutside="closeQuizSuggest">
             <img src="@/assets/images/liveClass/search.png" class="filter-search__icon" alt="" />
             <input
               v-model="quizKeyword"
               type="text"
               class="filter-search__input"
               placeholder="搜索课后测名称、主讲老师"
+              @focus="onQuizKeywordFocus"
+              @input="onQuizKeywordInput"
+              @keydown.enter.prevent="confirmQuizKeyword"
+              @keydown.esc="closeQuizSuggest"
             />
+            <i
+              v-if="quizKeyword || quizFilterExamConfigId || quizFilterTeacherId"
+              class="el-icon-circle-close filter-search__clear"
+              @click="clearQuizKeyword"
+            />
+            <div
+              v-if="quizSuggestVisible && quizSuggestGroups.length"
+              class="filter-search__dropdown"
+            >
+              <div
+                v-for="group in quizSuggestGroups"
+                :key="group.type"
+                class="filter-search__group"
+              >
+                <div class="filter-search__group-title">{{ group.label }}</div>
+                <div
+                  v-for="opt in group.items"
+                  :key="`${group.type}-${opt.value}`"
+                  class="filter-search__option"
+                  @mousedown.prevent="selectQuizSuggest(opt)"
+                >
+                  {{ opt.label }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="quiz-grid">
+      <div class="quiz-grid" v-loading="quizLoading">
         <div
-          v-for="item in quizList"
-          :key="item.id"
+          v-for="item in filteredQuizList"
+          :key="item.examConfigId || item.id"
           class="quiz-card"
+          @click="openQuizDetail(item)"
         >
-          <div class="quiz-card__title">{{ item.title }}</div>
+          <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
           <div class="quiz-card__info">
-            <div class="quiz-card__pill">{{ item.teacher }}</div>
-            <div class="quiz-card__pill">{{ item.subject }}</div>
-            <div class="quiz-card__pill">{{ item.completed }}</div>
-            <div class="quiz-card__pill">{{ item.questions }}</div>
+            <div class="quiz-card__pill">{{ item.teacherName2 || item.teacherName || '-' }}</div>
+            <div class="quiz-card__pill">{{ item.subjectName || item.subject || '-' }}</div>
+            <div class="quiz-card__pill">{{ item.finishedStudentCount || 0 }}/{{ item.totalStudentCount || 0 }} 已完成</div>
+            <div class="quiz-card__pill">{{ item.topicNum || 0 }} 题</div>
           </div>
           <div class="quiz-card__time">
             <span class="quiz-card__time-label">发布时间</span>
-            <span class="quiz-card__time-value">{{ item.publishTime }}</span>
+            <span class="quiz-card__time-value">{{ item.createTime || '-' }}</span>
           </div>
-          <div class="quiz-card__btn">查看详情</div>
+          <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
         </div>
       </div>
+      <empty-state v-if="!quizLoading && filteredQuizList.length === 0" description="暂无课后测数据" />
     </template>
+    <!-- 课后测试 - 学生做题详情 -->
+    <AfterClassTestDetail
+      v-if="activeTab === 'quiz' && showQuizDetail"
+      :visible="showQuizDetail"
+      :className="quizClassName"
+      :courseInfo="currentQuizCourse"
+      @close="showQuizDetail = false"
+    />
 
 
       <!-- ── 升级提示弹窗 ──────────────────────────────────────────────────── -->
@@ -769,19 +852,22 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api/modules/teacher'
+import Clickoutside from 'element-ui/lib/utils/clickoutside'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
+import AfterClassTestDetail from '@/views/teacher/Class/AfterClassTestDetail.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'Online',
-  components: { EmptyState, DialogCustome, VideoPlayer },
+  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail },
+  directives: { Clickoutside },
   data() {
     return {
-       activeTab: 'live',
+      activeTab: 'live',
       tabs: [
         { key: 'live', label: '待启课堂' },
         { key: 'history', label: '回放课堂' },
@@ -789,63 +875,22 @@ export default {
       ],
       replayKeyword: '',
       quizKeyword: '',
-    
-      quizList: [
-        {
-          id: 1,
-          title: '英语阅读精讲课后测试',
-          teacher: '林老师',
-          subject: '英语',
-          completed: '32/38 已完成',
-          questions: '20 题',
-          publishTime: '2026.07.16 21:00'
-        },
-        {
-          id: 2,
-          title: '行测申论冲刺课后测',
-          teacher: '周老师',
-          subject: '语文',
-          completed: '45/52 已完成',
-          questions: '25 题',
-          publishTime: '2026.07.15 18:30'
-        },
-        {
-          id: 3,
-          title: '函数图像专题巩固练习',
-          teacher: '陈老师',
-          subject: '数学',
-          completed: '28/35 已完成',
-          questions: '18 题',
-          publishTime: '2026.07.12 20:00'
-        },
-        {
-          id: 4,
-          title: '光学实验观察记录测',
-          teacher: '赵老师',
-          subject: '物理',
-          completed: '21/24 已完成',
-          questions: '12 题',
-          publishTime: '2026.07.08 17:20'
-        },
-        {
-          id: 5,
-          title: '文言文阅读专项训练',
-          teacher: '孙老师',
-          subject: '语文',
-          completed: '36/40 已完成',
-          questions: '15 题',
-          publishTime: '2026.07.05 19:00'
-        },
-        {
-          id: 6,
-          title: '化学方程式配平练习',
-          teacher: '钱老师',
-          subject: '化学',
-          completed: '18/22 已完成',
-          questions: '16 题',
-          publishTime: '2026.07.02 16:40'
-        }
-      ],
+      quizList: [],
+      quizLoading: false,
+      quizClassId: '',
+      quizSubjectId: '',
+      quizDateRange: [],
+      quizSubjectOptions: [],
+      afterQuizOptions: [],
+      teacherOptions: [],
+      quizSuggestVisible: false,
+      quizFilterExamConfigId: '',
+      quizFilterTeacherId: '',
+      showQuizDetail: false,
+      currentQuizCourse: null,
+      quizDatePickerOptions: {
+        disabledDate: (time) => time.getTime() > Date.now()
+      },
       liveUrl: '',
       bannerDismissed: false,
 
@@ -860,7 +905,6 @@ export default {
       _removeComplete: null,
       _removeError: null,
 
-      activeTab: 'live',
       dateRange: null,
       selectedClass: '',
       searchKeyword: '',
@@ -974,6 +1018,10 @@ export default {
       } else if (val === 'live') {
         this.fetchLiveList()
         this.startLiveRefreshTimer()
+      } else if (val === 'quiz') {
+        this.stopLiveRefreshTimer()
+        this.showQuizDetail = false
+        this.initQuizTab()
       } else {
         this.stopLiveRefreshTimer()
       }
@@ -1074,6 +1122,41 @@ created() {
   computed: {
     ...mapGetters('user', ['userInfo']),
     ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
+    quizClassName() {
+      const cls = this.classList.find(c => c.value === this.quizClassId)
+      return cls ? cls.label : ''
+    },
+    filteredQuizList() {
+      return this.quizList
+    },
+    quizSuggestGroups() {
+      const keyword = (this.quizKeyword || '').trim().toLowerCase()
+      if (!keyword) return []
+      const groups = []
+      const quizItems = (this.afterQuizOptions || [])
+        .filter(opt => (opt.name || '').toLowerCase().includes(keyword))
+        .slice(0, 8)
+        .map(opt => ({
+          type: 'quiz',
+          label: opt.name,
+          value: opt.examConfigId
+        }))
+      if (quizItems.length) {
+        groups.push({ type: 'quiz', label: '课后测名称', items: quizItems })
+      }
+      const teacherItems = (this.teacherOptions || [])
+        .filter(opt => (opt.realName || '').toLowerCase().includes(keyword))
+        .slice(0, 8)
+        .map(opt => ({
+          type: 'teacher',
+          label: opt.realName,
+          value: opt.teacherId
+        }))
+      if (teacherItems.length) {
+        groups.push({ type: 'teacher', label: '主讲老师', items: teacherItems })
+      }
+      return groups
+    },
     recordModeOptions() {
       const base = [
         { label: '无头像录制（白板）', value: 1 },
@@ -1779,6 +1862,141 @@ created() {
       } catch (_) {}
     },
 
+    // ── 课后测试 ─────────────────────────────────────────────────────────
+    async initQuizTab() {
+      await this.fetchClassList()
+      if (!this.quizClassId && this.classList.length) {
+        this.quizClassId = this.classList[0].value
+      }
+      if (!this.quizClassId) {
+        this.quizList = []
+        this.quizSubjectOptions = []
+        this.afterQuizOptions = []
+        this.teacherOptions = []
+        return
+      }
+      await Promise.all([
+        this.fetchQuizSubjectOptions(),
+        this.fetchQuizFilterOptions()
+      ])
+      this.fetchQuizList()
+    },
+    async handleQuizClassChange() {
+      this.quizSubjectId = ''
+      this.quizKeyword = ''
+      this.quizFilterExamConfigId = ''
+      this.quizFilterTeacherId = ''
+      this.quizSuggestVisible = false
+      await Promise.all([
+        this.fetchQuizSubjectOptions(),
+        this.fetchQuizFilterOptions()
+      ])
+      this.fetchQuizList()
+    },
+    handleQuizSearch() {
+      this.fetchQuizList()
+    },
+    async fetchQuizSubjectOptions() {
+      if (!this.quizClassId) {
+        this.quizSubjectOptions = []
+        return
+      }
+      try {
+        const res = await getSubjectOptions({ classId: this.quizClassId })
+        const list = (res && res.data) ? res.data : []
+        this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
+      } catch (e) {
+        console.log(e, 'fetchQuizSubjectOptions error')
+        this.quizSubjectOptions = []
+      }
+    },
+    async fetchQuizFilterOptions() {
+      if (!this.quizClassId) {
+        this.afterQuizOptions = []
+        this.teacherOptions = []
+        return
+      }
+      try {
+        const [quizRes, teacherRes] = await Promise.all([
+          getAfterQuizOptions({ classId: this.quizClassId }),
+          getTeacherOptions({ classId: this.quizClassId })
+        ])
+        this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
+        this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
+      } catch (e) {
+        console.log(e, 'fetchQuizFilterOptions error')
+        this.afterQuizOptions = []
+        this.teacherOptions = []
+      }
+    },
+    onQuizKeywordFocus() {
+      if ((this.quizKeyword || '').trim() && this.quizSuggestGroups.length) {
+        this.quizSuggestVisible = true
+      }
+    },
+    onQuizKeywordInput() {
+      const keyword = (this.quizKeyword || '').trim()
+      this.quizSuggestVisible = !!keyword
+      // 仅在清空输入时重置筛选并刷新列表，输入过程中不改动列表
+      if (!keyword && (this.quizFilterExamConfigId || this.quizFilterTeacherId)) {
+        this.quizFilterExamConfigId = ''
+        this.quizFilterTeacherId = ''
+        this.fetchQuizList()
+      }
+    },
+    clearQuizKeyword() {
+      this.quizKeyword = ''
+      this.quizFilterExamConfigId = ''
+      this.quizFilterTeacherId = ''
+      this.quizSuggestVisible = false
+      this.fetchQuizList()
+    },
+    closeQuizSuggest() {
+      this.quizSuggestVisible = false
+    },
+    selectQuizSuggest(opt) {
+      if (!opt) return
+      this.quizKeyword = opt.label || ''
+      this.quizSuggestVisible = false
+      if (opt.type === 'quiz') {
+        this.quizFilterExamConfigId = opt.value
+        this.quizFilterTeacherId = ''
+      } else if (opt.type === 'teacher') {
+        this.quizFilterTeacherId = opt.value
+        this.quizFilterExamConfigId = ''
+      }
+      this.fetchQuizList()
+    },
+    confirmQuizKeyword() {
+      this.quizSuggestVisible = false
+    },
+    async fetchQuizList() {
+      if (!this.quizClassId) return
+      const { userId } = getUserInfo()
+      this.quizLoading = true
+      try {
+        const params = { classId: this.quizClassId, teacherId: userId }
+        if (this.quizSubjectId) params.subjectId = this.quizSubjectId
+        if (this.quizDateRange && this.quizDateRange.length === 2) {
+          params.quizStartTime = this.quizDateRange[0]
+          params.quizEndTime = this.quizDateRange[1]
+        }
+        if (this.quizFilterExamConfigId) params.examConfigId = this.quizFilterExamConfigId
+        if (this.quizFilterTeacherId) params.teacherId = this.quizFilterTeacherId
+        const res = await getAfterQuizTeacherList(params)
+        this.quizList = (res && res.data) ? res.data : []
+      } catch (e) {
+        console.log(e, 'fetchQuizList error')
+        this.quizList = []
+      } finally {
+        this.quizLoading = false
+      }
+    },
+    openQuizDetail(item) {
+      this.currentQuizCourse = { ...item, classId: this.quizClassId }
+      this.showQuizDetail = true
+    },
+
     // ── 工具方法 ─────────────────────────────────────────────────────────
     formatTimeRange(startTime, endTime) {
       if (!startTime) return ''
@@ -2111,6 +2329,10 @@ border-radius: 12px 12px 12px 12px;
       cursor: default;
     }
 
+    &--datetime {
+      min-width: 240px;
+    }
+
     &--select {
       min-width: 160px;
       cursor: default;
@@ -2141,6 +2363,7 @@ border-radius: 12px 12px 12px 12px;
 }
 
 .filter-search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2153,6 +2376,7 @@ border: 1px solid #E2E8F0;
 
   &--wide {
     max-width: 360px;
+    width: 360px;
   }
 
   &__icon {
@@ -2175,6 +2399,62 @@ border: 1px solid #E2E8F0;
     &::placeholder {
       color: #90A1B9 !important;
       font-size: 14px !important;
+    }
+  }
+
+  &__clear {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #94A3B8;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+      color: #64748B;
+    }
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    padding: 8px 0;
+  }
+
+  &__group + &__group {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #F1F5F9;
+  }
+
+  &__group-title {
+    padding: 4px 12px 6px;
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 16px;
+  }
+
+  &__option {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #314158;
+    line-height: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: #F8FAFC;
+      color: #2563EB;
     }
   }
 }
@@ -2444,6 +2724,7 @@ box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
 border-radius: 12px 12px 12px 12px;
 border: 1px solid #DBEAFE;
   padding: 21px;
+  cursor: pointer;
 
   display: flex;
   flex-direction: column;
@@ -3495,6 +3776,9 @@ margin-bottom: 12px;
     color: #1D293D;
     background: transparent;
     width: 88px;
+  }
+  ::v-deep .el-range-editor--datetimerange .el-range-input {
+    width: 140px;
   }
   ::v-deep .el-range-separator {
     font-size: 14px;
