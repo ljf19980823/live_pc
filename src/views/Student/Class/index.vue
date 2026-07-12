@@ -890,7 +890,8 @@
 </template>
 
 <script>
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, checkTempStudentLiveRecord, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'

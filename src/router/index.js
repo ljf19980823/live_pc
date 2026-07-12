@@ -157,6 +157,7 @@ const routes = [
       {
         path: 'student/online',
         name: 'StudentOnline',
+        // 与老师端共用在线课堂页（内部已按角色区分能力）
         component: () => import('@/views/Student/Online/index.vue'),
         meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['student'] }
       },

@@ -473,7 +473,7 @@
 
 <script>
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
-import { checkTempStudentLiveRecord } from '@/api'
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import { getToken, getUserInfo } from '@/utils/auth'
 import Settings from './components/Settings.vue'
 import CameraCheck from './components/CameraCheck.vue'

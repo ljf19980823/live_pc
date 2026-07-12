@@ -21,3 +21,6 @@ export const getAllCourseList = (params) => get('/edu/recentView/courses', param
 
 // 获取最近学习课程列表
 export const getRecentCourseList = (params) => get('/edu/recentView/recent', params)
+
+// 获取最近观看列表
+export const getRecentViewList = (params) => get('/edu/recentView/view', params)

@@ -369,8 +369,9 @@
 </template>
 
 <script>
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import { getAllCourseList, getRecentCourseList } from '@/api/modules/student'
-import { getCourseDetail, updateRecentStudy, updateCourseProgress, collectToggle, checkTempStudentLiveRecord } from '@/api'
+import { getCourseDetail, updateRecentStudy, updateCourseProgress, collectToggle } from '@/api'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import HistoryVideoPlayer from '@/components/HistoryVideoPlayer/index.vue'
 import FilePreview from '@/components/FilePreview/index.vue'

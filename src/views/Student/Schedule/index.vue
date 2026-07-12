@@ -254,7 +254,7 @@
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
-import { checkTempStudentLiveRecord } from '@/api'
+import { checkTempStudentLiveRecord } from '@/api/modules/student'
 const pad = n => String(n).padStart(2, '0')
 
 export default {

@@ -246,12 +246,12 @@
                 <div class="replay-card__title">{{ item.name }}</div>
               </el-tooltip>
             <div class="replay-card__meta">
-              <div>{{formatDate(item.generationTime) }}</div>
+              <div style="color:#62748E">{{formatDate(item.generationTime) }}</div>
               <div class="replay-card__meta-sep" ></div>
               <div>{{ formatDuration(item.fileList && item.fileList.length != 0 ? (item.fileList[0].duration) :0)}}</div>
             </div>
             <div class="replay-card__meta">
-              <div>主讲</div>
+              <div style="color:#62748E">主讲</div>
              
               <div>{{item.teacherName2 }}</div>
             </div>
@@ -1813,13 +1813,14 @@ created() {
     },
 
     openSchedule() {
-      const now = new Date()
-      this.scheduleYear = now.getFullYear()
-      this.scheduleMonth = now.getMonth()
-      const pad = n => String(n).padStart(2, '0')
-      this.scheduleSelectedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-      this.showSchedule = true
-      this.fetchScheduleData(now.getFullYear(), now.getMonth() + 1)
+         this.$router.push('/schedule')
+    //   const now = new Date()
+    //   this.scheduleYear = now.getFullYear()
+    //   this.scheduleMonth = now.getMonth()
+    //   const pad = n => String(n).padStart(2, '0')
+    //   this.scheduleSelectedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    //   this.showSchedule = true
+    //   this.fetchScheduleData(now.getFullYear(), now.getMonth() + 1)
     },
     async fetchScheduleData(year, month) {
       this.scheduleLoading = true
@@ -2161,7 +2162,7 @@ created() {
 
 <style lang="scss" scoped>
 .online-page {
-  padding: 28px 24px 28px;
+  padding: 28px 24px 63px;
   min-height: 100%;
   box-sizing: border-box;
 }
