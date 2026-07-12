@@ -68,12 +68,12 @@
 
               <div class="app_container_last_left_header_nav_list_text">班级</div>
             </div>
-            <div class="app_container_last_left_header_nav_list">
+            <div class="app_container_last_left_header_nav_list"  @click="toSchedule()">
               <img src="@/assets/images/home/kcb.png" class="app_container_last_left_header_nav_list_icon" alt="">
 
               <div class="app_container_last_left_header_nav_list_text">课程表</div>
             </div>
-            <div class="app_container_last_left_header_nav_list">
+            <div class="app_container_last_left_header_nav_list" @click="toAfter()">
               <img src="@/assets/images/home/khc.png" class="app_container_last_left_header_nav_list_icon" alt="">
 
               <div class="app_container_last_left_header_nav_list_text">课后测</div>
@@ -338,6 +338,17 @@ export default {
 
     toClass(){
       this.$router.push('/class')
+    },
+    toSchedule(){
+      this.$router.push('/schedule')
+    },
+    toAfter(){
+      this.$router.push({
+        path:'/online',
+        query:{
+          from:'home'
+        }
+      })
     },
 
      async enterLiveRoom(item) {

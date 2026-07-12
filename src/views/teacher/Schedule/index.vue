@@ -75,7 +75,7 @@
             >
               <span class="cal-cell__today-tag" v-if="cell.isToday">今</span>
               <span class="cal-cell__day">{{ cell.dayText }}</span>
-              <span class="cal-cell__dot" v-if="cell.currentMonth"></span>
+              <span class="cal-cell__dot" v-if="cell.currentMonth && cell.hasClass"></span>
             </div>
           </div>
         </template>
@@ -99,7 +99,7 @@
             >
               <span class="cal-cell__today-tag" v-if="cell.isToday">今</span>
               <span class="cal-cell__day">{{ cell.dayText }}</span>
-              <span class="cal-cell__dot"></span>
+              <span class="cal-cell__dot" v-if="cell.hasClass"></span>
             </div>
           </div>
         </template>
@@ -121,12 +121,14 @@
       </div>
 
       <div class="course-panel">
-        <div class="course-panel__title">课程列表</div>
+        <div class="course-panel__title">
+          {{ selectedDateLabel }}（共{{ selectedCourses.length }}节）
+        </div>
         <div class="course-grid" v-if="selectedCourses.length">
           <div
             class="course-card"
-            v-for="course in selectedCourses"
-            :key="course.id"
+            v-for="(course, idx) in selectedCourses"
+            :key="course.id || idx"
           >
             <img
               :src="course.cover || defaultCover"
@@ -134,7 +136,26 @@
               alt=""
             />
             <div class="course-card__info">
-              <div class="course-card__name">{{ course.name }}</div>
+              <div class="course-card__name-row">
+                <div class="course-card__name">{{ course.name }}</div>
+                <!-- <div
+                  class="course-card__status"
+                  :class="{
+                    'status-living': course.status === '直播中',
+                    'status-finished': course.status === '已结束已开播' || course.status === '已结束未开播',
+                    'status-soon': course.status === '未开始',
+                    'status-not-broadcast': course.status === '未开播',
+                    'status-unknown': course.status === '未知'
+                  }"
+                >
+                  <i class="status-dot"></i>
+                  <span>{{
+                    course.status === '已结束已开播' || course.status === '已结束未开播'
+                      ? '已结束'
+                      : course.status
+                  }}</span>
+                </div> -->
+              </div>
               <div class="course-card__time">
                 {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
                 <template v-if="course.durationText"> 共{{ course.durationText }}</template>
@@ -142,12 +163,12 @@
               <div class="course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
             </div>
             <div
-              v-if="isEnterable(course)"
+              v-if="course.status === '直播中' || course.status === '未开始'"
               class="course-card__btn"
               @click="enterLiveRoom(course)"
-            >进入直播</div>
+            >进入直播间</div>
             <div
-              v-else-if="isReplayable(course)"
+              v-else-if="course.status === '已结束已开播' || course.status === '已结束未开播'"
               class="course-card__btn"
               @click="openVideo(course)"
             >查看回放</div>
@@ -193,12 +214,12 @@
                 <div class="list-course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
               </div>
               <div
-                v-if="isEnterable(course)"
+                v-if="course.status === '直播中' || course.status === '未开始'"
                 class="list-course-card__btn"
                 @click="enterLiveRoom(course)"
-              >进入直播</div>
+              >进入直播间</div>
               <div
-                v-else-if="isReplayable(course)"
+                v-else-if="course.status === '已结束已开播' || course.status === '已结束未开播'"
                 class="list-course-card__btn"
                 @click="openVideo(course)"
               >查看回放</div>
@@ -228,7 +249,7 @@
 </template>
 
 <script>
-import { getScheduleList } from '@/api/modules/teacher'
+import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 
@@ -265,7 +286,15 @@ export default {
       playerTeacherSource: '',
       playerTitle: '',
       playerHistoryLessonId: '',
-      playerAllowDownload: '2'
+      playerAllowDownload: '2',
+
+       // macOS 屏幕录制权限引导弹窗
+      showScreenPermissionDialog: false,
+      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
+      _removeScreenPermissionDenied: null,
+      // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
+      showScreenCaptureFailedDialog: false,
+      _removeScreenCaptureFailed: null,
     }
   },
   computed: {
@@ -273,12 +302,45 @@ export default {
     monthLabel() {
       return `${this.scheduleYear}年${pad(this.scheduleMonth + 1)}月`
     },
+    // 与 Online 课表 scheduleDataByDate 同一套接口字段映射
     scheduleDataByDate() {
       const map = {}
       ;(this.scheduleApiData || []).forEach(item => {
         const dateStr = item.date
         if (!dateStr) return
-        map[dateStr] = (item.lives || []).map(live => this.normalizeLive(live))
+        map[dateStr] = (item.lives || []).map(live => {
+          const startTime = live.startTime ? live.startTime.substring(11, 16) : ''
+          const endTime = live.endTime ? live.endTime.substring(11, 16) : ''
+          let durationText = ''
+          if (live.startTime && live.endTime) {
+            const s = new Date(live.startTime.replace(/-/g, '/')).getTime()
+            const e = new Date(live.endTime.replace(/-/g, '/')).getTime()
+            if (e > s) {
+              durationText = `${Math.round((e - s) / 60000)}分钟`
+            }
+          }
+          return {
+            // Online 课表原有字段
+            id: live.id,
+            name: live.name || '',
+            startTime,
+            endTime,
+            fullStartTime: live.startTime || '',
+            liveLessonId: live.liveLessonId || '',
+            fileList: live.fileList || [],
+            status: live.status,
+            isStart: live.isStart,
+            isFinish: live.isFinish,
+            // 本页卡片展示 / 回放所需扩展字段（同源 live）
+            durationText,
+            fullEndTime: live.endTime || '',
+            historyLessonId: live.historyLessonId || '',
+            cover: live.cover || live.coverUrl || live.imgUrl || live.image || '',
+            teacherName: live.teacherName2 || live.teacherName || this.realName || '',
+            taskUuid: live.taskUuid || '',
+            allowDownload: live.allowDownload
+          }
+        })
       })
       return map
     },
@@ -361,6 +423,11 @@ export default {
       if (!this.selectedDate) return []
       return this.scheduleDataByDate[this.selectedDate] || []
     },
+    selectedDateLabel() {
+      if (!this.selectedDate) return '课程列表'
+      const parts = this.selectedDate.split('-')
+      return `${parseInt(parts[1])}月${parseInt(parts[2])}日`
+    },
     listGroups() {
       if (!this.listDateRange || this.listDateRange.length !== 2) return []
       const [start, end] = this.listDateRange
@@ -383,15 +450,44 @@ export default {
     }
   },
   watch: {
-    scheduleYear() {
-      this.fetchScheduleData()
+    // 与 Online 课表一致：年月变化时按 year/month 重新拉取（整月模式）
+    scheduleYear(val) {
+      if (this.viewMode === 'calendar' && this.calendarScope === 'month') {
+        this.fetchScheduleData(val, this.scheduleMonth + 1)
+      }
     },
-    scheduleMonth() {
-      this.fetchScheduleData()
+    scheduleMonth(val) {
+      if (this.viewMode === 'calendar' && this.calendarScope === 'month') {
+        this.fetchScheduleData(this.scheduleYear, val + 1)
+      }
     }
   },
   mounted() {
-    this.fetchScheduleData()
+    // 监听 iframe 直播退出消息（保存引用以便 beforeDestroy 移除）
+    this._onWindowMessage = (event) => {
+      if (event.data?.type === 'CLASSROOM_EXIT') {
+        const { classId } = event.data
+        this.showLiveIframe = false
+      } else if (event.data?.type === 'MINIMIZE_WINDOW') {
+        window.electronAPI && window.electronAPI.minimizeWindow()
+      }
+    }
+    window.addEventListener('message', this._onWindowMessage)
+
+    // macOS：监听主进程通知——屏幕录制权限被拒绝
+    if (window.electronAPI?.onScreenPermissionDenied) {
+      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
+        this.screenPermissionStatus = data?.status || 'denied'
+        this.showScreenPermissionDialog = true
+      })
+    }
+    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
+    if (window.electronAPI?.onScreenCaptureFailed) {
+      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
+        this.showScreenCaptureFailedDialog = true
+      })
+    }
+    this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
   },
   methods: {
     todayStr() {
@@ -402,45 +498,13 @@ export default {
       const [y, m, d] = str.split('-').map(Number)
       return new Date(y, m - 1, d)
     },
-    normalizeLive(live) {
-      const startTime = live.startTime ? live.startTime.substring(11, 16) : ''
-      const endTime = live.endTime ? live.endTime.substring(11, 16) : ''
-      let durationText = ''
-      if (live.startTime && live.endTime) {
-        const s = new Date(live.startTime.replace(/-/g, '/')).getTime()
-        const e = new Date(live.endTime.replace(/-/g, '/')).getTime()
-        if (e > s) {
-          const mins = Math.round((e - s) / 60000)
-          durationText = `${mins}分钟`
-        }
-      }
-      return {
-        id: live.id,
-        name: live.name || '',
-        startTime,
-        endTime,
-        durationText,
-        fullStartTime: live.startTime || '',
-        fullEndTime: live.endTime || '',
-        liveLessonId: live.liveLessonId || '',
-        historyLessonId: live.historyLessonId || '',
-        fileList: live.fileList || [],
-        cover: live.cover || live.coverUrl || live.imgUrl || live.image || '',
-        teacherName: live.teacherName2 || live.teacherName || this.realName || '',
-        status: live.status,
-        isStart: live.isStart,
-        isFinish: live.isFinish,
-        taskUuid: live.taskUuid || '',
-        allowDownload: live.allowDownload
-      }
-    },
-    async fetchScheduleData() {
+    /** 与 Online fetchScheduleData 一致：getScheduleList({ year, month }) */
+    async fetchScheduleData(year, month) {
+      const y = year != null ? year : this.scheduleYear
+      const m = month != null ? month : this.scheduleMonth + 1
       this.scheduleLoading = true
       try {
-        const res = await getScheduleList({
-          year: String(this.scheduleYear),
-          month: String(this.scheduleMonth + 1)
-        })
+        const res = await getScheduleList({ year: String(y), month: String(m) })
         this.scheduleApiData = res.data || res || []
       } catch (_) {
         this.scheduleApiData = []
@@ -448,7 +512,7 @@ export default {
         this.scheduleLoading = false
       }
     },
-    /** 列表模式跨月时合并拉取 */
+    /** 周视图跨月时合并拉取（同一 getScheduleList 接口） */
     async fetchRangeData(startStr, endStr) {
       this.scheduleLoading = true
       try {
@@ -480,6 +544,25 @@ export default {
         this.scheduleLoading = false
       }
     },
+    /** 列表模式：按时间区间拉取 getScheduleListByRange({ startDate, endDate }) */
+    async fetchListByRange(startDate, endDate) {
+      if (!startDate || !endDate) return
+      this.scheduleLoading = true
+      try {
+        const res = await getScheduleListByRange({ startDate, endDate })
+        this.scheduleApiData = res.data || res || []
+      } catch (_) {
+        this.scheduleApiData = []
+      } finally {
+        this.scheduleLoading = false
+      }
+    },
+    /** 周视图：按当前周起止日期拉取（可能跨月） */
+    fetchWeekData() {
+      const cells = this.weekCells
+      if (!cells.length) return
+      this.fetchRangeData(cells[0].dateStr, cells[cells.length - 1].dateStr)
+    },
     selectDate(dateStr) {
       this.selectedDate = dateStr
       this.weekAnchorDate = dateStr
@@ -493,11 +576,13 @@ export default {
       if (this.calendarScope === 'month') {
         this.calendarScope = 'week'
         this.weekAnchorDate = this.selectedDate
+        this.$nextTick(() => this.fetchWeekData())
       } else {
         this.calendarScope = 'month'
         const d = this.parseDate(this.selectedDate)
         this.scheduleYear = d.getFullYear()
         this.scheduleMonth = d.getMonth()
+        this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
       }
     },
     handlePrev() {
@@ -530,31 +615,35 @@ export default {
       const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
       this.weekAnchorDate = dateStr
       this.selectedDate = dateStr
-      this.scheduleYear = d.getFullYear()
-      this.scheduleMonth = d.getMonth()
+      // 避免仅改锚点时年月不变导致不请求；周视图统一按周区间拉数
+      const y = d.getFullYear()
+      const m = d.getMonth()
+      if (y !== this.scheduleYear || m !== this.scheduleMonth) {
+        this.scheduleYear = y
+        this.scheduleMonth = m
+      }
+      this.$nextTick(() => this.fetchWeekData())
     },
     switchToCalendarMode() {
       if (this.viewMode === 'calendar') return
       this.viewMode = 'calendar'
-      this.fetchScheduleData()
+      if (this.calendarScope === 'week') {
+        this.$nextTick(() => this.fetchWeekData())
+      } else {
+        this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
+      }
     },
     switchToListMode() {
       if (this.viewMode === 'list') return
       this.viewMode = 'list'
       if (this.listDateRange && this.listDateRange.length === 2) {
-        this.fetchRangeData(this.listDateRange[0], this.listDateRange[1])
+        this.fetchListByRange(this.listDateRange[0], this.listDateRange[1])
       }
     },
     onListRangeChange(val) {
       if (val && val.length === 2) {
-        this.fetchRangeData(val[0], val[1])
+        this.fetchListByRange(val[0], val[1])
       }
-    },
-    isEnterable(course) {
-      return course.status === '直播中' || course.status === '未开始'
-    },
-    isReplayable(course) {
-      return course.status === '已结束已开播' || course.status === '已结束未开播'
     },
     prepareElectronMediaPermissions() {
       if (!window.electronAPI) return
@@ -919,7 +1008,7 @@ export default {
   padding: 16px;
   box-sizing: border-box;
   flex: 1;
-  min-height: 200px;
+//   min-height: 200px;
 }
 .course-panel__title {
   font-size: 16px;
@@ -960,6 +1049,12 @@ export default {
   flex-direction: column;
   gap: 12px;
 }
+.course-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .course-card__name {
   font-size: 14px;
   font-weight: bold;
@@ -967,6 +1062,37 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.course-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1;
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  &.status-living {
+    color: #22C55E;
+  }
+  &.status-finished {
+    color: #94A3B8;
+  }
+  &.status-soon {
+    color: #1F7CFF;
+  }
+  &.status-not-broadcast {
+    color: #F59E0B;
+  }
+  &.status-unknown {
+    color: #94A3B8;
+  }
 }
 .course-card__time {
   font-size: 12px;
@@ -978,16 +1104,16 @@ export default {
 }
 .course-card__btn {
   flex-shrink: 0;
-  width: 80px;
-height: 32px;
-background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
-border-radius: 10px 10px 10px 10px;
+  min-width: 80px;
+  padding: 0 12px;
+  height: 32px;
+  background: linear-gradient(90deg, #155DFC 0%, #00BCFF 100%);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   font-size: 12px;
-
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -1005,7 +1131,7 @@ border-radius: 12px 12px 12px 12px;
   padding: 20px;
   box-sizing: border-box;
   flex: 1;
-  min-height: 300px;
+//   min-height: 300px;
 }
 
 .list-group {

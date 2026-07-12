@@ -1064,6 +1064,9 @@ export default {
     },
   },
 created() {
+    if(this.$route.query.from &&this.$route.query.from=='home' ){
+        this.activeTab = 'quiz'
+    }
     this.isTeacher = getUserInfo().role === 'TEACHER'
   },
   mounted() {

@@ -193,6 +193,12 @@ export default {
           activeIcon: require('@/assets/icons/menu/new_kcb_active.png')
         },
         {
+          path: '/notes',
+          title: '知构笔记',
+          icon: require('@/assets/icons/menu/new_zgbj.png'),
+          activeIcon: require('@/assets/icons/menu/new_zgbj_active.png')
+        },
+        {
           path: '/message',
           title: '消息',
           icon: require('@/assets/icons/menu/new_xx.png'),

@@ -84,6 +84,9 @@ export const getCourseProgress = (courseId, classId) => get(`/edu/course/${cours
 // 获取课表列表
 export const getScheduleList = params => get('/edu/schedule/list', params)
 
+// 按日期区间获取课表列表
+export const getScheduleListByRange = params => get('/edu/schedule/list-by-range', params)
+
 // 删除课堂
 export const deleteLiveClass = liveId => del(`/edu/live/${liveId}`)
 
