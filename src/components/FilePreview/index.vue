@@ -37,6 +37,7 @@
           <div :id="editorContainerId" class="file-preview-editor"></div>
           <div v-if="isPreviewPresentation" class="presentation-top-mask"></div>
           <div v-if="isPreviewPresentation" class="presentation-left-menu-mask"></div>
+          <div class="toolbar-logo-mask"></div>
           <div class="toolbar-right-mask"></div>
         </div>
       </div>
@@ -48,8 +49,9 @@
 /**
  * FilePreview — 通用文件在线预览组件
  *
- * 基于 ONLYOFFICE Document Server 实现，以只读模式渲染文档，
- * 禁用下载、打印、复制等操作，适合在各业务模块中复用。
+ * 基于 ONLYOFFICE Document Server 实现，先向后端换取 JWT，
+ * 再以只读模式渲染文档；禁用下载、打印、复制等操作（可按权限放开），
+ * 适合在各业务模块中复用。
  *
  * 使用示例：
  *   <FilePreview
@@ -67,7 +69,22 @@
  */
 
 /** ONLYOFFICE 文档服务器 API 地址 */
-const ONLYOFFICE_API_URL = 'http://120.26.253.133:18106/web-apps/apps/api/documents/api.js'
+const ONLYOFFICE_API_URL = 'https://live.fjlsjy123.com/onlyoffice/web-apps/apps/api/documents/api.js'
+
+/**
+ * 根据文件 URL 生成稳定的 document.key（OnlyOffice 缓存/鉴权依赖）
+ * @param {string} url
+ * @returns {string}
+ */
+function buildDocumentKey(url) {
+  let hash = 0
+  const str = String(url || '')
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return `preview-${Math.abs(hash).toString(16)}`.slice(0, 128)
+}
 
 /**
  * 支持预览的文件类型映射表
@@ -131,7 +148,7 @@ function loadOnlyOfficeScript() {
 }
 
 import { getUserInfo } from '@/utils/auth'
-import { collectToggle } from '@/api'
+import { collectToggle, getOnlyOfficeToken } from '@/api'
 
 /** 用于生成唯一的编辑器容器 id，避免同页面多实例冲突 */
 let editorIdCounter = 0
@@ -257,7 +274,8 @@ export default {
      * 初始化 ONLYOFFICE 编辑器：
      * 1. 校验文件类型是否支持
      * 2. 动态加载 API 脚本（已加载则跳过）
-     * 3. 以只读模式创建 DocEditor 实例
+     * 3. 向后端换取 JWT token
+     * 4. 以只读模式创建 DocEditor 实例
      */
     async initEditor() {
       this.loadError = false
@@ -277,8 +295,12 @@ export default {
         return
       }
       this.destroyEditor()
+
+      const canDownload = !this.isStudent || this.allowDownload === '1'
+      const userInfo = getUserInfo() || {}
       const isPresentation = fileInfo.documentType === 'slide'
       const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
       const customization = {
         loaderName: ' ',
         loaderLogo: emptyImage,
@@ -290,14 +312,17 @@ export default {
           info: '',
           logo: emptyImage
         },
+        // 新版 Docs 需 visible:false；透明图作旧版/无授权兜底
         logo: {
-          // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
           image: emptyImage,
           imageDark: emptyImage,
+          imageLight: emptyImage,
           imageEmbedded: emptyImage,
-          url: ''
+          url: '',
+          visible: false
         }
       }
+
       if (isPresentation) {
         Object.assign(customization, {
           compactHeader: true,
@@ -311,6 +336,7 @@ export default {
           feedback: false,
           goback: false,
           review: false,
+          
           layout: {
             header: {
               editMode: false,
@@ -355,10 +381,10 @@ export default {
           embedUrl: ''              // 隐藏右侧"嵌入"按钮
         }
       }
+
       const config = {
         /**
          * PPT 使用 desktop 模式保留左侧幻灯片目录，其他文件继续使用 embedded 模式
-         * 仅渲染文档内容区，完全去掉顶部工具栏、左侧面板、标题栏等所有操作 UI
          */
         type: isPresentation ? 'desktop' : 'embedded',
         documentType: fileInfo.documentType,
@@ -366,6 +392,7 @@ export default {
         height: '100%',
         document: {
           fileType: fileInfo.fileType,
+          key: buildDocumentKey(fileInfo.url),
           title: fileInfo.title,
           url: fileInfo.url,
           permissions: {
@@ -381,11 +408,17 @@ export default {
         editorConfig: {
           mode: 'view',
           lang: 'zh-CN',
+          user: {
+            id: String(userInfo.id || userInfo.userId || 'preview-user'),
+            name: userInfo.nickname || userInfo.name || userInfo.username || '预览用户'
+          },
           customization
         }
       }
-      console.log(config,'对象')
+
       try {
+        const tokenRes = await getOnlyOfficeToken(config)
+        config.token = tokenRes.data
         this.editorInstance = new window.DocsAPI.DocEditor(this.editorContainerId, config)
       } catch (e) {
         this.loadError = true
@@ -600,6 +633,18 @@ export default {
   background: #F7F7F7;
   z-index: 10;
   pointer-events: auto;
+}
+
+/* 新版 OnlyOffice logo 在左上角，用遮罩兜底（Community / 配置未生效时） */
+.toolbar-logo-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 160px;
+  height: 42px;
+  background: #F7F7F7;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .toolbar-right-mask {

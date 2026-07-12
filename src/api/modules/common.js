@@ -21,3 +21,6 @@ export const sendNotice = data => post('/common/notice', data)
 
 // 获取轮播图列表
 export const getCarouselList = () => get('/edu/carousel/list')
+
+// 获取 OnlyOffice JWT（预览前需携带编辑器配置换取 token）
+export const getOnlyOfficeToken = data => post('/onlyoffice/token', data)

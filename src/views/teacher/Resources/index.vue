@@ -711,9 +711,8 @@ export default {
 
       this.uploadPendingCount++
       uploadBusinessFile(formData)
-        .then(() => {})
-        .finally(() => {
-          this.uploadPendingCount--
+        .then(() => {
+           this.uploadPendingCount--
           if (this.uploadPendingCount === 0) {
             this.$message.success('上传成功')
             if (type === '2') {
@@ -723,6 +722,11 @@ export default {
               this.fetchMyFiles()
             }
           }
+        }).catch(res=>{
+          this.uploadPendingCount = 0
+        })
+        .finally(() => {
+        
         })
     },
 
