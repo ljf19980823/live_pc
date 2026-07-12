@@ -17,15 +17,19 @@ export default {
     recordId: {
       type: [String, Number],
       default: ''
+    },
+    reportUrl: {
+      type: [String, Number],
+      default: ''
     }
   },
   emits: ['close'],
-  computed: {
-    reportUrl() {
-      if (!this.classId || !this.recordId) return ''
-      return `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${this.classId}&recordId=${this.recordId}`
-    }
-  },
+  // computed: {
+  //   reportUrl() {
+  //     if (!this.classId || !this.recordId) return ''
+  //     return `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${this.classId}&recordId=${this.recordId}`
+  //   }
+  // },
   watch: {
     visible(val) {
       if (val) {

@@ -32,6 +32,7 @@
       :visible="showReport"
       :class-id="reportClassId"
       :record-id="reportRecordId"
+      :report-url="reportUrl"
       @close="showReport = false"
     />
 
@@ -78,6 +79,7 @@
 
           <div class="exam-record-card__actions">
             <button
+            v-if="record.reportUrl"
               class="exam-record-card__btn exam-record-card__btn--outline"
               @click="handleViewReport(record)"
             >查看报告</button>
@@ -132,7 +134,8 @@ export default {
       wrongRecord: null,
       showReport: false,
       reportClassId: '',
-      reportRecordId: ''
+      reportRecordId: '',
+      reportUrl:''
     }
   },
   computed: {
@@ -190,6 +193,7 @@ export default {
     handleViewReport(record) {
       this.reportClassId = this.classId || (this.examInfo && this.examInfo.classId) || ''
       this.reportRecordId = record.id || record.recordId || ''
+      this.reportUrl = record.reportUrl ||''
       this.showReport = true
     },
     handleViewDetail(record, index) {

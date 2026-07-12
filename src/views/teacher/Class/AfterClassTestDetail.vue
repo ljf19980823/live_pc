@@ -76,7 +76,7 @@
               <td class="act-detail__td-time">{{ formatDuration(row.examDuration) }}</td>
               <td>
                 <button class="act-detail__detail-btn" @click="openStudentDetail(row)">做题详情</button>
-                <button class="act-detail__report-btn" @click="openReport(row)">查看报告</button>
+                <button class="act-detail__report-btn" v-if="row.reportUrl" @click="openReport(row)">查看报告</button>
                 <button class="act-detail__share-btn" @click="shareReport(row)">分享报告</button>
               </td>
             </tr>
@@ -149,6 +149,7 @@
       :visible="reportVisible"
       :class-id="reportClassId"
       :record-id="reportRecordId"
+      :report-url="reportUrl"
       @close="reportVisible = false"
     />
   </div>
@@ -198,6 +199,7 @@ export default {
       reportVisible: false,
       reportClassId: '',
       reportRecordId: '',
+      reportUrl:'',
       exporting: false
     }
   },
@@ -299,6 +301,7 @@ export default {
     openReport(row) {
       this.reportClassId = (this.courseInfo && this.courseInfo.classId) || ''
       this.reportRecordId = row.recordId || ''
+      this.reportUrl = row.reportUrl || ''
       this.reportVisible = true
     },
     async handleExport() {
