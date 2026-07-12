@@ -11,6 +11,12 @@
             class="filter-search__input"
             placeholder="搜索知构笔记名称、关键字"
             @keydown.enter.prevent="handleSearch"
+            @blur="handleSearch"
+          />
+          <i
+            v-if="searchKeyword"
+            class="el-icon-circle-close filter-search__clear"
+            @mousedown.prevent="clearSearch"
           />
         </div>
 
@@ -40,24 +46,20 @@
 
         <div class="filter-item">
           <span class="filter-item__label">时间</span>
-          <div class="filter-item__control filter-item__control--select">
-            <div class="ls_class_select_wrap">
-              <el-select
-                v-model="timeRange"
-                placeholder="全部时间"
-                size="mini"
-                class="ls_class_select"
-                @change="handleSearch"
-              >
-                <el-option
-                  v-for="opt in timeOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
-              <i class="el-icon-arrow-down ls_class_select_arrow" />
-            </div>
+          <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
+            <el-date-picker
+              v-model="dateRange"
+              type="daterange"
+              range-separator="-"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="yyyy-MM-dd"
+              :picker-options="datePickerOptions"
+              class="ls_date_picker"
+              size="mini"
+              @change="handleSearch"
+            />
+            <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
           </div>
         </div>
       </div>
@@ -73,13 +75,13 @@
     </div>
 
     <!-- 数量统计 -->
-    <div class="notes-count">共 {{ filteredNotes.length }} 条笔记</div>
+    <div class="notes-count">共 {{ total }} 条笔记</div>
 
     <!-- 笔记卡片网格 -->
     <div class="notes-grid" v-loading="loading">
       <div
-        v-for="item in filteredNotes"
-        :key="item.id"
+        v-for="item in noteList"
+        :key="item.id || item.historyLessonId"
         class="note-card"
         @click="openNote(item)"
       >
@@ -90,42 +92,51 @@
             class="note-card__cover-img"
             alt=""
           />
-          
-          
+
           <div
             class="note-card__star"
-            :class="{ active: item.isImportant }"
+            :class="{ active: item.isPoint === '1' }"
             @click.stop="toggleImportant(item)"
           >
-            <i class="el-icon-star-on" v-if="item.isImportant" />
+            <i class="el-icon-star-on" v-if="item.isPoint === '1'" />
             <i class="el-icon-star-off" v-else />
           </div>
         </div>
 
         <div class="note-card__body">
           <div class="note-card__meta">
-            <span
-              class="note-card__subject"
-            
-            >{{ item.subjectName }}</span>
-            <span class="note-card__time">{{ item.time }}</span>
+            <span class="note-card__subject" v-if=" item.subjectName ">{{ item.subjectName || '未分类' }}</span>
+            <span class="note-card__time">{{ formatTime(item.generationTime) }}</span>
           </div>
-          <div class="note-card__title" :title="item.title">{{ item.title }}</div>
-          <div class="note-card__teacher">主讲：{{ item.teacherName }}</div>
-          <div class="note-card__desc">{{ item.description }}</div>
+          <div class="note-card__title" :title="item.name">{{ item.name }}</div>
+          <div class="note-card__teacher">主讲：{{ item.teacherName2 || item.teacherName || '-' }}</div>
+          <div class="note-card__desc" v-if="item.summary">{{ item.summary || '暂无总结' }}</div>
         </div>
       </div>
     </div>
 
     <empty-state
-      v-if="!loading && filteredNotes.length === 0"
+      v-if="!loading && noteList.length === 0"
       description="暂无知构笔记"
     />
+
+    <div class="ls_pagination" v-if="total > pageSize">
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :total="total"
+        :page-size="pageSize"
+        :current-page="pageNum"
+        @current-change="handlePageChange"
+      />
+    </div>
   </div>
 </template>
 
 <script>
 import EmptyState from '@/components/EmptyState/index.vue'
+import { getSubjectOptions, getNoteList, updateNoteIsPoint } from '@/api/modules/teacher'
+import { getUserInfo } from '@/utils/auth'
 
 export default {
   name: 'ZhigouNotes',
@@ -135,146 +146,130 @@ export default {
       loading: false,
       searchKeyword: '',
       subjectId: '',
-      timeRange: '',
+      dateRange: null,
       noteMode: 'all', // all | important
-      subjectOptions: [
-        { id: 'english', name: '英语' },
-        { id: 'chinese', name: '语文' },
-        { id: 'math', name: '数学' },
-        { id: 'science', name: '科学' },
-        { id: 'history', name: '历史' },
-        { id: 'physics', name: '物理' }
-      ],
-      timeOptions: [
-        { label: '全部时间', value: '' },
-        { label: '近一周', value: 'week' },
-        { label: '近一月', value: 'month' },
-        { label: '近三月', value: 'quarter' }
-      ],
-      noteList: [
-        {
-          id: 1,
-          title: '英语阅读精讲直播课',
-          teacherName: '林老师',
-          subjectName: '英语',
-          subjectKey: 'english',
-          time: '2026.07.16 21:20',
-          description: '梳理阅读题定位、长难句拆解与选项排除方法，重点记录主旨题和细节题答题路径。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #34D399 0%, #10B981 55%, #059669 100%)',
-          cover: '',
-          isImportant: true
-        },
-        {
-          id: 2,
-          title: '高三语文 · 行测申论冲刺课',
-          teacherName: '周老师',
-          subjectName: '语文',
-          subjectKey: 'chinese',
-          time: '2026.07.15 19:40',
-          description: '归纳作文素材与论证结构，整理申论大作文常见框架与金句表达。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%)',
-          cover: '',
-          isImportant: false
-        },
-        {
-          id: 3,
-          title: '初二数学 · 函数图像专题',
-          teacherName: '陈老师',
-          subjectName: '数学',
-          subjectKey: 'math',
-          time: '2026.07.14 20:10',
-          description: '总结一次函数、二次函数图像变换规律，记录易错点与典型例题解法。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #FB923C 0%, #F97316 55%, #EA580C 100%)',
-          cover: '',
-          isImportant: true
-        },
-        {
-          id: 4,
-          title: '科学探索暑期营 · 光学实验',
-          teacherName: '赵老师',
-          subjectName: '科学',
-          subjectKey: 'science',
-          time: '2026.07.13 16:30',
-          description: '记录光的折射、反射实验步骤与结论，整理实验报告关键观察要点。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 55%, #2563EB 100%)',
-          cover: '',
-          isImportant: false
-        },
-        {
-          id: 5,
-          title: '高一历史 · 近代史专题复习',
-          teacherName: '吴老师',
-          subjectName: '历史',
-          subjectKey: 'history',
-          time: '2026.07.12 18:00',
-          description: '梳理近代史时间轴与重大事件因果，提炼选择题高频考点与答题模板。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #F87171 0%, #EF4444 55%, #DC2626 100%)',
-          cover: '',
-          isImportant: true
-        },
-        {
-          id: 6,
-          title: '高二物理 · 力学综合提升',
-          teacherName: '郑老师',
-          subjectName: '物理',
-          subjectKey: 'physics',
-          time: '2026.07.11 21:05',
-          description: '整理受力分析、动能定理与动量守恒的综合题思路，标注易混公式。',
-          badge: '行测+申论',
-          coverTitle: '国省考 基础早鸟班',
-          coverGradient: 'linear-gradient(135deg, #818CF8 0%, #6366F1 55%, #4F46E5 100%)',
-          cover: '',
-          isImportant: false
-        }
-      ]
+      subjectOptions: [],
+      noteList: [],
+      pageNum: 1,
+      pageSize: 8,
+      total: 0,
+      datePickerOptions: {
+        disabledDate: (time) => time.getTime() > Date.now()
+      }
     }
   },
-  computed: {
-    filteredNotes() {
-      let list = this.noteList.slice()
-
-      if (this.noteMode === 'important') {
-        list = list.filter(item => item.isImportant)
-      }
-
-      if (this.subjectId) {
-        list = list.filter(item => item.subjectKey === this.subjectId)
-      }
-
-      const keyword = (this.searchKeyword || '').trim()
-      if (keyword) {
-        list = list.filter(item => {
-          const text = `${item.title}${item.description}${item.teacherName}${item.subjectName}`
-          return text.includes(keyword)
-        })
-      }
-
-      return list
-    }
+  created() {
+    this.fetchSubjectOptions()
+    this.fetchNoteList()
   },
   methods: {
-    handleSearch() {
-      // 预留接口查询；当前为前端筛选
+    async fetchSubjectOptions() {
+      try {
+        const res = await getSubjectOptions()
+        this.subjectOptions = (res && res.data) ? res.data : []
+      } catch (e) {
+        console.log(e, 'fetchSubjectOptions error')
+        this.subjectOptions = []
+      }
     },
+
+    async fetchNoteList() {
+      this.loading = true
+      try {
+        const params = {
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        }
+        const keyword = (this.searchKeyword || '').trim()
+        if (keyword) params.keyword = keyword
+        if (this.subjectId) params.subjectId = this.subjectId
+        if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0]) {
+          params.startDate = this.dateRange[0]
+          params.endDate = this.dateRange[1]
+        }
+        if (this.noteMode === 'important') {
+          params.isPoint = '1'
+        }
+
+        const res = await getNoteList(params)
+        const data = (res && res.data) ? res.data : {}
+        this.noteList = data.list || []
+        this.total = data.total || 0
+      } catch (e) {
+        console.log(e, 'fetchNoteList error')
+        this.noteList = []
+        this.total = 0
+      } finally {
+        this.loading = false
+      }
+    },
+
+    handleSearch() {
+      this.pageNum = 1
+      this.fetchNoteList()
+    },
+
+    clearSearch() {
+      this.searchKeyword = ''
+      this.handleSearch()
+    },
+
+    handlePageChange(page) {
+      this.pageNum = page
+      this.fetchNoteList()
+    },
+
     toggleNoteMode() {
       this.noteMode = this.noteMode === 'all' ? 'important' : 'all'
+      this.pageNum = 1
+      this.fetchNoteList()
     },
-    toggleImportant(item) {
-      item.isImportant = !item.isImportant
+
+    async toggleImportant(item) {
+      const nextIsPoint = item.isPoint === '1' ? '2' : '1'
+      const prevIsPoint = item.isPoint
+      item.isPoint = nextIsPoint
+      try {
+        await updateNoteIsPoint({
+          id: item.id || item.historyLessonId,
+          isPoint: nextIsPoint
+        })
+        await this.fetchNoteList()
+      } catch (e) {
+        item.isPoint = prevIsPoint
+        console.log(e, 'toggleImportant error')
+      }
     },
+
+    formatTime(timeStr) {
+      if (!timeStr) return ''
+      // yyyy-MM-dd HH:mm:ss → yyyy.MM.dd HH:mm
+      const text = String(timeStr).replace(/-/g, '.')
+      return text.length >= 16 ? text.substring(0, 16) : text
+    },
+
     openNote(item) {
-      // 预留笔记详情跳转
-      console.log('open note', item.id)
+      if (!item.taskUuid) {
+        this.$message.warning('该笔记暂未生成听记内容')
+        return
+      }
+      const fileList = item.fileList || []
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
+      const userInfo = getUserInfo() || {}
+      this.$router.push({
+        name: 'AIListening',
+        query: {
+          videoUrl: mainFile ? mainFile.filePath || '' : '',
+          teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+          meetingId: item.taskUuid,
+          meetingTitle: item.name || '',
+          scopeText: item.taskUuid,
+          liveLessonId: item.liveLessonId || '',
+          historyLessonId: item.historyLessonId || item.id || '',
+          teacherId: item.teacherId || ''
+        }
+      })
     }
   }
 }
@@ -284,7 +279,7 @@ export default {
 .zhigou-notes-page {
   height: 100%;
   box-sizing: border-box;
-  padding: 28px 24px 28px;
+  padding: 28px 24px 80px;
   overflow-y: auto;
 }
 
@@ -313,9 +308,9 @@ export default {
   &__btn {
     flex-shrink: 0;
     width: 96px;
-height: 40px;
-background: #EFF6FF;
-border-radius: 12px 12px 12px 12px;
+    height: 40px;
+    background: #EFF6FF;
+    border-radius: 12px 12px 12px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -335,7 +330,6 @@ border-radius: 12px 12px 12px 12px;
       background: #eff6ff;
       color: #1f7cff;
       box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
-
 
       &:hover {
         background: #dbeafe;
@@ -377,6 +371,24 @@ border-radius: 12px 12px 12px 12px;
       cursor: default;
       padding-right: 8px;
     }
+
+    &--picker {
+      min-width: 240px;
+      cursor: default;
+    }
+
+    &--datetime {
+      min-width: 260px;
+    }
+  }
+
+  &__icon {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+    opacity: 0.6;
+    flex-shrink: 0;
+    pointer-events: none;
   }
 }
 
@@ -413,6 +425,18 @@ border-radius: 12px 12px 12px 12px;
     &::placeholder {
       color: #90a1b9 !important;
       font-size: 14px !important;
+    }
+  }
+
+  &__clear {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #94A3B8;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+      color: #64748B;
     }
   }
 }
@@ -458,6 +482,48 @@ border-radius: 12px 12px 12px 12px;
   }
 }
 
+.ls_date_picker {
+  flex: 1;
+  width: auto !important;
+
+  ::v-deep .el-range-editor {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    background: transparent;
+    width: 100%;
+    &:hover,
+    &.is-active {
+      border: none;
+      box-shadow: none;
+    }
+  }
+  ::v-deep .el-range-input {
+    font-size: 14px;
+    color: #1D293D;
+    background: transparent;
+    width: 88px;
+  }
+  ::v-deep .el-range-separator {
+    font-size: 14px;
+    color: #1D293D;
+    padding: 0 4px;
+    line-height: normal;
+    width: auto;
+  }
+  ::v-deep .el-range__icon {
+    display: none;
+  }
+  ::v-deep .el-range__close-icon {
+    font-size: 14px;
+  }
+}
+
+.filter-item__control--picker ::v-deep .el-input__inner {
+  border: none !important;
+}
+
 /* ── 数量 ───────────────────────────────────────────────────── */
 .notes-count {
   margin: 20px 0 17px;
@@ -492,7 +558,7 @@ border-radius: 12px 12px 12px 12px;
   &__cover {
     position: relative;
     width: 100%;
-    height: 140px;
+    height: 152.31px;
     overflow: hidden;
     background: #e2e8f0;
   }
@@ -500,46 +566,8 @@ border-radius: 12px 12px 12px 12px;
   &__cover-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    // object-fit: cover;
     display: block;
-  }
-
-  &__cover-placeholder {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    display: flex;
-    align-items: flex-end;
-    padding: 20px 16px 18px;
-    box-sizing: border-box;
-  }
-
-  &__cover-badge {
-    display: inline-flex;
-    align-items: center;
-    height: 22px;
-    padding: 0 8px;
-    background: #1f7cff;
-    border-radius: 6px;
-    font-size: 11px;
-    color: #ffffff;
-    font-weight: 600;
-    line-height: 1;
-    white-space: nowrap;
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 2;
-  }
-
-  &__cover-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-    line-height: 1.35;
-    max-width: 72%;
   }
 
   &__star {
@@ -547,10 +575,10 @@ border-radius: 12px 12px 12px 12px;
     top: 10px;
     right: 10px;
     width: 36px;
-height: 36px;
-background: rgba(255,255,255,0.9);
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 10px 10px 10px 10px;
+    height: 36px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+    border-radius: 10px 10px 10px 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -599,36 +627,6 @@ border-radius: 10px 10px 10px 10px;
     white-space: nowrap;
     background: #EFF6FF;
     color: #1f7cff;
-
-    &.subject-english {
-      background: #eff6ff;
-      color: #1f7cff;
-    }
-
-    &.subject-chinese {
-      background: #f3e8ff;
-      color: #9333ea;
-    }
-
-    &.subject-math {
-      background: #fff7ed;
-      color: #ea580c;
-    }
-
-    &.subject-science {
-      background: #ecfeff;
-      color: #0891b2;
-    }
-
-    &.subject-history {
-      background: #fef2f2;
-      color: #dc2626;
-    }
-
-    &.subject-physics {
-      background: #eef2ff;
-      color: #4f46e5;
-    }
   }
 
   &__time {
@@ -660,7 +658,7 @@ border-radius: 10px 10px 10px 10px;
     flex: 1;
     padding: 10px 12px;
     background: #F8FAFC;
-border-radius: 10px 10px 10px 10px;
+    border-radius: 10px 10px 10px 10px;
     font-size: 12px;
     color: #62748E;
     line-height: 1.6;
@@ -670,6 +668,19 @@ border-radius: 10px 10px 10px 10px;
     overflow: hidden;
     word-break: break-word;
   }
+}
+
+.ls_pagination {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  background: #fff;
+  box-shadow: 0 -2px 8px 0 rgba(0, 0, 0, 0.06);
+  z-index: 100;
 }
 
 /* ── 响应式 ─────────────────────────────────────────────────── */

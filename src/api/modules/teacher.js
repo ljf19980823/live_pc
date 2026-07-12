@@ -156,6 +156,12 @@ export const getAfterQuizTeacherList = params => get('/edu/after/quiz/teacher/li
 // 科目下拉选项（可按 classId 筛选）
 export const getSubjectOptions = params => get('/edu/subject/options', params)
 
+// 知构笔记列表
+export const getNoteList = params => get('/edu/history/note-list', params)
+
+// 更新是否重点笔记（isPoint: 1=设为重点 2=取消重点）
+export const updateNoteIsPoint = data => post('/edu/history/update-is-point', data)
+
 // 课后测下拉选项
 export const getAfterQuizOptions = params => get('/edu/after/quiz/options', params)
 

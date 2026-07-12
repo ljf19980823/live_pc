@@ -1,93 +1,136 @@
 <template>
-  <div class="page-placeholder">
+  <div class="message-page">
     <!-- 隐藏的文件输入 -->
     <input ref="imageInput" type="file" accept="image/*" multiple style="display:none" @change="onImageFileChange">
     <input ref="fileInput" type="file" multiple style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.txt,.csv,.mp4,.mp3,.avi,.mov,.wmv,.mkv" @change="onFileChange">
 
-    <div class="app_top">
-      <div class="app_top_left" @click="openSendDialog">
-        <div class="app_top_left_text">消息</div>
-        <img src="@/assets/images/home/add.png" class="app_top_left_icon" alt="">
-      </div>
-      <div class="app_top_right" v-if="showDetail == false">{{ activeTab === 'sent' ? '已发消息' : '已收消息' }}</div>
-      <div class="app_top_right" @click="showDetail=false" v-if="showDetail == true">消息详情
-        <img src="@/assets/images/message/back.png" class="app_top_right_back"  alt="">
-      </div>
-    </div>
-    <div class="app_last">
-      <div class="app_last_left">
-        <div
-          :class="activeTab === 'sent' ? 'app_last_left_detail_active' : 'app_last_left_detail'"
-          @click="switchTab('sent')"
-        >已发消息</div>
-        <div
-          :class="activeTab === 'received' ? 'app_last_left_detail_active' : 'app_last_left_detail'"
-          @click="switchTab('received')"
-        >已收消息</div>
-      </div>
-      <!-- 列表 -->
-      <div class="app_last_right" v-if="showDetail == false">
-        <EmptyState v-if="currentList.length === 0" description="暂无消息" />
-        <div class="app_last_right_detail" @click="handleDetail(item)" v-for="(item) in currentList" :key="item.id">
-          <!-- <img src="@/assets/images/message/such.png" class="app_last_right_detail_img" alt=""> -->
-          <div class="app_last_right_detail_mess">
-            <div class="app_last_right_detail_mess_top">
-              <div class="app_last_right_detail_mess_top_left">
-                <div class="app_last_right_detail_mess_top_name">{{ item.sender }}</div>
-                <div class="app_last_right_detail_mess_top_time">{{ relativeTimeText(item.time) }}</div>
-                <div class="app_last_right_detail_mess_top_file" v-if="item.attachCount > 0">
-                  <div class="app_last_right_detail_mess_top_file_sx"></div>
-                  <img src="@/assets/images/message/file.png" class="app_last_right_detail_mess_top_file_icon" alt="">
-                  <div class="app_last_right_detail_mess_top_file_text">{{ item.attachCount }}个附件</div>
-                </div>
-              </div>
-              <el-dropdown v-if="activeTab === 'received'" trigger="click" @command="(cmd) => handleReceivedOptionsCommand(cmd, item)">
-                <img @click.stop src="@/assets/images/message/options.png" class="app_last_right_detail_mess_top_options" alt="">
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="delete">删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-            <div class="app_last_right_detail_mess_con">{{ item.content }}</div>
-          </div>
+    <!-- 顶部：列表态 Tab+发送 / 详情态 返回 -->
+    <div class="message-header">
+      <template v-if="!showDetail">
+        <div class="message-tabs">
+          <div
+            class="message-tab"
+            :class="{ active: activeTab === 'sent' }"
+            @click="switchTab('sent')"
+          >已发消息</div>
+          <div
+            class="message-tab"
+            :class="{ active: activeTab === 'received' }"
+            @click="switchTab('received')"
+          >已收消息</div>
         </div>
-      </div>
-      <!-- 详情 -->
-      <div class="app_last_right" v-if="showDetail == true && currentDetail">
-        <div class="app_last_right_detailBOX">
-            <div class="app_last_right_detailBOX_top">
-               <div class="app_last_right_detail_mess_top_name">{{ currentDetail.sender }}</div>
-                <div class="app_last_right_detail_mess_top_time">{{ relativeTimeText(currentDetail.time) }}</div>
+        <div class="btn-send" @click="openSendDialog">
+          <img src="@/assets/images/message/send.png" class="btn-send__icon" alt="">
+          <span>发送消息</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="message-detail-back" @click="closeDetail">
+          <img src="@/assets/images/message/back.png" class="message-detail-back__icon" alt="">
+          <span>消息详情</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 列表 -->
+    <div v-if="!showDetail" class="list_container">
+      <div class="message-count">共 {{ currentList.length }} 条消息</div>
+
+      <div class="message-list" v-loading="loading">
+        <EmptyState v-if="!loading && currentList.length === 0" description="暂无消息" />
+        <div
+          class="message-card"
+          v-for="item in currentList"
+          :key="item.id"
+          @click="handleDetail(item)"
+        >
+          <div class="message-card__header">
+            <div class="message-card__header-left">
+              <span class="message-card__title">{{ item.sender }}</span>
+              <span class="message-card__time">{{ formatTime(item.time) }}</span>
             </div>
-            <div class="app_last_right_detail_mess_con app_last_right_detail_mess_con_full">{{ currentDetail.content }}</div>
-            <div class="app_last_right_detailBOX_last" v-if="currentDetail.images.length > 0 || currentDetail.files.length > 0">
-              <el-image
-                v-for="(img, ii) in currentDetail.images"
-                :key="'img_' + ii"
-                :src="img.filePath"
-                :preview-src-list="currentDetail.images.map(i => i.filePath)"
-                :initial-index="ii"
-                class="app_last_right_detailBOX_last_img"
-                fit="cover"
-              />
-              <div
-                class="app_last_right_detailBOX_last_file"
-                v-for="(file, fi) in currentDetail.files"
-                :key="'file_' + fi"
-                @click="previewFile(file)"
+            <div class="message-card__more" @click.stop>
+              <el-popover
+                placement="bottom-end"
+                trigger="click"
+                popper-class="ls_options_popover"
+                :visible-arrow="false"
               >
-                <img src="@/assets/images/message/icon.png" class="app_last_right_detailBOX_last_file_icon" alt="">
-                <div class="app_last_right_detailBOX_last_file_mess">
-                  <div class="app_last_right_detailBOX_last_file_mess_title">{{ file.name }}</div>
+                <div class="ls_options_menu">
+                  <div class="ls_options_menu_item" @click.stop="handleDelete(item)">
+                    <span>删除</span>
+                  </div>
                 </div>
-              </div>
+                <div slot="reference" class="message-card__more-btn">
+                  <img src="@/assets/images/online/options.png" alt="">
+                </div>
+              </el-popover>
             </div>
+          </div>
+
+          <div class="message-card__content">{{ item.content }}</div>
+
+          <div
+            class="message-card__media"
+            v-if="item.images.length > 0 || item.files.length > 0"
+            @click.stop
+          >
+            <el-image
+              v-for="(img, ii) in item.images"
+              :key="'img_' + item.id + '_' + ii"
+              :src="img.filePath"
+              :preview-src-list="item.images.map(i => i.filePath)"
+              :initial-index="ii"
+              class="message-card__img"
+            />
+            <div
+              class="message-card__file"
+              v-for="(file, fi) in item.files"
+              :key="'file_' + item.id + '_' + fi"
+              @click="previewFile(file)"
+            >
+              <img src="@/assets/images/message/link_icon.png" class="message-card__file-icon" alt="">
+              <span class="message-card__file-name">{{ file.name }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- 详情 -->
+    <div class="message-detail" v-else-if="currentDetail">
+      <div class="message-card message-card--detail">
+        <div class="message-card__header">
+          <div class="message-card__header-left">
+            <span class="message-card__title">{{ currentDetail.sender }}</span>
+            <span class="message-card__time">{{ formatTime(currentDetail.time) }}</span>
+          </div>
+        </div>
+        <div class="message-card__content message-card__content--full">{{ currentDetail.content }}</div>
+        <div
+          class="message-card__media"
+          v-if="currentDetail.images.length > 0 || currentDetail.files.length > 0"
+        >
+          <el-image
+            v-for="(img, ii) in currentDetail.images"
+            :key="'detail_img_' + ii"
+            :src="img.filePath"
+            :preview-src-list="currentDetail.images.map(i => i.filePath)"
+            :initial-index="ii"
+            class="message-card__img"
+          />
+          <div
+            class="message-card__file"
+            v-for="(file, fi) in currentDetail.files"
+            :key="'detail_file_' + fi"
+            @click="previewFile(file)"
+          >
+            <img src="@/assets/images/message/link_icon.png" class="message-card__file-icon" alt="">
+            <span class="message-card__file-name">{{ file.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 添加消息弹窗 -->
     <DialogCustome :visible="showDialog" title="发消息" :confirmLoading="sendLoading" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
@@ -263,13 +306,13 @@ export default {
   data() {
     return {
       showDetail: false,
+      currentDetail: null,
       filePreviewVisible: false,
       filePreviewData: null,
       showDialog: false,
       showDialogReceive: false,
       messageContent: '',
       activeTab: 'sent',
-      currentDetail: null,
       keyword: '',
       loading: false,
       sendLoading: false,
@@ -350,18 +393,16 @@ export default {
       this.currentDetail = item
       this.showDetail = true
     },
-    relativeTimeText(raw) {
+    closeDetail() {
+      this.showDetail = false
+      this.currentDetail = null
+    },
+    formatTime(raw) {
       if (!raw) return ''
       const date = new Date(raw)
       if (isNaN(date.getTime())) return raw
-      const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
-      if (seconds < 3600) {
-        return `${Math.max(1, Math.floor(seconds / 60))}分钟前`
-      }
-      if (seconds < 86400) {
-        return `${Math.max(1, Math.floor(seconds / 3600))}小时前`
-      }
-      return `${Math.max(1, Math.floor(seconds / 86400))}天前`
+      const pad = n => String(n).padStart(2, '0')
+      return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
     },
 
     // 发消息弹窗
@@ -422,7 +463,7 @@ export default {
           id: u.userId,
           name: u.displayName || '',
           type: u.type,
-          profilePicture:u.profilePicture||''
+          profilePicture: u.profilePicture || ''
         }))
       }))
     },
@@ -517,26 +558,24 @@ export default {
       this.selectedImages.splice(index, 1)
     },
 
-    // 已收消息操作下拉
-    async handleReceivedOptionsCommand(cmd, item) {
-      if (cmd === 'delete') {
-        try {
-          await this.$confirm('确定要删除该消息吗？', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          })
-        } catch {
-          return
-        }
-        try {
-          const type = this.activeTab === 'sent' ? '2' : '1'
-          await removeNotice({ itemId: item.itemId, type })
-          this.$message({ message: '删除成功', type: 'success' })
-          this.fetchMessages()
-        } catch (e) {
-          // 错误由请求拦截器统一处理
-        }
+    // 删除消息
+    async handleDelete(item) {
+      try {
+        await this.$confirm('确定要删除该消息吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+      } catch {
+        return
+      }
+      try {
+        const type = this.activeTab === 'sent' ? '2' : '1'
+        await removeNotice({ itemId: item.itemId, type })
+        this.$message({ message: '删除成功', type: 'success' })
+        this.fetchMessages()
+      } catch (e) {
+        // 错误由请求拦截器统一处理
       }
     },
 
@@ -568,274 +607,301 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.page-placeholder{
+.message-page {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 顶部栏 */
+.message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+/* Tab：与设计图一致的分段切换 */
+.message-tabs {
+  display: flex;
+  align-items: center;
   gap: 8px;
-    padding: 0 0 16px 0;
+  background: rgba(239,246,255,0.8);
+// box-shadow: 0px 0px 0px 1px #DBEAFE;
+border-radius: 12px 12px 12px 12px;
+  padding: 4px;
   box-sizing: border-box;
 }
-.app_top{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
-}
-.app_top_left{
-  width: 300px;
-  height: 68px;
-background: #FFFFFF;
-display: flex;
-justify-content: center;
-align-items: center;
-gap: 8px;
-cursor: pointer;
-}
-.app_top_left_text{
+
+.message-tab {
+  width: 112px;
+  height: 40px;
+  text-align: center;
+  line-height: 40px;
+  font-size: 14px;
   font-weight: bold;
-font-size: 16px;
-color: #333333;
-}
-.app_top_left_icon{
-  width: 16px;
-  height: 16px;
-}
-.app_top_right{
-  background: #ffffff;
-  position: relative;
-  flex: 1;
-  width: 0;
-  display: flex;
-   height: 68px;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-font-size: 16px;
-color: #333333;
-}
-.app_top_right_back{
-  position: absolute;
-  left: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 7px;
-  height: 14px;
+  color: #62748E;
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+
+  &:hover:not(.active) {
+    color: #62748E;
+  }
+
+  &.active {
+    background: #FFFFFF;
+    color: #1F7CFF;
+    font-weight: bold;
+    box-shadow: 0px 1px 2px -1px rgba(0, 0, 0, 0.1), 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 0px 0px 1px #DBEAFE;
+  }
 }
-.app_last{
-  gap: 4px;
+
+/* 发送消息按钮 */
+.btn-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 120px;
+height: 40px;
+
+background: #1F7CFF;
+box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
+border-radius: 12px 12px 12px 12px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #1a6de6;
+  }
+
+  &__icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+}
+
+/* 详情返回 */
+.message-detail-back {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333333;
+  cursor: pointer;
+  user-select: none;
+
+  &__icon {
+    width: 7px;
+    height: 14px;
+  }
+}
+
+.list_container{
+  background: #FFFFFF;
+box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
+border-radius: 12px 12px 12px 12px;
+padding: 20px;
+box-sizing: border-box;
+ flex: 1;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+/* 数量文案 */
+.message-count {
+  font-size: 14px;
+  color: #45556C;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  line-height: 20px;
+}
+
+/* 列表区域 */
+.message-list {
   flex: 1;
   height: 0;
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-}
-.app_last_left{
-  width: 300px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 8px;
-border-radius: 4px 4px 4px 4px;
-}
-.app_last_left_detail{
-  cursor: pointer;
-  width: 100%;
-  height: 68px;
-  background: #F0F3F6;
-border-radius: 4px 4px 4px 4px;
-padding-left: 24px;
-line-height: 68px;
-color: #333333;
-font-size: 16px;
-}
-.app_last_left_detail_active{
-  width: 100%;
-  height: 68px;
-  background: #CAD9FF;
-border-radius: 4px 4px 4px 4px;
-padding-left: 24px;
-line-height: 68px;
-color: #0049FF;
-font-size: 16px;
-}
-.app_last_right{
-  flex: 1;
-  width: 0;
   overflow: auto;
-  padding-left: 16px;
-  padding-top: 8px;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   gap: 16px;
 }
-.app_last_right_detail{
-  width: 100%;
-  padding: 12px 16px;
-  box-sizing: border-box;
-  background: #ffffff;
-  border-radius: 4px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 17px;
-  cursor: pointer;
-}
-.app_last_right_detail_img{
-  width: 68px;
-  height: 68px;
-  border-radius: 4px;
-}
-.app_last_right_detail_mess{
+
+/* 详情区域 */
+.message-detail {
   flex: 1;
-  width: 0;
+  height: 0;
+  overflow: auto;
+}
 
-}
-.app_last_right_detail_mess_top{
+/* 消息卡片 —— 按设计图静态还原 */
+.message-card {
   width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.app_last_right_detail_mess_top_left{
-   display: flex;
-  justify-content: flex-start;
-  align-items:flex-end;
-  gap: 8px;
-}
-.app_last_right_detail_mess_top_name{
-  font-weight: bold;
-font-size: 16px;
-color: #333333;
-}
-.app_last_right_detail_mess_top_file{
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-  gap: 8px;
-}
-.app_last_right_detail_mess_top_file_sx{
-  width: 1px;
-  height: 11px;
-  background: #D9D9D9;
-
-}
-.app_last_right_detail_mess_top_file_icon{
-  width: 15px;
-  height: 14px;
-}
-.app_last_right_detail_mess_top_file_text{
-  font-weight: 400;
-font-size: 14px;
-color: #666666;
-}
-.app_last_right_detail_mess_top_time{
-  font-weight: 400;
-font-size: 12px;
-color: #999999;
-align-self: flex-end;
-}
-.app_last_right_detail_mess_top_options{
-  width: 20px;
-  height: 4px;
-  cursor: pointer;
-}
-.app_last_right_detail_mess_con{
-  margin-top: 10px;
-  width: 100%;
-  word-break: break-all;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  color: #999999;
-  font-size: 14px;
-  line-height: 22px;
-}
-.app_last_right_detailBOX{
-  width: 100%;
-  padding: 12px;
-  background: #ffffff;
-  border-radius: 4px;
-}
-.app_last_right_detailBOX_top{
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-  gap: 8px;
-}
-.app_last_right_detailBOX_last{
-  width: 100%;
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.app_last_right_detailBOX_last_img{
-  width: 88px;
-  height: 88px;
-  border-radius: 4px;
-}
-.app_last_right_detailBOX_last_file{
-  width: 214px;
-  height: 56px;
-  background: #F3F4F8;
-  border-radius: 4px;
-  padding: 0 12px;
+ background: rgba(239,246,255,0.5);
+border-radius: 12px 12px 12px 12px;
+border: 1px solid #DBEAFE;
+  padding: 17px;
   box-sizing: border-box;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
   cursor: pointer;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(31, 124, 255, 0.08);
+  }
+
+  &--detail {
+    cursor: default;
+
+    &:hover {
+      box-shadow: none;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  &__header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex: 1;
+    width: 0;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #020618;
+    line-height: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+  }
+
+  &__time {
+    font-size: 12px;
+    color: #90A1B9;
+    line-height: 18px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__more {
+    flex-shrink: 0;
+  }
+
+  &__more-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 10px;
+
+    img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
+
+    &:hover {
+      background: #F1F5F9;
+    }
+  }
+
+  &__content {
+    font-size: 14px;
+    color: #45556C;
+    line-height: 22px;
+    white-space: pre-wrap;
+    word-break: break-all;
+
+    &--full {
+      /* 详情页完整展示 */
+    }
+  }
+
+  &__media {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  &__img {
+    width: 128px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  &__file {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
+   background: #FFFFFF;
+box-shadow: 0px 0px 0px 1px #DBEAFE;
+border-radius: 10px 10px 10px 10px;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    &:hover {
+      background: #E8EAEE;
+    }
+  }
+
+  &__file-icon {
+    width: 14px;
+    height: 14px;
+    // object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &__file-name {
+    font-size: 12px;
+    color: #45556C;
+    line-height: 18px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
-.app_last_right_detailBOX_last_file_icon{
-  width: 36px;
-  height: 36px;
-}
-.app_last_right_detailBOX_last_file_mess{
-  flex: 1;
-  width: 0;
-}
-.app_last_right_detailBOX_last_file_mess_title{
+
+// ─── 发消息弹窗（保持原有样式）──────────────────────────────
+.dialog_con {
   width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 400;
-font-size: 14px;
-color: #333333;
 }
-.app_last_right_detailBOX_last_file_mess_size{
-font-weight: 400;
-font-size: 14px;
-color: #999999;
-margin-top: 5px;
-}
-.app_last_right_detail_mess_con_full{
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  white-space: pre-wrap!important;
-}
-
-
-
-
-.dialog_con{
-  width: 100%;
-}
-.dialog_con_top{
-  border-radius: 8px 8px 8px 8px;
+.dialog_con_top {
+  border-radius: 8px;
   width: 100%;
   height: 56px;
   background: #ffffff;
@@ -847,7 +913,7 @@ margin-top: 5px;
   box-sizing: border-box;
   cursor: pointer;
 }
-.dialog_con_top_left{
+.dialog_con_top_left {
   flex: 1;
   width: 0;
   display: flex;
@@ -857,16 +923,15 @@ margin-top: 5px;
   overflow-x: auto;
   overflow-y: hidden;
 }
-.dialog_con_top_btn{
+.dialog_con_top_btn {
   width: 16px;
   height: 16px;
   cursor: pointer;
   flex-shrink: 0;
 }
-.dialog_con_top_left_detail{
+.dialog_con_top_left_detail {
   height: 32px;
-  display: inline-flex;
-  border-radius: 4px 4px 4px 4px;
+  border-radius: 4px;
   padding: 0 14px;
   box-sizing: border-box;
   display: flex;
@@ -876,21 +941,21 @@ margin-top: 5px;
   background: #CAD9FF;
   flex-shrink: 0;
 }
-.dialog_con_top_left_detail_name{
+.dialog_con_top_left_detail_name {
   color: #333333;
   font-size: 14px;
   white-space: nowrap;
 }
-.dialog_con_top_left_detail_close{
+.dialog_con_top_left_detail_close {
   width: 16px;
   height: 16px;
 }
-.dialog_con_top_left_empty{
+.dialog_con_top_left_empty {
   font-weight: 400;
-font-size: 16px;
-color: #999999;
+  font-size: 16px;
+  color: #999999;
 }
-.dialog_con_last{
+.dialog_con_last {
   width: 100%;
   margin-top: 16px;
   background: #ffffff;
@@ -900,37 +965,37 @@ color: #999999;
   flex-direction: column;
   justify-content: space-between;
 }
-.dialog_con_last_con{
+.dialog_con_last_con {
   min-height: 228px;
   width: 100%;
 }
-.dialog_con_last_btn{
+.dialog_con_last_btn {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 20px;
 }
-.dialog_con_last_btn_file{
+.dialog_con_last_btn_file {
   width: 19px;
   height: 18px;
   cursor: pointer;
 }
-.dialog_con_last_btn_img{
-   width: 19px;
+.dialog_con_last_btn_img {
+  width: 19px;
   height: 18px;
   cursor: pointer;
 }
-::v-deep .el-textarea__inner{
-  padding: 0!important;
-  border: none!important;
-  color: #333333!important;
-  font-size: 16px!important;
+::v-deep .el-textarea__inner {
+  padding: 0 !important;
+  border: none !important;
+  color: #333333 !important;
+  font-size: 16px !important;
 }
 ::v-deep .el-textarea__inner::placeholder {
-  color: #999999!important;
-  font-size:16px!important
+  color: #999999 !important;
+  font-size: 16px !important;
 }
-.dialog_con_last_con_other{
+.dialog_con_last_con_other {
   width: 100%;
   margin-top: 19px;
   display: flex;
@@ -939,19 +1004,19 @@ color: #999999;
   align-items: flex-end;
   flex-wrap: wrap;
 }
-.dialog_con_last_con_other_img{
+.dialog_con_last_con_other_img {
   position: relative;
   width: 88px;
   height: 88px;
-  border-radius: 4px 4px 4px 4px;
+  border-radius: 4px;
 }
-.dialog_con_last_con_other_img_img{
+.dialog_con_last_con_other_img_img {
   width: 100%;
   height: 100%;
-  border-radius: 4px 4px 4px 4px;
-  object-fit: cover;
+  border-radius: 4px;
+  // object-fit: cover;
 }
-.dialog_con_last_con_other_img_close{
+.dialog_con_last_con_other_img_close {
   position: absolute;
   top: -8px;
   right: -8px;
@@ -959,88 +1024,87 @@ color: #999999;
   height: 16px;
   cursor: pointer;
 }
-.dialog_con_last_con_other_file{
+.dialog_con_last_con_other_file {
   position: relative;
   width: 214px;
-height: 56px;
-background: #F3F4F8;
-border-radius: 4px 4px 4px 4px;
-padding: 0 12px;
-box-sizing: border-box;
-display: flex;
-justify-content: flex-start;
-align-items: center;
-gap: 8px;
+  height: 56px;
+  background: #F3F4F8;
+  border-radius: 4px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
 }
-.dialog_con_last_con_other_file_mess{
+.dialog_con_last_con_other_file_mess {
   flex: 1;
   width: 0;
 }
-.dialog_con_last_con_other_file_mess_title{
+.dialog_con_last_con_other_file_mess_title {
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-font-size: 14px;
-color: #333333;
+  font-size: 14px;
+  color: #333333;
 }
-.dialog_con_last_con_other_file_fm{
+.dialog_con_last_con_other_file_fm {
   width: 36px;
   height: 36px;
 }
-.dialog_con_last_con_other_file_mess_size{
+.dialog_con_last_con_other_file_mess_size {
   font-weight: 400;
-font-size: 14px;
-color: #999999;
-margin-top: 5px;
+  font-size: 14px;
+  color: #999999;
+  margin-top: 5px;
 }
 
-
-.receive_tc_box{
+// ─── 选择接收人弹窗（保持原有样式）──────────────────────────
+.receive_tc_box {
   width: 100%;
   display: flex;
   justify-content: space-between;
   height: 100%;
-
   gap: 12px;
 }
-.receive_tc_box_left{
+.receive_tc_box_left {
   display: flex;
   justify-content: flex-start;
   flex-direction: column;
   gap: 12px;
   width: 361px;
 }
-.receive_tc_box_left_top{
+.receive_tc_box_left_top {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 9px;
 }
-.receive_tc_box_left_top_detail{
+.receive_tc_box_left_top_detail {
   width: 176px;
-height: 48px;
-background: #FFFFFF;
-border-radius: 8px;
-font-weight: 400;
-font-size: 16px;
-color: #333333;
-display: flex;
-justify-content: center;
-align-items: center;
-cursor: pointer;
+  height: 48px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  font-weight: 400;
+  font-size: 16px;
+  color: #333333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
 }
-.receive_tc_box_left_top_detail_active{
-  background: #0049FF!important;
-  color: #FFFFFF!important;
+.receive_tc_box_left_top_detail_active {
+  background: #0049FF !important;
+  color: #FFFFFF !important;
   font-weight: bold;
 }
-.receive_tc_box_left_list{
+.receive_tc_box_left_list {
   flex: 1;
   height: 0;
-  background:#FFFFFF ;
+  background: #FFFFFF;
   border-radius: 8px;
   overflow: auto;
   padding: 14px 18px;
@@ -1050,31 +1114,31 @@ cursor: pointer;
   justify-content: flex-start;
   gap: 16px;
 }
-.receive_tc_box_left_list_detail{
+.receive_tc_box_left_list_detail {
   width: 100%;
 }
-.receive_tc_box_left_list_detail_class{
+.receive_tc_box_left_list_detail_class {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
 }
-.receive_tc_box_left_list_detail_class_xl{
+.receive_tc_box_left_list_detail_class_xl {
   width: 8px;
   height: 8px;
 }
-.receive_tc_box_left_list_detail_class_tag{
+.receive_tc_box_left_list_detail_class_tag {
   margin: 0 6px 0 12px;
   width: 14px;
   height: 14px;
 }
-.receive_tc_box_left_list_detail_class_choose{
+.receive_tc_box_left_list_detail_class_choose {
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
-.receive_tc_box_left_list_detail_class_title{
+.receive_tc_box_left_list_detail_class_title {
   margin-right: 10px;
   flex: 1;
   width: 0;
@@ -1082,21 +1146,20 @@ cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-font-size: 14px;
-color: #333333;
+  font-size: 14px;
+  color: #333333;
 }
-
-.receive_tc_box_left_list_detail_second{
+.receive_tc_box_left_list_detail_second {
   padding-left: 18px;
   box-sizing: border-box;
   width: 100%;
-   margin-top: 16px;
+  margin-top: 16px;
   display: flex;
   justify-content: flex-start;
   gap: 8px;
   flex-direction: column;
 }
-.receive_tc_box_left_list_detail_second_detail{
+.receive_tc_box_left_list_detail_second_detail {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -1104,12 +1167,12 @@ color: #333333;
   gap: 8px;
   cursor: pointer;
 }
-.receive_tc_box_left_list_detail_second_detail_fm{
+.receive_tc_box_left_list_detail_second_detail_fm {
   width: 32px;
   height: 32px;
   border-radius: 50%;
 }
-.avatar_placeholder{
+.avatar_placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1120,17 +1183,17 @@ color: #333333;
   flex-shrink: 0;
   user-select: none;
 }
-.receive_tc_box_left_list_detail_second_detail_name{
+.receive_tc_box_left_list_detail_second_detail_name {
   flex: 1;
   width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-font-size: 14px;
-color: #333333;
+  font-size: 14px;
+  color: #333333;
 }
-.receive_tc_box_right{
+.receive_tc_box_right {
   width: 100%;
   height: 100%;
   background: #FFFFFF;
@@ -1138,23 +1201,23 @@ color: #333333;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 12px ;
+  gap: 12px;
   padding: 8px 0;
   box-sizing: border-box;
 }
-.receive_tc_box_right_top{
+.receive_tc_box_right_top {
   font-weight: 400;
-font-size: 14px;
-color: #333333;
+  font-size: 14px;
+  color: #333333;
   padding: 0px 17px;
   box-sizing: border-box;
 }
-.receive_tc_box_right_top span{
+.receive_tc_box_right_top span {
   font-size: 20px;
   font-weight: bold;
 }
-.receive_tc_box_right_list{
-   padding: 0px 17px;
+.receive_tc_box_right_list {
+  padding: 0px 17px;
   box-sizing: border-box;
   flex: 1;
   height: 0;
@@ -1164,31 +1227,56 @@ color: #333333;
   flex-direction: column;
   gap: 8px;
 }
-.receive_tc_box_right_list_detail{
+.receive_tc_box_right_list_detail {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
-.receive_tc_box_right_list_detail_head{
+.receive_tc_box_right_list_detail_head {
   width: 32px;
   height: 32px;
   border-radius: 50%;
 }
-.receive_tc_box_right_list_detail_close{
+.receive_tc_box_right_list_detail_close {
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
-.receive_tc_box_right_list_detail_title{
+.receive_tc_box_right_list_detail_title {
   flex: 1;
   width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-font-size: 14px;
-color: #333333;
+  font-size: 14px;
+  color: #333333;
+}
+</style>
+
+<style lang="scss">
+.ls_options_popover {
+  padding: 4px 0 !important;
+  min-width: 120px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+.ls_options_menu {
+  display: flex;
+  flex-direction: column;
+}
+.ls_options_menu_item {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  &:hover {
+    background: #f0f4ff;
+    color: #0049ff;
+  }
 }
 </style>
