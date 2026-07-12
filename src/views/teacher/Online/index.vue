@@ -403,25 +403,27 @@
         </div>
       </div>
       <div class="quiz-grid" v-loading="quizLoading">
-        <div
-          v-for="item in filteredQuizList"
-          :key="item.examConfigId || item.id"
-          class="quiz-card"
-          @click="openQuizDetail(item)"
-        >
-          <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
-          <div class="quiz-card__info">
-            <div class="quiz-card__pill">{{ item.teacherName2 || item.teacherName || '-' }}</div>
-            <div class="quiz-card__pill">{{ item.subjectName || item.subject || '-' }}</div>
-            <div class="quiz-card__pill">{{ item.finishedStudentCount || 0 }}/{{ item.totalStudentCount || 0 }} 已完成</div>
-            <div class="quiz-card__pill">{{ item.topicNum || 0 }} 题</div>
+        <template v-if="!quizLoading">
+          <div
+            v-for="item in filteredQuizList"
+            :key="item.examConfigId || item.id"
+            class="quiz-card"
+            @click="openQuizDetail(item)"
+          >
+            <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
+            <div class="quiz-card__info">
+              <div class="quiz-card__pill">{{ item.teacherName2 || item.teacherName || '-' }}</div>
+              <div class="quiz-card__pill">{{ item.subjectName || item.subject || '-' }}</div>
+              <div class="quiz-card__pill">{{ item.finishedStudentCount || 0 }}/{{ item.totalStudentCount || 0 }} 已完成</div>
+              <div class="quiz-card__pill">{{ item.topicNum || 0 }} 题</div>
+            </div>
+            <div class="quiz-card__time">
+              <span class="quiz-card__time-label">发布时间</span>
+              <span class="quiz-card__time-value">{{ item.createTime || '-' }}</span>
+            </div>
+            <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
           </div>
-          <div class="quiz-card__time">
-            <span class="quiz-card__time-label">发布时间</span>
-            <span class="quiz-card__time-value">{{ item.createTime || '-' }}</span>
-          </div>
-          <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
-        </div>
+        </template>
       </div>
       <empty-state v-if="!quizLoading && filteredQuizList.length === 0" description="暂无课后测数据" />
     </template>
@@ -2030,6 +2032,8 @@ created() {
 
     // ── 课后测试 ─────────────────────────────────────────────────────────
     async initQuizTab() {
+      this.quizList = []
+      this.quizLoading = true
       await this.fetchClassList()
       if (!this.quizClassId && this.classList.length) {
         this.quizClassId = this.classList[0].value
@@ -2039,6 +2043,7 @@ created() {
         this.quizSubjectOptions = []
         this.afterQuizOptions = []
         this.teacherOptions = []
+        this.quizLoading = false
         return
       }
       await Promise.all([
@@ -2999,6 +3004,7 @@ border-radius: 10px 10px 10px 10px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  min-height: 200px;
 }
 
 .quiz-card {
