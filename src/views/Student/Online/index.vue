@@ -8,7 +8,7 @@
           :key="tab.key"
           class="online-tab"
           :class="{ active: activeTab === tab.key }"
-          @click="activeTab = tab.key"
+          @click="switchOnlineTab(tab.key)"
         >
           {{ tab.label }}
         </div>
@@ -167,6 +167,8 @@
             <span class="filter-item__label">时间</span>
             <div class="filter-item__control filter-item__control--picker">
               <el-date-picker
+                :key="'history-date-' + datePickerRenderKey"
+                ref="historyDatePicker"
                 v-model="dateRange"
                 type="daterange"
                 range-separator="-"
@@ -174,8 +176,13 @@
                 end-placeholder="结束日期"
                 format="yyyy-MM-dd"
                 value-format="yyyy-MM-dd"
-                class="ls_date_picker"
+                align="left"
+                :append-to-body="true"
+                :picker-options="historyDatePickerOptions"
+                popper-class="ls-online-date-popper"
+                class="ls_date_picker ls_date_picker--daterange"
                 size="mini"
+                @focus="fixDatePickerPosition('historyDatePicker')"
               />
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
@@ -275,22 +282,28 @@
     </template>
 
     <!-- 课后测试 -->
-    <template v-if="activeTab === 'quiz' && !showQuizDetail">
+    <template v-if="activeTab === 'quiz'">
       <div class="filter-bar">
         <div class="filter-bar__left">
           <div class="filter-item">
             <span class="filter-item__label">时间</span>
             <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
               <el-date-picker
+                :key="'quiz-date-' + datePickerRenderKey"
+                ref="quizDatePicker"
                 v-model="quizDateRange"
                 type="datetimerange"
                 range-separator="-"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
                 value-format="yyyy-MM-dd HH:mm:ss"
+                align="left"
+                :append-to-body="true"
                 :picker-options="quizDatePickerOptions"
-                class="ls_date_picker"
+                popper-class="ls-online-date-popper"
+                class="ls_date_picker ls_date_picker--datetimerange"
                 size="mini"
+                @focus="fixDatePickerPosition('quizDatePicker')"
                 @change="handleQuizSearch"
               />
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
@@ -302,9 +315,10 @@
               <div class="ls_class_select_wrap">
                 <el-select
                   v-model="quizClassId"
-                  placeholder="请选择班级"
+                  placeholder="全部班级"
                   size="mini"
                   filterable
+                  clearable
                   class="ls_class_select"
                   @change="handleQuizClassChange"
                 >
@@ -338,6 +352,26 @@
                     :label="opt.name"
                     :value="opt.id"
                   />
+                </el-select>
+                <i class="el-icon-arrow-down ls_class_select_arrow" />
+              </div>
+            </div>
+          </div>
+          <div class="filter-item">
+            <span class="filter-item__label">情况</span>
+            <div class="filter-item__control filter-item__control--select">
+              <div class="ls_class_select_wrap">
+                <el-select
+                  v-model="quizFinishStatus"
+                  placeholder="全部情况"
+                  size="mini"
+                  clearable
+                  class="ls_class_select"
+                  @change="handleQuizSearch"
+                >
+                  <el-option label="全部情况" value="" />
+                  <el-option label="已做题" value="1" />
+                  <el-option label="未做题" value="0" />
                 </el-select>
                 <i class="el-icon-arrow-down ls_class_select_arrow" />
               </div>
@@ -384,35 +418,70 @@
         </div>
       </div>
       <div class="quiz-grid" v-loading="quizLoading">
-        <div
-          v-for="item in filteredQuizList"
-          :key="item.examConfigId || item.id"
-          class="quiz-card"
-          @click="openQuizDetail(item)"
-        >
-          <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
-          <div class="quiz-card__info">
-            <div class="quiz-card__pill">{{ item.teacherName2 || item.teacherName || '-' }}</div>
-            <div class="quiz-card__pill">{{ item.subjectName || item.subject || '-' }}</div>
-            <div class="quiz-card__pill">{{ item.finishedStudentCount || 0 }}/{{ item.totalStudentCount || 0 }} 已完成</div>
-            <div class="quiz-card__pill">{{ item.topicNum || 0 }} 题</div>
+        <template v-if="!quizLoading">
+          <div
+            v-for="item in filteredQuizList"
+            :key="item.examConfigId || item.id"
+            class="quiz-card"
+          >
+            <div class="quiz-card__header">
+              <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
+              <span
+                class="quiz-card__status"
+                :class="isQuizFinished(item) ? 'quiz-card__status--done' : 'quiz-card__status--todo'"
+              >
+                {{ isQuizFinished(item) ? '已做题' : '未做题' }}
+              </span>
+            </div>
+            <div class="quiz-card__meta">
+              <div class="quiz-card__meta-row">
+                <span class="quiz-card__meta-label">科目</span>
+                <span class="quiz-card__meta-value">{{ item.subjectName || item.subject || '-' }}</span>
+              </div>
+              <div class="quiz-card__meta-row">
+                <span class="quiz-card__meta-label">发布时间</span>
+                <span class="quiz-card__meta-value">{{ formatQuizTime(item.createTime) }}</span>
+              </div>
+            </div>
+            <div class="quiz-card__actions">
+              <template v-if="isQuizFinished(item)">
+                <button class="quiz-card__btn quiz-card__btn--outline" @click.stop="openRanking(item)">排行榜</button>
+                <button class="quiz-card__btn quiz-card__btn--record" @click.stop="openExamRecord(item)">考试记录</button>
+                <button class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
+              </template>
+              <template v-else>
+                <button class="quiz-card__btn quiz-card__btn--primary quiz-card__btn--right" @click.stop="startExam(item)">去考试</button>
+              </template>
+            </div>
           </div>
-          <div class="quiz-card__time">
-            <span class="quiz-card__time-label">发布时间</span>
-            <span class="quiz-card__time-value">{{ item.createTime || '-' }}</span>
-          </div>
-          <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
-        </div>
+        </template>
       </div>
       <empty-state v-if="!quizLoading && filteredQuizList.length === 0" description="暂无课后测数据" />
     </template>
-    <!-- 课后测试 - 学生做题详情 -->
-    <AfterClassTestDetail
-      v-if="activeTab === 'quiz' && showQuizDetail"
-      :visible="showQuizDetail"
-      :className="quizClassName"
-      :courseInfo="currentQuizCourse"
-      @close="showQuizDetail = false"
+
+    <!-- 考试页面 -->
+    <ExamPage
+      v-if="showExam"
+      :examInfo="currentExamItem"
+      :classId="quizClassId || (currentExamItem && currentExamItem.classId) || ''"
+      @back="onExamBack"
+      @submitted="onExamSubmitted"
+    />
+
+    <!-- 考试记录页面 -->
+    <ExamRecordPage
+      v-if="showExamRecord"
+      :examInfo="currentExamRecordItem"
+      :classId="quizClassId || (currentExamRecordItem && currentExamRecordItem.classId) || ''"
+      @back="showExamRecord = false"
+    />
+
+    <!-- 排行榜页面 -->
+    <RankingPage
+      :visible="showRanking"
+      :examConfigId="rankingExamConfigId"
+      :classId="quizClassId || rankingClassId || ''"
+      @back="showRanking = false"
     />
 
 
@@ -868,18 +937,20 @@
 </template>
 
 <script>
-import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api/modules/teacher'
+import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive, getAfterQuizList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api/modules/teacher'
 import Clickoutside from 'element-ui/lib/utils/clickoutside'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
-import AfterClassTestDetail from '@/views/teacher/Class/AfterClassTestDetail.vue'
+import ExamPage from '@/views/Student/Class/ExamPage.vue'
+import ExamRecordPage from '@/views/Student/Class/ExamRecordPage.vue'
+import RankingPage from '@/views/Student/Class/RankingPage.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'Online',
-  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail },
+  components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, ExamRecordPage, RankingPage },
   directives: { Clickoutside },
   data() {
     return {
@@ -895,17 +966,136 @@ export default {
       quizLoading: false,
       quizClassId: '',
       quizSubjectId: '',
+      quizFinishStatus: '',
       quizDateRange: [],
       quizSubjectOptions: [],
+      datePickerRenderKey: 0,
       afterQuizOptions: [],
       teacherOptions: [],
       quizSuggestVisible: false,
       quizFilterExamConfigId: '',
       quizFilterTeacherId: '',
-      showQuizDetail: false,
-      currentQuizCourse: null,
+      showExam: false,
+      currentExamItem: null,
+      showExamRecord: false,
+      currentExamRecordItem: null,
+      showRanking: false,
+      rankingExamConfigId: '',
+      rankingClassId: '',
       quizDatePickerOptions: {
-        disabledDate: (time) => time.getTime() > Date.now()
+        disabledDate: (time) => time.getTime() > Date.now(),
+        shortcuts: [
+          {
+            text: '本周',
+            onClick(picker) {
+              const now = new Date()
+              const day = now.getDay() || 7
+              const start = new Date(now)
+              start.setDate(now.getDate() - day + 1)
+              start.setHours(0, 0, 0, 0)
+              const end = new Date(start)
+              end.setDate(start.getDate() + 6)
+              end.setHours(23, 59, 59, 999)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '本月',
+            onClick(picker) {
+              const now = new Date()
+              const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0)
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近三月',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 3)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近半年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 6)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近一年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setFullYear(start.getFullYear() - 1)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          }
+        ]
+      },
+      historyDatePickerOptions: {
+        shortcuts: [
+          {
+            text: '本周',
+            onClick(picker) {
+              const now = new Date()
+              const day = now.getDay() || 7
+              const start = new Date(now)
+              start.setDate(now.getDate() - day + 1)
+              start.setHours(0, 0, 0, 0)
+              const end = new Date(start)
+              end.setDate(start.getDate() + 6)
+              end.setHours(23, 59, 59, 999)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '本月',
+            onClick(picker) {
+              const now = new Date()
+              const start = new Date(now.getFullYear(), now.getMonth(), 1)
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近三月',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 3)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近半年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 6)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近一年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setFullYear(start.getFullYear() - 1)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          }
+        ]
       },
       liveUrl: '',
       bannerDismissed: false,
@@ -1036,7 +1226,6 @@ export default {
         this.startLiveRefreshTimer()
       } else if (val === 'quiz') {
         this.stopLiveRefreshTimer()
-        this.showQuizDetail = false
         this.initQuizTab()
       } else {
         this.stopLiveRefreshTimer()
@@ -1146,7 +1335,11 @@ created() {
       return cls ? cls.label : ''
     },
     filteredQuizList() {
-      return this.quizList
+      let list = this.quizList || []
+      if (this.quizFinishStatus === '1' || this.quizFinishStatus === '0') {
+        list = list.filter(item => this.isQuizFinished(item) === (this.quizFinishStatus === '1'))
+      }
+      return list
     },
     quizSuggestGroups() {
       const keyword = (this.quizKeyword || '').trim().toLowerCase()
@@ -1884,16 +2077,10 @@ created() {
 
     // ── 课后测试 ─────────────────────────────────────────────────────────
     async initQuizTab() {
+      this.quizLoading = true
       await this.fetchClassList()
       if (!this.quizClassId && this.classList.length) {
         this.quizClassId = this.classList[0].value
-      }
-      if (!this.quizClassId) {
-        this.quizList = []
-        this.quizSubjectOptions = []
-        this.afterQuizOptions = []
-        this.teacherOptions = []
-        return
       }
       await Promise.all([
         this.fetchQuizSubjectOptions(),
@@ -1916,18 +2103,91 @@ created() {
     handleQuizSearch() {
       this.fetchQuizList()
     },
-    async fetchQuizSubjectOptions() {
-      if (!this.quizClassId) {
-        this.quizSubjectOptions = []
-        return
+    switchOnlineTab(key) {
+      if (key === this.activeTab) return
+      // 必须在切换 tab（v-if 销毁）前清理，否则 append-to-body 的面板残留会导致下一个定位到顶部
+      this.destroyOnlineDatePickers()
+      this.datePickerRenderKey += 1
+      this.activeTab = key
+    },
+    destroyOnlineDatePickers() {
+      ;['historyDatePicker', 'quizDatePicker'].forEach((refName) => {
+        const inst = this.$refs[refName]
+        if (!inst) return
+        try {
+          inst.pickerVisible = false
+          if (typeof inst.hidePicker === 'function') inst.hidePicker()
+          if (typeof inst.destroyPopper === 'function') inst.destroyPopper()
+          if (inst.picker) {
+            const el = inst.picker.$el
+            if (el && el.parentNode) el.parentNode.removeChild(el)
+            if (typeof inst.picker.$destroy === 'function') inst.picker.$destroy()
+            inst.picker = null
+          }
+          inst.popperElm = null
+        } catch (e) {
+          console.log(e, 'destroyOnlineDatePickers')
+        }
+      })
+      document.querySelectorAll('.ls-online-date-popper').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+      })
+      document.querySelectorAll('body > .el-picker-panel, body > .el-date-range-picker').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+      })
+    },
+    fixDatePickerPosition(refName) {
+      const apply = () => {
+        const inst = this.$refs[refName]
+        if (!inst || !inst.$el) return
+        const panel = inst.popperElm || (inst.picker && inst.picker.$el)
+        if (!panel) return
+        const rect = inst.$el.getBoundingClientRect()
+        if (!rect.width && !rect.height) return
+        panel.style.position = 'fixed'
+        panel.style.transform = 'none'
+        panel.style.margin = '0'
+        let left = rect.left
+        const panelWidth = panel.offsetWidth || 0
+        if (panelWidth && left + panelWidth > window.innerWidth - 8) {
+          left = Math.max(8, window.innerWidth - panelWidth - 8)
+        }
+        panel.style.top = `${rect.bottom + 4}px`
+        panel.style.left = `${Math.max(8, left)}px`
       }
+      const patchUpdatePopper = () => {
+        const inst = this.$refs[refName]
+        if (!inst || inst._lsPosPatched || typeof inst.updatePopper !== 'function') return
+        inst._lsPosPatched = true
+        const rawUpdate = inst.updatePopper.bind(inst)
+        inst.updatePopper = () => {
+          rawUpdate()
+          apply()
+        }
+      }
+      this.$nextTick(() => {
+        patchUpdatePopper()
+        if (this.$refs[refName] && typeof this.$refs[refName].updatePopper === 'function') {
+          this.$refs[refName].updatePopper()
+        }
+        apply()
+        requestAnimationFrame(() => {
+          apply()
+          setTimeout(apply, 30)
+          setTimeout(apply, 100)
+        })
+      })
+    },
+    async fetchQuizSubjectOptions() {
       try {
-        const res = await getSubjectOptions({ classId: this.quizClassId })
+        const params = {}
+        if (this.quizClassId) params.classId = this.quizClassId
+        const res = await getSubjectOptions(params)
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
       } catch (e) {
         console.log(e, 'fetchQuizSubjectOptions error')
-        this.quizSubjectOptions = []
+        this.quizSubjectOptions = [{ id: '', name: '全部科目' }]
       }
     },
     async fetchQuizFilterOptions() {
@@ -1957,7 +2217,6 @@ created() {
     onQuizKeywordInput() {
       const keyword = (this.quizKeyword || '').trim()
       this.quizSuggestVisible = !!keyword
-      // 仅在清空输入时重置筛选并刷新列表，输入过程中不改动列表
       if (!keyword && (this.quizFilterExamConfigId || this.quizFilterTeacherId)) {
         this.quizFilterExamConfigId = ''
         this.quizFilterTeacherId = ''
@@ -1991,19 +2250,20 @@ created() {
       this.quizSuggestVisible = false
     },
     async fetchQuizList() {
-      if (!this.quizClassId) return
-      const { userId } = getUserInfo()
+      const userInfo = getUserInfo() || {}
+      const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
       this.quizLoading = true
       try {
-        const params = { classId: this.quizClassId, teacherId: userId }
+        const params = { studentId }
+        if (this.quizClassId) params.classId = this.quizClassId
         if (this.quizSubjectId) params.subjectId = this.quizSubjectId
         if (this.quizDateRange && this.quizDateRange.length === 2) {
           params.quizStartTime = this.quizDateRange[0]
           params.quizEndTime = this.quizDateRange[1]
         }
         if (this.quizFilterExamConfigId) params.examConfigId = this.quizFilterExamConfigId
-        if (this.quizFilterTeacherId) params.teacherId = this.quizFilterTeacherId
-        const res = await getAfterQuizTeacherList(params)
+        if (this.quizFilterTeacherId) params.quizTeacherId = this.quizFilterTeacherId
+        const res = await getAfterQuizList(params)
         this.quizList = (res && res.data) ? res.data : []
       } catch (e) {
         console.log(e, 'fetchQuizList error')
@@ -2012,9 +2272,46 @@ created() {
         this.quizLoading = false
       }
     },
-    openQuizDetail(item) {
-      this.currentQuizCourse = { ...item, classId: this.quizClassId }
-      this.showQuizDetail = true
+    formatQuizTime(time) {
+      if (!time) return '-'
+      const str = String(time).replace(/-/g, '.')
+      return str.length >= 16 ? str.substring(0, 16) : str
+    },
+    isQuizFinished(item) {
+      return String(item && item.finishStatus) === '1'
+    },
+    openRanking(item) {
+      this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
+      this.rankingClassId = item.classId || this.quizClassId || ''
+      this.showRanking = true
+    },
+    startExam(item) {
+      this.currentExamItem = {
+        id: item.id || item.quizId || item.examId,
+        name: item.name || item.examName || '',
+        duration: item.duration || 60,
+        examConfigId: item.examConfigId || item.configId || '',
+        liveId: item.liveId || '',
+        classId: item.classId || this.quizClassId || ''
+      }
+      this.showExam = true
+    },
+    openExamRecord(item) {
+      this.currentExamRecordItem = {
+        id: item.id || item.quizId || item.examId,
+        name: item.name || item.examName || '',
+        className: this.quizClassName || item.className || '',
+        classId: item.classId || this.quizClassId || ''
+      }
+      this.showExamRecord = true
+    },
+    onExamBack() {
+      this.showExam = false
+      this.fetchQuizList()
+    },
+    onExamSubmitted() {
+      this.showExam = false
+      this.fetchQuizList()
     },
 
     // ── 工具方法 ─────────────────────────────────────────────────────────
@@ -2162,6 +2459,7 @@ created() {
 
 <style lang="scss" scoped>
 .online-page {
+  position: relative;
   padding: 28px 24px 63px;
   min-height: 100%;
   box-sizing: border-box;
@@ -2300,6 +2598,7 @@ created() {
   margin-bottom: 20px;
   box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px rgba(226,232,240,0.8);
 border-radius: 12px 12px 12px 12px;
+  overflow: visible;
 
   &__left {
     display: flex;
@@ -2307,6 +2606,7 @@ border-radius: 12px 12px 12px 12px;
     gap: 20px;
     flex: 1;
     min-width: 0;
+    overflow: visible;
   }
 
   &__count {
@@ -2344,12 +2644,14 @@ border-radius: 12px 12px 12px 12px;
     box-sizing: border-box;
 
     &--picker {
-      min-width: 240px;
+      position: relative;
+      min-width: 250px;
       cursor: default;
+      overflow: visible;
     }
 
     &--datetime {
-      min-width: 240px;
+      min-width: 250px;
     }
 
     &--select {
@@ -2759,91 +3061,139 @@ border-radius: 10px 10px 10px 10px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  min-height: 200px;
 }
 
 .quiz-card {
- background: #FFFFFF;
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 12px 12px 12px 12px;
-border: 1px solid #DBEAFE;
-  padding: 21px;
-  cursor: pointer;
-
+  background: #FFFFFF;
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  border: 1px solid #DBEAFE;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
   &__title {
+    flex: 1;
+    min-width: 0;
     font-size: 16px;
     font-weight: bold;
     color: #020618;
     line-height: 1.4;
-    margin-bottom: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  &__pill {
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    background: #F8FAFC;
-    border-radius: 10px;
-    font-size: 12px;
-    color: #314158;
-    font-weight: bold;
+  &__status {
+    flex-shrink: 0;
+    height: 24px;
     padding: 0 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
     box-sizing: border-box;
+
+    &--done {
+      background: #ECFDF5;
+      color: #22B877;
+    }
+
+    &--todo {
+      background: #FFF7ED;
+      color: #F54900;
+    }
   }
 
-  &__time {
-    height: 36px;
+  &__meta {
+    
+    
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__meta-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
     background: #F8FAFC;
-border-radius: 10px 10px 10px 10px;
-padding: 0 12px;
-box-sizing: border-box;
+    border-radius: 10px;
+    padding: 8px 12px;
+    box-sizing: border-box;
   }
 
-  &__time-label {
+  &__meta-label {
     font-size: 12px;
     color: #90A1B9;
   }
 
-  &__time-value {
+  &__meta-value {
     font-size: 12px;
     color: #314158;
-    font-weight: bold;
+    font-weight: 600;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
   }
 
   &__btn {
     height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
-box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
-border-radius: 12px 12px 12px 12px;
-    color: #FFFFFF;
-    font-size: 14px;
+    
+    border-radius: 10px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
+    box-sizing: border-box;
+    outline: none;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 40px;
+    width: 95.77px;
 
+    &--outline {
+     background: #FFFFFF;
+    border-radius: 10px 10px 10px 10px;
+    border: 1px solid #BFE0FF;
+    color: #1F7CFF;
+    }
 
-   
+      &--record {
+    background: #EFF6FF;
+border-radius: 10px 10px 10px 10px;
+color: #1F7CFF;
+border: none;
+    }
+
+    &--primary {
+     background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
+box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
+border-radius: 10px 10px 10px 10px;
+      color: #FFFFFF;
+      border: none;
+    }
+
+    &--right {
+      margin-left: auto;
+    }
   }
 }
 
@@ -3799,7 +4149,18 @@ margin-bottom: 12px;
 
 .ls_date_picker {
   flex: 1;
-  width: auto !important;
+  width: 100% !important;
+  min-width: 0;
+
+  &--daterange {
+    width: 220px !important;
+    flex: 0 0 220px;
+  }
+
+  &--datetimerange {
+    width: 220px !important;
+    flex: 0 0 220px;
+  }
 
   ::v-deep .el-range-editor {
     border: none;
@@ -3807,7 +4168,7 @@ margin-bottom: 12px;
     padding: 0;
     height: auto;
     background: transparent;
-    width: 100%;
+    width: 100% !important;
     &:hover,
     &.is-active {
       border: none;
@@ -3904,5 +4265,12 @@ margin-bottom: 12px;
 
 .filter-item__control--picker ::v-deep .el-input__inner{
 border:none!important
+}
+</style>
+
+<style lang="scss">
+/* 挂载到 body 的日期面板，避免偶发层级/定位异常 */
+.ls-online-date-popper {
+  z-index: 4000 !important;
 }
 </style>

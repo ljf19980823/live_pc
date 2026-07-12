@@ -8,7 +8,7 @@
           :key="tab.key"
           class="online-tab"
           :class="{ active: activeTab === tab.key }"
-          @click="activeTab = tab.key"
+          @click="switchOnlineTab(tab.key)"
         >
           {{ tab.label }}
         </div>
@@ -165,8 +165,13 @@
         <div class="filter-bar__left">
           <div class="filter-item">
             <span class="filter-item__label">时间</span>
-            <div class="filter-item__control filter-item__control--picker">
+            <div
+              class="filter-item__control filter-item__control--picker"
+              @mousedown="fixDatePickerPosition('historyDatePicker')"
+            >
               <el-date-picker
+                :key="'history-date-' + datePickerRenderKey"
+                ref="historyDatePicker"
                 v-model="dateRange"
                 type="daterange"
                 range-separator="-"
@@ -174,8 +179,13 @@
                 end-placeholder="结束日期"
                 format="yyyy-MM-dd"
                 value-format="yyyy-MM-dd"
-                class="ls_date_picker"
+                align="left"
+                :append-to-body="true"
+                :picker-options="historyDatePickerOptions"
+                popper-class="ls-online-date-popper"
+                class="ls_date_picker ls_date_picker--daterange"
                 size="mini"
+                @focus="fixDatePickerPosition('historyDatePicker')"
               />
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
@@ -280,17 +290,26 @@
         <div class="filter-bar__left">
           <div class="filter-item">
             <span class="filter-item__label">时间</span>
-            <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
+            <div
+              class="filter-item__control filter-item__control--picker filter-item__control--datetime"
+              @mousedown="fixDatePickerPosition('quizDatePicker')"
+            >
               <el-date-picker
+                :key="'quiz-date-' + datePickerRenderKey"
+                ref="quizDatePicker"
                 v-model="quizDateRange"
                 type="datetimerange"
                 range-separator="-"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
                 value-format="yyyy-MM-dd HH:mm:ss"
+                align="left"
+                :append-to-body="true"
                 :picker-options="quizDatePickerOptions"
-                class="ls_date_picker"
+                popper-class="ls-online-date-popper"
+                class="ls_date_picker ls_date_picker--datetimerange"
                 size="mini"
+                @focus="fixDatePickerPosition('quizDatePicker')"
                 @change="handleQuizSearch"
               />
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
@@ -897,6 +916,7 @@ export default {
       quizSubjectId: '',
       quizDateRange: [],
       quizSubjectOptions: [],
+      datePickerRenderKey: 0,
       afterQuizOptions: [],
       teacherOptions: [],
       quizSuggestVisible: false,
@@ -904,8 +924,121 @@ export default {
       quizFilterTeacherId: '',
       showQuizDetail: false,
       currentQuizCourse: null,
+      _datePickerPosTimer: null,
       quizDatePickerOptions: {
-        disabledDate: (time) => time.getTime() > Date.now()
+        disabledDate: (time) => time.getTime() > Date.now(),
+        shortcuts: [
+          {
+            text: '本周',
+            onClick(picker) {
+              const now = new Date()
+              const day = now.getDay() || 7
+              const start = new Date(now)
+              start.setDate(now.getDate() - day + 1)
+              start.setHours(0, 0, 0, 0)
+              const end = new Date(start)
+              end.setDate(start.getDate() + 6)
+              end.setHours(23, 59, 59, 999)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '本月',
+            onClick(picker) {
+              const now = new Date()
+              const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0)
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近三月',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 3)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近半年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 6)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近一年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setFullYear(start.getFullYear() - 1)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          }
+        ]
+      },
+      historyDatePickerOptions: {
+        shortcuts: [
+          {
+            text: '本周',
+            onClick(picker) {
+              const now = new Date()
+              const day = now.getDay() || 7
+              const start = new Date(now)
+              start.setDate(now.getDate() - day + 1)
+              start.setHours(0, 0, 0, 0)
+              const end = new Date(start)
+              end.setDate(start.getDate() + 6)
+              end.setHours(23, 59, 59, 999)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '本月',
+            onClick(picker) {
+              const now = new Date()
+              const start = new Date(now.getFullYear(), now.getMonth(), 1)
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近三月',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 3)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近半年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setMonth(start.getMonth() - 6)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          },
+          {
+            text: '近一年',
+            onClick(picker) {
+              const end = new Date()
+              const start = new Date()
+              start.setFullYear(start.getFullYear() - 1)
+              start.setHours(0, 0, 0, 0)
+              picker.$emit('pick', [start, end])
+            }
+          }
+        ]
       },
       liveUrl: '',
       bannerDismissed: false,
@@ -1048,6 +1181,18 @@ export default {
       if (val !== 'liveui') {
         this.$nextTick(() => { this.liveUrl = '' })
       }
+      this.$nextTick(() => {
+        this.bindDatePickerPositionFix('historyDatePicker')
+        this.bindDatePickerPositionFix('quizDatePicker')
+      })
+    },
+    showQuizDetail(val) {
+      if (val) {
+        this.destroyOnlineDatePickers()
+      } else {
+        this.datePickerRenderKey += 1
+        this.$nextTick(() => this.bindDatePickerPositionFix('quizDatePicker'))
+      }
     },
     dateRange() {
       this.historyPageNum = 1
@@ -1118,6 +1263,7 @@ created() {
   beforeDestroy() {
     // 确保 iframe 及其 WebRTC 资源在组件销毁时被完全释放
     this.liveUrl = ''
+    this.destroyOnlineDatePickers()
     this.removeIpcListeners()
     clearTimeout(this._searchTimer)
     this.stopLiveRefreshTimer()
@@ -1916,6 +2062,98 @@ created() {
     handleQuizSearch() {
       this.fetchQuizList()
     },
+    switchOnlineTab(key) {
+      if (key === this.activeTab) return
+      this.destroyOnlineDatePickers()
+      this.datePickerRenderKey += 1
+      this.activeTab = key
+      this.$nextTick(() => {
+        this.bindDatePickerPositionFix('historyDatePicker')
+        this.bindDatePickerPositionFix('quizDatePicker')
+      })
+    },
+    destroyOnlineDatePickers() {
+      if (this._datePickerPosTimer) {
+        clearInterval(this._datePickerPosTimer)
+        this._datePickerPosTimer = null
+      }
+      ;['historyDatePicker', 'quizDatePicker'].forEach((refName) => {
+        const inst = this.$refs[refName]
+        if (!inst) return
+        try {
+          inst.pickerVisible = false
+          if (typeof inst.hidePicker === 'function') inst.hidePicker()
+          if (typeof inst.destroyPopper === 'function') inst.destroyPopper()
+          if (inst.picker) {
+            const el = inst.picker.$el
+            if (el && el.parentNode) el.parentNode.removeChild(el)
+            if (typeof inst.picker.$destroy === 'function') inst.picker.$destroy()
+            inst.picker = null
+          }
+          inst.popperElm = null
+          inst._lsShowPatched = false
+          inst._lsPosPatched = false
+        } catch (e) {
+          console.log(e, 'destroyOnlineDatePickers')
+        }
+      })
+      document.querySelectorAll('.ls-online-date-popper').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+      })
+      document.querySelectorAll('body > .el-picker-panel, body > .el-date-range-picker').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+      })
+    },
+    bindDatePickerPositionFix(refName) {
+      const inst = this.$refs[refName]
+      if (!inst || inst._lsShowPatched) return
+      if (typeof inst.showPicker !== 'function') return
+      inst._lsShowPatched = true
+      const rawShow = inst.showPicker.bind(inst)
+      inst.showPicker = () => {
+        rawShow()
+        this.fixDatePickerPosition(refName)
+      }
+    },
+    fixDatePickerPosition(refName) {
+      this.bindDatePickerPositionFix(refName)
+      const apply = () => {
+        const inst = this.$refs[refName]
+        if (!inst || !inst.$el) return false
+        const panel = inst.popperElm || (inst.picker && inst.picker.$el) ||
+          document.querySelector('.ls-online-date-popper')
+        if (!panel || panel.style.display === 'none') return false
+        const rect = inst.$el.getBoundingClientRect()
+        if (!rect.width && !rect.height) return false
+        let left = rect.left
+        const panelWidth = panel.offsetWidth || 0
+        if (panelWidth && left + panelWidth > window.innerWidth - 8) {
+          left = Math.max(8, window.innerWidth - panelWidth - 8)
+        }
+        const top = `${rect.bottom + 4}px`
+        const leftPx = `${Math.max(8, left)}px`
+        panel.style.setProperty('position', 'fixed', 'important')
+        panel.style.setProperty('top', top, 'important')
+        panel.style.setProperty('left', leftPx, 'important')
+        panel.style.setProperty('transform', 'none', 'important')
+        panel.style.setProperty('margin', '0', 'important')
+        return true
+      }
+      if (this._datePickerPosTimer) {
+        clearInterval(this._datePickerPosTimer)
+        this._datePickerPosTimer = null
+      }
+      let tries = 0
+      this._datePickerPosTimer = setInterval(() => {
+        tries += 1
+        apply()
+        if (tries >= 25) {
+          clearInterval(this._datePickerPosTimer)
+          this._datePickerPosTimer = null
+        }
+      }, 16)
+      this.$nextTick(() => apply())
+    },
     async fetchQuizSubjectOptions() {
       if (!this.quizClassId) {
         this.quizSubjectOptions = []
@@ -2344,12 +2582,14 @@ border-radius: 12px 12px 12px 12px;
     box-sizing: border-box;
 
     &--picker {
-      min-width: 240px;
+      position: relative;
+      min-width: 250px;
       cursor: default;
+      overflow: visible;
     }
 
     &--datetime {
-      min-width: 240px;
+      min-width: 250px;
     }
 
     &--select {
@@ -3799,7 +4039,18 @@ margin-bottom: 12px;
 
 .ls_date_picker {
   flex: 1;
-  width: auto !important;
+  width: 100% !important;
+  min-width: 0;
+
+  &--daterange {
+    width: 220px !important;
+    flex: 0 0 220px;
+  }
+
+  &--datetimerange {
+    width: 220px !important;
+    flex: 0 0 220px;
+  }
 
   ::v-deep .el-range-editor {
     border: none;
@@ -3807,7 +4058,7 @@ margin-bottom: 12px;
     padding: 0;
     height: auto;
     background: transparent;
-    width: 100%;
+    width: 100% !important;
     &:hover,
     &.is-active {
       border: none;
@@ -3904,5 +4155,11 @@ margin-bottom: 12px;
 
 .filter-item__control--picker ::v-deep .el-input__inner{
 border:none!important
+}
+</style>
+
+<style lang="scss">
+.ls-online-date-popper {
+  z-index: 4000 !important;
 }
 </style>
