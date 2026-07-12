@@ -1,57 +1,80 @@
 <template>
   <div class="page-placeholder">
-    <!-- 顶部标题栏 -->
-    <div class="page-header">
-      <div class="page-header-left">
-        <span class="page-header-title">我的班级</span>
-        <span class="page-header-count">共 {{ classList.length }} 个</span>
-      </div>
-      <div class="page-header-right">
-        <div class="page-header-create" @click="handleAddClass()">
-          <img src="@/assets/images/class/new_add.png" class="page-header-create-icon" alt="">
-          <span>创建班级</span>
-        </div>
-        <img src="@/assets/images/class/new_notice.png" class="page-header-notice" @click="handleToAnnouncement()" alt="">
-      </div>
-    </div>
-
-    <div class="page-body">
     <div class="app_container_box_left">
-      <!-- 默认：搜索入口 + 筛选 -->
+      <div class="app_container_box_left_top">
+        <div class="app_top_left_text">我的班级<span class="app_top_left_count">({{ classList.length }})</span></div>
+        <img src="@/assets/images/home/add.png" @click="handleAddClass()" class="app_top_left_icon" alt="">
+      </div>
       <div class="app_container_box_left_search_box" v-if="isOpenSearch == false">
-        <div class="app_container_box_left_search_box_entry" @click="openSearch()">
+        <div class="app_container_box_left_search_box_top" @click="openSearch()">
           <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
-          <div class="app_container_box_left_search_box_top_text">搜索班级名称</div>
+          <div class="app_container_box_left_search_box_top_text">
+            搜索
+          </div>
         </div>
         <div class="app_container_box_left_search_box_center">
-          <el-dropdown trigger="click" @command="handleSortCommand" class="left-filter-dropdown">
-            <div class="left-filter-btn">
-              <span>{{ sortLabel }}</span>
-              <i class="el-icon-arrow-down left-filter-arrow"></i>
+          <!-- <div class="app_container_box_left_search_box_center_left">
+              <el-select
+            v-model="year"
+            placeholder="请选择年份"
+            clearable
+            style="width: 100%;"
+          >
+            <el-option
+            
+              key=""
+              label="全部"
+              value=""
+            />
+             <el-option
+            
+              key="2026"
+              label="2026"
+              value="2026"
+            />
+          </el-select>
+          </div> -->
+          <div class="app_container_box_left_search_box_center_left">
+              <el-select
+            v-model="liveStatus"
+            placeholder="状态"
+            style="width: 100%;"
+          >
+            <el-option
+              key=""
+              label="全部"
+              value=""
+            />
+            <el-option
+              key="未过期"
+              label="未过期"
+              value="未过期"
+            />
+             <el-option
+              key="已过期"
+              label="已过期"
+              value="已过期"
+            />
+          </el-select>
+          </div>
+          <el-dropdown trigger="click" @command="handleSortCommand">
+            <div class="app_container_box_left_search_box_center_right">
+              <img src="@/assets/images/class/sx.png" class="app_container_box_left_search_box_center_right_img" alt="">
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="name_asc" :class="{ 'sort-active': sortType === 'name_asc' }">默认排序</el-dropdown-item>
+                <el-dropdown-item command="name_asc" :class="{ 'sort-active': sortType === 'name_asc' }">班级名称 A-Z</el-dropdown-item>
                 <el-dropdown-item command="name_desc" :class="{ 'sort-active': sortType === 'name_desc' }">班级名称 Z-A</el-dropdown-item>
                 <el-dropdown-item command="time_asc" :class="{ 'sort-active': sortType === 'time_asc' }">创建时间升序</el-dropdown-item>
                 <el-dropdown-item command="time_desc" :class="{ 'sort-active': sortType === 'time_desc' }">创建时间降序</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <div class="left-filter-select">
-            <el-select v-model="liveStatus" placeholder="全部" style="width: 100%;">
-              <el-option key="" label="全部" value="" />
-              <el-option key="未过期" label="未过期" value="未过期" />
-              <el-option key="已过期" label="已过期" value="已过期" />
-            </el-select>
-          </div>
         </div>
       </div>
-
-      <!-- 搜索中：保持原样式 -->
-      <div class="app_container_box_left_search_box" v-if="isOpenSearch == true">
+      <div  class="app_container_box_left_search_box" v-if="isOpenSearch==true">
         <div class="app_container_box_left_search_box_topBox">
-          <div class="app_container_box_left_search_box_topBox_search">
+           <div class="app_container_box_left_search_box_topBox_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
               <el-input ref="searchInput" v-model="leftSearchText" :placeholder="searchType === 'class' ? '搜索班级' : '搜索学生'" clearable />
@@ -72,8 +95,7 @@
           >找学生</div>
         </div>
       </div>
-
-      <div ref="leftClassList" class="app_container_box_left_list" v-if="isOpenSearch == false" v-loading="classListLoading">
+      <div ref="leftClassList" class="app_container_box_left_list" v-if="isOpenSearch==false" v-loading="classListLoading">
         <div
           class="app_container_box_left_list_detail"
           :class="{ 'app_container_box_left_list_detail_active': selectedClassIndex === index }"
@@ -81,47 +103,17 @@
           :key="index"
           @click="selectClass(index)"
         >
-          <div class="class-card-header">
-            <div class="app_container_box_left_list_detail_title">
-              <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
-              {{ item.alias || item.name }}
-            </div>
-            <el-dropdown trigger="click" @command="(cmd) => handleClassCardOptions(cmd, index)">
-              <img @click.stop src="@/assets/images/class/new_options.png" class="class-card-options" alt="">
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="pin">{{ item.pinned ? '取消置顶' : '置顶' }}</el-dropdown-item>
-                  <el-dropdown-item command="alias">设置别名</el-dropdown-item>
-                  <el-dropdown-item v-if="item.source !== '后台创建'" command="editName">修改班级名称</el-dropdown-item>
-                  <el-dropdown-item v-if="item.source !== '后台创建'" command="editDate">修改有效期</el-dropdown-item>
-                  <el-dropdown-item v-if="item.source !== '后台创建'" command="delete">删除班级</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-          <div class="app_container_box_left_list_detail_count app_container_box_left_list_detail_count2">
-            <span>{{ item.count }} 人</span>
-            <span>{{ item.courseCnt || 0 }} 门课</span>
-            <span>{{ item.source || '老师创建' }}</span>
-          </div>
-          <div class="class-card-validity">
-            <span class="class-card-validity-label">有效期</span>
-            <span
-              class="class-card-validity-value"
-              :class="{
-                'is-urgent': item.remainDays >= 0 && item.remainDays <= 30,
-                'is-expired': item.remainDays < 0
-              }"
-            >{{ getClassValidityText(item) }}</span>
-          </div>
+          <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
+          <div class="app_container_box_left_list_detail_title">{{ item.alias || item.name }}</div>
+          <div class="app_container_box_left_list_detail_count">{{ item.count }}人</div>
         </div>
         <EmptyState v-if="!classListLoading && classList.length === 0" description="暂无班级数据" />
       </div>
 
-      <!-- 查询时的左边列表：保持原样式 -->
-      <div class="app_container_box_left_list app_container_box_left_list_search" v-if="isOpenSearch == true">
-        <div class="search_tips" v-if="!leftSearchText && searchType === 'class'">输入关键词查找班级</div>
-        <div class="search_tips" v-if="!leftSearchText && searchType === 'student'">输入学生姓名/用户名/手机号查找学生所在班级</div>
+      <!-- 查询时的左边列表 -->
+      <div class="app_container_box_left_list" v-if="isOpenSearch==true">
+        <div class="search_tips" v-if="!leftSearchText &&searchType === 'class'">输入关键词查找班级</div>
+        <div class="search_tips" v-if="!leftSearchText &&searchType === 'student'">输入学生姓名/用户名/手机号查找学生所在班级</div>
         <template v-if="leftSearchText">
           <div
             class="app_container_box_left_list_detail2"
@@ -375,128 +367,130 @@
                 class="app_container_box_right_top_top_realname"
               >{{ currentClass.name }}</div>
             </div>
+            <div
+              class="app_container_box_right_top_top_tag"
+              :class="{ 'is-expired': currentClass.remainDays < 0 }"
+            >{{ currentClass.remainDays < 0 ? `已过期${Math.abs(currentClass.remainDays)}天` : ( currentClass.remainDays==0? `今天到期` : `剩余${currentClass.remainDays}天` )}}</div>
+          </div>
+          <div class="app_container_box_right_top_top_right">
+            <img @click="handleToAnnouncement()" src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
+            <el-dropdown trigger="click" @command="handleOptionsCommand">
+              <img src="@/assets/images/class/options.png" class="app_container_box_right_top_top_right_options" alt="">
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="pin">
+                    {{ currentClass.pinned ? '取消置顶' : '置顶' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="alias">设置别名</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="editName">修改班级名称</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="editDate">修改有效期</el-dropdown-item>
+                  <el-dropdown-item v-if="currentClass.source !== '后台创建'" command="delete">删除班级</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
         <div class="app_container_box_right_top_mess">
-          <span>{{ currentClass.count }} 位学生</span>
-          <span class="right-top-mess-dot">·</span>
-          <span>{{ currentClass.courseCnt || 0 }} 门课程</span>
-          <span class="right-top-mess-dot">·</span>
-          <span>{{ currentClass.source || '老师创建' }}</span>
+          <div>{{ currentClass.count }}人</div>
+          <div>{{ currentClass.startDate }}  ~  {{ currentClass.endDate }}</div>
+          <div>{{ currentClass.source }}</div>
         </div>
         <div class="app_container_box_right_top_choose">
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'student'">
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'student' }">学生</div>
-            <img v-if="rightTab === 'student'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+            <img v-if="rightTab === 'student'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'course'">
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
-            <img v-if="rightTab === 'course'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+            <img v-if="rightTab === 'course'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'afterTest'">
-            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'afterTest' }">课后测</div>
-            <img v-if="rightTab === 'afterTest'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'afterTest' }">课后测试</div>
+            <img v-if="rightTab === 'afterTest'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
         </div>
       </div>
       <!-- 学生tab列表 -->
-      <div class="app_container_box_right_last student-tab" v-if="rightTab === 'student'">
-        <div class="app_container_box_right_last_top student-tab-top">
+      <div class="app_container_box_right_last" v-if="rightTab === 'student'">
+        <div class="app_container_box_right_last_top">
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
               <el-input v-model="rightStudentSearch" placeholder="姓名/用户名/手机号" clearable />
             </div>
           </div>
+          <div class="app_container_box_right_last_top_num">共{{ filteredStudentList.length }}个学生</div>
         </div>
-        <div class="app_container_box_right_last_list student-list" v-loading="studentListLoading">
-          <div class="app_container_box_right_last_list_detail student-card" v-for="(item, index) in filteredStudentList" :key="index" @click="handleStudentDetail(item)">
-            <img v-if="item.avatar" :src="item.avatar" class="student-card-avatar" alt="">
-            <div v-else class="student-card-avatar student-card-avatar-placeholder">{{ (item.name || '').slice(-2) }}</div>
-            <div class="student-card-info">
-              <div class="student-card-name">{{ item.name }}</div>
-              <div class="student-card-account">账号: {{ item.userName || '-' }}</div>
-              <div class="student-card-join">{{ item.joinDesc || (item.joinDate ? (item.joinDate.slice(0, 10) + '进班') : '') }}</div>
+        <div class="app_container_box_right_last_list" v-loading="studentListLoading">
+          <div class="app_container_box_right_last_list_detail" v-for="(item, index) in filteredStudentList" :key="index" @click="handleStudentDetail(item)">
+            <div class="app_container_box_right_last_list_detail_top">
+              <el-dropdown trigger="click" @command="(cmd) => handleStudentOptionsCommand(cmd, item)">
+                <img  @click.stop src="@/assets/images/class/options2.png" class="app_container_box_right_last_list_detail_top_options" alt="">
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
+                    <el-dropdown-item command="studentDetail">学生详情</el-dropdown-item>
+                    <el-dropdown-item v-if="currentClass && currentClass.allowRemove == 1" command="removeStudent">移除学生</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <div class="app_container_box_right_last_list_detail_top_mess">
+                <img v-if="item.avatar" :src="item.avatar" class="app_container_box_right_last_list_detail_top_mess_icon" alt="">
+                <div v-else class="app_container_box_right_last_list_detail_top_mess_icon app_container_box_right_last_list_detail_top_mess_icon_placeholder">{{ (item.name || '').slice(-2) }}</div>
+                <div class="app_container_box_right_last_list_detail_top_mess_mess">{{ item.name }}</div>
+              </div>
             </div>
-            <div class="student-card-actions" @click.stop>
-              <span class="student-card-action student-card-action-reset" @click="handleStudentOptionsCommand('resetPassword', item)">重置密码</span>
-              <span
-                v-if="currentClass && currentClass.allowRemove == 1"
-                class="student-card-action student-card-action-remove"
-                @click="handleStudentOptionsCommand('removeStudent', item)"
-              >移除学生</span>
-            </div>
+            <div class="app_container_box_right_last_list_detail_last">进班日期：{{ item.joinDate ? item.joinDate.slice(0, 10) : '' }}</div>
           </div>
           <EmptyState v-if="!studentListLoading && filteredStudentList.length === 0" :description="rightStudentSearch ? '无搜索结果' : '暂无学生数据'" style="width: 100%;" />
         </div>
       </div>
       <!-- 课程tab列表 -->
-      <div class="app_container_box_right_last course-tab" v-if="rightTab === 'course'">
+      <div class="app_container_box_right_last" v-if="rightTab === 'course'">
         <div class="app_container_box_right_last_top">
-          <div class="app_container_box_right_last_top_num">共 {{ filteredCourseList.length }} 门课程</div>
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <el-input v-model="rightCourseSearch" placeholder="搜索课程名称" clearable />
+              <el-input v-model="rightCourseSearch" placeholder="搜索课程" clearable />
             </div>
           </div>
+          <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
         </div>
-        <div class="app_container_box_right_last_list course-list" v-loading="courseListLoading">
+        <div class="app_container_box_right_last_list" v-loading="courseListLoading">
           <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index" @click="handleCourseClick(item)" style="cursor:pointer;">
-            <div class="course-card-cover-wrap">
-              <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
-              <div class="app_container_box_right_last_list_detailCourse_options" @click.stop>
-                <el-dropdown trigger="click" @command="(cmd) => handleCourseOptionsCommand(cmd, item)">
-                  <div class="app_container_box_right_last_list_detailCourse_options_box">
-                    <img src="@/assets/images/class/new_options.png" class="app_container_box_right_last_list_detailCourse_options_icon" alt="">
-                  </div>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </div>
-            </div>
+            <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
-            <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }} 个学习任务</div>
+            <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }}个学习任务</div>
             <div class="app_container_box_right_last_list_detailCourse_jd">
               <div class="app_container_box_right_last_list_detailCourse_jd_box">
-                <div
-                  class="app_container_box_right_last_list_detailCourse_jd_box_now"
-                  :class="{ 'is-complete': Math.round(item.progress) >= 100 }"
-                  :style="{ width: Math.round(item.progress) + '%' }"
-                ></div>
+                <div class="app_container_box_right_last_list_detailCourse_jd_box_now" :style="{ width: Math.round(item.progress) + '%' }"></div>
               </div>
               <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ Math.round(item.progress) }}%</div>
+            </div>
+            <div class="app_container_box_right_last_list_detailCourse_options" @click.stop>
+              <el-dropdown trigger="click" @command="(cmd) => handleCourseOptionsCommand(cmd, item)">
+                <div class="app_container_box_right_last_list_detailCourse_options_box">
+                  <img src="@/assets/images/class/options3.png" class="app_container_box_right_last_list_detailCourse_options_icon" alt="">
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </div>
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
       </div>
       <!-- 课后测试tab列表 -->
-      <div class="app_container_box_right_last after-test-tab" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
+      <div class="app_container_box_right_last" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
         <!-- 筛选条件 -->
         <div class="after-test-filter">
           <div class="after-test-filter__group">
-            <span class="after-test-filter__label">时间</span>
-            <el-date-picker
-              v-model="afterTestTimeRange"
-              type="datetimerange"
-              range-separator="-"
-              start-placeholder="开始时间"
-              end-placeholder="结束时间"
-              value-format="yyyy-MM-dd HH:mm:ss"
-              :picker-options="afterTestDatePickerOptions"
-              class="after-test-filter__datepicker"
-              @change="handleAfterTestSearch"
-            />
-          </div>
-          <div class="after-test-filter__group">
-            <span class="after-test-filter__label">科目</span>
             <el-select
               v-model="afterTestFilter.subjectId"
-              placeholder="全部科目"
+              placeholder="请选择科目"
               clearable
               filterable
               class="after-test-filter__select"
@@ -510,6 +504,21 @@
               />
             </el-select>
           </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-date-picker
+              v-model="afterTestTimeRange"
+              type="datetimerange"
+              range-separator="-"
+              start-placeholder="直播开始时间"
+              end-placeholder="直播结束时间"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              :picker-options="afterTestDatePickerOptions"
+              class="after-test-filter__datepicker"
+              @change="handleAfterTestSearch"
+            />
+          </div>
+          <div class="after-test-filter__divider"></div>
           <div class="after-test-filter__group">
             <el-select
               v-model="afterTestFilter.examConfigId"
@@ -527,6 +536,7 @@
               />
             </el-select>
           </div>
+          <div class="after-test-filter__divider"></div>
           <div class="after-test-filter__group">
             <el-select
               v-model="afterTestFilter.teacherId"
@@ -546,29 +556,42 @@
           </div>
         </div>
         <div class="after-test-list" v-loading="afterTestLoading">
+         
           <EmptyState v-if="!afterTestLoading && afterTestList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
           <div
             class="after-test-item"
             v-for="(item, index) in afterTestList"
             :key="index"
+            @click="openAfterTestDetail(item)"
           >
-            <div class="after-test-item__title" :title="item.name">{{ item.name }}</div>
-            <div class="after-test-item__meta">
-              <div class="after-test-item__meta-cell">{{ item.teacherName || item.teacherId || '-' }}</div>
-              <div class="after-test-item__meta-cell">{{ item.subjectName || item.subject || '-' }}</div>
-              <div class="after-test-item__meta-cell">{{ item.finishedStudentCount }}/{{ item.totalStudentCount }} 已完成</div>
-              <div class="after-test-item__meta-cell">{{ item.topicNum }} 题</div>
-            </div>
-            <div class="after-test-item__time">
-              <div class="after-test-item__time-label">发布时间</div>
-              <div class="after-test-item__time-val">{{ formatAfterTestTime(item.createTime) }}</div>
-              <!-- <div
-                class="after-test-item__play"
-                v-if="item.fileList && item.fileList.length != 0"
-                @click.stop="openVideoPlayer(item)"
-              >
+            <div class="after-test-item__cover-wrap">
+              <img :src="item.cover" class="after-test-item__cover" alt="" />
+              <div class="after-test-item__play-icon" v-if="item.fileList && item.fileList.length != 0" @click.stop="openVideoPlayer(item)">
                 <img src="@/assets/images/class/play.png" class="after-test-item__play-btn" alt="" />
-              </div> -->
+              </div>
+            </div>
+            <div class="after-test-item__info">
+              <div class="after-test-item__label">课程标题</div>
+              <div class="after-test-item__title" :title="item.name">{{ item.name }}</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">发布时间</div>
+              <div class="after-test-item__val">{{ item.createTime }}</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">学生完成情况</div>
+              <div class="after-test-item__val">
+                {{ item.finishedStudentCount }}/{{ item.totalStudentCount }}
+                <span class="after-test-item__rate">({{ item.finishedPercentage }}%)</span>
+              </div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">题目数量</div>
+              <div class="after-test-item__val">{{ item.topicNum }}题</div>
+            </div>
+            <div class="after-test-item__col">
+              <div class="after-test-item__label">上课老师</div>
+              <div class="after-test-item__val">{{ item.teacherName || item.teacherId || '-' }}</div>
             </div>
             <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
           </div>
@@ -584,7 +607,6 @@
       />
       </template>
       </template>
-    </div>
     </div>
     <!-- 重置密码弹窗 -->
     <DialogCustome width="616px" height="366px" :visible="showResetPasswordDialog" confirmText="确定并复制密码" title="重置密码" :confirmLoading="resetPasswordLoading" @cancel="onDialogCancel" @confirm="onDialogConfirm" @close="onDialogCancel">
@@ -1165,15 +1187,6 @@ export default {
     },
     filteredCourseList() {
       return this.courseList
-    },
-    sortLabel() {
-      const map = {
-        name_asc: '默认排序',
-        name_desc: '班级名称 Z-A',
-        time_asc: '创建时间升序',
-        time_desc: '创建时间降序'
-      }
-      return map[this.sortType] || '默认排序'
     }
   },
   mounted() {
@@ -1268,20 +1281,18 @@ export default {
       this.fetchAfterTestList()
     },
     _mapClassItem(item) {
-      const sourceMap = { '1': '后台创建', '0': '老师创建' }
+      const sourceMap = { '1': '后台创建', '0': '' }
       return {
         classId: item.classId,
         name: item.className || '',
         alias: item.classAlias || '',
         count: item.studentCount || 0,
-        courseCount: item.courseCount || item.totalCourses || item.lessonCount || 0,
         pinned: item.isTop === 1,
         remainDays: item.remainDay || 0,
         startDate: item.beginTime || '',
         endDate: item.endTime || '',
-        source: sourceMap[item.classMode] || '老师创建',
-        status: item.status || '',
-        courseCnt: item.courseCnt || '',
+        source: sourceMap[item.classMode] || '',
+        status: item.status || ''
       }
     },
     async fetchClassList() {
@@ -1351,24 +1362,22 @@ export default {
         const detail = res.data || {}
         const idx = this.classList.findIndex(c => c.classId === classId)
         if (idx !== -1) {
-          const sourceMap = { '1': '后台创建', '0': '老师创建' }
+          const sourceMap = { '1': '后台创建', '0': '' }
           this.classList.splice(idx, 1, {
             ...this.classList[idx],
             name: detail.className || this.classList[idx].name,
             alias: detail.classAlias || this.classList[idx].alias,
             count: detail.studentCount || this.classList[idx].count,
-            courseCount: detail.courseCount || detail.totalCourses || detail.lessonCount || this.classList[idx].courseCount || 0,
             pinned: detail.isTop === 1,
             remainDays: detail.remainDay || this.classList[idx].remainDays,
             startDate: detail.beginTime || this.classList[idx].startDate,
             endDate: detail.endTime || this.classList[idx].endDate,
-            source: sourceMap[detail.classMode] || this.classList[idx].source || '老师创建',
+            source: sourceMap[detail.classMode] || this.classList[idx].source,
             status: detail.status || this.classList[idx].status,
             describe: detail.describe || '',
             isSelfCreate: detail.isSelfCreate,
             allowRemove: detail.allowRemove,
-            isAllowInvite: detail.isAllowInvite,
-            courseCnt: detail.courseCnt,
+            isAllowInvite: detail.isAllowInvite
           })
         }
       } catch (e) {
@@ -1415,10 +1424,6 @@ export default {
           taskCount: item.totalLessons || 0,
           progress: item.progressPercent || 0
         }))
-        const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
-        if (idx !== -1) {
-          this.$set(this.classList[idx], 'courseCount', this.courseList.length)
-        }
       } catch (e) {
         console.error(e)
         this.courseList = []
@@ -1469,7 +1474,6 @@ export default {
       this.courseList = []
       if (this.selectedClassId) {
         this.fetchClassDetail(this.selectedClassId)
-        this.fetchCourseList()
       }
       if (this.rightTab === 'student') {
         this.fetchStudentList()
@@ -1494,26 +1498,6 @@ export default {
       this.searchType = 'class'
       this.searchClassList = []
       this.searchStudentList = []
-    },
-    getClassValidityText(item) {
-      if (!item) return ''
-      if (item.remainDays < 0) return '已过期'
-      if (item.remainDays === 0) return '今天到期'
-      if (item.remainDays <= 30) return `剩余${item.remainDays}天`
-      return `${this.formatDotDate(item.startDate)}-${this.formatDotDate(item.endDate)}`
-    },
-    formatDotDate(val) {
-      if (!val) return ''
-      return String(val).slice(0, 10).replace(/-/g, '.')
-    },
-    formatAfterTestTime(val) {
-      if (!val) return '-'
-      return String(val).replace(/-/g, '.').replace('T', ' ').slice(0, 16)
-    },
-    handleClassCardOptions(command, index) {
-      this.selectedClassIndex = index
-      this.selectedClassId = this.classList[index]?.classId || null
-      this.handleOptionsCommand(command)
     },
     highlightKeyword(text, keyword) {
       if (!keyword || !text) return text
@@ -2024,76 +2008,8 @@ export default {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  background: #F7FBFF;
-  padding: 16px 20px 20px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.page-header{
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-shrink: 0;
 }
-.page-header-left{
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.page-header-title{
-  font-weight: bold;
-  font-size: 20px;
-  color: #020618;
-}
-.page-header-count{
-  font-weight: 400;
-  font-size: 14px;
-  color: #90A1B9;
-}
-.page-header-right{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.page-header-create{
-  width: 112px;
-height: 40px;
-background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
-box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
-border-radius: 10px 10px 10px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #FFFFFF;
-  font-size: 14px;
-  font-weight: bold;
-  box-sizing: border-box;
-}
-.page-header-create-icon{
-  width: 16px;
-  height: 16px;
-}
-.page-header-notice{
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  object-fit: contain;
-  display: block;
-}
-.page-body{
-  flex: 1;
-  height: 0;
-  display: flex;
-  gap: 0;
-  overflow: hidden;
-  background: #FFFFFF;
-  border-radius: 12px;
-}
-
 .live-iframe-overlay {
   position: fixed;
   top: 0;
@@ -2117,46 +2033,66 @@ border-radius: 10px 10px 10px 10px;
   color: #333;
 }
 .app_container_box_left{
-  width: 320px;
-  flex-shrink: 0;
+  width: 300px;
   display: flex;
   justify-content: flex-start;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   background: #FFFFFF;
-  border-radius: 12px 0 0 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow: hidden;
-  border-right: 1px solid #F0F0F0;
+}
+.app_container_box_left_top{
+    width: 300px;
+  height: 68px;
+background: #FFFFFF;
+display: flex;
+justify-content: center;
+align-items: center;
+gap: 8px;
+cursor: pointer;
+border-bottom: 1px solid #F3F4F8;
+}
+.app_top_left_text{
+  font-weight: bold;
+font-size: 16px;
+color: #333333;
+}
+.app_top_left_count{
+  font-weight: normal;
+  font-size: 14px;
+  color: #999999;
+  margin-left: 4px;
+}
+.app_top_left_icon{
+  width: 16px;
+  height: 16px;
 }
 .app_container_box_left_search_box{
   width: 100%;
+  margin-top: 20px;
+  padding: 0 16px ;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
-.app_container_box_left_search_box_entry{
+.app_container_box_left_search_box_top{
   display: flex;
   justify-content: flex-start;
   align-items: center;
   height: 36px;
-  background: #F8FAFC;
-  border-radius: 8px;
-  border: 1px solid #E2E8F0;
-  gap: 8px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  cursor: pointer;
+background: #FFFFFF;
+border-radius: 28px 28px 28px 28px;
+border: 1px solid #999999;
+gap: 8px;
+padding: 0 14px;
+box-sizing: border-box;
+cursor: pointer;
 }
 .app_container_box_left_search_box_top_icon{
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
 .app_container_box_left_search_box_top_text{
   font-weight: 400;
-  font-size: 14px;
-  color: #90A1B9;
+font-size: 14px;
+color: #D9D9D9;
 }
 .app_container_box_left_search_box_top_input{
   flex: 1;
@@ -2176,247 +2112,97 @@ border-radius: 10px 10px 10px 10px;
 .app_container_box_left_search_box_top_input :deep(.el-input__suffix) {
   color: #999999;
 }
-.app_container_box_left_search_box_topBox{
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-}
-.app_container_box_left_search_box_topBox_search{
-  flex: 1;
-  width: 0;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  height: 36px;
-  background: #FFFFFF;
-  border-radius: 28px 28px 28px 28px;
-  border: 1px solid #0049FF;
-  gap: 8px;
-  padding: 0 14px;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-.app_container_box_left_search_box_topBox_cancel{
-  font-weight: 400;
-  font-size: 14px;
-  color: #0049FF;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.app_container_box_left_search_box_choose{
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 32px;
-  margin-top: 16px;
-}
-.app_container_box_left_search_box_choose_detail{
-  width: 73px;
-  height: 36px;
-  font-weight: 400;
-  font-size: 14px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #666666;
-  background: transparent;
-  border-radius: 18px 18px 18px 18px;
-  cursor: pointer;
-}
-.app_container_box_left_search_box_choose_detail_active{
-  font-weight: 400;
-  font-size: 14px;
-  color: #333333;
-  background: #D9D9D9;
-  border-radius: 18px 18px 18px 18px;
-}
 .app_container_box_left_search_box_center{
   width: 100%;
-  margin-top: 12px;
+  margin-top: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 17px;
 }
-.left-filter-dropdown{
-  flex: 1;
-  width: 0;
+.app_container_box_left_search_box_center_left{
+width: 215px;
+height: 36px;
+border-radius: 4px 4px 4px 4px;
+border: 1px solid #999999;
 }
-.left-filter-btn{
-  width: 100%;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid #E8E8E8;
-  background: #FFFFFF;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 12px;
-  box-sizing: border-box;
+.app_container_box_left_search_box_center_right{
+  width: 36px;
+height: 36px;
+border-radius: 4px 4px 4px 4px;
+border: 1px solid #999999;
+display: flex;
+justify-content: center;
+align-items: center;
   cursor: pointer;
-  font-size: 13px;
-  color: #333333;
 }
-.left-filter-arrow{
-  font-size: 12px;
-  color: #999999;
-}
-.left-filter-select{
-  flex: 1;
-  width: 0;
-  height: 36px;
-  :deep(.el-input__inner) {
-    height: 36px;
-    line-height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8!important;
-    font-size: 13px;
-  }
-  :deep(.el-input__suffix) {
-    display: flex;
-    align-items: center;
-  }
+.app_container_box_left_search_box_center_right_img{
+  width: 16px;
+  height: 16px;
 }
 .sort-active {
   color: #0049FF !important;
   font-weight: 600;
 }
 .app_container_box_left_list{
-  margin-top: 16px;
+  margin-top: 20px;
   width: 100%;
   flex: 1;
   height: 0;
   overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.app_container_box_left_list_search{
-  gap: 0;
 }
 .app_container_box_left_list_detail{
-  width: 100%;
-  min-height: 96px;
-  background: #FFFFFF;
-  border-radius: 10px;
-  border: 1px solid #DBEAFE;
-  padding: 14px 12px 12px;
-  box-sizing: border-box;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  width: 300px;
+height: 68px;
+background: #FFFFFF;
+border-radius: 0px 0px 0px 0px;
+padding: 9px 30px 0 16px;
+box-sizing: border-box;
+position: relative;
+cursor: pointer;
 }
+
 .app_container_box_left_list_detail2{
-  width: 100%;
-  background: #FFFFFF;
-  border-radius: 0;
-  border: none;
-  padding: 20px 16px;
-  box-sizing: border-box;
-  position: relative;
-  cursor: pointer;
+  width: 300px;
+
+background: #FFFFFF;
+border-radius: 0px 0px 0px 0px;
+padding: 20px 30px 20px 16px;
+box-sizing: border-box;
+position: relative;
+cursor: pointer;
 }
+
 .app_container_box_left_list_detail2:hover{
   background: #F0F3F6!important;
 }
-.app_container_box_left_list_detail2 .app_container_box_left_list_detail_title{
-  font-weight: 400;
-  width: 100%;
-  flex: none;
-  display: block;
-  color: #333333;
-  font-size: 14px;
-}
-.app_container_box_left_list_detail2 .app_container_box_left_list_detail_count{
-  font-weight: 400;
-  font-size: 14px;
-  color: #666666;
-  margin-top: 9px;
-}
-.app_container_box_left_list_detail_count2{
-  display: flex;
-  gap: 32px;
-}
 .app_container_box_left_list_detail_active{
-  background: #F0F5FF!important;
-  border-color: #0049FF!important;
+  background: #CAD9FF!important;
 }
 .app_container_box_left_list_detail:hover{
-  background: #F7F9FC!important;
-}
-.class-card-header{
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
-.class-card-options{
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  flex-shrink: 0;
-  // margin-top: 2px;
+  background: #F0F3F6!important;
 }
 .app_container_box_left_list_detail_title{
-  font-weight: 600;
-  flex: 1;
-  width: 0;
+  font-weight: 400;
+  width: 100%;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
-  font-size: 15px;
-  color: #333333;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.app_container_box_left_list_detail_active .app_container_box_left_list_detail_title{
-  color: #0049FF;
+font-size: 14px;
+color: #333333;
 }
 .app_container_box_left_list_detail_count{
   font-weight: 400;
-  font-size: 12px;
-  color: #62748E;
-  margin-top: 8px;
-  line-height: 18px;
+font-size: 14px;
+color: #666666;
+margin-top: 9px;
 }
 .app_container_box_left_list_detail_chooseIcon{
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-.class-card-validity{
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 29px;
-  height: 29px;
-background: #EFF6FF;
-padding: 0 10px;
-box-sizing:  border-box;
-border-radius: 8px 8px 8px 8px;
-}
-.class-card-validity-label{
-  color: #62748E;
-  flex-shrink: 0;
-}
-.class-card-validity-value{
-  color: #45556C;
-  text-align: right;
-  word-break: break-all;
-}
-.class-card-validity-value.is-urgent{
-  color: #FF6900;
-  font-weight: 500;
-}
-.class-card-validity-value.is-expired{
-  color: #90A1B9;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
 }
 .app_container_box_right{
   flex: 1;
@@ -2425,8 +2211,6 @@ border-radius: 8px 8px 8px 8px;
   flex-direction: column;
   justify-content: flex-start;
   overflow: hidden;
-  background: #FFFFFF;
-  border-radius: 0 12px 12px 0;
 }
 .app_container_box_right_empty{
   flex: 1;
@@ -2434,13 +2218,14 @@ border-radius: 8px 8px 8px 8px;
   justify-content: center;
   align-items: center;
   background: #FFFFFF;
+  border-left: 1px solid #F3F4F8;
 }
 .app_container_box_right_top{
   width: 100%;
-  padding: 24px 24px 0;
+  padding: 21px 43px 2px 20px;
   box-sizing: border-box;
+  border-left: 1px solid #F3F4F8;
   background: #FFFFFF;
-  flex-shrink: 0;
 }
 .app_container_box_right_top_top{
   display: flex;
@@ -2464,9 +2249,8 @@ border-radius: 8px 8px 8px 8px;
 }
 .app_container_box_right_top_top_name{
   font-weight: bold;
-  font-size: 20px;
-  color: #020618;
-  line-height: 28px;
+font-size: 16px;
+color: #333333;
 }
 .app_container_box_right_top_top_realname{
   font-weight: 400;
@@ -2475,52 +2259,78 @@ border-radius: 8px 8px 8px 8px;
   line-height: 1.2;
   word-break: break-all;
 }
+.app_container_box_right_top_top_tag{
+  flex-shrink: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  border-radius: 16px;
+  background: #FFEDED;
+  border: 1px solid #FF2E00;
+  font-weight: 400;
+  font-size: 14px;
+  color: #FF2E00;
+  padding: 0 9px;
+  box-sizing: border-box;
+  &.is-expired {
+    background: #F5F5F5;
+    border-color: #CCCCCC;
+    color: #999999;
+  }
+}
+.app_container_box_right_top_top_right{
+  display: flex;
+  justify-content: flex-end;
+  gap: 23px;
+  align-items: center;
+}
+.app_container_box_right_top_top_right_rl{
+  cursor: pointer;
+  width: 20px;
+  height: 18px;
+}
+.app_container_box_right_top_top_right_options{
+  width: 20px;
+  height: 4px;
+  cursor: pointer;
+}
 .app_container_box_right_top_mess{
-  margin-top: 8px;
+  margin-top: 22px;
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 6px;
+  gap: 20px;
   font-weight: 400;
-  font-size: 14px;
-  color: #62748E;
-  line-height: 20px;
-}
-.right-top-mess-dot{
-  color: #62748E;
+font-size: 14px;
+color: #999999;
 }
 .app_container_box_right_top_choose{
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 52px;
+  gap: 40px;
   margin-top: 20px;
-  border-bottom: 1px solid #F0F0F0;
 }
 .app_container_box_right_top_choose_detail{
   display: flex;
   justify-content: flex-start;
   align-items: center;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
   cursor: pointer;
-  padding-bottom: 0;
 }
 .app_container_box_right_top_choose_detail_text{
-  font-weight: 500;
-  font-size: 14px;
-  color: #62748E;
-  line-height: 22px;
+  font-weight: bold;
+font-size: 16px;
+color: #666666;
 }
 .app_container_box_right_top_choose_detail_hx{
-  width: 40px;
-  height: 10px;
-  object-fit: contain;
-  margin-bottom: -1px;
+  width: 31px;
+  height: 3px;
 }
 .app_container_box_right_top_choose_detail_text_active{
-  color: #020618!important;
-  font-weight: 600;
+  color: #333333!important;
 }
 .app_container_box_right_last{
   flex: 1;
@@ -2528,235 +2338,263 @@ border-radius: 8px 8px 8px 8px;
   display: flex;
   justify-content: flex-start;
   flex-direction: column;
-  background: #FFFFFF;
-  padding: 16px 24px 24px;
+  background: #F0F3F6;
+  padding: 20px;
   box-sizing: border-box;
 }
 .app_container_box_right_last_top_search{
   display: flex;
   justify-content:flex-start;
   align-items: center;
-  width: 240px;
-  height:36px;
-  background: #F8FAFC;
-  border-radius: 8px;
-  border: 1px solid #E2E8F0;
-  gap: 8px;
-  padding: 0 12px;
-  box-sizing: border-box;
+   width: 268px;
+   height:36px;
+   background: #FFFFFF;
+border-radius: 28px 28px 28px 28px;
+border: 1px solid #999999;
+gap: 8px;
+padding: 0 14px;
+box-sizing: border-box;
 }
 .app_container_box_right_last_top{
-  width: 100%;
-  display: flex;
+ width: 100%;
+ display: flex;
   justify-content: space-between;
   align-items: center;
-}
-.app_container_box_right_last_top3{
-  background: rgba(239,246,255,0.45);
-border-radius: 0px 0px 0px 0px;
-border-top: 1px solid #DBEAFE;
-border-bottom: 1px solid #DBEAFE;
-}
-.student-tab-top{
-  justify-content: flex-start;
+
+
 }
 .app_container_box_right_last_top_num{
-  font-weight: bold;
-  font-size: 14px;
-  color: #45556C;
+font-weight: 400;
+font-size: 14px;
+color: #666666;
 }
 .app_container_box_right_last_list{
   width: 100%;
   flex: 1;
   height: 0;
   overflow: auto;
-  margin-top: 16px;
+  margin-top: 17px;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 16px;
 }
-.student-list{
-  gap: 12px 16px;
+.app_container_box_right_last_list_detail{
+  width: 190px;
+background: #FFFFFF;
+box-shadow: 0px 0px 8px 0px rgba(0,73,255,0.1);
+border-radius: 8px 8px 8px 8px;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
 }
-.student-card{
-  width: calc((100% - 16px) / 2);
-  min-height: 88px;
-  background: #FFFFFF;
-  border: 1px solid #EEEEEE;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  padding: 16px;
+.app_container_box_right_last_list_detail_top{
+  padding: 0 15px 15px 15px;
   box-sizing: border-box;
-  cursor: pointer;
-  gap: 16px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
 }
-.student-card-avatar{
-  width: 44px;
-  height: 44px;
+.app_container_box_right_last_list_detail_top_options{
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+.app_container_box_right_last_list_detail_top_mess{
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+}
+.app_container_box_right_last_list_detail_top_mess_icon{
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   flex-shrink: 0;
-  object-fit: cover;
 }
-.student-card-avatar-placeholder{
+.app_container_box_right_last_list_detail_top_mess_icon_placeholder{
   background-color: #0049FF;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
 }
-.student-card-info{
+.app_container_box_right_last_list_detail_top_mess_mess{
   flex: 1;
   width: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.student-card-name{
-  font-weight: 600;
-  font-size: 14px;
-  color: #020618;
-  line-height: 20px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.student-card-account,
-.student-card-join{
-  font-weight: 400;
-  font-size: 12px;
-  color: #62748E;
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.student-card-actions{
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 24px;
-  flex-shrink: 0;
-}
-.student-card-action{
-  font-size: 12px;
-  line-height: 18px;
-  cursor: pointer;
-  white-space: nowrap;
   font-weight: bold;
-}
-.student-card-action-reset{
-  color: #1F7CFF;
-}
-.student-card-action-remove{
-  color: #FB2C36;
-}
-.course-list{
-  gap: 16px;
-}
-.app_container_box_right_last_list_detailCourse{
-  width: calc((100% - 32px) / 3);
-  background: #FFFFFF;
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 12px 12px 12px 12px;
-border: 1px solid #DBEAFE;
-  padding: 0 0 12px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  position: relative;
+font-size: 14px;
+color: #333333;
+  word-break: break-all;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* 超出几行省略 */
   overflow: hidden;
-  gap: 12px;
+  line-height: 22px;
+
 }
-.course-card-cover-wrap{
-  position: relative;
+.app_container_box_right_last_list_detail_last{
   width: 100%;
+height: 36px;
+background: #CAD9FF;
+border-radius: 0px 0px 8px 8px;
+padding-left: 12px;
+line-height: 36px;
+font-weight: 400;
+font-size: 14px;
+color: #666666;
+}
+
+.app_container_box_right_last_list_detailCourse{
+  width: 190px;
+background: #FFFFFF;
+padding: 6px;
+box-sizing: border-box;
+box-shadow: 0px 0px 8px 0px rgba(0,73,255,0.1);
+border-radius: 8px 8px 8px 8px;
+display: flex;
+flex-direction: column;
+justify-content: flex-start;
+position: relative;
 }
 .app_container_box_right_last_list_detailCourse_options{
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 13px;
+  right: 13px;
 }
 .app_container_box_right_last_list_detailCourse_options_box{
-  width: 32px;
-  height: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
+  width: 34px;
+height: 12px;
+background: #0049FF;
+border-radius: 7px 7px 7px 7px;
+display: flex;
+justify-content: center;
+align-items: center;
+cursor: pointer;
 }
 .app_container_box_right_last_list_detailCourse_options_icon{
-  width: 32px;
-  height: 32px;
+  width: 20px;
+  height: 4px;
 }
 .app_container_box_right_last_list_detailCourse_fm{
   width: 100%;
-  height: 128.61px;
-  display: block;
+  height: 108px;
+  border-radius: 4px 4px 4px 4px;
 }
 .app_container_box_right_last_list_detailCourse_name{
-  font-weight: bold;
-  font-size: 14px;
-  color: #020618;
-  width: 100%;
-  padding: 0 12px;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+font-weight: 400;
+font-size: 14px;
+color: #333333;
+width: 100%;
+margin-top: 10px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 .app_container_box_right_last_list_detailCourse_task{
-  margin-top: 6px;
-  padding: 0 12px;
-  box-sizing: border-box;
+  margin-top: 8px;
   font-weight: 400;
-  font-size: 12px;
-  color: #62748E;
+font-size: 12px;
+color: #666666;
 }
 .app_container_box_right_last_list_detailCourse_jd{
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 0 12px;
-  box-sizing: border-box;
+  gap: 6px;
+  margin-top: 8px;
 }
 .app_container_box_right_last_list_detailCourse_jd_box{
   flex: 1;
   width: 0;
-  background: #EFF6FF;
-  height: 6px;
+  background: #F3F4F8;
+  height: 4px;
   border-radius: 2px;
-  overflow: hidden;
 }
 .app_container_box_right_last_list_detailCourse_jd_box_now{
   border-radius: 2px;
-  height: 6px;
-background: linear-gradient( 90deg, #7DD3FF 0%, #77CEFF 7.14%, #70C9FF 14.29%, #6AC4FF 21.43%, #63BFFF 28.57%, #5CBAFF 35.71%, #56B5FF 42.86%, #4FB0FF 50%, #48ABFF 57.14%, #41A6FF 64.29%, #3AA1FF 71.43%, #329BFF 78.57%, #2A96FF 85.71%, #2190FF 92.86%, #168BFF 100%);
-}
-.app_container_box_right_last_list_detailCourse_jd_box_now.is-complete{
-background: linear-gradient( 90deg, #52DCAC 0%, #4EDAA7 10%, #4AD9A3 20%, #45D79E 30%, #41D69A 40%, #3CD495 50%, #37D291 60%, #32D18C 70%, #2CCF87 80%, #25CE83 90%, #1DCC7E 100%);
+  height: 4px;
+  background: #71A0FF;
 }
 .app_container_box_right_last_list_detailCourse_jd_num{
   width: 34px;
-  text-align: right;
-  color:#90A1B9;
+  text-align: center;
+  font-size: 400;
+  color:#666666 ;
   font-size: 12px;
+  
+
+}
+.app_container_box_left_search_box_topBox{
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.app_container_box_left_search_box_topBox_search{
+  flex: 1;
+  width: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  height: 36px;
+background: #FFFFFF;
+border-radius: 28px 28px 28px 28px;
+border: 1px solid #0049FF;
+gap: 8px;
+padding: 0 14px;
+box-sizing: border-box;
+cursor: pointer;
+}
+.app_container_box_left_search_box_topBox_cancel{
+  font-weight: 400;
+font-size: 14px;
+color: #0049FF;
+cursor: pointer;
+}
+.app_container_box_left_search_box_choose{
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+  margin-top: 16px;
+}
+.app_container_box_left_search_box_choose_detail{
+ width: 73px;
+ height: 36px;
+  font-weight: 400;
+font-size: 14px;
+display: flex;
+justify-content: center;
+align-items: center;
+color: #666666;
+background: transparent;
+border-radius: 18px 18px 18px 18px;
+cursor: pointer;
+}
+.app_container_box_left_search_box_choose_detail_active{
+  font-weight: 400;
+font-size: 14px;
+color: #333333;
+background: #D9D9D9;
+border-radius: 18px 18px 18px 18px;
 }
 .search_tips{
   padding: 67px 40px 0 40px;
   box-sizing: border-box;
   text-align: center;
   font-weight: 400;
-  font-size: 14px;
-  color: #666666;
+font-size: 14px;
+color: #666666;
 }
 
 .app_container_box_left_list_detail_title_textCompare{
@@ -3306,65 +3144,92 @@ color: #333333;
 .after-test-filter {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  background: transparent;
-  padding: 0;
+  height: 49px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0 20px;
   box-sizing: border-box;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
 .after-test-filter__group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
+  padding: 0 16px;
+  height: 100%;
+  &:first-child {
+    padding-left: 0;
+  }
 }
-.after-test-filter__label {
-  font-size: 13px;
-  color: #666666;
+.after-test-filter__divider {
+  width: 1px;
+  height: 20px;
+  background: #d9d9d9;
   flex-shrink: 0;
-  white-space: nowrap;
 }
 .after-test-filter__select {
-  width: 140px;
+  width: 130px;
   ::v-deep .el-input__inner {
-    height: 36px;
-    line-height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8;
-    font-size: 13px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    font-size: 14px;
     color: #333333;
-    background: #FFFFFF;
+    padding-left: 0;
+    &:focus {
+      border: none;
+      box-shadow: none;
+    }
+  }
+  ::v-deep .el-input.is-focus .el-input__inner {
+    border: none;
+    box-shadow: none;
+  }
+  ::v-deep .el-select__caret {
+    color: #999;
+  }
+  ::v-deep .el-select__input {
+    margin-left: 0 !important;
   }
 }
 .after-test-filter__datepicker {
-  width: 320px !important;
+  width: auto !important;
   ::v-deep .el-range-editor {
-    width: 100% !important;
-    height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8;
-    background: #FFFFFF;
-    padding: 0 10px;
-    box-sizing: border-box;
+    width: auto !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    background: transparent;
+    &:hover,
+    &.is-active {
+      border: none;
+      box-shadow: none;
+    }
   }
   ::v-deep .el-range-input {
-    font-size: 13px;
+    font-size: 14px;
     color: #333333;
     background: transparent;
+    width: 130px;
   }
   ::v-deep .el-range-separator {
-    font-size: 13px;
-    color: #999999;
-    line-height: 28px;
+    font-size: 14px;
+    color: #333333;
+    padding: 0 4px;
+    line-height: 2;
+  }
+  ::v-deep .el-range__icon {
+    display: none;
+  }
+  ::v-deep .el-range__close-icon {
+    font-size: 14px;
   }
 }
 .after-test-list {
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   flex: 1;
   height: 0;
@@ -3379,93 +3244,89 @@ color: #333333;
   color: #999;
 }
 .after-test-item {
-  width: calc((100% - 16px) / 2);
-  display: flex;
-  flex-direction: column;
-  padding: 21px;
-  gap: 8px;
-  background: #FFFFFF;
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 12px 12px 12px 12px;
-border: 1px solid #DBEAFE;
-  transition: border-color 0.15s;
-}
-.after-test-item:hover {
-  border-color: #C9D7FF;
-}
-.after-test-item__title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #020618;
-  line-height: 22px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.after-test-item__meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-.after-test-item__meta-cell {
-  background: #F8FAFC;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
-  color: #314158;
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-.after-test-item__time {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 18px;
-  position: relative;
-  padding: 0 12px;
-  box-sizing: border-box;
-height: 36px;
-background: #F8FAFC;
-border-radius: 10px 10px 10px 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #F3F4F8;
+  gap: 0;
+  background: #fff;
+  border-radius:8px;
+  transition: background 0.15s;
 }
-.after-test-item__time-label {
-  color: #90A1B9;
+.after-test-item:hover {
+  background: #F8F9FF;
+}
+.after-test-item__cover-wrap {
+  position: relative;
+  width: 178px;
+  height: 100px;
   flex-shrink: 0;
 }
-.after-test-item__time-val {
-  color: #314158;
+.after-test-item__cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px 0px 0px 8px;
+  display: block;
 }
-.after-test-item__play {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
+.after-test-item__play-icon {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px 0px 0px 8px;
+  cursor: pointer;
 }
 .after-test-item__play-btn {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
+}
+.after-test-item__info {
+  flex: 1;
+  min-width: 0;
+  padding: 0 16px;
+}
+.after-test-item__label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 6px;
+}
+.after-test-item__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.after-test-item__col {
+  flex: 1;
+  min-width: 0;
+  padding: 0 16px;
+}
+.after-test-item__val {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+.after-test-item__rate {
+  color: #00C853;
+  font-weight: 600;
 }
 .after-test-item__btn {
-  width: 100%;
-  height: 36px;
- background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
-box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
-border-radius: 12px 12px 12px 12px;
+  flex-shrink: 0;
+  padding: 8px 20px;
+  background: #0049FF;
   color: #fff;
   border: none;
+  border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
   outline: none;
+  margin-left: 16px;
 }
 .after-test-item__btn:hover {
   background: #003de0;
