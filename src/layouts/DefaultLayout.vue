@@ -137,32 +137,51 @@ export default {
           {
             path: '/student/home',
             title: '首页',
-            icon: require('@/assets/icons/menu/home.png'),
-            activeIcon: require('@/assets/icons/menu/home-active.png')
+            icon: require('@/assets/icons/menu/new_zy.png'),
+            activeIcon: require('@/assets/icons/menu/new_zy_active.png')
           },
-          {
-            path: '/student/class',
-            title: '班级',
-            icon: require('@/assets/icons/menu/class.png'),
-            activeIcon: require('@/assets/icons/menu/class-active.png')
-          },
-          {
-            path: '/student/live-class',
-            title: '实时课堂',
-            icon: require('@/assets/icons/menu/live-class.png'),
-            activeIcon: require('@/assets/icons/menu/live-class-active.png')
-          },
-          {
-            path: '/student/course',
-            title: '课程',
-            icon: require('@/assets/icons/menu/course.png'),
-            activeIcon: require('@/assets/icons/menu/course-active.png')
-          },
+            {
+          path: '/student/online',
+          title: '在线课堂',
+          icon: require('@/assets/icons/menu/new_zxkt.png'),
+          activeIcon: require('@/assets/icons/menu/new_zxkt_active.png')
+        },
+        
+          // {
+          //   path: '/student/class',
+          //   title: '班级',
+          //   icon: require('@/assets/icons/menu/class.png'),
+          //   activeIcon: require('@/assets/icons/menu/class-active.png')
+          // },
+          // {
+          //   path: '/student/live-class',
+          //   title: '实时课堂',
+          //   icon: require('@/assets/icons/menu/live-class.png'),
+          //   activeIcon: require('@/assets/icons/menu/live-class-active.png')
+          // },
+          // {
+          //   path: '/student/course',
+          //   title: '课程',
+          //   icon: require('@/assets/icons/menu/course.png'),
+          //   activeIcon: require('@/assets/icons/menu/course-active.png')
+          // },
+           {
+          path: '/student/schedule',
+          title: '课程表',
+          icon: require('@/assets/icons/menu/new_kcb.png'),
+          activeIcon: require('@/assets/icons/menu/new_kcb_active.png')
+        },
+        {
+          path: '/student/notes',
+          title: '知构笔记',
+          icon: require('@/assets/icons/menu/new_zgbj.png'),
+          activeIcon: require('@/assets/icons/menu/new_zgbj_active.png')
+        },
           {
             path: '/student/message',
             title: '消息',
-            icon: require('@/assets/icons/menu/message.png'),
-            activeIcon: require('@/assets/icons/menu/message-active.png')
+            icon: require('@/assets/icons/menu/new_xx.png'),
+            activeIcon: require('@/assets/icons/menu/new_xx_active.png')
           }
         ]
       }

@@ -463,7 +463,9 @@
       :teacher-source="playerTeacherSource"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
-      :allow-download="currentAllowDownload"
+      :allow-multiple="currentAllowMultiple"
+    :allow-fast-forward="currentAllowFastForward"
+    :allow-download="currentAllowDownload"
       @close="playerVisible = false"
     />
   </div>
@@ -563,8 +565,8 @@ export default {
       playerTeacherSource: '',
       playerTitle: '',
       playerHistoryLessonId: '',
-      currentAllowMultiple: '2',
-      currentAllowFastForward: '2',
+     currentAllowMultiple: '1',
+      currentAllowFastForward: '1',
       currentAllowDownload: '2',
       currentPlayingItem: null
     }

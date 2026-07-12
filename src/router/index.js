@@ -155,6 +155,24 @@ const routes = [
         meta: { title: '班级', icon: 'el-icon-office-building',keepAlive: true, roles: ['student'] }
       },
       {
+        path: 'student/online',
+        name: 'StudentOnline',
+        component: () => import('@/views/Student/Online/index.vue'),
+        meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['student'] }
+      },
+       {
+        path: 'student/notes',
+        name: 'studentNotes',
+        component: () => import('@/views/Student/ZhigouNotes/index.vue'),
+        meta: { title: '课程表', icon: 'el-icon-office-building',  roles: ['student'] }
+      },
+      {
+        path: 'student/schedule',
+        name: 'studentSchedule',
+        component: () => import('@/views/Student/Schedule/index.vue'),
+        meta: { title: '知构笔记', icon: 'el-icon-office-building',  roles: ['student'] }
+      },
+      {
         path: 'student/live-class',
         name: 'StudentLiveClass',
         // component: () => import('@/views/Student/LiveClass/index.vue'),

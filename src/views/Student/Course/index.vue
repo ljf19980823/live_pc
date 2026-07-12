@@ -317,6 +317,8 @@
     :teacher-source="playerTeacherSource"
     :title="playerTitle"
     :history-lesson-id="playerHistoryLessonId"
+    :allow-multiple="currentAllowMultiple"
+    :allow-fast-forward="currentAllowFastForward"
     :allow-download="currentAllowDownload"
     :from-task="fromLearningTask"
     :collect-params="currentCollectParams"
