@@ -1640,8 +1640,11 @@ created() {
     this.activeTab = 'liveui'
     },
     copyShareLink() {
-      const url = this.selectedCourseItem && this.selectedCourseItem.shareUrl
+      let url = this.selectedCourseItem && this.selectedCourseItem.shareUrl
       if (!url) return
+      if(process.env.NODE_ENV === 'development'){
+        url = url.replace('https://live.fjlsjy123.com/visitor/#', 'http://localhost:8080'); //访客-本地开发环境
+      }
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
           this.$message.success('链接已复制')

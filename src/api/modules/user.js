@@ -20,10 +20,10 @@ export const sendCode = data => post('/edu/sso/sendCode', data)
 export const codeLogin = data => post('/edu/sso/codeLogin', data)
 
 // 访客发送直播验证码
-export const visitorSendCode = data => post('/edu/live/visitor/sendCode', data)
+export const visitorSendCode = data => post('/edu/live/visitor/sendCode', data, { skipAuthorization: true })
 
 // 访客验证码登录
-export const visitorLogin = data => post('/edu/live/visitor/login', data)
+export const visitorLogin = data => post('/edu/live/visitor/login', data, { skipAuthorization: true })
 
 // 手机号验证码登录
 export const loginByPhone = data => post('/user/login/phone', data)
