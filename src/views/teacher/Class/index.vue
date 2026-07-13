@@ -83,8 +83,8 @@
         >
           <div class="class-card-header">
             <div class="app_container_box_left_list_detail_title">
-              <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
               {{ item.alias || item.name }}
+               <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
             </div>
             <el-dropdown trigger="click" @command="(cmd) => handleClassCardOptions(cmd, index)">
               <img @click.stop src="@/assets/images/class/new_options.png" class="class-card-options" alt="">
@@ -2349,8 +2349,8 @@ border-radius: 10px 10px 10px 10px;
   gap: 32px;
 }
 .app_container_box_left_list_detail_active{
-  background: #F0F5FF!important;
-  border-color: #0049FF!important;
+  background: #EFF6FF!important;
+  border-color: #8EC5FF!important;
 }
 .app_container_box_left_list_detail:hover{
   background: #F7F9FC!important;
@@ -2369,20 +2369,20 @@ border-radius: 10px 10px 10px 10px;
   // margin-top: 2px;
 }
 .app_container_box_left_list_detail_title{
-  font-weight: 600;
+  font-weight: bold;
   flex: 1;
   width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
-  font-size: 15px;
-  color: #333333;
+  font-size: 14px;
+  color: #020618;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .app_container_box_left_list_detail_active .app_container_box_left_list_detail_title{
-  color: #0049FF;
+  color: #020618;
 }
 .app_container_box_left_list_detail_count{
   font-weight: 400;
@@ -2392,8 +2392,8 @@ border-radius: 10px 10px 10px 10px;
   line-height: 18px;
 }
 .app_container_box_left_list_detail_chooseIcon{
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
 }
 .class-card-validity{
@@ -2503,7 +2503,7 @@ border-radius: 8px 8px 8px 8px;
   align-items: flex-start;
   gap: 52px;
   margin-top: 20px;
-  border-bottom: 1px solid #F0F0F0;
+  // border-bottom: 1px solid #F0F0F0;
 }
 .app_container_box_right_top_choose_detail{
   display: flex;
@@ -2537,7 +2537,7 @@ border-radius: 8px 8px 8px 8px;
   justify-content: flex-start;
   flex-direction: column;
   background: #FFFFFF;
-  padding: 16px 24px 24px;
+  padding: 10px 24px 24px;
   box-sizing: border-box;
 }
 .app_container_box_right_last_top_search{
@@ -2558,6 +2558,12 @@ border-radius: 8px 8px 8px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 11px 12px;
+  box-sizing: border-box;
+  background: rgba(239,246,255,0.45);
+border-radius: 0px 0px 0px 0px;
+border-top: 1px solid #DBEAFE;
+border-bottom: 1px solid #DBEAFE;
 }
 .app_container_box_right_last_top3{
   background: rgba(239,246,255,0.45);
@@ -2590,9 +2596,9 @@ border-bottom: 1px solid #DBEAFE;
 .student-card{
   width: calc((100% - 16px) / 2);
   min-height: 88px;
-  background: #FFFFFF;
-  border: 1px solid #EEEEEE;
-  border-radius: 10px;
+  background: rgba(248,250,252,0.4);
+border-radius: 12px 12px 12px 12px;
+border: 1px solid #DBEAFE;
   display: flex;
   align-items: center;
   padding: 16px;
@@ -2647,20 +2653,33 @@ border-bottom: 1px solid #DBEAFE;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 24px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .student-card-action{
   font-size: 12px;
-  line-height: 18px;
+  line-height: 32px;
   cursor: pointer;
   white-space: nowrap;
   font-weight: bold;
+  text-align: center;
 }
 .student-card-action-reset{
-  color: #1F7CFF;
+  width: 74px;
+height: 32px;
+background: #FFFFFF;
+box-shadow: 0px 0px 0px 1px #DBEAFE;
+border-radius: 10px 10px 10px 10px;
+border: 1px solid #D2E5FF;
+color: #1F7CFF;
 }
 .student-card-action-remove{
+  width: 74px;
+height: 32px;
+background: #FFFFFF;
+box-shadow: 0px 0px 0px 1px #FFE2E2;
+border-radius: 10px 10px 10px 10px;
+border: 1px solid #FED5D7;
   color: #FB2C36;
 }
 .course-list{
@@ -3317,7 +3336,11 @@ color: #333333;
   flex-wrap: wrap;
   gap: 12px;
   background: transparent;
-  padding: 0;
+  padding: 11px 12px ;
+  background: rgba(239,246,255,0.45);
+border-radius: 0px 0px 0px 0px;
+border-top: 1px solid #DBEAFE;
+border-bottom: 1px solid #DBEAFE;
   box-sizing: border-box;
   margin-bottom: 16px;
   flex-shrink: 0;
