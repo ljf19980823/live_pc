@@ -3,12 +3,9 @@
     <!-- 侧边栏 -->
     <aside class="layout-sidebar" :class="{ visible: sidebarVisible }">
       <!-- Logo 区域 -->
-      <!-- <div class="sidebar-logo">
-        <div class="logo-icon-wrap">
-          <i class="el-icon-video-camera" />
-        </div>
-        <span class="logo-name">Learn InClass</span>
-      </div> -->
+      <div class="sidebar-logo">
+        <img src="@/assets/images/logo.png" alt="" style="width:91px;height:29px">
+      </div>
      
       <!-- 菜单列表 --> 
       <nav class="sidebar-nav">
@@ -312,7 +309,7 @@ $header-h: $header-height;
 .layout-sidebar {
   width: $nav-width;
   // padding: 119px 16px 45px;
-  padding: 60px 16px 45px;
+  padding: 34px 16px 45px;
   box-sizing: border-box;
   height: 100%;
   background: #ffffff;
@@ -329,8 +326,8 @@ $header-h: $header-height;
   @include flex-column;
   align-items: center;
   justify-content: center;
-  padding: 20px 0 16px;
-  border-bottom: 1px solid #F2F3F7;
+  padding: 0 0 40px;
+  // border-bottom: 1px solid #F2F3F7;
   flex-shrink: 0;
 
   .logo-icon-wrap {
@@ -450,7 +447,7 @@ $header-h: $header-height;
 .sidebar-footer {
   flex-shrink: 0;
   padding: 8px 0 16px;
-  border-top: 1px solid #F2F3F7;
+  // border-top: 1px solid #F2F3F7;
 
   .nav-item {
     .nav-icon {

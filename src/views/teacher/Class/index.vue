@@ -960,7 +960,11 @@ export default {
       newClassName: '',
       newClassDesc: '',
       newClassStartDate: new Date(),
-      newClassEndDate: new Date(),
+      newClassEndDate: (() => {
+        const d = new Date()
+        d.setFullYear(d.getFullYear() + 1)
+        return d
+      })(),
       createClassLoading: false,
       rightView: 'default',
       selectedCourse: null,
@@ -1806,8 +1810,10 @@ export default {
       }
     },
     onStartDateChange(val) {
-      if (this.newClassEndDate && val && this.newClassEndDate <= val) {
-        this.newClassEndDate = null
+      if (val) {
+        const end = new Date(val)
+        end.setFullYear(end.getFullYear() + 1)
+        this.newClassEndDate = end
       }
     },
     disabledEndDate(date) {
@@ -1825,7 +1831,9 @@ export default {
       this.newClassName = ''
       this.newClassDesc = ''
       this.newClassStartDate = new Date()
-      this.newClassEndDate = new Date()
+      const end = new Date()
+      end.setFullYear(end.getFullYear() + 1)
+      this.newClassEndDate = end
     },
     async handleCardClickWithLoading(key, handler) {
       this.activeLoadingKey = key

@@ -5,7 +5,7 @@
     <!-- 应用信息 -->
     <div class="ab-app-info">
       <div class="ab-app-icon">
-        <img src="@/assets/images/set/Icon@2x (1).png" alt="app icon" class="ab-icon-img" />
+        <img src="@/assets/images/set/about_logo.png" alt="app icon" class="ab-icon-img" />
       </div>
       <div class="ab-app-name">{{ appName }}</div>
       <div class="ab-app-version">版本 {{ appVersion }}</div>

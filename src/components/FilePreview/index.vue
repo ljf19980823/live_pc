@@ -35,8 +35,9 @@
           :class="{ 'file-preview-editor-wrap--presentation': isPreviewPresentation }"
         >
           <div :id="editorContainerId" class="file-preview-editor"></div>
-          <!-- PPT desktop：遮住顶部多余按钮；左侧保留原生幻灯片目录 -->
+          <!-- PPT desktop：遮住顶部与左侧图标操作栏，保留右侧幻灯片缩略图目录 -->
           <div v-if="isPreviewPresentation" class="presentation-top-mask"></div>
+          <div v-if="isPreviewPresentation" class="presentation-left-menu-mask"></div>
           <div class="toolbar-logo-mask"></div>
           <div class="toolbar-right-mask"></div>
         </div>
@@ -568,6 +569,18 @@ export default {
   left: 0;
   right: 0;
   height: 42px;
+  background: #F7F7F7;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* 遮住 OnlyOffice 左侧图标操作栏，不挡幻灯片缩略图目录 */
+.presentation-left-menu-mask {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  bottom: 0;
+  width: 48px;
   background: #F7F7F7;
   z-index: 10;
   pointer-events: auto;
