@@ -24,3 +24,6 @@ export const getRecentCourseList = (params) => get('/edu/recentView/recent', par
 
 // 获取最近观看列表
 export const getRecentViewList = (params) => get('/edu/recentView/view', params)
+
+// 上报业务观看时长（type: 3 视频等）
+export const addBusinessView = data => post('/edu/recentView/addBusinessView', data)

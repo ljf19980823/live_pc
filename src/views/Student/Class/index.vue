@@ -891,7 +891,7 @@
 
 <script>
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
-import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
+import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions, addBusinessView } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from './ExamPage.vue'
@@ -1574,26 +1574,7 @@ export default {
         this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
         console.log(item.allowMultiple,'视频地址')
-         // taskUuid 有值 → 跳转 AI听记页面
-        // if(item.taskUuid){
-        //   const fileList = item.fileList || []
-        //   const mainFile = fileList.find(f => f.videoType == '1')
-        //   const teacherFile = fileList.find(f => f.videoType == '2')
-        //   const { userId } = getUserInfo()
-        //   this.$router.push({
-        //     name: 'AIListening',
-        //     query: {
-        //       videoUrl: mainFile ? mainFile.filePath || '' : '',
-        //       teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
-        //       meetingId: item.taskUuid,
-        //       meetingTitle: item.title || '',
-        //       scopeText: item.taskUuid,
-        //       liveLessonId: item.historyLessonId || '',
-        //       teacherId: userId || ''
-        //     }
-        //   })
-        //   return
-        // }
+        
         this.currentVideoUrl = url
         this.currentPlayingItem = item
         this.fromLearningTask = true
@@ -1601,6 +1582,7 @@ export default {
         this.isCollected = initCollected
         this.showVideoDialog = true
       } else if (historyVideoTypes.includes(item.nodeType)) {
+        
         this.openVideoPlayer(item, false, true)
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
@@ -1628,11 +1610,12 @@ export default {
         this.filePreviewVisible = true
       }
     },
-    async closeVideoDialog(percent = 0) {
+    async closeVideoDialog(percent = 0, viewTime = 0) {
       this.showVideoDialog = false
       this.currentVideoUrl = ''
       this.fromLearningTask = false
       this.isCollected = false
+      await this.reportBusinessView(viewTime)
       await this.saveVideoProgress(percent)
     },
     async closeHistoryPlayer(percent = 0) {
@@ -1644,6 +1627,19 @@ export default {
       if (!skip) {
         await this.saveVideoProgress(percent)
       }
+    },
+    /** 上报观看时长（秒） */
+    async reportBusinessView(viewTime = 0) {
+      const item = this.currentPlayingItem
+      if (!item) return
+      try {
+        await addBusinessView({
+          type: '3',
+          lessonId: String(item.id || ''),
+          contentId: this.selectedCourse ? String(this.selectedCourse.id || '') : '',
+          viewTime: String(Math.max(0, Math.round(Number(viewTime) || 0)))
+        })
+      } catch (_) {}
     },
     async saveVideoProgress(percent) {
       const item = this.currentPlayingItem

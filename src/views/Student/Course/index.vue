@@ -371,7 +371,7 @@
 <script>
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import { getAllCourseList, getRecentCourseList } from '@/api/modules/student'
-import { getCourseDetail, updateRecentStudy, updateCourseProgress, collectToggle } from '@/api'
+import { getCourseDetail, updateRecentStudy, updateCourseProgress, collectToggle, addBusinessView } from '@/api'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import HistoryVideoPlayer from '@/components/HistoryVideoPlayer/index.vue'
 import FilePreview from '@/components/FilePreview/index.vue'
@@ -822,11 +822,12 @@ const videoTypes = ['4']
       this.playerVisible = true
     },
 
-    async closeVideoDialog(percent = 0) {
+    async closeVideoDialog(percent = 0, viewTime = 0) {
       this.showVideoDialog = false
       this.currentVideoUrl = ''
       this.fromLearningTask = false
       this.isCollected = false
+      await this.reportBusinessView(viewTime)
       await this.saveVideoProgress(percent)
     },
 
@@ -835,6 +836,20 @@ const videoTypes = ['4']
       this.fromLearningTask = false
       this.isCollected = false
       await this.saveVideoProgress(percent)
+    },
+
+    /** 上报观看时长（秒） */
+    async reportBusinessView(viewTime = 0) {
+      const item = this.currentPlayingItem
+      if (!item) return
+      try {
+        await addBusinessView({
+          type: '3',
+          lessonId: String(item.id || ''),
+          contentId: this.selectedCourse ? String(this.selectedCourse.id || '') : '',
+          viewTime: String(Math.max(0, Math.round(Number(viewTime) || 0)))
+        })
+      } catch (_) {}
     },
 
     async saveVideoProgress(percent) {

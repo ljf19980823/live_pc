@@ -310,19 +310,21 @@ export default {
       }
     },
 
-    /** 关闭播放器，向父组件抛出 close 事件，携带当前播放进度百分比（0-100） */
+    /** 关闭播放器，向父组件抛出 close 事件：进度百分比（0-100）、观看时长（秒） */
     handleClose() {
       let percent = 0
+      let viewTime = 0
       if (this.playerInstance) {
         try {
           const current = this.playerInstance.getCurrentTime() || 0
           const total = this.playerInstance.getDuration() || 0
+          viewTime = Math.max(0, Math.round(current))
           if (total > 0) {
             percent = Math.min(Math.round(current / total * 100), 100)
           }
         } catch (e) {}
       }
-      this.$emit('close', percent)
+      this.$emit('close', percent, viewTime)
     }
   },
 
