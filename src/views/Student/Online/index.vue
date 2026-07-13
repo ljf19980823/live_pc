@@ -3244,6 +3244,41 @@ border-radius: 10px 10px 10px 10px;
 
 
 
+/* ── 顶部横幅 ─────────────────────────────────────────────────────────────── */
+.update-banner {
+  display: flex;
+  align-items: center;
+  padding: 9px 20px;
+  background: #fffbe6;
+  border-bottom: 1px solid #ffe58f;
+  font-size: 13px;
+  color: #595959;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  .banner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #faad14;
+    flex-shrink: 0;
+  }
+
+  .banner-text {
+    flex: 1;
+  }
+
+  .banner-link {
+    color: #13c2c2;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
 
 .banner-fade-enter-active,
 .banner-fade-leave-active {

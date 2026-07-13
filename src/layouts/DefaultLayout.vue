@@ -361,7 +361,7 @@ $header-h: $header-height;
 
 // 通用菜单项
 .nav-item {
-  margin-bottom: 25px;
+  margin-bottom: 8px;
   // @include flex-column;
   gap: 5px;
   width: 100%;
@@ -369,8 +369,8 @@ $header-h: $header-height;
   align-items: center;
   gap: 12px;
   justify-content: flex-start;
-  padding: 12px 12px;
-  border-radius: 12px;
+  padding: 14px 12px;
+  border-radius: 18px;
   cursor: pointer;
   transition: background $transition-fast, color $transition-fast;
   position: relative;
@@ -399,7 +399,9 @@ $header-h: $header-height;
     text-align: center;
     white-space: nowrap;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1;
+    position: relative;
+    top: -2px;
     transition: color $transition-fast;
   }
 
