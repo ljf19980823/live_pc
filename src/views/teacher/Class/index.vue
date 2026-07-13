@@ -477,72 +477,129 @@
       <!-- 课后测试tab列表 -->
       <div class="app_container_box_right_last after-test-tab" v-if="rightTab === 'afterTest' && !showAfterTestDetail">
         <!-- 筛选条件 -->
-        <div class="after-test-filter">
-          <div class="after-test-filter__group">
-            <span class="after-test-filter__label">时间</span>
-            <el-date-picker
-              v-model="afterTestTimeRange"
-              type="datetimerange"
-              range-separator="-"
-              start-placeholder="开始时间"
-              end-placeholder="结束时间"
-              value-format="yyyy-MM-dd HH:mm:ss"
-              :picker-options="afterTestDatePickerOptions"
-              class="after-test-filter__datepicker"
-              @change="handleAfterTestSearch"
-            />
-          </div>
-          <div class="after-test-filter__group">
-            <span class="after-test-filter__label">科目</span>
-            <el-select
-              v-model="afterTestFilter.subjectId"
-              placeholder="全部科目"
-              clearable
-              filterable
-              class="after-test-filter__select"
-              @change="handleAfterTestSearch"
-            >
-              <el-option
-                v-for="opt in subjectOptions"
-                :key="opt.id"
-                :label="opt.name"
-                :value="opt.id"
-              />
-            </el-select>
-          </div>
-          <div class="after-test-filter__group">
-            <el-select
-              v-model="afterTestFilter.examConfigId"
-              placeholder="请选择课后测"
-              clearable
-              filterable
-              class="after-test-filter__select"
-              @change="handleAfterTestSearch"
-            >
-              <el-option
-                v-for="opt in afterQuizOptions"
-                :key="opt.examConfigId"
-                :label="opt.name"
-                :value="opt.examConfigId"
-              />
-            </el-select>
-          </div>
-          <div class="after-test-filter__group">
-            <el-select
-              v-model="afterTestFilter.teacherId"
-              placeholder="请选择上课老师"
-              clearable
-              filterable
-              class="after-test-filter__select"
-              @change="handleAfterTestSearch"
-            >
-              <el-option
-                v-for="opt in teacherOptions"
-                :key="opt.teacherId"
-                :label="opt.realName"
-                :value="opt.teacherId"
-              />
-            </el-select>
+        <div class="filter-bar">
+          <div class="filter-bar__left">
+            <div class="filter-item">
+              <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
+                <el-date-picker
+                  v-model="afterTestTimeRange"
+                  type="datetimerange"
+                  range-separator="-"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  value-format="yyyy-MM-dd HH:mm:ss"
+                  :picker-options="afterTestDatePickerOptions"
+                  :clearable="false"
+                  class="ls_date_picker ls_date_picker--datetimerange"
+                  size="mini"
+                  @change="handleAfterTestSearch"
+                />
+                <i
+                  v-if="afterTestTimeRange && afterTestTimeRange.length"
+                  class="el-icon-circle-close filter-item__clear"
+                  @click.stop="clearAfterTestTimeRange"
+                />
+                <img
+                  v-else
+                  src="@/assets/images/class/rl_icon.png"
+                  class="filter-item__icon"
+                  alt=""
+                />
+              </div>
+            </div>
+            <div class="filter-item">
+              <div class="filter-item__control filter-item__control--select">
+                <div class="ls_class_select_wrap">
+                  <el-select
+                    v-model="afterTestFilter.subjectId"
+                    placeholder="全部科目"
+                    size="mini"
+                    :clearable="false"
+                    filterable
+                    class="ls_class_select"
+                    @change="handleAfterTestSearch"
+                  >
+                    <el-option
+                      v-for="opt in subjectOptions"
+                      :key="opt.id"
+                      :label="opt.name"
+                      :value="opt.id"
+                    />
+                  </el-select>
+                  <i
+                    v-if="afterTestFilter.subjectId"
+                    class="el-icon-circle-close ls_class_select_clear"
+                    @click.stop="clearAfterTestField('subjectId')"
+                  />
+                  <i
+                    v-else
+                    class="el-icon-arrow-down ls_class_select_arrow"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="filter-item">
+              <div class="filter-item__control filter-item__control--select">
+                <div class="ls_class_select_wrap">
+                  <el-select
+                    v-model="afterTestFilter.examConfigId"
+                    placeholder="全部课后测"
+                    size="mini"
+                    :clearable="false"
+                    filterable
+                    class="ls_class_select"
+                    @change="handleAfterTestSearch"
+                  >
+                    <el-option
+                      v-for="opt in afterQuizOptions"
+                      :key="opt.examConfigId"
+                      :label="opt.name"
+                      :value="opt.examConfigId"
+                    />
+                  </el-select>
+                  <i
+                    v-if="afterTestFilter.examConfigId"
+                    class="el-icon-circle-close ls_class_select_clear"
+                    @click.stop="clearAfterTestField('examConfigId')"
+                  />
+                  <i
+                    v-else
+                    class="el-icon-arrow-down ls_class_select_arrow"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="filter-item">
+              <div class="filter-item__control filter-item__control--select">
+                <div class="ls_class_select_wrap">
+                  <el-select
+                    v-model="afterTestFilter.teacherId"
+                    placeholder="全部老师"
+                    size="mini"
+                    :clearable="false"
+                    filterable
+                    class="ls_class_select"
+                    @change="handleAfterTestSearch"
+                  >
+                    <el-option
+                      v-for="opt in teacherOptions"
+                      :key="opt.teacherId"
+                      :label="opt.realName"
+                      :value="opt.teacherId"
+                    />
+                  </el-select>
+                  <i
+                    v-if="afterTestFilter.teacherId"
+                    class="el-icon-circle-close ls_class_select_clear"
+                    @click.stop="clearAfterTestField('teacherId')"
+                  />
+                  <i
+                    v-else
+                    class="el-icon-arrow-down ls_class_select_arrow"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="after-test-list" v-loading="afterTestLoading">
@@ -1265,6 +1322,14 @@ export default {
         this.afterTestFilter.quizEndTime = ''
       }
       this.fetchAfterTestList()
+    },
+    clearAfterTestTimeRange() {
+      this.afterTestTimeRange = []
+      this.handleAfterTestSearch()
+    },
+    clearAfterTestField(field) {
+      this.afterTestFilter[field] = ''
+      this.handleAfterTestSearch()
     },
     handleAfterTestReset() {
       this.afterTestFilter = { subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' }
@@ -3329,67 +3394,166 @@ color: #333333;
   &:hover { background: #E5E7EB; }
 }
 
-/* ─── 课后测试 tab 列表 ──────────────────────────────────────── */
-.after-test-filter {
+/* ─── 课后测试 tab 筛选栏（对齐学生端） ─────────────────────────── */
+.filter-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  background: transparent;
-  padding: 11px 12px ;
-  background: rgba(239,246,255,0.45);
-border-radius: 0px 0px 0px 0px;
-border-top: 1px solid #DBEAFE;
-border-bottom: 1px solid #DBEAFE;
+  justify-content: space-between;
+  padding: 11px 12px;
   box-sizing: border-box;
   margin-bottom: 16px;
+  background: rgba(239,246,255,0.45);
+  border-radius: 0;
+  border-top: 1px solid #DBEAFE;
+  border-bottom: 1px solid #DBEAFE;
+  overflow: visible;
   flex-shrink: 0;
-}
-.after-test-filter__group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-}
-.after-test-filter__label {
-  font-size: 13px;
-  color: #666666;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.after-test-filter__select {
-  width: 140px;
-  ::v-deep .el-input__inner {
-    height: 36px;
-    line-height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8;
-    font-size: 13px;
-    color: #333333;
-    background: #FFFFFF;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+    flex-wrap: wrap;
   }
 }
-.after-test-filter__datepicker {
-  width: 320px !important;
-  ::v-deep .el-range-editor {
-    width: 100% !important;
-    height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8;
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+
+  &__label {
+    font-size: 14px;
+    color: #45556C;
+    white-space: nowrap;
+  }
+
+  &__control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
     background: #FFFFFF;
-    padding: 0 10px;
+    box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    cursor: pointer;
+    min-width: 132px;
     box-sizing: border-box;
+
+    &--picker {
+      position: relative;
+      min-width: 220px;
+      cursor: default;
+      overflow: visible;
+    }
+
+    &--datetime {
+      min-width: 220px;
+    }
+
+    &--select {
+      min-width: 160px;
+      cursor: default;
+      padding-right: 8px;
+    }
+  }
+
+  &__icon {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+    opacity: 0.6;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+}
+.ls_date_picker {
+  flex: 1;
+  ::v-deep .el-range-editor {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0;
+    height: 38px;
   }
   ::v-deep .el-range-input {
     font-size: 13px;
-    color: #333333;
+    color: #1D293D;
     background: transparent;
   }
   ::v-deep .el-range-separator {
     font-size: 13px;
-    color: #999999;
-    line-height: 28px;
+    color: #94A3B8;
+    line-height: 38px;
   }
+  ::v-deep .el-range__icon,
+  ::v-deep .el-input__icon {
+    display: none;
+  }
+}
+.ls_class_select_wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+.ls_class_select_arrow,
+.ls_class_select_clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #94A3B8;
+}
+.ls_class_select_arrow {
+  pointer-events: none;
+}
+.ls_class_select_clear {
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 2;
+  &:hover {
+    color: #64748B;
+  }
+}
+.ls_class_select {
+  width: 140px;
+  ::v-deep .el-input__inner {
+    border: none;
+    box-shadow: none;
+    font-size: 14px;
+    color: #1D293D;
+    background: transparent;
+    padding-left: 0;
+    padding-right: 22px;
+    height: 38px;
+    line-height: 38px;
+  }
+  ::v-deep .el-select__caret {
+    display: none !important;
+  }
+  ::v-deep .el-select__input {
+    margin-left: 0 !important;
+  }
+}
+.filter-item__clear {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  line-height: 1;
+  &:hover {
+    color: #64748B;
+  }
+}
+.filter-item__control--picker ::v-deep .el-input__inner {
+  border: none !important;
 }
 .after-test-list {
   display: flex;
@@ -3500,5 +3664,9 @@ border-radius: 12px 12px 12px 12px;
 }
 .after-test-item__btn:hover {
   background: #003de0;
+}
+::v-deep .filter-item__control--datetime .el-date-editor--datetimerange.el-input__inner{
+  width: 180px!important;
+  min-width: 180px!important;
 }
 </style>
