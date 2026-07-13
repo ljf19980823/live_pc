@@ -502,7 +502,7 @@ line-height: 1;
   background-size: 100% 100%;
   background-image: url("@/assets/images/home/bg.png");
   background-repeat: no-repeat;
-  padding: 20px;
+  padding:15px 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -660,6 +660,7 @@ color:#90A1B9 ;
   overflow: hidden;
 }
 .app_container_last_right{
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   cursor: pointer;
   flex: 1;
   width: 0;
@@ -807,7 +808,7 @@ align-items: center;
 }
 .app_container_last_left_header{
   width: 100%;
-  
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   padding:12px 12px;
   box-sizing: border-box;
   background: #FFFFFF;
@@ -839,7 +840,7 @@ color: #FFFFFF;
   height: 36px;
 }
 .app_container_last_left_line{
-  
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   border-radius: 12px;
    width: 100%;
   height: 100%;

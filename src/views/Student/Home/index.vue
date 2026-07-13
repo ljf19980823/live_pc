@@ -441,7 +441,7 @@ export default {
   background-size: 100% 100%;
   background-image: url("@/assets/images/home/bg2.png");
   background-repeat: no-repeat;
-  padding: 20px;
+  padding:15px 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -553,6 +553,7 @@ export default {
   gap: 16px;
 }
 .app_container_last_left_header{
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   width: 100%;
   padding:12px 12px;
   box-sizing: border-box;
@@ -589,6 +590,7 @@ export default {
   color: #0F172B;
 }
 .app_container_last_left_line{
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   border-radius: 12px;
   width: 100%;
   height: 100%;
@@ -693,6 +695,7 @@ export default {
   overflow: hidden;
 }
 .app_container_last_right{
+  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 0px 0px 1px #DBEAFE;
   cursor: pointer;
   flex: 1;
   width: 0;
