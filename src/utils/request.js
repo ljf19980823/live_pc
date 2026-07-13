@@ -65,7 +65,7 @@ service.interceptors.request.use(
 
     // 携带 Token
     const token = getToken()
-    if (token) {
+    if (token && !config.skipAuthorization) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
 
