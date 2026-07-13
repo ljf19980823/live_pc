@@ -174,11 +174,12 @@
             <button class="btn-outline btn-back" @click.stop="backToGroups">
               ← 返回教研组
             </button>
-            <button class="btn-outline" @click.stop="showNewFolderDialog = true">
+            <button class="btn-outline" @click.stop="showNewFolderDialog = true" v-if="selectedGroupInfo.myRole=='1'">
               <img src="@/assets/images/material/add.png" alt="" class="btn-icon" />
               新建文件夹
             </button>
             <el-upload
+            v-if="selectedGroupInfo.myRole=='1'"
               :action="''"
               :http-request="handleGroupUpload"
               :show-file-list="false"
