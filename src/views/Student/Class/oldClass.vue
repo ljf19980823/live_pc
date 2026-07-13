@@ -1,57 +1,80 @@
-﻿<template>
+<template>
   <div class="page-placeholder">
-    <!-- 顶部标题栏 -->
-    <div class="page-header">
-      <div class="page-header-left">
-        <span class="page-header-title">我的班级</span>
-        <span class="page-header-count">共 {{ classList.length }} 个</span>
-      </div>
-      <div class="page-header-right">
-        <div class="page-header-create" @click="handleAddClass()">
-          <img src="@/assets/images/class/new_add.png" class="page-header-create-icon" alt="">
-          <span>加入班级</span>
-        </div>
-        <img src="@/assets/images/class/new_notice.png" class="page-header-notice" @click="handleToAnnouncement()" alt="">
-      </div>
-    </div>
-
-    <div class="page-body">
     <div class="app_container_box_left">
-      <!-- 默认：搜索入口 + 筛选 -->
+      <div class="app_container_box_left_top">
+        <div class="app_top_left_text">我的班级<span class="app_top_left_count">({{ classList.length }})</span></div>
+        <img src="@/assets/images/home/add.png" @click="handleAddClass()" class="app_top_left_icon" alt="">
+      </div>
       <div class="app_container_box_left_search_box" v-if="isOpenSearch == false">
-        <div class="app_container_box_left_search_box_entry" @click="openSearch()">
+        <div class="app_container_box_left_search_box_top" @click="openSearch()">
           <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
-          <div class="app_container_box_left_search_box_top_text">搜索班级名称</div>
+          <div class="app_container_box_left_search_box_top_text">
+            搜索
+          </div>
         </div>
         <div class="app_container_box_left_search_box_center">
-          <el-dropdown trigger="click" @command="handleSortCommand" class="left-filter-dropdown">
-            <div class="left-filter-btn">
-              <span>{{ sortLabel }}</span>
-              <i class="el-icon-arrow-down left-filter-arrow"></i>
+          <!-- <div class="app_container_box_left_search_box_center_left">
+              <el-select
+            v-model="year"
+            placeholder="请选择年份"
+            clearable
+            style="width: 100%;"
+          >
+            <el-option
+            
+              key=""
+              label="全部"
+              value=""
+            />
+             <el-option
+            
+              key="2026"
+              label="2026"
+              value="2026"
+            />
+          </el-select>
+          </div> -->
+          <div class="app_container_box_left_search_box_center_left">
+              <el-select
+            v-model="liveStatus"
+            placeholder="状态"
+            style="width: 100%;"
+          >
+            <el-option
+              key=""
+              label="全部"
+              value=""
+            />
+            <el-option
+              key="未过期"
+              label="未过期"
+              value="未过期"
+            />
+             <el-option
+              key="已过期"
+              label="已过期"
+              value="已过期"
+            />
+          </el-select>
+          </div>
+          <el-dropdown trigger="click" @command="handleSortCommand">
+            <div class="app_container_box_left_search_box_center_right">
+              <img src="@/assets/images/class/sx.png" class="app_container_box_left_search_box_center_right_img" alt="">
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="name_asc" :class="{ 'sort-active': sortType === 'name_asc' }">默认排序</el-dropdown-item>
+                <el-dropdown-item command="name_asc" :class="{ 'sort-active': sortType === 'name_asc' }">班级名称 A-Z</el-dropdown-item>
                 <el-dropdown-item command="name_desc" :class="{ 'sort-active': sortType === 'name_desc' }">班级名称 Z-A</el-dropdown-item>
                 <el-dropdown-item command="time_asc" :class="{ 'sort-active': sortType === 'time_asc' }">创建时间升序</el-dropdown-item>
                 <el-dropdown-item command="time_desc" :class="{ 'sort-active': sortType === 'time_desc' }">创建时间降序</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <div class="left-filter-select">
-            <el-select v-model="liveStatus" placeholder="全部" style="width: 100%;">
-              <el-option key="" label="全部" value="" />
-              <el-option key="未过期" label="未过期" value="未过期" />
-              <el-option key="已过期" label="已过期" value="已过期" />
-            </el-select>
-          </div>
         </div>
       </div>
-
-      <!-- 搜索中 -->
-      <div class="app_container_box_left_search_box" v-if="isOpenSearch == true">
+      <div  class="app_container_box_left_search_box" v-if="isOpenSearch==true">
         <div class="app_container_box_left_search_box_topBox">
-          <div class="app_container_box_left_search_box_topBox_search">
+           <div class="app_container_box_left_search_box_topBox_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
               <el-input ref="searchInput" v-model="leftSearchText" :placeholder="searchType === 'class' ? '搜索班级' : '搜索学生'" clearable />
@@ -59,9 +82,15 @@
           </div>
           <div class="app_container_box_left_search_box_topBox_cancel" @click="cancelSearch">取消</div>
         </div>
+        <!-- <div class="app_container_box_left_search_box_choose">
+          <div
+            class="app_container_box_left_search_box_choose_detail"
+            :class="{ 'app_container_box_left_search_box_choose_detail_active': searchType === 'class' }"
+            @click="searchType = 'class'"
+          >找班级</div>
+        </div> -->
       </div>
-
-      <div ref="leftClassList" class="app_container_box_left_list" v-if="isOpenSearch == false" v-loading="classListLoading">
+      <div ref="leftClassList" class="app_container_box_left_list" v-if="isOpenSearch==false" v-loading="classListLoading">
         <div
           class="app_container_box_left_list_detail"
           :class="{ 'app_container_box_left_list_detail_active': selectedClassIndex === index }"
@@ -69,44 +98,16 @@
           :key="index"
           @click="selectClass(index)"
         >
-          <div class="class-card-header">
-            <div class="app_container_box_left_list_detail_title">
-              {{ item.alias || item.name }}
-              <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
-            </div>
-            <el-dropdown trigger="click" @command="(cmd) => handleClassCardOptions(cmd, index)">
-              <img @click.stop src="@/assets/images/class/new_options.png" class="class-card-options" alt="">
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="pin">{{ item.pinned ? '取消置顶' : '置顶' }}</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-          <div class="app_container_box_left_list_detail_count">
-            <span>{{ item.courseCnt || 0 }} 门课</span>
-            <span class="class-card-count-sep">·</span>
-            <span class="class-card-pending">{{ item.waitCourseCnt || 0 }} 门课程待完成</span>
-          </div>
-          <div class="class-card-validity">
-            <span class="class-card-validity-label">有效期</span>
-            <span class="class-card-validity-dates">{{ formatDotDate(item.startDate) }}-{{ formatDotDate(item.endDate) }}</span>
-            <span
-              v-if="getClassStatusTag(item)"
-              class="class-card-status-tag"
-              :class="{
-                'is-urgent': item.remainDays >= 0 && item.remainDays <= 30,
-                'is-expired': item.remainDays < 0
-              }"
-            >{{ getClassStatusTag(item) }}</span>
-          </div>
+          <img v-if="item.pinned" src="@/assets/images/class/chooseYes.png" class="app_container_box_left_list_detail_chooseIcon" alt="">
+          <div class="app_container_box_left_list_detail_title">{{ item.alias || item.name }}</div>
+          <!-- <div class="app_container_box_left_list_detail_count">{{ item.count }}人</div> -->
         </div>
         <EmptyState v-if="!classListLoading && classList.length === 0" description="暂无班级数据" />
       </div>
 
       <!-- 查询时的左边列表 -->
-      <div class="app_container_box_left_list app_container_box_left_list_search" v-if="isOpenSearch == true">
-        <div class="search_tips" v-if="!leftSearchText && searchType === 'class'">输入关键词查找班级</div>
+      <div class="app_container_box_left_list" v-if="isOpenSearch==true">
+        <div class="search_tips" v-if="!leftSearchText &&searchType === 'class'">输入关键词查找班级</div>
         <template v-if="leftSearchText">
           <div
             class="app_container_box_left_list_detail2"
@@ -342,7 +343,7 @@
       <template v-else>
       <!-- 无班级时空状态 -->
       <div v-if="!classListLoading && classList.length === 0" class="app_container_box_right_empty">
-        <EmptyState description="暂无班级，请先加入班级" />
+        <EmptyState description="暂无班级，请先创建班级" />
       </div>
       <template v-if="classList.length > 0">
       <div class="app_container_box_right_top">
@@ -355,52 +356,75 @@
                 class="app_container_box_right_top_top_realname"
               >{{ currentClass.name }}</div>
             </div>
+            <div
+              class="app_container_box_right_top_top_tag"
+              :class="{ 'is-expired': currentClass.remainDays < 0 }"
+            >{{ currentClass.remainDays < 0 ? `已过期${Math.abs(currentClass.remainDays)}天` : ( currentClass.remainDays==0? `今天到期` : `剩余${currentClass.remainDays}天` )}}</div>
+          </div>
+          <div class="app_container_box_right_top_top_right">
+            <img @click="handleToAnnouncement()" src="@/assets/images/class/rl.png" class="app_container_box_right_top_top_right_rl" alt="">
+            <el-dropdown trigger="click" @command="handleOptionsCommand">
+              <img src="@/assets/images/class/options.png" class="app_container_box_right_top_top_right_options" alt="">
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="pin">
+                    {{ currentClass.pinned ? '取消置顶' : '置顶' }}
+                  </el-dropdown-item>
+                 
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
         <div class="app_container_box_right_top_mess">
-          <span>{{ currentClass.courseCnt || filteredCourseList.length || 0 }} 门课程</span>
-          <span class="right-top-mess-dot">·</span>
-          <span class="right-top-mess-pending">{{ currentClass.waitCourseCnt }} 门课程待完成</span>
+          <!-- <div>{{ currentClass.count }}人</div> -->
+          <div>{{ currentClass.startDate }}  ~  {{ currentClass.endDate }}</div>
         </div>
         <div class="app_container_box_right_top_choose">
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'course'">
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
-            <img v-if="rightTab === 'course'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+            <img v-if="rightTab === 'course'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'quiz'">
-            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测</div>
-            <img v-if="rightTab === 'quiz'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
+            <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测试</div>
+            <img v-if="rightTab === 'quiz'" src="@/assets/images/class/hx.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
         </div>
       </div>
       <!-- 课程tab列表 -->
       <div class="app_container_box_right_last" v-if="rightTab === 'course'">
         <div class="app_container_box_right_last_top">
-          <div class="app_container_box_right_last_top_num">共 {{ filteredCourseList.length }} 门课程</div>
           <div class="app_container_box_right_last_top_search">
             <img src="@/assets/images/class/s_icon.png" class="app_container_box_left_search_box_top_icon" alt="">
             <div class="app_container_box_left_search_box_top_input">
-              <el-input v-model="rightCourseSearch" placeholder="搜索课程名称" clearable />
+              <el-input v-model="rightCourseSearch" placeholder="搜索课程" clearable />
             </div>
           </div>
+          <div class="app_container_box_right_last_top_num">共{{ filteredCourseList.length }}个课程</div>
         </div>
-        <div class="app_container_box_right_last_list course-list" v-loading="courseListLoading">
+        <div class="app_container_box_right_last_list" v-loading="courseListLoading">
           <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index" @click="handleCourseClick(item)" style="cursor:pointer;">
-            <div class="course-card-cover-wrap">
-              <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
-            </div>
+            <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
-            <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }} 个学习任务</div>
+            <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }}个学习任务</div>
             <div class="app_container_box_right_last_list_detailCourse_jd">
               <div class="app_container_box_right_last_list_detailCourse_jd_box">
-                <div
-                  class="app_container_box_right_last_list_detailCourse_jd_box_now"
-                  :class="{ 'is-complete': Math.round(item.progress) >= 100 }"
-                  :style="{ width: Math.round(item.progress) + '%' }"
-                ></div>
+                <div class="app_container_box_right_last_list_detailCourse_jd_box_now" :style="{ width: Math.round(item.progress) + '%' }"></div>
               </div>
               <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ Math.round(item.progress) }}%</div>
             </div>
+            <!-- <div class="app_container_box_right_last_list_detailCourse_options" @click.stop>
+              <el-dropdown trigger="click" @command="(cmd) => handleCourseOptionsCommand(cmd, item)">
+                <div class="app_container_box_right_last_list_detailCourse_options_box">
+                  <img src="@/assets/images/class/options3.png" class="app_container_box_right_last_list_detailCourse_options_icon" alt="">
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div> -->
           </div>
           <EmptyState v-if="!courseListLoading && filteredCourseList.length === 0" :description="rightCourseSearch ? '无搜索结果' : '暂无课程数据'" style="width: 100%;" />
         </div>
@@ -408,188 +432,113 @@
 
       <!-- 课后测tab列表 -->
       <template v-if="rightTab === 'quiz'">
+      
         <div class="app_container_box_right_last quiz-list-wrap" v-loading="afterQuizLoading">
-          <div class="filter-bar">
-            <div class="filter-bar__left">
-              <div class="filter-item">
-                <!-- <span class="filter-item__label">时间</span> -->
-                <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
-                  <el-date-picker
-                    v-model="afterQuizTimeRange"
-                    type="datetimerange"
-                    range-separator="-"
-                    start-placeholder="开始时间"
-                    end-placeholder="结束时间"
-                    value-format="yyyy-MM-dd HH:mm:ss"
-                    :picker-options="afterQuizDatePickerOptions"
-                    :clearable="false"
-                    class="ls_date_picker ls_date_picker--datetimerange"
-                    size="mini"
-                    @change="handleAfterQuizSearch"
-                  />
-                  <i
-                    v-if="afterQuizTimeRange && afterQuizTimeRange.length"
-                    class="el-icon-circle-close filter-item__clear"
-                    @click.stop="clearAfterQuizTimeRange"
-                  />
-                  <img
-                    v-else
-                    src="@/assets/images/class/rl_icon.png"
-                    class="filter-item__icon"
-                    alt=""
-                  />
-                </div>
-              </div>
-              <div class="filter-item">
-                <!-- <span class="filter-item__label">科目</span> -->
-                <div class="filter-item__control filter-item__control--select">
-                  <div class="ls_class_select_wrap">
-                    <el-select
-                      v-model="afterQuizFilter.subjectId"
-                      placeholder="全部科目"
-                      size="mini"
-                      :clearable="false"
-                      filterable
-                      class="ls_class_select"
-                      @change="handleAfterQuizSearch"
-                    >
-                      <el-option
-                        v-for="opt in subjectOptions"
-                        :key="opt.id"
-                        :label="opt.name"
-                        :value="opt.id"
-                      />
-                    </el-select>
-                    <i
-                      v-if="afterQuizFilter.subjectId"
-                      class="el-icon-circle-close ls_class_select_clear"
-                      @click.stop="clearAfterQuizField('subjectId')"
-                    />
-                    <i
-                      v-else
-                      class="el-icon-arrow-down ls_class_select_arrow"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div class="filter-item">
-                <!-- <span class="filter-item__label">课后测</span> -->
-                <div class="filter-item__control filter-item__control--select">
-                  <div class="ls_class_select_wrap">
-                    <el-select
-                      v-model="afterQuizFilter.examConfigId"
-                      placeholder="全部课后测"
-                      size="mini"
-                      :clearable="false"
-                      filterable
-                      class="ls_class_select"
-                      @change="handleAfterQuizSearch"
-                    >
-                      <el-option
-                        v-for="opt in afterQuizOptions"
-                        :key="opt.examConfigId"
-                        :label="opt.name"
-                        :value="opt.examConfigId"
-                      />
-                    </el-select>
-                    <i
-                      v-if="afterQuizFilter.examConfigId"
-                      class="el-icon-circle-close ls_class_select_clear"
-                      @click.stop="clearAfterQuizField('examConfigId')"
-                    />
-                    <i
-                      v-else
-                      class="el-icon-arrow-down ls_class_select_arrow"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div class="filter-item">
-                <!-- <span class="filter-item__label">老师</span> -->
-                <div class="filter-item__control filter-item__control--select">
-                  <div class="ls_class_select_wrap">
-                    <el-select
-                      v-model="afterQuizFilter.teacherId"
-                      placeholder="全部老师"
-                      size="mini"
-                      :clearable="false"
-                      filterable
-                      class="ls_class_select"
-                      @change="handleAfterQuizSearch"
-                    >
-                      <el-option
-                        v-for="opt in teacherOptions"
-                        :key="opt.teacherId"
-                        :label="opt.realName"
-                        :value="opt.teacherId"
-                      />
-                    </el-select>
-                    <i
-                      v-if="afterQuizFilter.teacherId"
-                      class="el-icon-circle-close ls_class_select_clear"
-                      @click.stop="clearAfterQuizField('teacherId')"
-                    />
-                    <i
-                      v-else
-                      class="el-icon-arrow-down ls_class_select_arrow"
-                    />
-                  </div>
-                </div>
+          <div class="after-test-filter">
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.subjectId"
+              placeholder="请选择科目"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in subjectOptions"
+                :key="opt.id"
+                :label="opt.name"
+                :value="opt.id"
+              />
+            </el-select>
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-date-picker
+              v-model="afterQuizTimeRange"
+              type="datetimerange"
+              range-separator="-"
+              start-placeholder="直播开始时间"
+              end-placeholder="直播结束时间"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              :picker-options="afterQuizDatePickerOptions"
+              class="after-test-filter__datepicker"
+              @change="handleAfterQuizSearch"
+            />
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.examConfigId"
+              placeholder="请选择课后测"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in afterQuizOptions"
+                :key="opt.examConfigId"
+                :label="opt.name"
+                :value="opt.examConfigId"
+              />
+            </el-select>
+          </div>
+          <div class="after-test-filter__divider"></div>
+          <div class="after-test-filter__group">
+            <el-select
+              v-model="afterQuizFilter.teacherId"
+              placeholder="请选择上课老师"
+              clearable
+              filterable
+              class="after-test-filter__select"
+              @change="handleAfterQuizSearch"
+            >
+              <el-option
+                v-for="opt in teacherOptions"
+                :key="opt.teacherId"
+                :label="opt.realName"
+                :value="opt.teacherId"
+              />
+            </el-select>
+          </div>
+        </div>
+          <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" style="width:100%;margin-top:60px;" />
+          <div class="quiz-item" v-for="(item, index) in afterQuizList" :key="index" @click="startExam(item)">
+            <div class="quiz-item-left">
+              <img :src="item.cover || require('@/assets/images/class/such.png')" class="quiz-item-cover" alt="">
+              <div class="quiz-item-play-icon" v-if="item.fileList && item.fileList.length!=0" @click.stop="openVideoPlayer(item, false, false, true)">
+                <img src="@/assets/images/class/play.png" class="quiz-play-btn" alt="">
               </div>
             </div>
-          </div>
-          <div class="quiz-grid">
-            <div
-              class="quiz-card"
-              v-for="(item, index) in afterQuizList"
-              :key="index"
-            >
-              <div class="quiz-card__header">
-                <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
-                <span
-                  class="quiz-card__status"
-                  :class="item.finishStatus === '1' ? 'quiz-card__status--done' : 'quiz-card__status--todo'"
-                >
+            <div class="quiz-item-body">
+              <div class="quiz-item-title-row">
+                <span class="quiz-item-name">{{ item.name }}</span>
+                <span class="quiz-item-status" :class="item.finishStatus === '1' ? 'quiz-status-done' : 'quiz-status-todo'">
                   {{ item.finishStatus === '1' ? '已做题' : '未做题' }}
                 </span>
+                <span class="quiz-item-date">发布时间: {{ item.createTime }}</span>
               </div>
-              <div class="quiz-card__meta">
-                <div class="quiz-card__meta-row">
-                  <span class="quiz-card__meta-label">科目</span>
-                  <span class="quiz-card__meta-value">{{ item.subjectName || item.subject || '-' }}</span>
-                </div>
-                <div class="quiz-card__meta-row">
-                  <span class="quiz-card__meta-label">发布时间</span>
-                  <span class="quiz-card__meta-value">{{ formatQuizTime(item.createTime) }}</span>
-                </div>
-                <div class="quiz-card__meta-row" v-if="item.finishStatus === '1' || item.topicNum">
-                  <span class="quiz-card__meta-label">做题信息</span>
-                  <span class="quiz-card__meta-value">
-                    {{ item.finishNum || 0 }}次 · {{ item.topicNum || 0 }}题
-                    <template v-if="item.finishStatus === '1'"> · {{ item.finishScore }}分</template>
+              <div class="quiz-item-meta-row">
+                <span class="quiz-item-meta">做题次数: {{ item.finishNum }}次</span>
+                <span class="quiz-item-meta">题目数量: {{ item.topicNum }}题</span>
+                <span class="quiz-item-meta">
+                  <span :class="item.finishStatus === '1' ? 'quiz-score-done' : 'quiz-score-none'">
+                    {{ item.finishStatus === '1' ? item.finishScore + ' 分' : '' }}
                   </span>
-                </div>
-              </div>
-              <div class="quiz-card__actions">
-                <!-- <button
-                  v-if="item.fileList && item.fileList.length != 0"
-                  class="quiz-card__btn quiz-card__btn--outline"
-                  @click.stop="openVideoPlayer(item, false, false, true)"
-                >看回放</button> -->
-               
-                  <button class="quiz-card__btn quiz-card__btn--outline"  @click.stop="openRanking(item)">排行榜</button>
-                  <button class="quiz-card__btn quiz-card__btn--record" v-if=" item.finishStatus === '1'" @click.stop="openExamRecord(item)">考试记录</button>
-                  <button class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
-              
+                  <span class="quiz-score-done" style="cursor:pointer;" @click.stop="openRanking(item)">{{item.finishStatus === '1'?'(查看排行榜)':'查看排行榜'}}</span>
+                </span>
               </div>
             </div>
+            <div class="quiz-item-actions">
+              <button class="quiz-btn-primary" @click.stop="startExam(item)">去考试</button>
+              <button class="quiz-btn-outline" @click.stop="openExamRecord(item)">考试记录</button>
+            </div>
           </div>
-          <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" />
         </div>
       </template>
       </template>
       </template>
-    </div>
     </div>
     <!-- 班级详情抽屉 -->
     <transition name="class-detail-fade">
@@ -1103,18 +1052,6 @@ export default {
     },
     filteredCourseList() {
       return this.courseList
-    },
-    pendingCourseCount() {
-      return this.courseList.filter(c => Math.round(c.progress || 0) < 100).length
-    },
-    sortLabel() {
-      const map = {
-        name_asc: '默认排序',
-        name_desc: '班级名称 Z-A',
-        time_asc: '创建时间升序',
-        time_desc: '创建时间降序'
-      }
-      return map[this.sortType] || '默认排序'
     }
   },
   mounted() {
@@ -1156,7 +1093,6 @@ export default {
     formatDuration,
     _mapClassItem(item) {
       const sourceMap = { '1': '后台创建', '0': '' }
-      console.log(item.courseCount,'数量')
       return {
         classId: item.classId,
         name: item.className || '',
@@ -1167,9 +1103,7 @@ export default {
         startDate: item.beginTime || '',
         endDate: item.endTime || '',
         source: sourceMap[item.classMode] || '',
-        status: item.status || '',
-        courseCnt: item.courseCnt || 0,
-        waitCourseCnt: item.courseCount  || 0
+        status: item.status || ''
       }
     },
     async fetchClassList() {
@@ -1251,8 +1185,6 @@ export default {
             endDate: detail.endTime || this.classList[idx].endDate,
             source: sourceMap[detail.classMode] || this.classList[idx].source,
             status: detail.status || this.classList[idx].status,
-            courseCnt: detail.courseCnt || 0,
-            waitCourseCnt: detail.courseCount ||0,
             describe: detail.describe || '',
             isSelfCreate: detail.isSelfCreate,
             allowRemove: detail.allowRemove,
@@ -1277,12 +1209,6 @@ export default {
           taskCount: item.totalLessons || 0,
           progress: item.progressPercent || 0
         }))
-        const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
-        if (idx !== -1) {
-          const waitCnt = this.courseList.filter(c => Math.round(c.progress || 0) < 100).length
-          this.$set(this.classList[idx], 'courseCnt', this.courseList.length)
-          // this.$set(this.classList[idx], 'waitCourseCnt', waitCnt)
-        }
       } catch (e) {
         console.error(e)
         this.courseList = []
@@ -1335,14 +1261,6 @@ export default {
         this.afterQuizFilter.quizEndTime = ''
       }
       this.fetchAfterQuizList()
-    },
-    clearAfterQuizTimeRange() {
-      this.afterQuizTimeRange = []
-      this.handleAfterQuizSearch()
-    },
-    clearAfterQuizField(field) {
-      this.afterQuizFilter[field] = ''
-      this.handleAfterQuizSearch()
     },
     openRanking(item) {
       this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
@@ -1426,26 +1344,6 @@ export default {
       this.leftSearchText = ''
       this.searchType = 'class'
       this.searchClassList = []
-    },
-    formatDotDate(val) {
-      if (!val) return ''
-      return String(val).slice(0, 10).replace(/-/g, '.')
-    },
-    formatQuizTime(time) {
-      if (!time) return '-'
-      return String(time).replace(/-/g, '.').replace('T', ' ').slice(0, 16)
-    },
-    getClassStatusTag(item) {
-      if (!item) return ''
-      if (item.remainDays < 0) return '已过期'
-      if (item.remainDays === 0) return '今天到期'
-      if (item.remainDays <= 30) return `剩余${item.remainDays}天`
-      return ''
-    },
-    handleClassCardOptions(command, index) {
-      this.selectedClassIndex = index
-      this.selectedClassId = this.classList[index]?.classId || null
-      this.handleOptionsCommand(command)
     },
     highlightKeyword(text, keyword) {
       if (!keyword || !text) return text
@@ -2087,11 +1985,7 @@ export default {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  background: #F7FBFF;
-  padding: 16px 20px 20px;
-  box-sizing: border-box;
-  overflow: hidden;
+  justify-content: space-between;
 }
 .live-iframe-overlay {
   position: fixed;
@@ -2116,18 +2010,12 @@ export default {
   color: #333;
 }
 .app_container_box_left{
-  width: 320px;
-  flex-shrink: 0;
+  width: 300px;
   display: flex;
   justify-content: flex-start;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   background: #FFFFFF;
-  border-radius: 12px 0 0 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow: hidden;
-  border-right: 1px solid #F0F0F0;
 }
 .app_container_box_left_top{
     width: 300px;
@@ -2395,7 +2283,7 @@ color: #333333;
   gap: 20px;
   font-weight: 400;
 font-size: 14px;
-color: #62748E;
+color: #999999;
 }
 .app_container_box_right_top_choose{
   display: flex;
@@ -3331,709 +3219,212 @@ color: #333333;
   font-weight: 600;
 }
 
-/* 课后测筛选栏（对齐 Online） */
-.filter-bar {
+/* 课后测筛选栏 */
+.after-test-filter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding:11px 12px;
+  height: 49px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0 20px;
   box-sizing: border-box;
-  margin-bottom: 16px;
-  background: rgba(239,246,255,0.45);
-border-radius: 0px 0px 0px 0px;
-border-top: 1px solid #DBEAFE;
-border-bottom: 1px solid #DBEAFE;
-  overflow: visible;
+  margin-bottom: 0;
   flex-shrink: 0;
-
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex: 1;
-    min-width: 0;
-    overflow: visible;
-    flex-wrap: wrap;
-  }
 }
-.filter-item {
+.after-test-filter__group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  padding: 0 16px;
+  height: 100%;
+  &:first-child { padding-left: 0; }
+}
+.after-test-filter__divider {
+  width: 1px;
+  height: 20px;
+  background: #d9d9d9;
   flex-shrink: 0;
-
-  &__label {
-    font-size: 14px;
-    color: #45556C;
-    white-space: nowrap;
-  }
-
-  &__control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 40px;
-    padding: 0 12px;
-    background: #FFFFFF;
-    box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-    border-radius: 10px;
-    border: 1px solid #E2E8F0;
-    cursor: pointer;
-    min-width: 132px;
-    box-sizing: border-box;
-
-    &--picker {
-      position: relative;
-      min-width: 220px;
-      cursor: default;
-      overflow: visible;
-    }
-
-    &--datetime {
-      min-width: 220px;
-    }
-
-    &--select {
-      min-width: 160px;
-      cursor: default;
-      padding-right: 8px;
-    }
-  }
-
-  &__icon {
-    width: 15px;
-    height: 15px;
-    object-fit: contain;
-    opacity: 0.6;
-    flex-shrink: 0;
-    pointer-events: none;
-  }
 }
-.ls_date_picker {
-  flex: 1;
-  ::v-deep .el-range-editor {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    padding: 0;
-    height: 38px;
-  }
-  ::v-deep .el-range-input {
-    font-size: 13px;
-    color: #1D293D;
-    background: transparent;
-  }
-  ::v-deep .el-range-separator {
-    font-size: 13px;
-    color: #94A3B8;
-    line-height: 38px;
-  }
-  ::v-deep .el-range__icon,
-  ::v-deep .el-input__icon {
-    display: none;
-  }
-}
-.ls_class_select_wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 100%;
-}
-.ls_class_select_arrow,
-.ls_class_select_clear {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  color: #94A3B8;
-}
-.ls_class_select_arrow {
-  pointer-events: none;
-}
-.ls_class_select_clear {
-  font-size: 14px;
-  cursor: pointer;
-  z-index: 2;
-  &:hover {
-    color: #64748B;
-  }
-}
-.ls_class_select {
-  width: 140px;
+.after-test-filter__select {
+  width: 130px;
   ::v-deep .el-input__inner {
     border: none;
     box-shadow: none;
-    font-size: 14px;
-    color: #1D293D;
     background: transparent;
+    font-size: 14px;
+    color: #333333;
     padding-left: 0;
-    padding-right: 22px;
-    height: 38px;
-    line-height: 38px;
+    &:focus { border: none; box-shadow: none; }
   }
-  ::v-deep .el-select__caret {
-    display: none !important;
-  }
-  ::v-deep .el-select__input {
-    margin-left: 0 !important;
-  }
+  ::v-deep .el-input.is-focus .el-input__inner { border: none; box-shadow: none; }
+  ::v-deep .el-select__caret { color: #999; }
+  ::v-deep .el-select__input { margin-left: 0 !important; }
 }
-.filter-item__clear {
-  flex-shrink: 0;
-  font-size: 14px;
-  color: #94A3B8;
-  cursor: pointer;
-  line-height: 1;
-  &:hover {
-    color: #64748B;
+.after-test-filter__datepicker {
+  width: auto !important;
+  ::v-deep .el-range-editor {
+    width: auto !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    background: transparent;
+    &:hover, &.is-active { border: none; box-shadow: none; }
   }
-}
-.filter-item__control--picker ::v-deep .el-input__inner{
-  border: none!important
+  ::v-deep .el-range-input {
+    font-size: 14px;
+    color: #333333;
+    background: transparent;
+    width: 130px;
+  }
+  ::v-deep .el-range-separator {
+    font-size: 14px;
+    color: #333333;
+    padding: 0 4px;
+    line-height: 2;
+  }
+  ::v-deep .el-range__icon { display: none; }
+  ::v-deep .el-range__close-icon { font-size: 14px; }
 }
 
-/* 课后测卡片 */
+/* 课后测列表 */
 .quiz-list-wrap {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
   overflow-y: auto;
 }
-.quiz-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  min-height: 120px;
-}
-.quiz-card {
-  background: #FFFFFF;
-  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-  border-radius: 12px;
-  border: 1px solid #DBEAFE;
-  padding: 20px;
+.quiz-item {
   display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-
-  &__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  &__title {
-    flex: 1;
-    min-width: 0;
-    font-size: 16px;
-    font-weight: bold;
-    color: #020618;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__status {
-    flex-shrink: 0;
-    height: 24px;
-    padding: 0 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    display: inline-flex;
-    align-items: center;
-    box-sizing: border-box;
-
-    &--done {
-      background: #ECFDF5;
-      color: #22B877;
-    }
-
-    &--todo {
-      background: #FFF7ED;
-      color: #F54900;
-    }
-  }
-
-  &__meta {
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  &__meta-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #F8FAFC;
-    border-radius: 10px;
-    padding: 8px 12px;
-    box-sizing: border-box;
-  }
-
-  &__meta-label {
-    font-size: 12px;
-    color: #90A1B9;
-  }
-
-  &__meta-value {
-    font-size: 12px;
-    color: #314158;
-    font-weight: 600;
-  }
-
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
-    margin-top: auto;
-    flex-wrap: wrap;
-  }
-
-  &__btn {
-    height: 40px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    box-sizing: border-box;
-    outline: none;
-    white-space: nowrap;
-    text-align: center;
-    line-height: 40px;
-    min-width: 88px;
-    padding: 0 12px;
-
-    &--outline {
-      background: #FFFFFF;
-      border-radius: 10px;
-      border: 1px solid #BFE0FF;
-      color: #1F7CFF;
-    }
-
-    &--record {
-      background: #EFF6FF;
-      border-radius: 10px;
-      color: #1F7CFF;
-      border: none;
-    }
-
-    &--primary {
-      background: linear-gradient( 90deg, #1F7CFF 0%, #00BCFF 100%);
-      box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
-      border-radius: 10px;
-      color: #FFFFFF;
-      border: none;
-    }
-
-    &--right {
-      margin-left: auto;
-    }
-  }
-}
-@media (max-width: 1280px) {
-  .quiz-grid {
-    grid-template-columns: 1fr;
-  }
-  .app_container_box_right_last_list_detailCourse{
-    width: calc((100% - 16px) / 2);
-  }
-}
-
-/* ===== 新版布局覆盖（对齐设计图 / 教师班级页） ===== */
-.page-header{
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  padding: 0 16px 0 0;
+  gap: 16px;
+  min-height: 100px;
+}
+.quiz-item-left {
+  position: relative;
   flex-shrink: 0;
+  width: 178px;
+  height: 100px;
+  border-radius: 8px 0 0 8px;
+  overflow: hidden;
 }
-.page-header-left{
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+.quiz-item-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.page-header-title{
-  font-weight: bold;
-  font-size: 20px;
-  color: #020618;
-}
-.page-header-count{
-  font-weight: 400;
-  font-size: 14px;
-  color: #90A1B9;
-}
-.page-header-right{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.page-header-create{
-  width: 112px;
-  height: 40px;
-  background: linear-gradient( 90deg, #1F7CFF 0%, #00BCFF 100%);
-  box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
-  border-radius: 10px;
+.quiz-item-play-icon {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #FFFFFF;
-  font-size: 14px;
-  font-weight: bold;
-  box-sizing: border-box;
+  background: rgba(0,0,0,0.18);
 }
-.page-header-create-icon{
-  width: 16px;
-  height: 16px;
-}
-.page-header-notice{
+.quiz-play-btn {
   width: 40px;
   height: 40px;
-  cursor: pointer;
-  object-fit: contain;
-  display: block;
 }
-.page-body{
+.quiz-item-body {
   flex: 1;
-  height: 0;
-  display: flex;
-  gap: 0;
-  overflow: hidden;
-  background: #FFFFFF;
-  border-radius: 12px;
-}
-.app_container_box_left_search_box{
-  width: 100%;
-  margin-top: 0;
-  padding: 0;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-.app_container_box_left_search_box_entry{
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  height: 36px;
-  background: #F8FAFC;
-  border-radius: 8px;
-  border: 1px solid #E2E8F0;
-  gap: 8px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-.app_container_box_left_search_box_top_text{
-  color: #90A1B9;
-}
-.app_container_box_left_search_box_center{
-  margin-top: 12px;
-  gap: 8px;
-}
-.left-filter-dropdown{
-  flex: 1;
-  width: 0;
-}
-.left-filter-btn{
-  width: 100%;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid #E8E8E8;
-  background: #FFFFFF;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 12px;
-  box-sizing: border-box;
-  cursor: pointer;
-  font-size: 13px;
-  color: #333333;
-}
-.left-filter-arrow{
-  font-size: 12px;
-  color: #999999;
-}
-.left-filter-select{
-  flex: 1;
-  width: 0;
-  height: 36px;
-  :deep(.el-input__inner) {
-    height: 36px;
-    line-height: 36px;
-    border-radius: 8px;
-    border: 1px solid #E8E8E8!important;
-    font-size: 13px;
-  }
-}
-.app_container_box_left_list{
-  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.app_container_box_left_list_search{
-  gap: 0;
-  margin-top: 16px;
-}
-.app_container_box_left_list_detail{
-  width: 100%;
-  min-height: 96px;
-  height: auto;
-  background: #FFFFFF;
-  border-radius: 10px;
-  border: 1px solid #DBEAFE;
-  padding: 14px 12px 12px;
-  box-sizing: border-box;
-  display: block;
-  overflow: hidden;
-}
-/* 搜索结果列表：保留原来的扁平列表样式 */
-.app_container_box_left_list_detail2{
-  width: 100%;
-  min-height: auto;
-  height: auto;
-  background: #FFFFFF;
-  border-radius: 0;
-  border: none;
-  padding: 20px 16px;
-  box-sizing: border-box;
-  position: relative;
-  cursor: pointer;
-  overflow: visible;
-  display: block;
-}
-.app_container_box_left_list_detail2:hover{
-  background: #F0F3F6!important;
-}
-.app_container_box_left_list_detail2 .app_container_box_left_list_detail_title{
-  font-weight: 400;
-  width: 100%;
-  flex: none;
-  display: block;
-  color: #333333;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.app_container_box_left_list_detail_active{
-  background: #EFF6FF!important;
-  border-color: #8EC5FF!important;
-}
-// .app_container_box_left_list_detail_active::before{
-//   content: '';
-//   position: absolute;
-//   left: 0;
-//   top: 0;
-//   bottom: 0;
-//   width: 3px;
-//   background: #1F7CFF;
-// }
-.class-card-header{
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
-.class-card-options{
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.app_container_box_left_list_detail_title{
-  font-weight: bold;
-  flex: 1;
-  width: 0;
-  color: #020618;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.app_container_box_left_list_detail_count{
-  font-size: 12px;
-  color: #62748E;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.class-card-pending{
-  color: #1F7CFF;
-  font-weight: bold;
-}
-.app_container_box_left_list_detail_chooseIcon{
-  position: static;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-.class-card-validity{
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 29px;
-  height: 29px;
-  background: #EFF6FF;
-  padding: 0 10px;
-  box-sizing: border-box;
-  border-radius: 8px;
-}
-.class-card-validity-label{
-  color: #62748E;
-  flex-shrink: 0;
-}
-.class-card-validity-dates{
-  color: #45556C;
-  flex: 1;
   min-width: 0;
+}
+.quiz-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.quiz-item-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333333;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 220px;
+}
+.quiz-item-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.quiz-status-done {
+  background: #e6f0ff;
+  color: #0049FF;
+}
+.quiz-status-todo {
+  background: #fff0f0;
+  color: #f44;
+}
+.quiz-item-date {
+  font-size: 12px;
+  color: #666666;
   white-space: nowrap;
 }
-.class-card-status-tag{
-  flex-shrink: 0;
+.quiz-item-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.quiz-item-meta {
   font-size: 12px;
-  color: #FF6900;
-  font-weight: 500;
-  &.is-expired{
-    color: #90A1B9;
-    font-weight: 400;
-  }
+  color: #666666;
 }
-.app_container_box_right{
-  border-radius: 0 12px 12px 0;
-  background: #FFFFFF;
+.quiz-score-done {
+  color: #0049FF;
+  font-weight: 700;
 }
-.app_container_box_right_empty{
-  border-left: none;
+.quiz-score-none {
+  color: #aaa;
 }
-.app_container_box_right_top{
-  padding: 24px 24px 0;
-  border-left: none;
+.quiz-item-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
 }
-.app_container_box_right_top_top_name{
-  font-size: 20px;
-  color: #020618;
-  line-height: 28px;
+.quiz-btn-primary {
+  width: 79px;
+  height: 34px;
+  background: #0049FF;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s;
 }
-.app_container_box_right_top_mess{
-  margin-top: 8px;
-  gap: 6px;
-  color: #62748E;
-} 
-.right-top-mess-dot{
-  color: #62748E;
+.quiz-btn-primary:hover {
+  background: #003acc;
 }
-.right-top-mess-pending{
-  color: #1F7CFF;
-  font-weight: bold;
-}
-.app_container_box_right_top_choose{
-  gap: 52px;
-}
-.app_container_box_right_top_choose_detail{
-  gap: 8px;
-}
-.app_container_box_right_top_choose_detail_text{
-  font-weight: 500;
-  font-size: 14px;
-  color: #62748E;
-  line-height: 22px;
-}
-.app_container_box_right_top_choose_detail_hx{
-  width: 40px;
-  height: 10px;
-  object-fit: contain;
-}
-.app_container_box_right_top_choose_detail_text_active{
-  color: #1F7CFF!important;
-  font-weight: 600;
-}
-.app_container_box_right_last{
-  background: #FFFFFF;
-  padding: 10px 24px 24px;
-}
-.app_container_box_right_last_top{
-  padding: 11px 12px;
+.quiz-btn-outline {
+  width: 79px;
+  height: 34px;
+  background: #fff;
+  color: #0049FF;
+  border: 1px solid #0049FF;
   box-sizing: border-box;
-  background: rgba(239,246,255,0.45);
-  border-top: 1px solid #DBEAFE;
-  border-bottom: 1px solid #DBEAFE;
+  border-radius: 6px;
+  font-size: 13px;
+ font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
-.app_container_box_right_last_top_num{
-  font-weight: bold;
-  color: #45556C;
+.quiz-btn-outline:hover {
+  background: #e6f0ff;
 }
-.app_container_box_right_last_top_search{
-  width: 240px;
-  background: #F8FAFC;
-  border-radius: 8px;
-  border: 1px solid #E2E8F0;
-}
-.app_container_box_right_last_list_detailCourse{
-  width: calc((100% - 32px) / 3);
-  padding: 0 0 12px;
-  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-  border-radius: 12px;
-  border: 1px solid #DBEAFE;
-  overflow: hidden;
-}
-.course-card-cover-wrap{
-  position: relative;
-  width: 100%;
-}
-.app_container_box_right_last_list_detailCourse_fm{
-  width: 100%;
-  height: 128.61px;
-  border-radius: 0;
-  object-fit: cover;
-}
-.app_container_box_right_last_list_detailCourse_name{
-  font-weight: bold;
-  color: #020618;
-  padding: 12px 12px 0;
-  box-sizing: border-box;
-  margin-top: 0;
-}
-.app_container_box_right_last_list_detailCourse_task{
-  padding: 0 12px;
-  box-sizing: border-box;
-  color: #62748E;
-}
-.app_container_box_right_last_list_detailCourse_jd{
-  padding: 0 12px;
-  box-sizing: border-box;
-  margin-top: 12px;
-}
-.app_container_box_right_last_list_detailCourse_jd_box{
-  background: #EFF6FF;
-  height: 6px;
-}
-.app_container_box_right_last_list_detailCourse_jd_box_now{
-  height: 6px;
-  background: linear-gradient( 90deg, #7DD3FF 0%, #4FB0FF 50%, #168BFF 100%);
-}
-.app_container_box_right_last_list_detailCourse_jd_box_now.is-complete{
-  background: linear-gradient( 90deg, #52DCAC 0%, #1DCC7E 100%);
-}
-.app_container_box_right_last_list_detailCourse_jd_num{
-  text-align: right;
-  color: #90A1B9;
-}
-::v-deep .el-date-editor.el-input, .el-date-editor.el-input__inner{
-  width: 170px!important;
-  min-width:170px!important;
-}
+
 
 </style>

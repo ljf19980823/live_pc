@@ -164,7 +164,7 @@
       <div class="filter-bar">
         <div class="filter-bar__left">
           <div class="filter-item">
-            <span class="filter-item__label">时间</span>
+            <!-- <span class="filter-item__label">时间</span> -->
             <div class="filter-item__control filter-item__control--picker">
               <el-date-picker
                 :key="'history-date-' + datePickerRenderKey"
@@ -188,7 +188,7 @@
             </div>
           </div>
           <div class="filter-item">
-            <span class="filter-item__label">班级</span>
+            <!-- <span class="filter-item__label">班级</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
@@ -286,7 +286,7 @@
       <div class="filter-bar">
         <div class="filter-bar__left">
           <div class="filter-item">
-            <span class="filter-item__label">时间</span>
+            <!-- <span class="filter-item__label">时间</span> -->
             <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
               <el-date-picker
                 :key="'quiz-date-' + datePickerRenderKey"
@@ -310,7 +310,7 @@
             </div>
           </div>
           <div class="filter-item">
-            <span class="filter-item__label">班级</span>
+            <!-- <span class="filter-item__label">班级</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
@@ -334,7 +334,7 @@
             </div>
           </div>
           <div class="filter-item">
-            <span class="filter-item__label">科目</span>
+            <!-- <span class="filter-item__label">科目</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
@@ -358,7 +358,7 @@
             </div>
           </div>
           <div class="filter-item">
-            <span class="filter-item__label">情况</span>
+            <!-- <span class="filter-item__label">情况</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
