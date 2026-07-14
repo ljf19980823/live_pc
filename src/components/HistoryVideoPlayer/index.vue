@@ -207,10 +207,12 @@ export default {
   watch: {
     visible(val) {
       if (val) {
+        this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.startReplayLogSession()
         this.$nextTick(() => this.initPlayers())
       } else {
+        this.setScreenGuard(false)
         this.stopReplayLogSession()
         this.destroyPlayers()
       }
@@ -222,6 +224,12 @@ export default {
     }
   },
   methods: {
+    setScreenGuard(enabled) {
+      if (window.electronAPI?.setScreenGuard) {
+        window.electronAPI.setScreenGuard(enabled)
+      }
+    },
+
     // ─────────────── 历史课堂回放埋点 ───────────────
 
     getReplayHistoryLessonId() {
@@ -623,6 +631,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.setScreenGuard(false)
     this.stopReplayLogSession()
     this.destroyPlayers()
   }

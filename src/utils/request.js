@@ -316,6 +316,52 @@ export function upload(url, formData, onProgress) {
 }
 
 /**
+ * 从 Content-Disposition 解析文件名
+ * 优先 RFC 5987 的 filename*=UTF-8''...，避免 Mac 上中文乱码
+ */
+function parseContentDispositionFilename(disposition) {
+  if (!disposition) return ''
+
+  // filename*=UTF-8''%E4%B8%AD%E6%96%87.xlsx
+  const starMatch = disposition.match(/filename\*\s*=\s*([^;]+)/i)
+  if (starMatch && starMatch[1]) {
+    let value = starMatch[1].trim().replace(/^["']|["']$/g, '')
+    // charset'lang'encoded-value
+    const rfc5987 = value.match(/^(?:UTF-8|utf-8)''(.+)$/)
+    if (rfc5987) {
+      try {
+        return decodeURIComponent(rfc5987[1])
+      } catch (_) {}
+    }
+    try {
+      return decodeURIComponent(value)
+    } catch (_) {}
+  }
+
+  // filename="xxx.xlsx" 或 filename=xxx.xlsx
+  const plainMatch = disposition.match(/filename\s*=\s*((["']).*?\2|[^;\n]*)/i)
+  if (plainMatch && plainMatch[1]) {
+    let value = plainMatch[1].replace(/^["']|["']$/g, '').trim()
+    try {
+      value = decodeURIComponent(value)
+    } catch (_) {}
+    // 部分服务端把 UTF-8 字节按 Latin-1 写入 filename，Mac 上会乱码
+    if (/[\u00C0-\u00FF]/.test(value)) {
+      try {
+        const bytes = Uint8Array.from(value, ch => ch.charCodeAt(0))
+        const decoded = new TextDecoder('utf-8').decode(bytes)
+        if (decoded && !decoded.includes('\uFFFD')) {
+          value = decoded
+        }
+      } catch (_) {}
+    }
+    return value
+  }
+
+  return ''
+}
+
+/**
  * 文件下载
  * @param {string} url
  * @param {object} params
@@ -329,13 +375,8 @@ export async function download(url, params = {}, filename = 'download') {
   // 拦截器透传了完整 response，data 是 Blob
   const blob = new Blob([response.data])
 
-  // 尝试从 Content-Disposition 读取服务端文件名
-  let finalFilename = filename
   const disposition = response.headers?.['content-disposition'] || ''
-  const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
-  if (match && match[1]) {
-    finalFilename = decodeURIComponent(match[1].replace(/['"]/g, '').trim())
-  }
+  const finalFilename = parseContentDispositionFilename(disposition) || filename
 
   const objectUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')

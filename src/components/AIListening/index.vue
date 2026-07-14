@@ -366,8 +366,8 @@
           </div>
         </div>
 
-        <div class="al-chat-body" ref="chatBodyEl">
-           <empty-state v-if="currentStatus=='Error' || currentStatus2=='Error'" description="笔记正在生成中，请耐心等待。" />
+        <div class="al-chat-body" ref="chatBodyEl"  v-if="currentStatus=='Error' || currentStatus2=='Error'">
+           <empty-state description="笔记正在生成中，请耐心等待。" />
         </div>
 
         <!-- Chat Footer -->
@@ -425,7 +425,7 @@
 <script>
 import { Message } from 'element-ui'
 import ListenVideoPlayer from '@/components/ListenVideoPlayer/index.vue'
-import { del, get, post } from '@/utils/request'
+import { del, download, get, post } from '@/utils/request'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { batchLiveStatisticsLog } from '@/api'
 import MarkdownIt from 'markdown-it'
@@ -451,6 +451,13 @@ const markdownRenderer = new MarkdownIt({
 })
 
 const REPLAY_HEARTBEAT_INTERVAL = 30000
+
+function sanitizeFileName(name) {
+  return String(name || 'AI纪要')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim() || 'AI纪要'
+}
 
 export default {
   name: 'AIListening',
@@ -853,31 +860,17 @@ export default {
       }
     },
 
-    handleDownloadSummary() {
-      const url = this.summaryHtmlUrl
-      if (!url) return
-
-      const fileName = `${this.meetingTitle || 'AI纪要'}.html`
-      fetch(url)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`下载失败：${response.status}`)
-          }
-          return response.blob()
-        })
-        .then(blob => {
-          const objectUrl = window.URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = objectUrl
-          link.download = fileName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          window.URL.revokeObjectURL(objectUrl)
-        })
-        .catch(() => {
-          window.location.href = url
-        })
+    async handleDownloadSummary() {
+      const title = this.meetingTitle || 'AI纪要'
+      try {
+        await download('/dingTalk/download/notes/pdf', {
+          liveLessonId: this.liveLessonId,
+          teacherId: this.teacherId
+        }, `${sanitizeFileName(title)}.pdf`)
+        // Message.success('纪要PDF已下载')
+      } catch (err) {
+        Message.error(err.message || 'PDF下载失败')
+      }
     },
 
     // ===== 视频与转写联动 =====

@@ -222,9 +222,11 @@ export default {
   watch: {
     visible(val) {
       if (val) {
+        this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.$nextTick(() => this.initPlayers())
       } else {
+        if (!this.inline) this.setScreenGuard(false)
         this.destroyPlayers()
       }
     },
@@ -235,11 +237,20 @@ export default {
     }
   },
   mounted() {
+    if (this.inline || this.visible) {
+      this.setScreenGuard(true)
+    }
     if (this.inline && this.mainSource) {
       this.$nextTick(() => this.initPlayers())
     }
   },
   methods: {
+    setScreenGuard(enabled) {
+      if (window.electronAPI?.setScreenGuard) {
+        window.electronAPI.setScreenGuard(enabled)
+      }
+    },
+
     // ─────────────── 播放器初始化 ───────────────
 
     initPlayers() {
@@ -569,6 +580,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.setScreenGuard(false)
     this.destroyPlayers()
   }
 }

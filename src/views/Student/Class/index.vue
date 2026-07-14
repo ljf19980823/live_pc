@@ -4031,9 +4031,15 @@ border-bottom: 1px solid #DBEAFE;
   text-align: right;
   color: #90A1B9;
 }
-::v-deep .el-date-editor.el-input, .el-date-editor.el-input__inner{
-  width: 170px!important;
-  min-width:170px!important;
+::v-deep .filter-item__control--datetime .el-date-editor--datetimerange.el-input__inner{
+  width: 330px!important;
+  min-width: 330px!important;
+  .el-range-input{
+    width: 142px!important;
+  }
+  .el-range-separator{
+    line-height: 20px!important;
+  }
 }
 
 </style>

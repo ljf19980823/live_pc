@@ -1160,7 +1160,7 @@ export default {
       this.fetchClassList()
     },
     rightTab(val) {
-      if (val === 'student') this.fetchStudentList()
+      if (val === 'student') this.fetchStudentList(this.rightStudentSearch)
       else if (val === 'course') this.fetchCourseList()
       else if (val === 'afterTest') { this.fetchAfterTestFilterOptions(); this.fetchAfterTestList() }
     },
@@ -1391,7 +1391,7 @@ export default {
         }
         if (this.selectedClassId) {
           this.fetchClassDetail(this.selectedClassId)
-          this.fetchStudentList()
+          this.fetchStudentList(this.rightStudentSearch)
         }
         this.$nextTick(() => { this.scrollToSelectedClass() })
       } catch (e) {
@@ -1547,14 +1547,27 @@ export default {
       }
     },
     selectSearchResult(item) {
+      const isStudentSearch = this.searchType === 'student'
+      const studentKeyword = isStudentSearch
+        ? (item.studentName || this.leftSearchText || '')
+        : ''
+
       this.selectedClassId = item.classId
-      this.rightStudentSearch = ''
       this.rightCourseSearch = ''
+      this.rightView = 'default'
       this.isOpenSearch = false
       this.leftSearchText = ''
       this.searchType = 'class'
       this.searchClassList = []
       this.searchStudentList = []
+
+      if (isStudentSearch) {
+        this.rightStudentSearch = studentKeyword
+        this.rightTab = 'student'
+      } else {
+        this.rightStudentSearch = ''
+      }
+
       this.fetchClassList()
     },
     cancelSearch() {
@@ -3666,7 +3679,13 @@ border-radius: 12px 12px 12px 12px;
   background: #EFF6FF;
 }
 ::v-deep .filter-item__control--datetime .el-date-editor--datetimerange.el-input__inner{
-  width: 180px!important;
-  min-width: 180px!important;
+  width: 330px!important;
+  min-width: 330px!important;
+  .el-range-input{
+    width: 142px!important;
+  }
+  .el-range-separator{
+    line-height: 20px!important;
+  }
 }
 </style>

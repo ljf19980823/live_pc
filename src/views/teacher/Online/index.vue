@@ -183,7 +183,7 @@
                 :append-to-body="true"
                 :picker-options="historyDatePickerOptions"
                 popper-class="ls-online-date-popper"
-                class="ls_date_picker ls_date_picker--daterange"
+                class="ls_date_picker ls_date_picker2 ls_date_picker--daterange"
                 size="mini"
                 @focus="fixDatePickerPosition('historyDatePicker')"
               />
@@ -4382,7 +4382,21 @@ margin-bottom: 12px;
 
 
 /* Element UI 组件样式覆盖 */
-
+.ls_date_picker2{
+   &--daterange {
+    width: 220px !important;
+    flex: 0 0 220px;
+  }
+    ::v-deep .el-range-input {
+    font-size: 14px;
+    color: #1D293D;
+    background: transparent;
+    width: 88px!important;
+  }
+  ::v-deep .el-range-editor--datetimerange .el-range-input {
+    width: 140px;
+  }
+}
 .ls_date_picker {
   flex: 1;
   width: 100% !important;
@@ -4394,8 +4408,8 @@ margin-bottom: 12px;
   }
 
   &--datetimerange {
-    width: 220px !important;
-    flex: 0 0 220px;
+    width: 330px !important;
+    flex: 0 0 330px;
   }
 
   ::v-deep .el-range-editor {
@@ -4415,7 +4429,7 @@ margin-bottom: 12px;
     font-size: 14px;
     color: #1D293D;
     background: transparent;
-    width: 88px;
+    width: 142px;
   }
   ::v-deep .el-range-editor--datetimerange .el-range-input {
     width: 140px;
