@@ -403,7 +403,7 @@ export default {
 .app_container_first{
   width: 100%;
   display: flex;
-  height: 26.8%;
+  height: 30%;
   justify-content: space-between;
   align-items: center;
   gap: 20px;

@@ -271,7 +271,7 @@
         </template>
         
       </div>
-       <empty-state v-if="historyCourses.length === 0 && !historyLoading" description="暂无回放课堂" />
+      <empty-state v-if="historyCourses.length === 0 && !historyLoading" description="暂无回放课堂" />
       <div class="ls_pagination" v-if="historyTotal > historyPageSize">
         <el-pagination
           background
