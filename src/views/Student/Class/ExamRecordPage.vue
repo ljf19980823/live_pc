@@ -66,7 +66,7 @@
         >
           <div class="exam-record-card__header">
             <div class="exam-record-card__header-left">
-              <div class="exam-record-card__title">第 {{ index + 1 }} 次考试</div>
+              <div class="exam-record-card__title">第 {{ recordList.length - index }} 次考试</div>
               <div class="exam-record-card__time">{{ formatExamTime(record.examTime) }}</div>
             </div>
             <span class="exam-record-card__score">{{ record.score }} 分</span>
@@ -198,7 +198,7 @@ export default {
     },
     handleViewDetail(record, index) {
       this.selectedRecord = record
-      this.selectedIndex = index + 1
+      this.selectedIndex = this.recordList.length - index
       this.showDetail = true
     },
     handleWrongReview(record) {
