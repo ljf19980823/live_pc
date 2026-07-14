@@ -445,12 +445,22 @@
             </div>
             <div class="quiz-card__actions">
               <template v-if="isQuizFinished(item)">
+                <button
+                  v-if="item.fileList && item.fileList.length != 0"
+                  class="quiz-card__btn quiz-card__btn--outline"
+                  @click.stop="openVideoPlayer(item)"
+                >查看回放</button>
                 <button class="quiz-card__btn quiz-card__btn--outline" @click.stop="openRanking(item)">排行榜</button>
                 <button class="quiz-card__btn quiz-card__btn--record" @click.stop="openExamRecord(item)">考试记录</button>
                 <button class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
               </template>
               <template v-else>
-                <button class="quiz-card__btn quiz-card__btn--primary quiz-card__btn--right" @click.stop="startExam(item)">去考试</button>
+                <button
+                  v-if="item.fileList && item.fileList.length != 0"
+                  class="quiz-card__btn quiz-card__btn--outline"
+                  @click.stop="openVideoPlayer(item)"
+                >查看回放</button>
+                <button class="quiz-card__btn quiz-card__btn--primary " @click.stop="startExam(item)">去考试</button>
               </template>
             </div>
           </div>
@@ -3150,6 +3160,7 @@ border-radius: 10px 10px 10px 10px;
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: auto;
   }
@@ -3174,6 +3185,13 @@ border-radius: 10px 10px 10px 10px;
     border-radius: 10px 10px 10px 10px;
     border: 1px solid #BFE0FF;
     color: #1F7CFF;
+    }
+
+    &--replay {
+      background: #FFFFFF;
+      border-radius: 10px 10px 10px 10px;
+      border: 1px solid #155DFC;
+      color: #155DFC;
     }
 
       &--record {

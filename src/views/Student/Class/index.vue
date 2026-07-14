@@ -571,11 +571,11 @@
                 </div>
               </div>
               <div class="quiz-card__actions">
-                <!-- <button
+                <button
                   v-if="item.fileList && item.fileList.length != 0"
                   class="quiz-card__btn quiz-card__btn--outline"
                   @click.stop="openVideoPlayer(item, false, false, true)"
-                >看回放</button> -->
+                >查看回放</button>
                
                   <button class="quiz-card__btn quiz-card__btn--outline"  @click.stop="openRanking(item)">排行榜</button>
                   <button class="quiz-card__btn quiz-card__btn--record" v-if=" item.finishStatus === '1'" @click.stop="openExamRecord(item)">考试记录</button>

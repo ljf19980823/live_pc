@@ -421,7 +421,14 @@
               <span class="quiz-card__time-label">发布时间</span>
               <span class="quiz-card__time-value">{{ item.createTime || '-' }}</span>
             </div>
-            <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
+            <div class="quiz-card__actions">
+              <div
+                v-if="item.fileList && item.fileList.length != 0"
+                class="quiz-card__btn quiz-card__btn--replay"
+                @click.stop="openVideoPlayer(item)"
+              >查看回放</div>
+              <div class="quiz-card__btn" @click.stop="openQuizDetail(item)">查看详情</div>
+            </div>
           </div>
         </template>
       </div>
@@ -3061,7 +3068,13 @@ box-sizing: border-box;
     font-weight: bold;
   }
 
+  &__actions {
+    display: flex;
+    gap: 10px;
+  }
+
   &__btn {
+    flex: 1;
     height: 40px;
     display: flex;
     align-items: center;
@@ -3077,6 +3090,17 @@ border-radius: 12px 12px 12px 12px;
 
 
    
+  }
+
+  &__btn--replay {
+    background: #FFFFFF;
+    border: 1px solid #155DFC;
+    box-shadow: none;
+    color: #155DFC;
+  }
+
+  &__btn--replay:hover {
+    background: #EFF6FF;
   }
 }
 

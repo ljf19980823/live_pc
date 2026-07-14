@@ -619,15 +619,15 @@
             <div class="after-test-item__time">
               <div class="after-test-item__time-label">发布时间</div>
               <div class="after-test-item__time-val">{{ formatAfterTestTime(item.createTime) }}</div>
-              <!-- <div
-                class="after-test-item__play"
-                v-if="item.fileList && item.fileList.length != 0"
-                @click.stop="openVideoPlayer(item)"
-              >
-                <img src="@/assets/images/class/play.png" class="after-test-item__play-btn" alt="" />
-              </div> -->
             </div>
-            <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
+            <div class="after-test-item__actions">
+              <button
+                v-if="item.fileList && item.fileList.length != 0"
+                class="after-test-item__btn after-test-item__btn--replay"
+                @click.stop="openVideoPlayer(item)"
+              >查看回放</button>
+              <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
+            </div>
           </div>
         </div>
       </div>
@@ -3635,21 +3635,12 @@ border-radius: 10px 10px 10px 10px;
 .after-test-item__time-val {
   color: #314158;
 }
-.after-test-item__play {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
+.after-test-item__actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.after-test-item__play-btn {
-  width: 24px;
-  height: 24px;
+  gap: 10px;
 }
 .after-test-item__btn {
-  width: 100%;
+  flex: 1;
   height: 36px;
  background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
 box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
@@ -3664,6 +3655,15 @@ border-radius: 12px 12px 12px 12px;
 }
 .after-test-item__btn:hover {
   background: #003de0;
+}
+.after-test-item__btn--replay {
+  background: #FFFFFF;
+  border: 1px solid #155DFC;
+  box-shadow: none;
+  color: #155DFC;
+}
+.after-test-item__btn--replay:hover {
+  background: #EFF6FF;
 }
 ::v-deep .filter-item__control--datetime .el-date-editor--datetimerange.el-input__inner{
   width: 180px!important;
