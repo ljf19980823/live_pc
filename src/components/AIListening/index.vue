@@ -222,7 +222,7 @@
              
             </button> -->
             <!-- 菜单按钮 -->
-            <button class="al-hd-btn" title="会话列表" @click="toggleQaSessionList">
+            <button v-if="currentStatus=='Success' && currentStatus2=='Success'" class="al-hd-btn" title="会话列表" @click="toggleQaSessionList">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
@@ -240,7 +240,7 @@
         </div>
 
         <!-- Chat Body -->
-        <div class="al-chat-body" ref="chatBodyEl">
+        <div class="al-chat-body" ref="chatBodyEl" v-if="currentStatus=='Success' && currentStatus2=='Success'">
           <transition name="al-session-slide">
             <div v-if="showQaSessionList" class="al-session-panel">
               <div class="al-session-panel-hd">
@@ -366,8 +366,12 @@
           </div>
         </div>
 
+        <div class="al-chat-body" ref="chatBodyEl">
+           <empty-state v-if="currentStatus=='Error' || currentStatus2=='Error'" description="笔记正在生成中，请耐心等待。" />
+        </div>
+
         <!-- Chat Footer -->
-        <div class="al-chat-ft">
+        <div class="al-chat-ft" v-if="currentStatus=='Success' && currentStatus2=='Success'">
           <div class="al-input-box">
             <textarea
               ref="chatInput"
@@ -419,6 +423,7 @@
 </template>
 
 <script>
+import { Message } from 'element-ui'
 import ListenVideoPlayer from '@/components/ListenVideoPlayer/index.vue'
 import { del, get, post } from '@/utils/request'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -427,7 +432,7 @@ import MarkdownIt from 'markdown-it'
 import texmath from 'markdown-it-texmath'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-
+import EmptyState from '@/components/EmptyState/index.vue'
 /**
  * AIListening — AI 听记组件
  * 包含：视频播放器、转写/AI纪要标签页、右侧 AI 问答对话面板
@@ -449,7 +454,7 @@ const REPLAY_HEARTBEAT_INTERVAL = 30000
 
 export default {
   name: 'AIListening',
-  components: { ListenVideoPlayer },
+  components: { ListenVideoPlayer,EmptyState },
   data() {
     return {
       // ===== 转写同步状态 =====
@@ -494,7 +499,9 @@ export default {
       quickQuestions: [
         'AI一键生成思维导图',
         '帮我提炼一下重点内容'
-      ]
+      ],
+      currentStatus:'Error',
+      currentStatus2:'Error',
     }
   },
   computed: {
@@ -781,7 +788,7 @@ export default {
         while (hasNext) {
           const params = { maxResults: 50, direction: 0 }
           if (nextToken) params.nextToken = nextToken
-          const res = await get(`/dingTalk/flashMinutes/${this.meetingId}/textInfos`, params)
+          const res = await get(`/dingTalk/flashMinutes/${this.meetingId}/textInfos`, params, { skipErrorMessage: true })
           const data = (res && res.data) || {}
           const list = data.paragraphList || []
           list.forEach(item => {
@@ -807,10 +814,16 @@ export default {
           })
           hasNext = !!data.hasNext
           nextToken = data.nextToken || null
+           this.currentStatus = 'Success'
         }
         this.transcriptList = allParagraphs
       } catch (e) {
-        console.error('转写数据加载失败', e)
+        this.currentStatus = 'Error'
+       Message({
+          message: '笔记正在生成中，请耐心等待。',
+          type: 'warning',
+          duration: 3000
+        })
       } finally {
         this.transcriptLoading = false
       }
@@ -823,12 +836,18 @@ export default {
         const params = {}
         if (this.liveLessonId) params.liveLessonId = this.liveLessonId
         if (this.teacherId) params.teacherId = this.teacherId
-        const res = await get('/dingTalk/notes/html/path', params)
+        const res = await get('/dingTalk/notes/html/path', params, { skipErrorMessage: true })
         if (res && res.code === 200 && res.data) {
           this.summaryHtmlUrl = res.data
+           this.currentStatus2 = 'Success'
         }
       } catch (e) {
-        console.error('AI纪要加载失败', e)
+         this.currentStatus2 = 'Error'
+          Message({
+          message: '笔记正在生成中，请耐心等待。',
+          type: 'warning',
+          duration: 3000
+        })
       } finally {
         this.summaryLoading = false
       }
@@ -1362,7 +1381,8 @@ $white: #fff;
 // ===== 主体左右分栏 =====
 .al-body {
   display: flex;
-  flex: 1;
+flex: 1;
+height: 0;
   overflow: hidden;
 }
 
@@ -1370,7 +1390,7 @@ $white: #fff;
 // 左侧面板
 // ===================================================================
 .al-left {
-  flex: 0 0 721px;
+  // flex: 0 0 721px;
   width: 580px;
   display: flex;
   flex-direction: column;
@@ -1436,8 +1456,9 @@ $white: #fff;
 // ===== 内容区 =====
 .al-content-area {
   flex: 1;
-  overflow-y: auto;
+  height: 0;
   padding: 14px 24px 16px;
+  box-sizing: border-box;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -1488,6 +1509,7 @@ $white: #fff;
   display: flex;
   flex-direction: column;
   gap: 0;
+  height: 100%;
 }
 
 .al-transcript-actions {
@@ -1661,6 +1683,11 @@ $white: #fff;
 // ===== AI纪要区域 =====
 .al-summary-area {
   padding: 4px 0;
+  box-sizing: border-box;
+ height: 100%;
+ display: flex;
+ flex-direction: column;
+ justify-content: flex-start;
 }
 
 .al-summary-actions {
@@ -1691,11 +1718,11 @@ $white: #fff;
 }
 
 .al-summary-iframe-wrap {
+  height: 0;
+  overflow: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
   position: relative;
 }
 
