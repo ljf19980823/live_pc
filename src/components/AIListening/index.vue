@@ -621,7 +621,7 @@ export default {
 
     getQaRequestConfig() {
       return {
-        baseURL: 'http://47.122.53.79:8000',
+        baseURL: 'https://live.fjlsjy123.com/aiQa',
         rawResponse: true,
         headers: {
           'X-User-Id': this.teacherId
@@ -630,7 +630,7 @@ export default {
     },
 
     getQaBaseUrl() {
-      return 'http://47.122.53.79:8000'
+      return 'https://live.fjlsjy123.com/aiQa'
     },
 
     getQaHeaders() {
