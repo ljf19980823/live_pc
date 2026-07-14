@@ -300,20 +300,34 @@ async function checkScreenGuard () {
   }
 }
 
-// ─── 启动防录屏守护 ──────────────────────────────────────────────────────
+// ─── 启动防录屏守护（仅直播课堂期间启用） ────────────────────────────────
 function startScreenGuard () {
-  // 启用内容保护：窗口内容在任何截图/录屏工具中显示为黑色
-  // mainWindow.setContentProtection(true)
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (screenGuardInterval) return
 
+  // 启用内容保护：窗口内容在任何截图/录屏工具中显示为黑色
+  mainWindow.setContentProtection(true)
+
+  consecutiveDetections = 0
   // 立即检测一次，之后每 3 秒检测一次
-  // checkScreenGuard()
-  // screenGuardInterval = setInterval(checkScreenGuard, 3000)
+  checkScreenGuard()
+  screenGuardInterval = setInterval(checkScreenGuard, 3000)
 }
 
 function stopScreenGuard () {
   if (screenGuardInterval) {
     clearInterval(screenGuardInterval)
     screenGuardInterval = null
+  }
+  consecutiveDetections = 0
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setContentProtection(false)
+    mainWindow.webContents.send('screen-guard-change', {
+      isRecording: false,
+      isVM: false,
+      detected: false
+    })
   }
 }
 
@@ -435,7 +449,6 @@ function createWindow () {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
-    startScreenGuard()
 
     // ─── 周期性内存清理：每 20 分钟执行一次 ──────────────────────────────
     // 1. 清理 HTTP 磁盘缓存，防止长时间运行后缓存文件无限增长
@@ -1146,6 +1159,15 @@ ipcMain.on('window-minimize', (event) => {
     win.minimize();
   }
 });
+
+// 直播课堂防录屏：开启内容保护 + 录屏/虚拟机进程检测；离开课堂后关闭
+ipcMain.on('set-screen-guard', (_, enabled) => {
+  if (enabled) {
+    startScreenGuard()
+  } else {
+    stopScreenGuard()
+  }
+})
 
 // ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
 // 查询屏幕录制权限状态（仅 macOS 有效，其他平台返回 'granted'）

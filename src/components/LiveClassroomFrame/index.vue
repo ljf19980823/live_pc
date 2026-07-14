@@ -95,6 +95,7 @@ export default {
     window.addEventListener('message', this.handleMessage)
     window.addEventListener('online', this.handleOnline)
     window.addEventListener('offline', this.handleOffline)
+    this.setScreenGuard(true)
 
     if (window.electronAPI?.onIframeLoadFailed) {
       this.removeIframeLoadFailedListener = window.electronAPI.onIframeLoadFailed(
@@ -115,6 +116,7 @@ export default {
     }
   },
   beforeDestroy() {
+    this.setScreenGuard(false)
     this.clearLoadTimer()
     window.removeEventListener('message', this.handleMessage)
     window.removeEventListener('online', this.handleOnline)
@@ -124,6 +126,11 @@ export default {
     }
   },
   methods: {
+    setScreenGuard(enabled) {
+      if (window.electronAPI?.setScreenGuard) {
+        window.electronAPI.setScreenGuard(enabled)
+      }
+    },
     beginLoading(timeout) {
       this.clearLoadTimer()
       this.status = 'loading'
