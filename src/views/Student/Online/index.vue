@@ -1349,6 +1349,7 @@ created() {
       if (this.quizFinishStatus === '1' || this.quizFinishStatus === '0') {
         list = list.filter(item => this.isQuizFinished(item) === (this.quizFinishStatus === '1'))
       }
+      console.log(list,'哈哈哈')
       return list
     },
     quizSuggestGroups() {
@@ -1560,7 +1561,7 @@ created() {
             scopeText: item.taskUuid,
             liveLessonId: item.liveLessonId || '',
             historyLessonId: item.historyLessonId || '',
-            teacherId: userId || ''
+            teacherId: item.teacherId || ''
           }
         })
         return

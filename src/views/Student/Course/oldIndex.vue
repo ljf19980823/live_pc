@@ -3,24 +3,13 @@
 
     <!-- ===== 课程列表视图 ===== -->
     <template v-if="currentView === 'list'">
-      <div class="course-list-view">
-        <!-- 顶部搜索 -->
-        <div class="course-list-search-wrap">
-          <div class="course-list-search">
-            <img src="@/assets/images/course/s_icon.png" class="course-list-search-icon" alt="">
-            <div class="course-list-search-input">
-              <el-input
-                v-model="searchText"
-                placeholder="搜索课程名称"
-                clearable
-                @keydown.enter.native="fetchCourseList"
-              />
-            </div>
-          </div>
+      <!-- 顶部标题区 -->
+      <div class="course-page-header">
+        <div class="course-page-title-group">
+          <div class="course-page-title">课程</div>
+          <div class="course-page-subtitle">管理课程与学习任务</div>
         </div>
-
-        <!-- Tab + 统计 -->
-        <div class="course-list-toolbar">
+        <div class="course-page-header-right">
           <div class="course-tab-group">
             <button
               :class="['course-tab-btn', activeTab === 'all' ? 'active' : '']"
@@ -31,49 +20,67 @@
               @click="activeTab = 'recent'"
             >最近学习</button>
           </div>
-          <div class="course-list-toolbar-right">
-            <div class="course-list-stats">共 {{ courseList.length }} 门课程，{{ totalTaskCount }} 个学习任务</div>
+          <div class="course-search-box">
+            <svg class="course-search-icon" viewBox="0 0 16 16" fill="none">
+              <circle cx="6.5" cy="6.5" r="5" stroke="#999" stroke-width="1.4"/>
+              <path d="M10.5 10.5L14 14" stroke="#999" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <input
+              v-model="searchText"
+              class="course-search-input"
+              placeholder="搜索课程名称"
+              @keydown.enter="fetchCourseList"
+              @blur="fetchCourseList"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 我的课程卡片 -->
+      <div class="course-list-card">
+        <div class="course-list-card-header">
+          <div class="course-list-card-header-left">
+            <div class="course-list-card-title">我的课程</div>
+            <div class="course-list-card-subtitle">按课程卡片进入课程详情，继续管理对应学习任务</div>
+          </div>
+          <div class="course-list-card-header-right">
+            <div class="course-task-badge">
+              <img src="@/assets/images/task_icon.png" class="course-task-badge-icon" alt="" />
+              <span>{{ totalTaskCount }}个学习任务</span>
+            </div>
             <div class="course-hide-done">
-             
-              <el-switch v-model="hideDone" active-color="#1F7CFF" />
-               <span class="course-hide-done-label">隐藏学完</span>
+              <span class="course-hide-done-label">隐藏学完</span>
+              <el-switch v-model="hideDone" />
             </div>
           </div>
         </div>
 
-        <!-- 课程卡片列表（样式对齐班级页课程列表） -->
-        <div class="course-list" v-loading="courseListLoading" element-loading-background="rgba(255,255,255,0.7)">
+        <div class="course-grid" v-loading="courseListLoading" element-loading-background="rgba(255,255,255,0.7)">
           <div
             v-for="(item, index) in courseList"
             :key="item.id || index"
-            class="app_container_box_right_last_list_detailCourse"
+            class="course-card"
             @click="openDetail(item)"
           >
-            <div class="course-card-cover-wrap">
-              <img
-                :src="item.cover || require('@/assets/images/class/such.png')"
-                class="app_container_box_right_last_list_detailCourse_fm"
-                alt=""
-              >
+            <div class="course-card-cover" :style="item.cover ? {} : { background: item.bgGradient }">
+              <img v-if="item.cover" :src="item.cover" class="course-card-cover-img" alt="" />
+              <span v-else class="course-card-cover-char">{{ item.coverChar }}</span>
             </div>
-            <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
-            <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }} 个学习任务</div>
-            <div class="app_container_box_right_last_list_detailCourse_jd">
-              <div class="app_container_box_right_last_list_detailCourse_jd_box">
-                <div
-                  class="app_container_box_right_last_list_detailCourse_jd_box_now"
-                  :class="{ 'is-complete': Math.round(item.progress) >= 100 }"
-                  :style="{ width: Math.round(item.progress) + '%' }"
-                ></div>
+            <div  class="course-card-box" >
+              <div class="course-card-name">{{ item.name }}</div>
+              <div class="course-card-tasks">{{ item.taskCount }}个学习任务</div>
+              <div class="course-card-progress">
+                <div class="course-progress-bar">
+                  <div class="course-progress-bar-fill" :style="{ width: item.progress + '%' }"></div>
+                </div>
+                <span class="course-progress-text">{{ item.progress }}%</span>
               </div>
-              <div class="app_container_box_right_last_list_detailCourse_jd_num">{{ Math.round(item.progress) }}%</div>
+
             </div>
           </div>
-          <EmptyState
-            v-if="!courseListLoading && courseList.length === 0"
-            :description="searchText ? '无搜索结果' : '暂无课程数据'"
-            style="width: 100%;"
-          />
+          <div v-if="!courseListLoading && courseList.length === 0" class="course-empty">
+            暂无课程
+          </div>
         </div>
       </div>
     </template>
@@ -971,129 +978,172 @@ const videoTypes = ['4']
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: #F0F3F6;
+  overflow: hidden;
+}
+
+/* ===== 列表视图 - 顶部标题区 ===== */
+.course-page-header {
+  width: 100%;
   background: #FFFFFF;
-  overflow: hidden;
-}
-
-/* ===== 列表视图 ===== */
-.course-list-view {
-  flex: 1;
-  height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 24px 24px 20px;
+  padding: 24px 30px 20px;
   box-sizing: border-box;
-  overflow: hidden;
-  background: #F7FBFF;
-}
-
-.course-list-search-wrap {
-  display: flex;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  box-sizing: border-box;
-  border-bottom: 1px solid #DBEAFE;
-}
-
-.course-list-search {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-width: 280px;
-height: 44px;
-background: #FFFFFF;
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 28px;
-border: 1px solid #0F172B;
-padding: 0 21px;
-box-sizing: border-box;
-}
-
-.course-list-search-icon {
-  width: 16px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.course-list-search-input {
-  flex: 1;
-  width: 0;
-}
-
-.course-list-search-input ::v-deep .el-input__inner {
-  border: none;
-  background: transparent;
-  padding-left: 0;
-  height: 44px;
-  line-height: 44px;
-  font-size: 14px;
-  color: #90A1B9;
-}
-
-.course-list-search-input ::v-deep .el-input__inner::placeholder {
-  color: #BBBBBB;
-}
-
-.course-list-search-input ::v-deep .el-input__suffix {
-  color: #999999;
-}
-
-.course-list-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
   flex-shrink: 0;
-  margin-bottom: 20px;
 }
 
-.course-list-toolbar-right {
+.course-page-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.course-page-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #333333;
+  line-height: 1.2;
+}
+
+.course-page-subtitle {
+  font-size: 13px;
+  color: #999999;
+  margin-top: 4px;
+}
+
+.course-page-header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
-  flex-shrink: 0;
-}
-
-.course-list-stats {
-  font-size: 14px;
-  color: #45556C;
-  white-space: nowrap;
+  gap: 16px;
 }
 
 /* Tab 切换按钮 */
 .course-tab-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  background: rgba(239,246,255,0.8);
-box-shadow: 0px 0px 0px 1px #DBEAFE;
-border-radius: 12px 12px 12px 12px;
-padding: 4px;
+  background: #F0F3F6;
+  border-radius: 10px;
+  padding: 5px 7px;
+  gap: 2px;
+  border: 1px solid rgba(229, 234, 242, 0.60);
 }
 
 .course-tab-btn {
-  height: 36px;
-  width: 96px;
-  text-align: center;
-  line-height: 36px;
+  height: 34px;
+  padding: 0 20px;
   border: none;
-  border-radius: 9px;
+  border-radius: 6px;
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 500;
   cursor: pointer;
-  background: #F0F7FF;
-  color: #62748E;
+  background: transparent;
+  color: #666666;
   transition: background 0.2s, color 0.2s;
   outline: none;
 
   &.active {
-    background: #FFFFFF;
-    color: #1F7CFF;
-    font-weight: bold;
+    background: #0049FF;
+    color: #FFFFFF;
+    font-weight: 600;
   }
+}
+
+/* 搜索框 */
+.course-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  height: 38px;
+  background: #F5F6FA;
+  border-radius: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid #EBEBEB;
+}
+
+.course-search-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.course-search-input {
+  flex: 1;
+  width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #333333;
+
+  &::placeholder {
+    color: #BBBBBB;
+  }
+}
+
+/* ===== 我的课程卡片 ===== */
+.course-list-card {
+  flex: 1;
+  overflow-y: auto;
+  margin: 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 24px 24px 16px;
+  box-sizing: border-box;
+}
+
+.course-list-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.course-list-card-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.course-list-card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333333;
+}
+
+.course-list-card-subtitle {
+  font-size: 12px;
+  color: #999999;
+}
+
+.course-list-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* 学习任务徽标 */
+.course-task-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  background: #FFF4E4;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #B96B00;
+}
+
+.course-task-badge-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* 隐藏学完 */
@@ -1104,130 +1154,110 @@ padding: 4px;
 }
 
 .course-hide-done-label {
-  font-size: 14px;
-  color: #45556C;
-  white-space: nowrap;
+  font-size: 13px;
+  color: #666666;
 }
 
-/* ===== 课程卡片列表（对齐班级页） ===== */
-.course-list {
-  width: 100%;
-  flex: 1;
-  height: 0;
-  overflow: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 16px;
+/* ===== 课程卡片网格 ===== */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
 }
 
-.app_container_box_right_last_list_detailCourse {
-  width: calc((100% - 48px) / 4);
-  padding: 0 0 18px;
-  box-sizing: border-box;
-  background: #FFFFFF;
-box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
-border-radius: 12px 12px 12px 12px;
-border: 1px solid #DBEAFE;
-  overflow: hidden;
+.course-card {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  position: relative;
   cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
   transition: box-shadow 0.2s;
 
   &:hover {
-    box-shadow: 0 4px 16px rgba(31, 124, 255, 0.12);
+    box-shadow: 0 4px 16px rgba(0, 73, 255, 0.1);
   }
 }
 
-.course-card-cover-wrap {
-  position: relative;
+.course-card-cover {
   width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 10px;
 }
-
-.app_container_box_right_last_list_detailCourse_fm {
+.course-card-box{
   width: 100%;
-  height: 142.31px;
-  border-radius: 0;
-  // object-fit: cover;
-  display: block;
-}
-
-.app_container_box_right_last_list_detailCourse_name {
-  font-weight: bold;
-  font-size: 14px;
-  color: #020618;
-  padding: 12px 12px 0;
+  padding: 0 10px 10px 10px;
   box-sizing: border-box;
-  margin-top: 0;
+}
+.course-card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.course-card-cover-char {
+  font-size: 52px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.55);
+  user-select: none;
+  letter-spacing: 0;
+}
+
+.course-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 0;
+  font-size: 14px;
+  color: #BBBBBB;
+}
+
+.course-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333333;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  margin-bottom: 4px;
 }
 
-.app_container_box_right_last_list_detailCourse_task {
-  margin-top: 12px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  font-weight: 400;
+.course-card-tasks {
   font-size: 12px;
-  color: #62748E;
+  color: #999999;
+  margin-bottom: 8px;
 }
 
-.app_container_box_right_last_list_detailCourse_jd {
-  width: 100%;
+.course-card-progress {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
-  padding: 0 12px;
-  box-sizing: border-box;
 }
 
-.app_container_box_right_last_list_detailCourse_jd_box {
+.course-progress-bar {
   flex: 1;
-  width: 0;
-  background: #EFF6FF;
   height: 6px;
-  border-radius: 10px;
+  background: #F0F3F6;
+  border-radius: 2px;
   overflow: hidden;
 }
 
-.app_container_box_right_last_list_detailCourse_jd_box_now {
+.course-progress-bar-fill {
+  height: 100%;
+  background: #A3BFFF;
   border-radius: 2px;
-  height: 6px;
-  background: linear-gradient(90deg, #7DD3FF 0%, #4FB0FF 50%, #168BFF 100%);
+  transition: width 0.3s;
 }
 
-.app_container_box_right_last_list_detailCourse_jd_box_now.is-complete {
-  background: linear-gradient(90deg, #52DCAC 0%, #1DCC7E 100%);
-}
-
-.app_container_box_right_last_list_detailCourse_jd_num {
-  width: 34px;
-  text-align: right;
+.course-progress-text {
   font-size: 12px;
-  color: #90A1B9;
+  color: #999999;
   flex-shrink: 0;
-}
-
-@media (max-width: 1280px) {
-  .app_container_box_right_last_list_detailCourse {
-    width: calc((100% - 32px) / 3);
-  }
-}
-
-@media (max-width: 960px) {
-  .app_container_box_right_last_list_detailCourse {
-    width: calc((100% - 16px) / 2);
-  }
-
-  .course-list-toolbar {
-    flex-wrap: wrap;
-  }
+  min-width: 28px;
+  text-align: right;
 }
 
 /* ===== 详情视图 ===== */
