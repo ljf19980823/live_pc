@@ -607,6 +607,7 @@
 </template>
 
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
 import Settings from './components/Settings.vue'
@@ -703,7 +704,9 @@ export default {
       currentAllowMultiple: '2',
       currentAllowFastForward: '2',
       currentAllowDownload: '2',
-      currentPlayingItem: null
+      currentPlayingItem: null,
+
+       limitTimeTeacher:30
     }
   },
   computed: {
@@ -815,8 +818,22 @@ export default {
     })
     this.fetchUserInfo()
     this.loadDeviceCheckStatus()
+      this.fetchAgreementTeacher()
   },
   methods: {
+    async fetchAgreementTeacher() {
+      try {
+        const res = await getAgreement('teacher_live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTimeTeacher = parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTimeTeacher  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     closeAvatarDialog() {
       if (this.avatarUploading) return
       this.showAvatarDialog = false
@@ -1134,7 +1151,7 @@ export default {
     async enterLiveRoomFromSchedule(course) {
       const now = Date.now()
       const startTime = course.fullStartTime ? new Date(course.fullStartTime.replace(/-/g, '/')).getTime() : null
-      if (!startTime || now < startTime - 30 * 60 * 1000) {
+      if (!startTime || now < startTime - this.limitTimeTeacher * 60 * 1000) {
         this.$message.warning('时间还未到，请耐心等候')
         return
       }

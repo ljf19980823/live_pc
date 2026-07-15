@@ -251,6 +251,7 @@
 </template>
 
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
@@ -301,6 +302,8 @@ export default {
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
       showScreenCaptureFailedDialog: false,
       _removeScreenCaptureFailed: null,
+
+      limitTime:30,
     }
   },
   computed: {
@@ -476,9 +479,23 @@ export default {
         this.showScreenCaptureFailedDialog = true
       })
     }
+      this.fetchAgreement()
     this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
   },
   methods: {
+     async fetchAgreement() {
+      try {
+        const res = await getAgreement('live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTime = res.data[0].moduleValue || ''
+        
+        }else{
+          this.limitTime  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     todayStr() {
       const t = new Date()
       return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`
@@ -655,7 +672,7 @@ export default {
     async enterLiveRoom(course) {
      const now = Date.now()
       const startTime = course.fullStartTime ? new Date(course.fullStartTime.replace(/-/g, '/')).getTime() : null
-      if (!startTime || now < startTime - 30 * 60 * 1000) {
+      if (!startTime || now < startTime - this.limitTime * 60 * 1000) {
         this.$message.warning('时间还未到，请耐心等候')
         return
       }

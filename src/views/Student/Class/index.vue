@@ -941,6 +941,7 @@
 </template>
 
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import { getClassList, getClassDetail, getClassCourses, toggleClassTop, setClassAlias, updateClass, deleteClass, getCourseDetail, joinClass, updateRecentStudy, updateCourseProgress, getAfterQuizList, collectToggle, getSubjectOptions, getAfterQuizOptions, getTeacherOptions, addBusinessView } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
@@ -1053,6 +1054,8 @@ export default {
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
       showScreenCaptureFailedDialog: false,
       _removeScreenCaptureFailed: null,
+
+      limitTime:30,
     }
   },
   watch: {
@@ -1120,6 +1123,7 @@ export default {
   mounted() {
     this._sessionToken = this.$store.state.user.token
     this.fetchClassList()
+     this.fetchAgreement()
 
     // 监听 iframe 直播退出消息
     window.addEventListener('message', (event) => {
@@ -1154,6 +1158,19 @@ export default {
   },
   methods: {
     formatDuration,
+     async fetchAgreement() {
+      try {
+        const res = await getAgreement('live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTime = parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTime  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     _mapClassItem(item) {
       const sourceMap = { '1': '后台创建', '0': '' }
       console.log(item.courseCount,'数量')
@@ -2029,7 +2046,7 @@ export default {
         console.log(2222,'halo')
       const now = Date.now()
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
-      if (!startTime || now < startTime - 30 * 60 * 1000) {
+      if (!startTime || now < startTime - this.limitTime * 60 * 1000) {
         this.$message.warning('时间还未到，请耐心等候')
         return
       }

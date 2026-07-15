@@ -880,6 +880,7 @@
 </template>
 
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api/modules/teacher'
 import Clickoutside from 'element-ui/lib/utils/clickoutside'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
@@ -1103,7 +1104,9 @@ export default {
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
       showScreenCaptureFailedDialog: false,
       _removeScreenCaptureFailed: null,
-      isTeacher: false
+      isTeacher: false,
+      limitTime:30,
+      limitTimeTeacher:30
     }
   },
   watch: {
@@ -1206,6 +1209,9 @@ created() {
         this.activeTab = 'quiz'
     }
     this.isTeacher = getUserInfo().role === 'TEACHER'
+
+    this.fetchAgreementTeacher()
+    this.fetchAgreement()
   },
   mounted() {
     console.log('[缓存优化0708]');
@@ -1408,6 +1414,32 @@ created() {
     }
   },
  methods: {
+  async fetchAgreementTeacher() {
+      try {
+        const res = await getAgreement('teacher_live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTimeTeacher = parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTimeTeacher  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
+     async fetchAgreement() {
+      try {
+        const res = await getAgreement('live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTime = parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTime  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     /**
      * 预连接直播课堂入口和阿里云 SDK CDN。
      * 课程列表页通常早于用户点击进入课堂渲染完成，
@@ -1593,13 +1625,13 @@ created() {
 
       if (this.isTeacher) {
         // 老师：距开始时间30分钟以内（含）或已开始，均可进入
-        if (!startTime || now < startTime - 30 * 60 * 1000) {
+        if (!startTime || now < startTime - this.limitTimeTeacher * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
       } else {
         // 学生：当前时间 >= 直播开始时间 才可进入
-        if (!startTime|| now < startTime - 30 * 60 * 1000) {
+        if (!startTime|| now < startTime - this.limitTime * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
@@ -1726,12 +1758,12 @@ created() {
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
 
       if (this.isTeacher) {
-        if (!startTime || now < startTime - 30 * 60 * 1000) {
+        if (!startTime || now < startTime - this.limitTimeTeacher * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
       } else {
-        if (!startTime|| now < startTime - 30 * 60 * 1000) {
+        if (!startTime|| now < startTime - this.limitTime * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }

@@ -123,6 +123,7 @@
   </div>
 </template>
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
 import { formatDate } from '@/utils'
@@ -140,7 +141,8 @@ export default {
       greetingText: '',
       currentDateText: '',
       liveUrl: '',
-      showLiveIframe: false
+      showLiveIframe: false,
+      limitTime:30,
     }
   },
   computed: {
@@ -155,6 +157,7 @@ export default {
     this.fetchCarouselList()
     this.fetchLatestLive()
     this.fetchRecentViewList()
+     this.fetchAgreement()
   },
   mounted () {
     window.addEventListener('message', (event) => {
@@ -169,6 +172,19 @@ export default {
     this.updateCurrentTimeInfo()
   },
   methods: {
+      async fetchAgreement() {
+      try {
+        const res = await getAgreement('live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTime =parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTime  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     updateCurrentTimeInfo () {
       const now = new Date()
       const weekDays = ['日', '一', '二', '三', '四', '五', '六']
@@ -321,7 +337,7 @@ export default {
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
 
       // 学生：距开始时间 30 分钟以内（含）或已开始，均可进入
-      if (!startTime || now < startTime - 30 * 60 * 1000) {
+      if (!startTime || now < startTime - this.limitTime * 60 * 1000) {
         this.$message.warning('时间还未到，请耐心等候')
         return
       }

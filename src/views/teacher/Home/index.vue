@@ -130,6 +130,7 @@
   </div>
 </template>
 <script>
+import { getAgreement } from '@/api/modules/teacher'
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
 import { getLiveList } from '@/api/modules/teacher'
@@ -158,6 +159,8 @@ export default {
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
       showScreenCaptureFailedDialog: false,
       _removeScreenCaptureFailed: null,
+
+       limitTimeTeacher:30
     }
   },
   computed: {
@@ -177,6 +180,7 @@ export default {
     this.fetchCarouselList()
     this.fetchLatestLive()
     this.fetchPendingLiveList()
+      this.fetchAgreementTeacher()
   },
   mounted () {
      // 监听 iframe 直播退出消息
@@ -207,6 +211,19 @@ export default {
     this.updateCurrentTimeInfo()
   },
   methods: {
+    async fetchAgreementTeacher() {
+      try {
+        const res = await getAgreement('teacher_live_join_times')
+        if (res && res.data && res.data.length!=0) {
+          this.limitTimeTeacher = parseInt(res.data[0].moduleValue) 
+        
+        }else{
+          this.limitTimeTeacher  = 30
+        }
+      } catch (e) {
+        console.error('获取隐私协议失败', e)
+      }
+    },
     updateCurrentTimeInfo () {
       const now = new Date()
       const weekDays = ['日', '一', '二', '三', '四', '五', '六']
@@ -358,13 +375,7 @@ export default {
 
       if (this.isTeacher) {
         // 老师：距开始时间30分钟以内（含）或已开始，均可进入
-        if (!startTime || now < startTime - 30 * 60 * 1000) {
-          this.$message.warning('时间还未到，请耐心等候')
-          return
-        }
-      } else {
-        // 学生：当前时间 >= 直播开始时间 才可进入
-        if (!startTime|| now < startTime - 30 * 60 * 1000) {
+        if (!startTime || now < startTime - this.limitTimeTeacher * 60 * 1000) {
           this.$message.warning('时间还未到，请耐心等候')
           return
         }
