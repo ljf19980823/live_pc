@@ -332,12 +332,10 @@ async function checkScreenGuard () {
 }
 
 // ─── 启动防录屏守护（仅直播课堂期间启用） ────────────────────────────────
+// 仅通过进程检测拦截录屏/虚拟机；不启用 setContentProtection，以便允许正常截图
 function startScreenGuard () {
   if (!mainWindow || mainWindow.isDestroyed()) return
   if (screenGuardInterval) return
-
-  // 启用内容保护：窗口内容在任何截图/录屏工具中显示为黑色
-  mainWindow.setContentProtection(true)
 
   consecutiveDetections = 0
   screenGuardAlerting = false
@@ -357,7 +355,6 @@ function stopScreenGuard () {
   screenGuardChecking = false
 
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setContentProtection(false)
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: false,
       isVM: false,
@@ -1195,7 +1192,7 @@ ipcMain.on('window-minimize', (event) => {
   }
 });
 
-// 直播课堂防录屏：开启内容保护 + 录屏/虚拟机进程检测；离开课堂后关闭
+// 直播课堂防录屏：录屏/虚拟机进程检测（允许截图）；离开课堂后关闭
 ipcMain.on('set-screen-guard', (_, enabled) => {
   if (enabled) {
     startScreenGuard()

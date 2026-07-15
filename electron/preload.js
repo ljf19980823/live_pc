@@ -1,13 +1,13 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // ─── 防录屏（仅直播课堂期间启用） ─────────────────────────────────────────
+  // ─── 防录屏（仅直播课堂期间启用；允许截图，拦截录屏软件） ─────────────
   onScreenGuardChange: (callback) => {
     const handler = (_, data) => callback(data)
     ipcRenderer.on('screen-guard-change', handler)
     return () => ipcRenderer.removeListener('screen-guard-change', handler)
   },
-  // 开启/关闭防录屏守护（内容保护 + 录屏/虚拟机进程检测）
+  // 开启/关闭防录屏守护（录屏/虚拟机进程检测；允许正常截图）
   setScreenGuard: (enabled) => ipcRenderer.send('set-screen-guard', !!enabled),
 
   // ─── 系统信息 ─────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 {
   "name": "lisheng-live-pc",
   "chname": "Learn InClass",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
