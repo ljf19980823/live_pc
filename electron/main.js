@@ -44,6 +44,11 @@ let screenGuardInterval = null
 // 连续检测到威胁的次数，需达到阈值才显示警告（防止瞬时误报）
 let consecutiveDetections = 0
 const DETECTION_THRESHOLD = 2
+// 常态每 3 秒检测；已拦截时加快到 500ms，关闭录屏后可尽快恢复观看
+const SCREEN_GUARD_INTERVAL_NORMAL = 3000
+const SCREEN_GUARD_INTERVAL_ALERT = 500
+let screenGuardChecking = false
+let screenGuardAlerting = false
 
 startLocalCrashReporter()
 registerMainProcessDiagnostics()
@@ -221,17 +226,34 @@ function getMacAppNames () {
   })
 }
 
+// ─── 按当前拦截状态切换轮询间隔 ──────────────────────────────────────────
+function scheduleScreenGuardInterval () {
+  if (screenGuardInterval) {
+    clearInterval(screenGuardInterval)
+    screenGuardInterval = null
+  }
+  const interval = screenGuardAlerting
+    ? SCREEN_GUARD_INTERVAL_ALERT
+    : SCREEN_GUARD_INTERVAL_NORMAL
+  screenGuardInterval = setInterval(checkScreenGuard, interval)
+}
+
 // ─── 执行一次检测并通知渲染进程 ──────────────────────────────────────────
 async function checkScreenGuard () {
   if (!mainWindow || mainWindow.isDestroyed()) return
+  // 避免慢速 tasklist/osascript 重叠，防止旧结果覆盖「已关闭录屏」的新结果
+  if (screenGuardChecking) return
+  screenGuardChecking = true
 
   try {
     const isMac = process.platform === 'darwin'
     const isWin = process.platform === 'win32'
 
-    const processes = await getRunningProcesses()
-    // macOS 额外获取 App 显示名（osascript），与二进制名互补
-    const macAppNames = isMac ? await getMacAppNames() : []
+    // 并行获取进程列表，缩短单次检测耗时
+    const [processes, macAppNames] = await Promise.all([
+      getRunningProcesses(),
+      isMac ? getMacAppNames() : Promise.resolve([])
+    ])
 
     const recorderList = isWin ? RECORDER_PROCESSES_WIN : RECORDER_PROCESSES_MAC
     const vmList = isWin ? VM_PROCESSES_WIN : VM_PROCESSES_MAC
@@ -289,14 +311,23 @@ async function checkScreenGuard () {
     }
 
     const shouldAlert = consecutiveDetections >= DETECTION_THRESHOLD
+    const wasAlerting = screenGuardAlerting
+    screenGuardAlerting = shouldAlert
 
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: shouldAlert ? !!detectedRecorder : false,
       isVM: shouldAlert ? !!detectedVM : false,
       detected: shouldAlert
     })
+
+    // 进入/退出拦截态时切换轮询频率，退出后尽快恢复观看
+    if (wasAlerting !== screenGuardAlerting && screenGuardInterval) {
+      scheduleScreenGuardInterval()
+    }
   } catch (e) {
     // 检测失败时静默处理，不影响主功能
+  } finally {
+    screenGuardChecking = false
   }
 }
 
@@ -309,9 +340,11 @@ function startScreenGuard () {
   mainWindow.setContentProtection(true)
 
   consecutiveDetections = 0
-  // 立即检测一次，之后每 3 秒检测一次
+  screenGuardAlerting = false
+  screenGuardChecking = false
+  // 立即检测一次，之后按状态切换间隔（常态 3s / 拦截中 500ms）
   checkScreenGuard()
-  screenGuardInterval = setInterval(checkScreenGuard, 3000)
+  scheduleScreenGuardInterval()
 }
 
 function stopScreenGuard () {
@@ -320,6 +353,8 @@ function stopScreenGuard () {
     screenGuardInterval = null
   }
   consecutiveDetections = 0
+  screenGuardAlerting = false
+  screenGuardChecking = false
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setContentProtection(false)
