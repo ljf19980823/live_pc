@@ -148,7 +148,7 @@
           <div class="pending-card__time">{{ item.time }}</div>
           <div
             class="pending-card__btn"
-            :class="{ active: item.status === 'living' }"
+            :class="{ active: item.status === 'living'||item.isWithin30Min==true }"
           >
             进入直播
           </div>
@@ -1836,8 +1836,8 @@ created() {
         this.liveCourses = list.map(item => {
           const isLiving = item.status == '直播中' ? true : false
           const now = Date.now()
-          const startMs = item.startTime ? new Date(item.startTime.replace(' ', 'T')).getTime() : null
-          const isWithin30Min = startMs !== null && !isLiving && (startMs - now) <= 30 * 60 * 1000 && (startMs - now) >= 0
+          const startMs = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
+          const isWithin30Min = startMs !== null && !Number.isNaN(startMs) && Math.abs(startMs - now) <= this.limitTimeTeacher * 60 * 1000
           let statusImg = null
           if (isLiving) {
             statusImg = require('@/assets/images/liveClass/zzzb.png')
@@ -1851,6 +1851,7 @@ created() {
             status: isLiving ? 'living' : 'soon',
             minutes: item.liveMin,
             statusImg,
+            isWithin30Min
           }
         })
       } catch (_) {} finally {

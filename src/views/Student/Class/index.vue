@@ -1225,6 +1225,7 @@ export default {
           this.selectedClassIndex = 0
           if (list.length > 0) this.selectedClassId = list[0].classId
         }
+        console.log( this.classList,'测萨达哇')
         if (this.selectedClassId) {
           this.fetchClassDetail(this.selectedClassId)
           this.fetchCourseList()
@@ -1268,8 +1269,8 @@ export default {
             endDate: detail.endTime || this.classList[idx].endDate,
             source: sourceMap[detail.classMode] || this.classList[idx].source,
             status: detail.status || this.classList[idx].status,
-            courseCnt: detail.courseCnt || 0,
-            waitCourseCnt: detail.courseCount ||0,
+            courseCnt: this.classList[idx].courseCnt,
+            waitCourseCnt: this.classList[idx].waitCourseCnt ,
             describe: detail.describe || '',
             isSelfCreate: detail.isSelfCreate,
             allowRemove: detail.allowRemove,
