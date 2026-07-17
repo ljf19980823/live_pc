@@ -564,7 +564,7 @@
                   :rows="3"
                   show-word-limit
                   resize="none"
-                  placeholder="请输入课堂描述"
+                  placeholder="请输入课堂描述，系统将据此自动生成 AI 问答的初始引导问题"
                   maxlength="40"
                 />
                 </div>
@@ -4549,10 +4549,13 @@ margin-bottom: 12px;
 .filter-item__control--picker ::v-deep .el-input__inner{
 border:none!important
 }
+
+
 </style>
 
 <style lang="scss">
-.ls-online-date-popper {
-  z-index: 4000 !important;
+.ls_options_popover {
+  z-index: 1997 !important;
 }
+
 </style>

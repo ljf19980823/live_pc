@@ -39,6 +39,12 @@ export const setClassAlias = (classId, alias) => post(`/edu/class/${classId}/ali
 // 获取学生详情
 export const getStudentDetail = (classId, studentId, params) => get(`/edu/class/${classId}/students/${studentId}`, params)
 
+// 获取学生直播统计汇总
+export const getStudentStatisticsSummary = params => get('/edu/live/statistics/student/summary', params)
+
+// 获取学生直播观看详情列表
+export const getStudentLiveStatistics = params => get('/edu/live/statistics/student/lives', params)
+
 // 添加/更新学生备注
 export const saveStudentNote = (classId, studentId, content) => post(`/edu/class/${classId}/students/${studentId}/note`, { content })
 

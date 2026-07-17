@@ -1885,7 +1885,7 @@ height: 0;
   .al-hd-btn {
     width: 30px;
     height: 30px;
-    border: 1.5px dashed #CCC;
+    border: none;
     border-radius: 6px;
     background: none;
     cursor: pointer;

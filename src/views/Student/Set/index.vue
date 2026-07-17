@@ -535,7 +535,7 @@ export default {
       changeCountdownTimer: null,
       menuItems: [
         { key: 'info',     label: '我的信息',      img: require('@/assets/images/set/wdxx.png'),     activeImg: require('@/assets/images/set/wdxx_yes.png') },
-        { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb_yes.png') },
+        // { key: 'schedule', label: '我的课表',      img: require('@/assets/images/set/wdkb.png'),     activeImg: require('@/assets/images/set/wdkb_yes.png') },
         { key: 'device',   label: '设备和网络检测', img: require('@/assets/images/set/sbhwljc.png'), activeImg: require('@/assets/images/set/sbhwljc_yes.png') },
         { key: 'settings', label: '设置',          img: require('@/assets/images/set/sz.png'),       activeImg: require('@/assets/images/set/sz_yes.png') }
       ],

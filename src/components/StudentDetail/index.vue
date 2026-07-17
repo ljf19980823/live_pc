@@ -15,7 +15,7 @@
               v-model="selectedType"
               size="mini"
               popper-class="detail-filter-popper"
-              @change="fetchStudentDetail"
+              @change="handleTypeChange"
             >
               <el-option
                 v-for="item in typeOptions"
@@ -24,6 +24,18 @@
                 :value="item.value"
               />
             </el-select>
+            <el-date-picker
+              v-if="selectedType === 'custom'"
+              v-model="customTimeRange"
+              type="datetimerange"
+              size="mini"
+              range-separator="至"
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="sd_custom_time_picker"
+              @change="handleCustomTimeChange"
+            />
           </div>
         </div>
 
@@ -42,7 +54,7 @@
             <div class="sd_profile_info">
               <div class="sd_name">{{ studentInfo.realName || studentInfo.userName || '-' }}</div>
               <div class="sd_meta">用户名：{{ studentInfo.userName || '-' }}</div>
-              <div class="sd_date">进班日期：{{ joinDateText }}</div>
+              <div class="sd_date">进班日期：{{ studentInfo.joinDesc }}</div>
             </div>
             <div class="sd_remark_btn" @click="openAliasDialog">
               {{ savedAlias ? '修改备注' : '添加备注' }}
@@ -92,7 +104,7 @@
               <div class="sd_watch_title">观看详情</div>
               <div class="sd_watch_filter">{{ timeRangeLabel }}</div>
             </div>
-            <div class="sd_course_grid">
+            <div class="sd_course_grid" v-if="watchCourseList.length">
               <div
                 v-for="(course, index) in watchCourseList"
                 :key="index"
@@ -108,6 +120,18 @@
                   <div class="sd_course_meta">观看历史课堂 {{ course.historyDuration }}分钟</div>
                 </div>
               </div>
+            </div>
+            <EmptyState v-else description="暂无数据" />
+            <div class="sd_pagination" v-if="liveTotal > livePageSize">
+              <el-pagination
+                background
+                small
+                layout="prev, pager, next"
+                :total="liveTotal"
+                :page-size="livePageSize"
+                :current-page="livePageNum"
+                @current-change="handleLivePageChange"
+              />
             </div>
           </div>
         </div>
@@ -142,12 +166,13 @@
 
 <script>
 import DialogCustome from '@/components/DialogCustome/index.vue'
-import { getStudentDetail, saveStudentNote } from '@/api/modules/teacher'
+import EmptyState from '@/components/EmptyState/index.vue'
+import { getStudentDetail, getStudentLiveStatistics, getStudentStatisticsSummary, saveStudentNote } from '@/api/modules/teacher'
 import courseCover from '@/assets/images/student/such.png'
 
 export default {
   name: 'StudentDetail',
-  components: { DialogCustome },
+  components: { DialogCustome, EmptyState },
   props: {
     visible: {
       type: Boolean,
@@ -176,82 +201,83 @@ export default {
         { label: '近1月', value: '3' },
         { label: '近3月', value: '4' },
         { label: '近半年', value: '5' },
-        { label: '近1年', value: '6' }
+        { label: '近1年', value: '6' },
+        { label: '自定义时间', value: 'custom' }
       ],
+      customTimeRange: [],
       studentInfo: {},
-      // 考勤追踪 - 先写死
-      attendanceStats: [
-        { label: '出勤次数', value: '18次', color: '#1F7CFF' },
-        { label: '出勤率', value: '90%', color: '#009966' },
-        { label: '迟到次数', value: '1次', color: '#E17100' },
-        { label: '早退次数', value: '0次', color: '#45556C' }
-      ],
-      // 学习情况 - 先写死
-      learningStats: [
-        { label: '上课时长', value: '860分钟' },
-        { label: '观看历史课堂时长', value: '420分钟' },
-        { label: '连麦次数', value: '6次' },
-        { label: '连麦时长', value: '38分钟' },
-        { label: '随堂测次数', value: '14次' },
-        { label: '课后测次数', value: '8次' },
-        { label: '已看历史课堂数量', value: '12节' },
-        { label: '总历史课堂数量', value: '18节' },
-        { label: '评论数', value: '26条' }
-      ],
-      // 观看详情 - 先写死
-      watchCourseList: [
-        {
-          cover: courseCover,
-          tag: '行测+申论',
-          title: '英语阅读精讲直播课',
-          classDuration: 45,
-          historyDuration: 18
-        },
-        {
-          cover: courseCover,
-          tag: '行测+申论',
-          title: '英语阅读精讲直播课',
-          classDuration: 45,
-          historyDuration: 18
-        },
-        {
-          cover: courseCover,
-          tag: '行测+申论',
-          title: '英语阅读精讲直播课',
-          classDuration: 45,
-          historyDuration: 18
-        },
-        {
-          cover: courseCover,
-          tag: '行测+申论',
-          title: '英语阅读精讲直播课',
-          classDuration: 45,
-          historyDuration: 18
-        }
-      ]
+      studentSummary: {},
+      watchCourseList: [],
+      livePageNum: 1,
+      livePageSize: 4,
+      liveTotal: 0
     }
   },
   watch: {
     visible(val) {
       if (val) {
+        this.livePageNum = 1
         this.fetchStudentDetail()
+        this.fetchStudentSummary()
+        this.fetchStudentLives()
       } else {
         this.studentInfo = {}
+        this.studentSummary = {}
+        this.watchCourseList = []
+        this.liveTotal = 0
         this.savedAlias = ''
       }
     }
   },
   computed: {
     timeRangeLabel() {
+      if (this.selectedType === 'custom') {
+        return this.hasCustomTimeRange() ? `${this.customTimeRange[0]} 至 ${this.customTimeRange[1]}` : '自定义时间'
+      }
       const found = this.typeOptions.find(item => item.value === this.selectedType)
       return found ? found.label : '全部时间'
     },
     joinDateText() {
       if (!this.studentInfo.joinTime) return '-'
       return this.studentInfo.joinTime
+    },
+    attendanceStats() {
+      return [
+        { label: '出勤次数', value: this.formatCount(this.studentSummary.attendedCount, '次'), color: '#1F7CFF' },
+        { label: '出勤率', value: this.formatAttendanceRate(), color: '#009966' },
+        { label: '迟到次数', value: this.formatCount(this.studentSummary.lateCount, '次'), color: '#E17100' },
+        { label: '早退次数', value: this.formatCount(this.studentSummary.earlyLeaveCount, '次'), color: '#45556C' }
+      ]
+    },
+    learningStats() {
+      return [
+        { label: '上课时长', value: this.formatCount(this.studentSummary.liveViewMinutes, '分钟') },
+        { label: '观看历史课堂时长', value: this.formatCount(this.studentSummary.replayViewMinutes, '分钟') },
+        { label: '连麦次数', value: this.formatCount(this.studentSummary.micCount, '次') },
+        { label: '连麦时长', value: this.formatCount(this.studentSummary.micMinutes, '分钟') },
+        { label: '随堂测次数', value: this.formatCount(this.studentSummary.inClassQuizCount, '次') },
+        { label: '课后测次数', value: this.formatCount(this.studentSummary.afterQuizCount, '次') },
+        { label: '已看历史课堂数量', value: this.formatCount(this.studentSummary.watchedReplayCount, '节') },
+        { label: '总历史课堂数量', value: this.formatCount(this.studentSummary.relatedReplayCount, '节') },
+        { label: '评论数', value: this.formatCount(this.studentSummary.commentCount, '条') }
+      ]
     }
   },
   methods: {
+    handleTypeChange() {
+      this.livePageNum = 1
+      if (this.selectedType === 'custom' && !this.hasCustomTimeRange()) return
+      this.fetchStudentDetail()
+      this.fetchStudentSummary()
+      this.fetchStudentLives()
+    },
+    handleCustomTimeChange() {
+      this.livePageNum = 1
+      if (!this.hasCustomTimeRange()) return
+      this.fetchStudentDetail()
+      this.fetchStudentSummary()
+      this.fetchStudentLives()
+    },
     async fetchStudentDetail() {
       if (!this.classId || !this.studentId) return
       try {
@@ -263,6 +289,100 @@ export default {
       } catch (e) {
         console.error('获取学生详情失败', e)
       }
+    },
+    async fetchStudentSummary() {
+      if (!this.studentId) return
+      try {
+        const res = await getStudentStatisticsSummary(this.getSummaryParams())
+        this.studentSummary = res.data || res || {}
+      } catch (e) {
+        console.error('获取学生统计汇总失败', e)
+        this.studentSummary = {}
+      }
+    },
+    async fetchStudentLives() {
+      if (!this.studentId) return
+      try {
+        const params = {
+          ...this.getSummaryParams(),
+          pageNum: this.livePageNum,
+          pageSize: this.livePageSize
+        }
+        const res = await getStudentLiveStatistics(params)
+        const data = res.data || res || {}
+        this.watchCourseList = (data.list || []).map(item => ({
+          ...item,
+          cover: item.cover || courseCover,
+          title: item.name || '-',
+          classDuration: item.liveViewMinutes || 0,
+          historyDuration: item.replayViewMinutes || 0
+        }))
+        this.liveTotal = Number(data.total) || 0
+      } catch (e) {
+        console.error('获取学生观看详情失败', e)
+        this.watchCourseList = []
+        this.liveTotal = 0
+      }
+    },
+    handleLivePageChange(page) {
+      this.livePageNum = page
+      this.fetchStudentLives()
+    },
+    getSummaryParams() {
+      const params = { studentId: this.studentId }
+      const dimensionMap = {
+        1: 'WEEK',
+        3: 'MONTH',
+        6: 'YEAR'
+      }
+
+      if (this.selectedType === 'custom' && this.hasCustomTimeRange()) {
+        params.start = this.customTimeRange[0]
+        params.end = this.customTimeRange[1]
+      } else if (dimensionMap[this.selectedType]) {
+        params.dimension = dimensionMap[this.selectedType]
+      } else if (['2', '4', '5'].includes(this.selectedType)) {
+        const daysMap = {
+          2: 14,
+          4: 90,
+          5: 180
+        }
+        const end = new Date()
+        const start = new Date(end)
+        start.setDate(start.getDate() - daysMap[this.selectedType])
+        params.start = this.formatDateTime(start)
+        params.end = this.formatDateTime(end)
+      }
+
+      return params
+    },
+    hasCustomTimeRange() {
+      return Array.isArray(this.customTimeRange) && this.customTimeRange.length === 2 && this.customTimeRange[0] && this.customTimeRange[1]
+    },
+    formatDateTime(date) {
+      const pad = value => String(value).padStart(2, '0')
+      const year = date.getFullYear()
+      const month = pad(date.getMonth() + 1)
+      const day = pad(date.getDate())
+      const hour = pad(date.getHours())
+      const minute = pad(date.getMinutes())
+      const second = pad(date.getSeconds())
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+    },
+    formatCount(value, unit) {
+      const number = Number(value)
+      return `${Number.isFinite(number) ? number : 0}${unit}`
+    },
+    formatAttendanceRate() {
+      const rate = Number(this.studentSummary.attendanceRate)
+      if (Number.isFinite(rate)) {
+        return `${Math.round((rate > 1 ? rate : rate * 100) * 100) / 100}%`
+      }
+
+      const attendedCount = Number(this.studentSummary.attendedCount) || 0
+      const requiredCount = Number(this.studentSummary.requiredCount) || 0
+      if (!requiredCount) return '0%'
+      return `${Math.round((attendedCount / requiredCount) * 10000) / 100}%`
     },
     openAliasDialog() {
       this.aliasInput = this.studentInfo.remark || this.savedAlias || ''
@@ -360,6 +480,9 @@ export default {
 }
 
 .sd_time_select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: #FFFFFF;
 box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
 border-radius: 10px 10px 10px 10px;
@@ -381,6 +504,10 @@ border: 1px solid #E2E8F0;
 
   ::v-deep .el-input__icon {
     line-height: 32px;
+  }
+
+  .sd_custom_time_picker {
+    width: 260px;
   }
 }
 
@@ -638,6 +765,12 @@ border: 1px solid #BEDBFF;
   font-size: 12px;
   color: #62748E;
   line-height: 18px;
+}
+
+.sd_pagination {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 4px;
 }
 
 .dialog_box2 {

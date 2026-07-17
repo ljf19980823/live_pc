@@ -28,15 +28,15 @@
             :http-request="handleMyUpload"
             :show-file-list="false"
             :multiple="true"
-            :disabled="uploadLoading"
+            :disabled="myUploadLoading"
           >
-            <button class="btn-outline btn-upload" type="button" :disabled="uploadLoading" :class="{ 'btn-uploading': uploadLoading }">
-              <span v-if="uploadLoading" class="upload-spin"></span>
+            <button class="btn-outline btn-upload" type="button" :disabled="myUploadLoading" :class="{ 'btn-uploading': myUploadLoading }">
+              <span v-if="myUploadLoading" class="upload-spin"></span>
               <template v-else>
                 <img src="@/assets/images/material/upload.png" alt="" class="btn-icon upload-icon-default" />
                 <img src="@/assets/images/material/upload_yes.png" alt="" class="btn-icon upload-icon-hover" />
               </template>
-              {{ uploadLoading ? '上传中...' : '上传资料' }}
+              {{ myUploadLoading ? '上传中...' : '上传资料' }}
             </button>
           </el-upload>
         </div>
@@ -184,15 +184,15 @@
               :http-request="handleGroupUpload"
               :show-file-list="false"
               :multiple="true"
-              :disabled="uploadLoading"
+              :disabled="groupUploadLoading"
             >
-              <button class="btn-outline btn-upload" type="button" :disabled="uploadLoading" :class="{ 'btn-uploading': uploadLoading }">
-                <span v-if="uploadLoading" class="upload-spin"></span>
+              <button class="btn-outline btn-upload" type="button" :disabled="groupUploadLoading" :class="{ 'btn-uploading': groupUploadLoading }">
+                <span v-if="groupUploadLoading" class="upload-spin"></span>
                 <template v-else>
                   <img src="@/assets/images/material/upload.png" alt="" class="btn-icon upload-icon-default" />
                   <img src="@/assets/images/material/upload_yes.png" alt="" class="btn-icon upload-icon-hover" />
                 </template>
-                {{ uploadLoading ? '上传中...' : '上传资料' }}
+                {{ groupUploadLoading ? '上传中...' : '上传资料' }}
               </button>
             </el-upload>
           </div>
@@ -427,7 +427,8 @@ export default {
       folderLoading: false,
       renameLoading: false,
       deleteLoading: false,
-      uploadPendingCount: 0,
+      myUploadPendingCount: 0,
+      groupUploadPendingCount: 0,
       latestGroupUpdate: '',
 
       // 文件预览
@@ -450,8 +451,11 @@ export default {
       if (!this.searchKeyword.trim()) return this.groupFileList
       return this.groupFileList.filter(f => f.name && f.name.includes(this.searchKeyword.trim()))
     },
-    uploadLoading() {
-      return this.uploadPendingCount > 0
+    myUploadLoading() {
+      return this.myUploadPendingCount > 0
+    },
+    groupUploadLoading() {
+      return this.groupUploadPendingCount > 0
     }
 
   },
@@ -710,11 +714,17 @@ export default {
       formData.append('level', String(level))
       if (userGroupId) formData.append('userGroupId', String(userGroupId))
 
-      this.uploadPendingCount++
+      const isGroupUpload = type === '2'
+      if (isGroupUpload) {
+        this.groupUploadPendingCount++
+      } else {
+        this.myUploadPendingCount++
+      }
       uploadBusinessFile(formData)
         .then(() => {
-           this.uploadPendingCount--
-          if (this.uploadPendingCount === 0) {
+          this.decreaseUploadPendingCount(isGroupUpload)
+          const isUploadDone = isGroupUpload ? this.groupUploadPendingCount === 0 : this.myUploadPendingCount === 0
+          if (isUploadDone) {
             this.$message.success('上传成功')
             if (type === '2') {
               this.fetchGroupList()
@@ -723,12 +733,19 @@ export default {
               this.fetchMyFiles()
             }
           }
-        }).catch(res=>{
-          this.uploadPendingCount = 0
+        }).catch(() => {
+          this.decreaseUploadPendingCount(isGroupUpload)
         })
         .finally(() => {
         
         })
+    },
+    decreaseUploadPendingCount(isGroupUpload) {
+      if (isGroupUpload) {
+        this.groupUploadPendingCount = Math.max(this.groupUploadPendingCount - 1, 0)
+      } else {
+        this.myUploadPendingCount = Math.max(this.myUploadPendingCount - 1, 0)
+      }
     },
 
     // ─── 工具方法 ────────────────────────────────────────────────
