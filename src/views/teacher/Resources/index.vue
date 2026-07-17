@@ -4,7 +4,7 @@
       <!-- 页面标题 -->
       <div class="page-header">
         <h2 class="page-title">资料中心</h2>
-        <p class="page-subtitle">集中管理个人资料与教研组共建素材。</p>
+        <p class="page-subtitle">集中管理个人资料与教研组共建素材</p>
       </div>
 
       <!-- Tabs -->
@@ -306,7 +306,7 @@
     <!-- ========== 重命名弹窗 ========== -->
     <DialogCustome
       :visible="showRenameDialog"
-      title="重命名文件夹"
+      :title="renameDialogTitle"
       width="500px"
       height="220px"
       :showClose="true"
@@ -420,6 +420,7 @@ export default {
       showRenameDialog: false,
       renameTarget: null,
       renameValue: '',
+      renameFileExt: '',
 
       showDeleteDialog: false,
       deleteTarget: null,
@@ -450,6 +451,9 @@ export default {
     filteredGroupFileList() {
       if (!this.searchKeyword.trim()) return this.groupFileList
       return this.groupFileList.filter(f => f.name && f.name.includes(this.searchKeyword.trim()))
+    },
+    renameDialogTitle() {
+      return this.renameTarget && this.renameTarget.fileType === '1' ? '重命名文件夹' : '重命名文件'
     },
     myUploadLoading() {
       return this.myUploadPendingCount > 0
@@ -651,7 +655,9 @@ export default {
     // ─── 重命名 ──────────────────────────────────────────────────
     openRenameDialog(item) {
       this.renameTarget = item
-      this.renameValue = item.name
+      const { name, ext } = this.getRenameNameParts(item)
+      this.renameValue = name
+      this.renameFileExt = ext
       this.showRenameDialog = true
       item.showMore = false
       this.$nextTick(() => {
@@ -662,17 +668,31 @@ export default {
       this.showRenameDialog = false
       this.renameTarget = null
       this.renameValue = ''
+      this.renameFileExt = ''
     },
     confirmRename() {
       if (!this.renameValue.trim() || !this.renameTarget || this.renameLoading) return
+      const nextName = this.renameTarget.fileType === '1'
+        ? this.renameValue.trim()
+        : `${this.renameValue.trim()}${this.renameFileExt}`
       this.renameLoading = true
-      renameBusinessFile(this.renameTarget.id, this.renameValue.trim())
+      renameBusinessFile(this.renameTarget.id, nextName)
         .then(() => {
           this.$message.success('重命名成功')
-          this.renameTarget.name = this.renameValue.trim()
+          this.renameTarget.name = nextName
           this.closeRenameDialog()
         })
         .finally(() => { this.renameLoading = false })
+    },
+    getRenameNameParts(item) {
+      const name = item.name || ''
+      if (item.fileType === '1') return { name, ext: '' }
+      const extIndex = name.lastIndexOf('.')
+      if (extIndex <= 0 || extIndex === name.length - 1) return { name, ext: '' }
+      return {
+        name: name.slice(0, extIndex),
+        ext: name.slice(extIndex)
+      }
     },
 
     // ─── 删除 ────────────────────────────────────────────────────
@@ -1405,7 +1425,7 @@ export default {
 .delete-dialog-close {
   width: 28px;
   height: 28px;
-  border: 1.5px dashed #ccc;
+  // border: 1.5px dashed #ccc;
   border-radius: 6px;
   display: flex;
   align-items: center;
