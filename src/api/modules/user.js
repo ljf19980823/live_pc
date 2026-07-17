@@ -5,19 +5,19 @@ import { get, post, put } from '@/utils/request'
  */
 
 // 账号密码登录
-export const login = data => post('/user/login', data)
+export const login = data => post('/user/login', data , { skipAuthorization: true })
 
 // SSO 账号密码登录
 export const ssoLogin = data => post('/edu/sso/login', data)
 
 // SSO 多用户选择登录
-export const chooseLogin = data => post('/edu/sso/chooseLogin', data)
+export const chooseLogin = data => post('/edu/sso/chooseLogin', data )
 
 // 发送手机验证码
 export const sendCode = data => post('/edu/sso/sendCode', data)
 
 // 手机验证码登录
-export const codeLogin = data => post('/edu/sso/codeLogin', data)
+export const codeLogin = data => post('/edu/sso/codeLogin', data , { skipAuthorization: true })
 
 // 访客发送直播验证码
 export const visitorSendCode = data => post('/edu/live/visitor/sendCode', data, { skipAuthorization: true })
@@ -26,7 +26,7 @@ export const visitorSendCode = data => post('/edu/live/visitor/sendCode', data, 
 export const visitorLogin = data => post('/edu/live/visitor/login', data, { skipAuthorization: true })
 
 // 手机号验证码登录
-export const loginByPhone = data => post('/user/login/phone', data)
+export const loginByPhone = data => post('/user/login/phone', data, { skipAuthorization: true })
 
 // 退出登录
 export const logout = () => post('/edu/sso/logout')
