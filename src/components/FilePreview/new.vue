@@ -35,8 +35,10 @@
           :class="{ 'file-preview-editor-wrap--presentation': isPreviewPresentation }"
         >
           <div :id="editorContainerId" class="file-preview-editor"></div>
+          <!-- PPT desktop：遮住顶部与左侧图标操作栏，保留右侧幻灯片缩略图目录 -->
           <div v-if="isPreviewPresentation" class="presentation-top-mask"></div>
           <div v-if="isPreviewPresentation" class="presentation-left-menu-mask"></div>
+          <div class="toolbar-logo-mask"></div>
           <div class="toolbar-right-mask"></div>
         </div>
       </div>
@@ -48,34 +50,51 @@
 /**
  * FilePreview — 通用文件在线预览组件
  *
- * 基于 ONLYOFFICE Document Server 实现，以只读模式渲染文档，
- * 禁用下载、打印、复制等操作，适合在各业务模块中复用。
+ * 基于 ONLYOFFICE Document Server 实现，先向后端换取 JWT，
+ * 再以只读模式渲染文档；禁用下载、打印、复制等操作（可按权限放开）。
  *
- * 使用示例：
- *   <FilePreview
- *     :visible="previewVisible"
- *     :file="{ name: 'report.pdf', path: 'https://example.com/report.pdf' }"
- *     @close="previewVisible = false"
- *   />
- *
- * Props：
- *   visible  {Boolean}  是否显示预览弹窗
- *   file     {Object}   预览的文件对象，格式见下方 props 说明
- *
- * Events：
- *   close    关闭弹窗时触发，父组件需将 visible 置为 false
+ * 重要：本环境缺 help/zh（仅有 help/en），PPT 用 desktop 时必须 lang:'en'，
+ * 否则会 404；同时勿配置 toolbarNoTabs / loaderName（会走不存在的 index_loader）。
  */
 
 /** ONLYOFFICE 文档服务器 API 地址 */
-const ONLYOFFICE_API_URL = 'http://120.26.253.133:18106/web-apps/apps/api/documents/api.js'
+const ONLYOFFICE_API_URL = 'https://live.fjlsjy123.com/onlyoffice/web-apps/apps/api/documents/api.js'
+
+/**
+ * 从路径中提取扩展名（去掉 query/hash）
+ * @param {string} value
+ * @returns {string}
+ */
+function extractExt(value) {
+  const clean = String(value || '').split('?')[0].split('#')[0]
+  const idx = clean.lastIndexOf('.')
+  if (idx < 0) return ''
+  return clean.slice(idx + 1).toLowerCase()
+}
+
+/**
+ * 根据文件 URL + 类型生成稳定的 document.key。
+ * 必须带上 fileType：OnlyOffice 会按 key 缓存文档，
+ * PPT 若复用旧 PDF/Word 的 key，会提示「文件内容与扩展名不匹配」。
+ * @param {string} url
+ * @param {string} fileType
+ * @returns {string}
+ */
+function buildDocumentKey(url, fileType) {
+  let hash = 0
+  const str = String(url || '')
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  const typePart = fileType ? `${fileType}-` : ''
+  return `preview-${typePart}${Math.abs(hash).toString(16)}`.slice(0, 128)
+}
 
 /**
  * 支持预览的文件类型映射表
  * key   — 文件扩展名（小写）
  * value — ONLYOFFICE 所需的 documentType 与 fileType
- *   documentType: 'word'  文字类文档（pdf / doc / docx / txt）
- *   documentType: 'cell'  表格类文档（xls / xlsx / csv）
- *   documentType: 'slide' 演示文稿（ppt / pptx）
  */
 const SUPPORTED_TYPES = {
   pdf:  { documentType: 'word',  fileType: 'pdf'  },
@@ -89,19 +108,12 @@ const SUPPORTED_TYPES = {
   pptx: { documentType: 'slide', fileType: 'pptx' }
 }
 
-/**
- * 以下三个变量用于确保 ONLYOFFICE API 脚本在整个应用生命周期内只加载一次。
- * scriptLoaded   — 脚本是否已加载完毕
- * scriptLoading  — 脚本是否正在加载中（防止并发重复插入 <script>）
- * scriptCallbacks — 脚本加载期间等待的 Promise 回调队列
- */
 let scriptLoaded = false
 let scriptLoading = false
 const scriptCallbacks = []
 
 /**
  * 动态加载 ONLYOFFICE API 脚本。
- * 首次调用时插入 <script> 标签，后续调用直接 resolve 或进入等待队列。
  * @returns {Promise<void>}
  */
 function loadOnlyOfficeScript() {
@@ -131,62 +143,30 @@ function loadOnlyOfficeScript() {
 }
 
 import { getUserInfo } from '@/utils/auth'
-import { collectToggle } from '@/api'
+import { collectToggle, getOnlyOfficeToken } from '@/api'
 
-/** 用于生成唯一的编辑器容器 id，避免同页面多实例冲突 */
 let editorIdCounter = 0
 
 export default {
   name: 'FilePreview',
 
   props: {
-    /**
-     * 是否显示预览弹窗
-     * @type {Boolean}
-     * @default false
-     */
     visible: {
       type: Boolean,
       default: false
     },
-
-    /**
-     * 需要预览的文件对象
-     * @type {Object|null}
-     * @property {string} name - 文件名（含扩展名），用于识别文件类型及展示标题，例如 'report.pdf'
-     * @property {string} path - 文件的完整可访问 URL，ONLYOFFICE 服务器将通过此地址拉取文件内容
-     * @example { name: 'report.pdf', path: 'https://example.com/report.pdf' }
-     */
     file: {
       type: Object,
       default: null
     },
-
-    /**
-     * 是否允许下载：1 允许，2 不允许
-     * @type {String}
-     * @default '2'
-     */
     allowDownload: {
       type: String,
       default: '2'
     },
-
-    /**
-     * 是否从"学习任务"入口打开，true 时才对学生显示收藏按钮
-     * @type {Boolean}
-     * @default false
-     */
     fromTask: {
       type: Boolean,
       default: false
     },
-
-    /**
-     * 收藏接口所需参数 { courseId, lessonId, type }
-     * @type {Object}
-     * @default {}
-     */
     collectParams: {
       type: Object,
       default: () => ({})
@@ -196,35 +176,23 @@ export default {
   data() {
     const userInfo = getUserInfo() || {}
     return {
-      /** 当前用户是否为学生角色，权限限制仅对学生生效 */
       isStudent: userInfo.role === 'STUDENT',
-      /** 是否加载/预览失败（不支持的类型或脚本加载异常时为 true，显示兜底提示） */
       loadError: false,
-      /** ONLYOFFICE DocEditor 实例，用于在关闭时主动销毁释放资源 */
       editorInstance: null,
-      /** 编辑器挂载的 DOM 容器 id，每个组件实例唯一 */
       editorContainerId: `onlyoffice-editor-${++editorIdCounter}`,
-      /** 是否已收藏 */
       isCollected: false,
-      /** 收藏请求进行中 */
       collecting: false
     }
   },
 
   computed: {
     isPreviewPresentation() {
-      if (!this.file || !this.file.path) return false
-      const ext = this.file.path.split('.').pop().toLowerCase()
-      return ext === 'ppt' || ext === 'pptx'
+      const info = this.getFileInfo()
+      return !!(info && info.documentType === 'slide')
     }
   },
 
   watch: {
-    /**
-     * 监听 visible 变化：
-     *   true  → 等待 DOM 更新后初始化编辑器
-     *   false → 立即销毁编辑器，释放 iframe 资源
-     */
     visible(val) {
       if (val) {
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
@@ -240,24 +208,26 @@ export default {
   methods: {
     /**
      * 根据 file prop 解析文件类型信息。
-     * @returns {{ documentType, fileType, title, url } | null} 不支持的类型返回 null
+     * @returns {{ documentType, fileType, title, url } | null}
      */
     getFileInfo() {
       if (!this.file || !this.file.path) return null
       const name = this.file.name || ''
-      const ext = this.file.path.split('.').pop().toLowerCase()
+      const nameExt = extractExt(name)
+      const pathExt = extractExt(this.file.path)
+      const ext = SUPPORTED_TYPES[nameExt] ? nameExt : pathExt
       const typeInfo = SUPPORTED_TYPES[ext]
-      console.log(typeInfo,'文件类型')
       if (!typeInfo) return null
-      const titleWithExt = name.toLowerCase().endsWith(`.${ext}`) ? name : `${name}.${ext}`
+      const titleWithExt = name
+        ? (name.toLowerCase().endsWith(`.${ext}`) ? name : `${name}.${ext}`)
+        : `预览.${ext}`
       return { ...typeInfo, title: titleWithExt, url: this.file.path }
     },
 
     /**
-     * 初始化 ONLYOFFICE 编辑器：
-     * 1. 校验文件类型是否支持
-     * 2. 动态加载 API 脚本（已加载则跳过）
-     * 3. 以只读模式创建 DocEditor 实例
+     * 初始化 ONLYOFFICE 编辑器。
+     * PPT：desktop + slide + lang:en（本环境仅有 help/en，用 zh-CN 会 404）
+     * 其他：embedded + zh-CN
      */
     async initEditor() {
       this.loadError = false
@@ -277,11 +247,13 @@ export default {
         return
       }
       this.destroyEditor()
+
+      const userInfo = getUserInfo() || {}
       const isPresentation = fileInfo.documentType === 'slide'
+      const canDownload = !this.isStudent || this.allowDownload === '1'
       const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
       const customization = {
-        loaderName: ' ',
-        loaderLogo: emptyImage,
         customer: {
           name: '',
           address: '',
@@ -291,23 +263,32 @@ export default {
           logo: emptyImage
         },
         logo: {
-          // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
           image: emptyImage,
           imageDark: emptyImage,
+          imageLight: emptyImage,
           imageEmbedded: emptyImage,
-          url: ''
-        }
+          url: '',
+          visible: false
+        },
+        comments: false,
+        chat: false,
+        about: false,
+        hideDownload: !canDownload,
+        hidePrint: !canDownload,
+        search: false,
+        help: false,
+        plugins: false
       }
+
       if (isPresentation) {
+        // desktop 才能显示原生左侧幻灯片目录
+        // 勿设 toolbarNoTabs / loaderName / loaderLogo，否则会请求 index_loader.html（404）
         Object.assign(customization, {
           compactHeader: true,
           compactToolbar: true,
-          toolbarNoTabs: true,
           toolbarHideFileName: true,
           hideRightMenu: true,
           hideRulers: true,
-          plugins: false,
-          help: false,
           feedback: false,
           goback: false,
           review: false,
@@ -348,30 +329,32 @@ export default {
           }
         })
       } else {
+        // 非 PPT 可安全使用 loader 定制 + embedded
+        customization.loaderName = ' '
+        customization.loaderLogo = emptyImage
         customization.embedded = {
-          toolbarDocked: 'hidden',  // 嵌入模式下隐藏浮动工具栏
-          saveUrl: '',              // 隐藏右侧"保存"按钮
-          shareUrl: '',             // 隐藏右侧"分享"按钮
-          embedUrl: ''              // 隐藏右侧"嵌入"按钮
+          toolbarDocked: 'hidden',
+          saveUrl: '',
+          shareUrl: '',
+          embedUrl: ''
         }
       }
+
       const config = {
-        /**
-         * PPT 使用 desktop 模式保留左侧幻灯片目录，其他文件继续使用 embedded 模式
-         * 仅渲染文档内容区，完全去掉顶部工具栏、左侧面板、标题栏等所有操作 UI
-         */
+        // PPT 用 desktop 显示左侧目录；其他用 embedded
         type: isPresentation ? 'desktop' : 'embedded',
         documentType: fileInfo.documentType,
         width: '100%',
         height: '100%',
         document: {
           fileType: fileInfo.fileType,
+          key: buildDocumentKey(fileInfo.url, fileInfo.fileType),
           title: fileInfo.title,
           url: fileInfo.url,
           permissions: {
             edit: false,
-            download: !this.isStudent || this.allowDownload === '1',
-            print: !this.isStudent || this.allowDownload === '1',
+            download: canDownload,
+            print: canDownload,
             copy: false,
             search: false,
             comment: false,
@@ -380,28 +363,31 @@ export default {
         },
         editorConfig: {
           mode: 'view',
-          lang: 'zh-CN',
+          // PPT desktop 必须用 en：服务端缺 help/zh、help/zh-CN，用中文会 404
+          lang: isPresentation ? 'en' : 'zh-CN',
+          user: {
+            id: String(userInfo.id || userInfo.userId || 'preview-user'),
+            name: userInfo.nickname || userInfo.name || userInfo.username || '预览用户'
+          },
           customization
         }
       }
-      console.log(config,'对象')
+
       try {
+        const tokenRes = await getOnlyOfficeToken(config)
+        config.token = tokenRes.data
         this.editorInstance = new window.DocsAPI.DocEditor(this.editorContainerId, config)
       } catch (e) {
         this.loadError = true
       }
     },
 
-    /**
-     * 销毁编辑器实例并清空容器 innerHTML，
-     * 防止下次打开时出现多个 iframe 重叠的问题。
-     */
     destroyEditor() {
       if (this.editorInstance && typeof this.editorInstance.destroyEditor === 'function') {
         try {
           this.editorInstance.destroyEditor()
         } catch (e) {
-          // 销毁失败时静默处理，不影响后续流程
+          // 销毁失败时静默处理
         }
       }
       this.editorInstance = null
@@ -409,7 +395,6 @@ export default {
       if (el) el.innerHTML = ''
     },
 
-    /** 收藏/取消收藏 */
     async handleCollect() {
       if (this.collecting) return
       this.collecting = true
@@ -426,12 +411,10 @@ export default {
       }
     },
 
-    /** 关闭预览，向父组件抛出 close 事件 */
     handleClose() {
       this.$emit('close')
     },
 
-    /** 不支持预览时的兜底操作：将文件下载到本地 */
     async handleDownload() {
       if (!this.file || !this.file.path) return
       const url = this.file.path
@@ -453,7 +436,6 @@ export default {
     }
   },
 
-  /** 组件销毁前主动释放编辑器资源 */
   beforeDestroy() {
     this.destroyEditor()
   }
@@ -569,6 +551,7 @@ export default {
   position: relative;
   width: 100%;
   height: 100%;
+  background: #fff;
 }
 
 .file-preview-editor-wrap--presentation {
@@ -591,6 +574,7 @@ export default {
   pointer-events: auto;
 }
 
+/* 遮住 OnlyOffice 左侧图标操作栏，不挡幻灯片缩略图目录 */
 .presentation-left-menu-mask {
   position: absolute;
   top: 42px;
@@ -602,6 +586,17 @@ export default {
   pointer-events: auto;
 }
 
+.toolbar-logo-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 160px;
+  height: 42px;
+  background: #F7F7F7;
+  z-index: 11;
+  pointer-events: none;
+}
+
 .toolbar-right-mask {
   position: absolute;
   top: 0;
@@ -609,7 +604,7 @@ export default {
   width: 120px;
   height: 42px;
   background: #F7F7F7;
-  z-index: 10;
+  z-index: 11;
   pointer-events: none;
 }
 
