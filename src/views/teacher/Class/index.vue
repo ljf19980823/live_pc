@@ -101,7 +101,7 @@
           </div>
           <div class="app_container_box_left_list_detail_count app_container_box_left_list_detail_count2">
             <span>{{ item.count }} 人</span>
-            <span>{{ item.courseCnt || 0 }} 门课</span>
+            <span>{{ item.courseCnt }} 门课</span>
             <span>{{ item.source || '老师创建' }}</span>
           </div>
           <div class="class-card-validity">
@@ -380,7 +380,7 @@
         <div class="app_container_box_right_top_mess">
           <span>{{ currentClass.count }} 位学生</span>
           <span class="right-top-mess-dot">·</span>
-          <span>{{ currentClass.courseCnt || 0 }} 门课程</span>
+          <span>{{ currentClass.courseCnt  }} 门课程</span>
           <span class="right-top-mess-dot">·</span>
           <span>{{ currentClass.source || '老师创建' }}</span>
         </div>
@@ -1359,14 +1359,14 @@ export default {
         name: item.className || '',
         alias: item.classAlias || '',
         count: item.studentCount || 0,
-        courseCount: item.courseCount || item.totalCourses || item.lessonCount || 0,
+        courseCount: item.courseCount ,
         pinned: item.isTop === 1,
         remainDays: item.remainDay || 0,
         startDate: item.beginTime || '',
         endDate: item.endTime || '',
         source: sourceMap[item.classMode] || '老师创建',
         status: item.status || '',
-        courseCnt: item.courseCnt || '',
+        courseCnt: item.courseCnt ?? 0,
       }
     },
     async fetchClassList() {
@@ -1442,7 +1442,7 @@ export default {
             name: detail.className || this.classList[idx].name,
             alias: detail.classAlias || this.classList[idx].alias,
             count: detail.studentCount || this.classList[idx].count,
-            courseCount: detail.courseCount || detail.totalCourses || detail.lessonCount || this.classList[idx].courseCount || 0,
+            courseCount: detail.courseCount || 0,
             pinned: detail.isTop === 1,
             remainDays: detail.remainDay || this.classList[idx].remainDays,
             startDate: detail.beginTime || this.classList[idx].startDate,
@@ -1453,7 +1453,6 @@ export default {
             isSelfCreate: detail.isSelfCreate,
             allowRemove: detail.allowRemove,
             isAllowInvite: detail.isAllowInvite,
-            courseCnt: detail.courseCnt,
           })
         }
       } catch (e) {
@@ -1500,10 +1499,10 @@ export default {
           taskCount: item.totalLessons || 0,
           progress: item.progressPercent || 0
         }))
-        const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
-        if (idx !== -1) {
-          this.$set(this.classList[idx], 'courseCount', this.courseList.length)
-        }
+        // const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
+        // if (idx !== -1) {
+        //   this.$set(this.classList[idx], 'courseCount', this.courseList.length)
+        // }
       } catch (e) {
         console.error(e)
         this.courseList = []

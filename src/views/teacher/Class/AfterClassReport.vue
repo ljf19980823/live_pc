@@ -3,6 +3,7 @@
     <div class="after-class-report__header">
       <button class="after-class-report__back" type="button" @click="handleBack">返回</button>
       <div class="after-class-report__title">课后测报告</div>
+      <button class="after-class-report__share" type="button" @click="handleShare">分享报告</button>
     </div>
     <div class="after-class-report__body">
       <iframe
@@ -42,6 +43,32 @@ export default {
   methods: {
     handleBack() {
       this.$emit('close')
+    },
+    async handleShare() {
+      const shareUrl = String(this.reportUrl || '')
+      if (!shareUrl) {
+        this.$message && this.$message.warning('暂无可分享的报告链接')
+        return
+      }
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(shareUrl)
+        } else {
+          const input = document.createElement('textarea')
+          input.value = shareUrl
+          input.setAttribute('readonly', 'readonly')
+          input.style.position = 'fixed'
+          input.style.left = '-9999px'
+          document.body.appendChild(input)
+          input.select()
+          document.execCommand('copy')
+          document.body.removeChild(input)
+        }
+        this.$message && this.$message.success('链接已复制')
+      } catch (error) {
+        this.$message && this.$message.error('复制失败，请手动复制链接')
+      }
     }
   }
 }
@@ -77,6 +104,19 @@ export default {
   cursor: pointer;
   background: #eef5ff;
   border: 1px solid #bfdbfe;
+  border-radius: 4px;
+}
+
+.after-class-report__share {
+  min-width: 96px;
+  height: 32px;
+  padding: 0 16px;
+  margin-left: auto;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
   border-radius: 4px;
 }
 

@@ -52,7 +52,13 @@
               {{ (studentInfo.realName || studentInfo.userName || '').slice(-2) || '-' }}
             </div>
             <div class="sd_profile_info">
-              <div class="sd_name">{{ studentInfo.realName || studentInfo.userName || '-' }}</div>
+              <div class="sd_name">
+                <template v-if="savedAlias">
+                  <span>{{ savedAlias }}</span>
+                  <span class="sd_name_origin">（{{ studentInfo.realName || studentInfo.userName || '-' }}）</span>
+                </template>
+                <template v-else>{{ studentInfo.realName || studentInfo.userName || '-' }}</template>
+              </div>
               <div class="sd_meta">用户名：{{ studentInfo.userName || '-' }}</div>
               <div class="sd_date">进班日期：{{ studentInfo.joinDesc }}</div>
             </div>
@@ -432,7 +438,7 @@ export default {
 }
 
 .sd_panel {
-  width: 600px;
+  width: 700px;
   height: 100%;
   background: #F5F7FA;
   border-radius: 8px 0 0 8px;
@@ -507,7 +513,7 @@ border: 1px solid #E2E8F0;
   }
 
   .sd_custom_time_picker {
-    width: 260px;
+    width: 380px;
   }
 }
 
@@ -567,6 +573,13 @@ border: 1px solid #E2E8F0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sd_name_origin {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #62748E;
 }
 
 .sd_meta {
@@ -722,7 +735,7 @@ border: 1px solid #BEDBFF;
 .sd_course_cover_wrap {
   position: relative;
   width: 100%;
-  height: 154px;
+  height: 174px;
   overflow: hidden;
   background: #E8EEF5;
 }
