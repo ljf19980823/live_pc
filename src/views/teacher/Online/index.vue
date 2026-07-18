@@ -2562,8 +2562,10 @@ created() {
 // ─── 筛选栏 ──────────────────────────────────────────────────
 .filter-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   background: #FFFFFF;
   padding:  16px;
   box-sizing: border-box;
@@ -2574,6 +2576,7 @@ border-radius: 12px 12px 12px 12px;
   &__left {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 20px;
     flex: 1;
     min-width: 0;
@@ -2583,7 +2586,8 @@ border-radius: 12px 12px 12px 12px;
     flex-shrink: 0;
     font-size: 13px;
     color: #94A3B8;
-    margin-left: 16px;
+    margin-left: auto;
+    line-height: 40px;
   }
 }
 

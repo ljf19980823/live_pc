@@ -34,6 +34,7 @@
               end-placeholder="结束时间"
               value-format="yyyy-MM-dd HH:mm:ss"
               class="sd_custom_time_picker"
+              popper-class="sd-custom-time-popper"
               @change="handleCustomTimeChange"
             />
           </div>
@@ -808,4 +809,16 @@ border: 1px solid #BEDBFF;
     transform: translateX(0);
   }
 }
+
 </style>
+
+<style lang="scss">
+.sd-custom-time-popper {
+  margin-left: -120px;
+
+  .el-picker-panel__body {
+    margin-right: 30px !important;
+  }
+}
+</style>
+
