@@ -83,6 +83,7 @@ export default {
       },
       liveIdFromQuery: '',
       classroomIdFromQuery: '',
+      fromExitFromQuery: '',
       sendCodeLoading: false,
       loginLoading: false,
       countdown: 0,
@@ -98,6 +99,9 @@ export default {
     classroomId() {
       return this.classroomIdFromQuery
     },
+    isFromExit() {
+      return this.fromExitFromQuery === '1'
+    },
     isPhoneValid() {
       return /^1[3-9]\d{9}$/.test(this.form.phone.trim())
     },
@@ -112,8 +116,11 @@ export default {
   },
   created() {
     const liveParams = this.getLiveParamsFromUrl()
-    this.liveIdFromQuery = liveParams.liveId
-    this.classroomIdFromQuery = liveParams.classroomId
+    this.fromExitFromQuery = liveParams.fromExit
+    if (!this.isFromExit) {
+      this.liveIdFromQuery = liveParams.liveId
+      this.classroomIdFromQuery = liveParams.classroomId
+    }
     console.log(liveParams, '直播间参数')
     if (!this.liveId) {
     //   this.$message.warning('直播间参数缺失')
@@ -130,7 +137,8 @@ export default {
       console.log('URL参数', params.toString())
       return {
         liveId: params.get('liveid') || '',
-        classroomId: params.get('classroomId') || ''
+        classroomId: params.get('classroomId') || '',
+        fromExit: params.get('fromExit') || ''
       }
     },
     clearCountdownTimer() {
