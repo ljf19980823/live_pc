@@ -46,7 +46,7 @@
             今日无课堂
           </div>
         </div>
-        <div class="app_container_first_course_btn_Box">
+        <div class="app_container_first_course_btn_Box2">
           合理安排时间，认真学习哦
         </div>
       </div>
@@ -532,6 +532,19 @@ export default {
   width: 100%;
   height: 57px;
   background: rgba(255, 255, 255, 0.26);
+  border-radius: 16px 16px 16px 16px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-left: 14px;
+  box-sizing: border-box;
+  color: #FFFFFF;
+  font-size: 14px;
+}
+.app_container_first_course_btn_Box2{
+  width: 100%;
+  height: 57px;
+background: rgba(0,0,0,.1);
   border-radius: 16px 16px 16px 16px;
   display: flex;
   justify-content: flex-start;

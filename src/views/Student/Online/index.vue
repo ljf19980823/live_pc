@@ -3215,7 +3215,7 @@ border-radius: 10px 10px 10px 10px;
     outline: none;
     white-space: nowrap;
     text-align: center;
-    line-height: 40px;
+    line-height: 1;
     width: 95.77px;
 
     &--outline {
