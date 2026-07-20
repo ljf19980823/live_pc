@@ -2009,7 +2009,7 @@ export default {
           id: node.id || node.lessonId || '',
           type: 'live',
           nodeType: node.type,
-          title: node.name || live.name || '',
+          title: live.name || node.name || '',
           isFinish: live.isFinish,
           isStart: live.isStart,
           liveStatus: live.status || '',

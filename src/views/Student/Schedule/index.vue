@@ -160,7 +160,7 @@
                 {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
                 <template v-if="course.durationText"> 共{{ course.durationText }}</template>
               </div>
-              <div class="course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
+              <div class="course-card__teacher">主讲：{{ course.teacherName2 || '-' }}</div>
             </div>
             <div
               v-if="course.status === '直播中' || course.status === '未开始'"
@@ -211,7 +211,7 @@
                   {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
                   <template v-if="course.durationText"> 共{{ course.durationText }}</template>
                 </div>
-                <div class="list-course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
+                <div class="list-course-card__teacher">主讲：{{ course.teacherName2 || '-' }}</div>
               </div>
               <div
                 v-if="course.status === '直播中' || course.status === '未开始'"
@@ -332,6 +332,7 @@ export default {
           isStart: live.isStart,
           isFinish: live.isFinish,
           historyLessonId: live.historyLessonId || '',
+          teacherName2: live.teacherName2 || '',
         }))
       })
       return map

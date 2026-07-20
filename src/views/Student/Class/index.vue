@@ -86,7 +86,7 @@
           <div class="app_container_box_left_list_detail_count">
             <span>{{ item.courseCnt || 0 }} 门课</span>
             <span class="class-card-count-sep">·</span>
-            <span class="class-card-pending">{{ item.waitCourseCnt || 0 }} 门课程待完成</span>
+            <span class="class-card-pending" v-if=" item.waitCourseCnt!=0">{{ item.waitCourseCnt || 0 }} 门课程待完成</span>
           </div>
           <div class="class-card-validity">
             <span class="class-card-validity-label">有效期</span>
@@ -360,7 +360,7 @@
         <div class="app_container_box_right_top_mess">
           <span>{{ currentClass.courseCnt || filteredCourseList.length || 0 }} 门课程</span>
           <span class="right-top-mess-dot">·</span>
-          <span class="right-top-mess-pending">{{ currentClass.waitCourseCnt }} 门课程待完成</span>
+          <span class="right-top-mess-pending"  v-if=" currentClass.waitCourseCnt!=0">{{ currentClass.waitCourseCnt }} 门课程待完成</span>
         </div>
         <div class="app_container_box_right_top_choose">
           <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'course'">
@@ -1890,6 +1890,7 @@ export default {
         }
       } else if (node.type === '2') {
         const live = node.liveInfo || {}
+        console.log(live.name)
         const startTime = live.startTime || ''
         let date = '', timeStart = ''
         if (startTime) {
@@ -1901,7 +1902,7 @@ export default {
           id: node.id || node.lessonId || '',
           type: 'live',
           nodeType: node.type,
-          title: node.name || live.name || '',
+          title: live.name || node.name || '',
           isFinish: live.isFinish,
           isStart: live.isStart,
           liveStatus: live.status || '',
