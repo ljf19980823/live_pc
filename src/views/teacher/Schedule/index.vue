@@ -156,9 +156,13 @@
                   }}</span>
                 </div> -->
               </div>
-              <div class="course-card__time">
+              <div class="course-card__time"  v-if="course.status === '已结束已开播' || course.status === '已结束未开播'">
+                {{ course.realStartTime }}{{ course.realEndTime ? '-' + course.realEndTime : '' }}
+                <template v-if="course.liveRealTime"> 共{{ course.liveRealTime =='0'?'1': course.liveRealTime }}分钟</template>
+              </div>
+              <div class="course-card__time" v-else>
                 {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
-                <template v-if="course.durationText"> 共{{ course.durationText }}</template>
+                <template v-if="course.liveTime"> 共{{ course.liveTime }}分钟</template>
               </div>
               <div class="course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
             </div>
@@ -207,9 +211,13 @@
               />
               <div class="list-course-card__info">
                 <div class="list-course-card__name">{{ course.name }}</div>
-                <div class="list-course-card__time">
+                <div class="list-course-card__time" v-if="course.status === '已结束已开播' || course.status === '已结束未开播'">
+                  {{ course.realStartTime }}{{ course.realEndTime ? '-' + course.realEndTime : '' }}
+                  <template v-if="course.liveRealTime"> 共{{ course.liveRealTime =='0'?'1': course.liveRealTime}}分钟</template>
+                </div>
+                <div class="list-course-card__time" v-else>
                   {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
-                  <template v-if="course.durationText"> 共{{ course.durationText }}</template>
+                  <template v-if="course.liveTime"> 共{{ course.liveTime }}分钟</template>
                 </div>
                 <div class="list-course-card__teacher">主讲：{{ course.teacherName || '-' }}</div>
               </div>
@@ -314,6 +322,8 @@ export default {
         map[dateStr] = (item.lives || []).map(live => {
           const startTime = live.startTime ? live.startTime.substring(11, 16) : ''
           const endTime = live.endTime ? live.endTime.substring(11, 16) : ''
+          const realStartTime = live.realStartTime ? live.realStartTime.substring(11, 16) : ''
+          const realEndTime = live.realEndTime ? live.realEndTime.substring(11, 16) : ''
           let durationText = ''
           if (live.startTime && live.endTime) {
             const s = new Date(live.startTime.replace(/-/g, '/')).getTime()
@@ -324,10 +334,13 @@ export default {
           }
           return {
             // Online 课表原有字段
+            ...live,
             id: live.id,
             name: live.name || '',
             startTime,
             endTime,
+            realStartTime,
+            realEndTime,
             fullStartTime: live.startTime || '',
             liveLessonId: live.liveLessonId || '',
             fileList: live.fileList || [],

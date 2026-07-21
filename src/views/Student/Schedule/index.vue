@@ -156,9 +156,13 @@
                   }}</span>
                 </div> -->
               </div>
-              <div class="course-card__time">
+              <div class="course-card__time" v-if="course.status === '已结束已开播' || course.status === '已结束未开播'">
+                {{ course.realStartTime }}{{ course.realEndTime ? '-' + course.realEndTime : '' }}
+                <template v-if="course.liveRealTime"> 共{{ course.liveRealTime =='0'?'1': course.liveRealTime}}分钟</template>
+              </div>
+              <div class="course-card__time" v-else>
                 {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
-                <template v-if="course.durationText"> 共{{ course.durationText }}</template>
+                <template v-if="course.liveTime"> 共{{ course.liveTime }}分钟</template>
               </div>
               <div class="course-card__teacher">主讲：{{ course.teacherName2 || '-' }}</div>
             </div>
@@ -207,9 +211,13 @@
               />
               <div class="list-course-card__info">
                 <div class="list-course-card__name">{{ course.name }}</div>
-                <div class="list-course-card__time">
+                 <div class="list-course-card__time" v-if="course.status === '已结束已开播' || course.status === '已结束未开播'">
+                  {{ course.realStartTime }}{{ course.realEndTime ? '-' + course.realEndTime : '' }}
+                  <template v-if="course.liveRealTime"> 共{{course.liveRealTime =='0'?'1': course.liveRealTime }}分钟</template>
+                </div>
+                <div class="list-course-card__time" v-else>
                   {{ course.startTime }}{{ course.endTime ? '-' + course.endTime : '' }}
-                  <template v-if="course.durationText"> 共{{ course.durationText }}</template>
+                  <template v-if="course.liveTime"> 共{{ course.liveTime }}分钟</template>
                 </div>
                 <div class="list-course-card__teacher">主讲：{{ course.teacherName2 || '-' }}</div>
               </div>
@@ -317,10 +325,13 @@ export default {
         const dateStr = item.date
         if (!dateStr) return
         map[dateStr] = (item.lives || []).map(live => ({
+           ...live,
           id: live.id,
           name: live.name || '',
           startTime: live.startTime ? live.startTime.substring(11, 16) : '',
           endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+          realStartTime: live.realStartTime ? live.realStartTime.substring(11, 16) : '',
+          realEndTime: live.realEndTime ? live.realEndTime.substring(11, 16) : '',
           fullStartTime: live.startTime || '',
           liveId: live.liveId || live.id,
           liveLessonId: live.liveLessonId || '',
@@ -332,7 +343,9 @@ export default {
           isStart: live.isStart,
           isFinish: live.isFinish,
           historyLessonId: live.historyLessonId || '',
-          teacherName2: live.teacherName2 || '',
+           cover: live.cover || live.coverUrl || live.imgUrl || live.image || '',
+            teacherName: live.teacherName2 || live.teacherName || this.realName || '',
+            taskUuid: live.taskUuid || '',
         }))
       })
       return map
