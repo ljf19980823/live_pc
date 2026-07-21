@@ -52,6 +52,17 @@
           </button>
         </div>
       </div>
+      <div v-if="myUploadQueue.length" class="upload-progress-panel">
+        <div class="upload-progress-item" v-for="item in myUploadQueue" :key="item.id">
+          <div class="upload-progress-info">
+            <span class="upload-file-name">{{ item.name }}</span>
+            <span class="upload-percent">{{ item.percent }}%</span>
+          </div>
+          <div class="upload-progress-track">
+            <div class="upload-progress-bar" :style="{ width: item.percent + '%' }"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- 文件列表 -->
       <div class="file-list" v-loading="myLoading">
@@ -206,6 +217,17 @@
               </svg>
               刷新
             </button>
+          </div>
+        </div>
+        <div v-if="groupUploadQueue.length" class="upload-progress-panel upload-progress-panel-group">
+          <div class="upload-progress-item" v-for="item in groupUploadQueue" :key="item.id">
+            <div class="upload-progress-info">
+              <span class="upload-file-name">{{ item.name }}</span>
+              <span class="upload-percent">{{ item.percent }}%</span>
+            </div>
+            <div class="upload-progress-track">
+              <div class="upload-progress-bar" :style="{ width: item.percent + '%' }"></div>
+            </div>
           </div>
         </div>
 
@@ -430,6 +452,8 @@ export default {
       deleteLoading: false,
       myUploadPendingCount: 0,
       groupUploadPendingCount: 0,
+      myUploadQueue: [],
+      groupUploadQueue: [],
       latestGroupUpdate: '',
 
       // 文件预览
@@ -726,6 +750,8 @@ export default {
       this.doUpload(file, '2', this.groupFileParentId, this.groupFileBreadcrumbs.length, this.selectedGroup)
     },
     doUpload(file, type, parentId, level, userGroupId) {
+      const isGroupUpload = type === '2'
+      const uploadItem = this.createUploadProgressItem(file, isGroupUpload)
       const formData = new FormData()
       formData.append('type', type)
       formData.append('fileType', this.getFileTypeFromFile(file))
@@ -734,14 +760,16 @@ export default {
       formData.append('level', String(level))
       if (userGroupId) formData.append('userGroupId', String(userGroupId))
 
-      const isGroupUpload = type === '2'
       if (isGroupUpload) {
         this.groupUploadPendingCount++
       } else {
         this.myUploadPendingCount++
       }
-      uploadBusinessFile(formData)
+      uploadBusinessFile(formData, percent => {
+        uploadItem.percent = Math.max(uploadItem.percent, percent)
+      })
         .then(() => {
+          uploadItem.percent = 100
           this.decreaseUploadPendingCount(isGroupUpload)
           const isUploadDone = isGroupUpload ? this.groupUploadPendingCount === 0 : this.myUploadPendingCount === 0
           if (isUploadDone) {
@@ -757,8 +785,27 @@ export default {
           this.decreaseUploadPendingCount(isGroupUpload)
         })
         .finally(() => {
-        
+          this.removeUploadProgressItem(uploadItem.id, isGroupUpload)
         })
+    },
+    createUploadProgressItem(file, isGroupUpload) {
+      const item = {
+        id: `${Date.now()}-${Math.random()}`,
+        name: file.name || '上传文件',
+        percent: 0
+      }
+      if (isGroupUpload) {
+        this.groupUploadQueue.push(item)
+      } else {
+        this.myUploadQueue.push(item)
+      }
+      return item
+    },
+    removeUploadProgressItem(id, isGroupUpload) {
+      const queueName = isGroupUpload ? 'groupUploadQueue' : 'myUploadQueue'
+      setTimeout(() => {
+        this[queueName] = this[queueName].filter(item => item.id !== id)
+      }, 500)
     },
     decreaseUploadPendingCount(isGroupUpload) {
       if (isGroupUpload) {
@@ -974,6 +1021,62 @@ export default {
   border-radius: 50%;
   flex-shrink: 0;
   animation: spin 0.7s linear infinite;
+}
+
+.upload-progress-panel {
+  padding: 0 40px 14px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.upload-progress-panel-group {
+  padding-bottom: 0;
+}
+
+.upload-progress-item {
+  padding: 10px 12px;
+  border: 1px solid #E6ECF5;
+  border-radius: 8px;
+  background: #FBFCFF;
+  & + .upload-progress-item { margin-top: 8px; }
+}
+
+.upload-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #3A4252;
+}
+
+.upload-file-name {
+  flex: 1;
+  width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-percent {
+  flex-shrink: 0;
+  color: #0049FF;
+  font-weight: 600;
+}
+
+.upload-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #E7ECF5;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0049FF 0%, #28A7FF 100%);
+  transition: width 0.2s ease;
 }
 
 // 文件列表

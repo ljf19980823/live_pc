@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { get, post, put, del, download } from '@/utils/request'
+import { get, post, put, del, download, upload } from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
 /**
@@ -210,7 +210,7 @@ export const collectToggle = data => post('/edu/recentView/collect/toggle', data
 export const getBusinessFileList = params => get('/edu/businessFile/list', params)
 
 // 新建文件夹 / 上传资料（multipart/form-data）
-export const uploadBusinessFile = formData => post('/edu/businessFile/upload', formData)
+export const uploadBusinessFile = (formData, onProgress) => upload('/edu/businessFile/upload', formData, onProgress)
 
 // 重命名资料
 export const renameBusinessFile = (id, name) => post('/edu/businessFile/rename', {}, { params: { id, name } })
