@@ -3107,7 +3107,8 @@ border-radius: 10px 10px 10px 10px;
 // ─── 课后测试卡片 ────────────────────────────────────────────
 .quiz-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, calc((100% - 40px) / 3));
+  justify-content: flex-start;
   gap: 20px;
   min-height: 200px;
 }
@@ -3261,8 +3262,7 @@ border-radius: 10px 10px 10px 10px;
 }
 
 @media (max-width: 1024px) {
-  .pending-grid,
-  .quiz-grid {
+  .pending-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
