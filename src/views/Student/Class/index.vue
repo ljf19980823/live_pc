@@ -3519,12 +3519,14 @@ border-bottom: 1px solid #DBEAFE;
   overflow-y: auto;
 }
 .quiz-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 20px;
   min-height: 120px;
 }
 .quiz-card {
+  width: calc((100% - 40px) / 2);
   background: #FFFFFF;
   box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
   border-radius: 12px;
