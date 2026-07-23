@@ -85,7 +85,7 @@
           </div>
           <div class="app_container_box_left_list_detail_count">
             <span>{{ item.courseCnt || 0 }} 门课</span>
-            <span class="class-card-count-sep">·</span>
+            <span class="class-card-count-sep"  v-if=" item.waitCourseCnt!=0">·</span>
             <span class="class-card-pending" v-if=" item.waitCourseCnt!=0">{{ item.waitCourseCnt || 0 }} 门课程待完成</span>
           </div>
           <div class="class-card-validity">
@@ -359,7 +359,7 @@
         </div>
         <div class="app_container_box_right_top_mess">
           <span>{{ currentClass.courseCnt || filteredCourseList.length || 0 }} 门课程</span>
-          <span class="right-top-mess-dot">·</span>
+          <span class="right-top-mess-dot"  v-if=" item.waitCourseCnt!=0">·</span>
           <span class="right-top-mess-pending"  v-if=" currentClass.waitCourseCnt!=0">{{ currentClass.waitCourseCnt }} 门课程待完成</span>
         </div>
         <div class="app_container_box_right_top_choose">

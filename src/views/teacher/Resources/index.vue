@@ -53,7 +53,7 @@
           </button>
         </div>
       </div>
-      <div v-if="myUploadQueue.length" class="upload-progress-panel">
+      <div  class="upload-progress-panel">
         <div class="upload-progress-item" v-for="item in myUploadQueue" :key="item.id">
           <div class="upload-progress-info">
             <span class="upload-file-name">{{ item.name }}</span>
@@ -1099,6 +1099,7 @@ export default {
   border-radius: 10px;
   padding: 0 25px 25px 25px;
   box-sizing: border-box;
+  margin-top: 25px;
 }
 .file-list2{
  padding: 0 25px 25px 25px!important;
@@ -1470,7 +1471,7 @@ export default {
   height: 0;
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  // gap: 25px;
 }
 
 // 弹窗内容

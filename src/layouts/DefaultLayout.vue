@@ -37,7 +37,7 @@
         >
           <div class="nav-icon_img" >
             <img v-if="avatar" :src="avatar" class="nav-icon_img_img" alt="头像">
-            <div v-else class="nav-icon_img_placeholder">{{ (realName || '').slice(0, 2) }}</div>
+            <div v-else class="nav-icon_img_placeholder">{{ (realName || '').slice(-2) }}</div>
             <span class="nav-icon_img_badge" :class="role === 'STUDENT' ? 'student' : 'teacher'">
               {{ role === 'STUDENT' ? '学生' : '老师' }}
             </span>

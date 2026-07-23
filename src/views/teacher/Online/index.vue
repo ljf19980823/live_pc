@@ -2757,7 +2757,7 @@ border: 1px solid #E2E8F0;
 // ─── 待启课堂卡片 ────────────────────────────────────────────
 .pending-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -2770,23 +2770,29 @@ border: 1px solid #DBEAFE;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  min-width: 0;
 
   &__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
+    gap: 12px;
+    min-width: 0;
   }
 
   &__badge {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     height: 28px;
     padding: 0 12px;
     border-radius: 10px 10px 10px 10px;
     font-size: 12px;
     font-weight: bold;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.is-living {
       background: #EFF6FF;
@@ -3151,7 +3157,7 @@ border-radius: 12px 12px 12px 12px;
 
 @media (max-width: 1024px) {
   .pending-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .replay-grid {
