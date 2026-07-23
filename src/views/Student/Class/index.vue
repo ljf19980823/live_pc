@@ -388,6 +388,7 @@
           <div class="app_container_box_right_last_list_detailCourse" v-for="(item, index) in filteredCourseList" :key="index" @click="handleCourseClick(item)" style="cursor:pointer;">
             <div class="course-card-cover-wrap">
               <img :src="item.cover || require('@/assets/images/class/such.png')" class="app_container_box_right_last_list_detailCourse_fm" alt="">
+              <div v-if="isUnreadCourse(item)" class="course-card-unread-tag">NEW</div>
             </div>
             <div class="app_container_box_right_last_list_detailCourse_name">{{ item.name }}</div>
             <div class="app_container_box_right_last_list_detailCourse_task">{{ item.taskCount }} 个学习任务</div>
@@ -1293,7 +1294,8 @@ export default {
           name: item.name || '',
           cover: item.cover || '',
           taskCount: item.totalLessons || 0,
-          progress: item.progressPercent || 0
+          progress: item.progressPercent || 0,
+          isRead: item.isRead ,
         }))
         const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
         if (idx !== -1) {
@@ -1869,9 +1871,20 @@ export default {
       this.fetchCourseList()
     },
     handleCourseClick(item) {
+      if (this.isUnreadCourse(item)) {
+        const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
+        if (idx !== -1) {
+          const nextWaitCourseCnt = Math.max((Number(this.classList[idx].waitCourseCnt) || 0) - 1, 0)
+          this.$set(this.classList[idx], 'waitCourseCnt', nextWaitCourseCnt)
+        }
+        this.$set(item, 'isRead', 1)
+      }
       this.selectedCourse = item
       this.rightView = 'courseDetail'
       this.fetchCourseDetail(item.id)
+    },
+    isUnreadCourse(item) {
+      return String(item && item.isRead) === '0'
     },
     _mapDetailNode(node) {
       if (node.type === '1') {
@@ -4013,6 +4026,25 @@ border-bottom: 1px solid #DBEAFE;
 .course-card-cover-wrap{
   position: relative;
   width: 100%;
+}
+.course-card-unread-tag{
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  min-width: 34px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FF8A3D 0%, #FF3D5A 100%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-sizing: border-box;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(255, 61, 90, 0.28);
+  letter-spacing: 0;
 }
 .app_container_box_right_last_list_detailCourse_fm{
   width: 100%;
