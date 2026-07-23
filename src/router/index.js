@@ -114,7 +114,7 @@ const routes = [
         path: 'resources',
         name: 'Resources',
         component: () => import('@/views/teacher/Resources/index.vue'),
-        meta: { title: '资料中心', icon: 'el-icon-folder-opened', roles: ['teacher'] }
+        meta: { title: '资料中心', icon: 'el-icon-folder-opened', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'message',
