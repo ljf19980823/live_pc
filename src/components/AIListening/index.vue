@@ -297,12 +297,17 @@
             </div>
             <p class="al-scope-hint">问答范围：{{ meetingTitle || '未命名笔记' }}</p>
             <div class="al-quick-questions">
-              <button
-                v-for="q in quickQuestions"
-                :key="q"
-                class="al-quick-btn"
-                @click="sendChat(q)"
-              >{{ q }}</button>
+              <template v-if="quickQuestionsLoading">
+                <span class="al-quick-skeleton" v-for="i in 2" :key="'quick-loading-' + i"></span>
+              </template>
+              <template v-else>
+                <button
+                  v-for="q in quickQuestions"
+                  :key="q"
+                  class="al-quick-btn"
+                  @click="sendChat(q)"
+                >{{ q }}</button>
+              </template>
             </div>
           </div>
 
@@ -501,11 +506,11 @@ export default {
       typingQueue: [],
       deepThinkMode: false,
       followUpList: [],
+      quickQuestionsLoading: false,
 
       // 快捷问题（欢迎状态）
       quickQuestions: [
-        'AI一键生成思维导图',
-        '帮我提炼一下重点内容'
+      
       ],
       currentStatus:'Error',
       currentStatus2:'Error',
@@ -631,6 +636,7 @@ export default {
       this.fetchTranscript()
       this.fetchSummary()
       this.fetchQaSessions()
+      this.fetchQaSuggestions('', 'quickQuestions')
     },
 
     getQaRequestConfig() {
@@ -978,7 +984,7 @@ export default {
         await this.askQaStream(sessionId, question, aiMessage)
         await this.flushTypingQueue()
         aiMessage.streaming = false
-        await this.fetchQaSuggestions(aiMessage.content)
+        await this.fetchQaSuggestions(aiMessage.content, 'followUpList')
       } catch (e) {
         console.error('AI问答请求失败', e)
         if (aiMessage) {
@@ -1006,9 +1012,14 @@ export default {
       }
     },
 
-    async fetchQaSuggestions(lastAnswer) {
+    async fetchQaSuggestions(lastAnswer, targetKey = 'followUpList') {
       const answer = (lastAnswer || '').trim()
-      if (!answer) return
+      const isQuickQuestions = targetKey === 'quickQuestions'
+      if (isQuickQuestions) this.quickQuestionsLoading = true
+      if (!this.liveLessonId || !this.teacherId) {
+        if (isQuickQuestions) this.quickQuestionsLoading = false
+        return
+      }
       try {
         const res = await post('/qa/suggestions', {
           lesson_id: this.liveLessonId,
@@ -1018,11 +1029,19 @@ export default {
         const suggestions = Array.isArray(data)
           ? data
           : (data && (data.suggestions || data.questions || data.items))
-        this.followUpList = Array.isArray(suggestions) ? suggestions.filter(Boolean) : []
+        this[targetKey] = Array.isArray(suggestions) ? suggestions.map(this.normalizeSuggestionText).filter(Boolean) : []
       } catch (e) {
         console.error('AI问答继续提问建议加载失败', e)
-        this.followUpList = []
+        this[targetKey] = []
+      } finally {
+        if (isQuickQuestions) this.quickQuestionsLoading = false
       }
+    },
+
+    normalizeSuggestionText(item) {
+      if (typeof item === 'string') return item
+      if (!item || typeof item !== 'object') return ''
+      return item.question || item.content || item.text || item.title || ''
     },
 
     async ensureQaSession(question) {
@@ -2106,6 +2125,21 @@ height: 0;
   flex-direction: column;
   gap: 30px;
   margin-top: 30px;
+}
+
+.al-quick-skeleton {
+  display: block;
+  width: 240px;
+  height: 44px;
+  border-radius: 48px;
+  background: linear-gradient(90deg, #EEF3F8 0%, #F8FBFF 48%, #EEF3F8 100%);
+  background-size: 200% 100%;
+  animation: alQuickSkeleton 1.2s ease-in-out infinite;
+}
+
+@keyframes alQuickSkeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 .al-quick-btn {
