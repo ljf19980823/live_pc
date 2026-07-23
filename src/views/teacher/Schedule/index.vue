@@ -1093,7 +1093,7 @@ export default {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-  min-width: 0;
+  width: 0;
 }
 .course-card__status {
   display: inline-flex;

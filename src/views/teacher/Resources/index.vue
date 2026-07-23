@@ -26,6 +26,7 @@
           <el-upload
             :action="''"
             :http-request="handleMyUpload"
+            :before-upload="beforeResourceUpload"
             :show-file-list="false"
             :multiple="true"
             :disabled="myUploadLoading"
@@ -193,6 +194,7 @@
             v-if="selectedGroupInfo.myRole=='1'"
               :action="''"
               :http-request="handleGroupUpload"
+              :before-upload="beforeResourceUpload"
               :show-file-list="false"
               :multiple="true"
               :disabled="groupUploadLoading"
@@ -743,6 +745,14 @@ export default {
     },
 
     // ─── 上传资料 ────────────────────────────────────────────────
+    beforeResourceUpload(file) {
+      const maxSize = 600 * 1024 * 1024
+      if (file.size > maxSize) {
+        this.$message.warning('上传文件大小不能超过600M')
+        return false
+      }
+      return true
+    },
     handleMyUpload({ file }) {
       this.doUpload(file, '1', this.myParentId, this.myBreadcrumbs.length)
     },
