@@ -636,7 +636,6 @@ export default {
       this.fetchTranscript()
       this.fetchSummary()
       this.fetchQaSessions()
-      this.fetchQaSuggestions('', 'quickQuestions')
     },
 
     getQaRequestConfig() {
@@ -853,6 +852,7 @@ export default {
         if (res && res.code === 200 && res.data) {
           this.summaryHtmlUrl = res.data
            this.currentStatus2 = 'Success'
+          this.fetchQaSuggestions('', 'quickQuestions')
         }
       } catch (e) {
          this.currentStatus2 = 'Error'

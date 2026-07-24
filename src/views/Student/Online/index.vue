@@ -144,7 +144,9 @@
              
             </div>
           </div>
-          <div class="pending-card__title">{{ item.title }}</div>
+          <el-tooltip :content="item.title" placement="top" :enterable="false">
+            <div class="pending-card__title">{{ item.title }}</div>
+          </el-tooltip>
           <div class="pending-card__time">{{ item.time }}</div>
           <div
             class="pending-card__btn"
@@ -425,7 +427,9 @@
             class="quiz-card"
           >
             <div class="quiz-card__header">
-              <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
+              <el-tooltip :content="item.name" placement="top" :enterable="false">
+                <div class="quiz-card__title">{{ item.name }}</div>
+              </el-tooltip>
               <span
                 class="quiz-card__status"
                 :class="isQuizFinished(item) ? 'quiz-card__status--done' : 'quiz-card__status--todo'"
