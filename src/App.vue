@@ -138,8 +138,10 @@ export default {
 
         if (data.isRecording) {
           this.screenGuard.message = '监测到您正在录制屏幕，关闭录屏后继续观看'
+          console.warn('[ScreenGuard] 检测到录屏软件:', data.detectedRecorder || '未知')
         } else if (data.isVM) {
           this.screenGuard.message = '监测到您正在使用虚拟机，请在真实设备上使用本软件'
+          console.warn('[ScreenGuard] 检测到虚拟机:', data.detectedVM || '未知')
         } else {
           this.screenGuard.message = ''
         }

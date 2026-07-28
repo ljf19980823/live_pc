@@ -317,7 +317,9 @@ async function checkScreenGuard () {
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: shouldAlert ? !!detectedRecorder : false,
       isVM: shouldAlert ? !!detectedVM : false,
-      detected: shouldAlert
+      detected: shouldAlert,
+      detectedRecorder: shouldAlert ? detectedRecorder : null,
+      detectedVM: shouldAlert ? detectedVM : null
     })
 
     // 进入/退出拦截态时切换轮询频率，退出后尽快恢复观看
@@ -358,7 +360,9 @@ function stopScreenGuard () {
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: false,
       isVM: false,
-      detected: false
+      detected: false,
+      detectedRecorder: null,
+      detectedVM: null
     })
   }
 }
