@@ -162,7 +162,7 @@
             <div v-else-if="summaryHtmlUrl" class="al-summary-iframe-wrap">
               <div class="al-summary-actions">
                 <button class="al-summary-download-btn" @click="handleDownloadSummary">下载纪要</button>
-                <button class="al-summary-fullscreen-btn" @click="summaryFullscreen = true" title="全屏查看">
+                <button class="al-summary-fullscreen-btn" @click="openSummaryFullscreen" title="全屏查看">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
                     <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
@@ -180,21 +180,52 @@
              <div v-else class="al-summary-empty">
               <span>暂无AI纪要</span>
             </div>
-            <!-- 全屏遮罩 -->
+            <!-- 全屏遮罩（支持缩放，便于查看思维导图等大图） -->
             <transition name="al-fs-fade">
-              <div v-if="summaryFullscreen" class="al-summary-fs-mask" @click.self="summaryFullscreen = false">
+              <div v-if="summaryFullscreen" class="al-summary-fs-mask" @click.self="closeSummaryFullscreen">
                 <div class="al-summary-fs-box">
-                  <button class="al-summary-fs-close" @click="summaryFullscreen = false" title="关闭">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                  <iframe
-                    :src="summaryHtmlUrl"
-                    class="al-summary-fs-iframe"
-                    frameborder="0"
-                    allowfullscreen
-                  ></iframe>
+                  <div class="al-summary-fs-toolbar">
+                    <!-- <span class="al-summary-fs-tip">Ctrl + 滚轮缩放思维导图，放大后可拖拽平移</span> -->
+                    <div class="al-summary-fs-zoom-btns">
+                      <button type="button" class="al-summary-fs-zoom-btn" title="缩小" @click="setSummaryFsZoom(summaryFsZoom - 0.25)">−</button>
+                      <button type="button" class="al-summary-fs-zoom-label" title="重置缩放" @click="setSummaryFsZoom(1)">
+                        {{ summaryFsZoomPercent }}%
+                      </button>
+                      <button type="button" class="al-summary-fs-zoom-btn" title="放大" @click="setSummaryFsZoom(summaryFsZoom + 0.25)">+</button>
+                    </div>
+                    <button class="al-summary-fs-close" @click="closeSummaryFullscreen" title="关闭">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div
+                    ref="summaryFsViewport"
+                    class="al-summary-fs-viewport"
+                    :class="{ 'is-zoomed': summaryFsZoom > 1, 'is-panning': summaryFsPanning }"
+                  >
+                    <div
+                      class="al-summary-fs-scaler"
+                      :style="summaryFsScalerStyle"
+                    >
+                      <iframe
+                        ref="summaryFsIframe"
+                        :src="summaryHtmlUrl"
+                        class="al-summary-fs-iframe"
+                        :style="summaryFsIframeStyle"
+                        frameborder="0"
+                        allowfullscreen
+                        @load="onSummaryFsIframeLoad"
+                      ></iframe>
+                      <!-- 放大后盖一层透明层，避免跨域 iframe 吞掉拖拽/滚轮事件 -->
+                      <div
+                        v-show="summaryFsZoom > 1"
+                        class="al-summary-fs-pan-layer"
+                        @mousedown="onSummaryFsPanStart"
+                        @wheel="onSummaryFsWheel"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </transition>
@@ -487,6 +518,12 @@ export default {
       summaryLoading: false,
       summaryHtmlUrl: '',
       summaryFullscreen: false,
+      summaryFsZoom: 1,
+      summaryFsPanning: false,
+      summaryFsPanStartX: 0,
+      summaryFsPanStartY: 0,
+      summaryFsScrollLeft: 0,
+      summaryFsScrollTop: 0,
 
       transcriptFullscreen: false,
 
@@ -549,6 +586,25 @@ export default {
     teacherId() {
       const userInfo = getUserInfo() || {}
       return this.$route.query.teacherId || userInfo.userId || userInfo.id || ''
+    },
+    summaryFsZoomPercent() {
+      return Math.round(this.summaryFsZoom * 100)
+    },
+    summaryFsScalerStyle() {
+      const z = this.summaryFsZoom
+      return {
+        width: `${z * 100}%`,
+        height: `${z * 100}%`
+      }
+    },
+    summaryFsIframeStyle() {
+      const z = this.summaryFsZoom
+      return {
+        width: `${100 / z}%`,
+        height: `${100 / z}%`,
+        transform: `scale(${z})`,
+        transformOrigin: 'top left'
+      }
     }
   },
   mounted() {
@@ -884,6 +940,154 @@ export default {
         // Message.success('纪要PDF已下载')
       } catch (err) {
         Message.error(err.message || 'PDF下载失败')
+      }
+    },
+
+    openSummaryFullscreen() {
+      this.summaryFsZoom = 1
+      this.summaryFullscreen = true
+      this.$nextTick(() => {
+        this.bindSummaryFsZoomEvents()
+      })
+    },
+
+    closeSummaryFullscreen() {
+      this.unbindSummaryFsZoomEvents()
+      this.stopSummaryFsPan()
+      this.summaryFullscreen = false
+      this.summaryFsZoom = 1
+    },
+
+    bindSummaryFsZoomEvents() {
+      // capture 监听，确保鼠标在跨域 iframe 上时 Ctrl+滚轮仍可缩放
+      window.addEventListener('wheel', this.onSummaryFsWheelCapture, { passive: false, capture: true })
+      window.addEventListener('keydown', this.onSummaryFsKeydown)
+    },
+
+    unbindSummaryFsZoomEvents() {
+      window.removeEventListener('wheel', this.onSummaryFsWheelCapture, { capture: true })
+      window.removeEventListener('keydown', this.onSummaryFsKeydown)
+    },
+
+    onSummaryFsWheelCapture(e) {
+      if (!this.summaryFullscreen) return
+      if (!(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      const step = e.deltaY > 0 ? -0.1 : 0.1
+      this.setSummaryFsZoom(this.summaryFsZoom + step)
+    },
+
+    onSummaryFsKeydown(e) {
+      if (!this.summaryFullscreen) return
+      if (e.key === 'Escape') {
+        this.closeSummaryFullscreen()
+        return
+      }
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        this.setSummaryFsZoom(this.summaryFsZoom + 0.25)
+      } else if (e.key === '-') {
+        e.preventDefault()
+        this.setSummaryFsZoom(this.summaryFsZoom - 0.25)
+      } else if (e.key === '0') {
+        e.preventDefault()
+        this.setSummaryFsZoom(1)
+      }
+    },
+
+    setSummaryFsZoom(nextZoom) {
+      const viewport = this.$refs.summaryFsViewport
+      const prevZoom = this.summaryFsZoom
+      const zoom = Math.min(4, Math.max(0.5, Math.round(nextZoom * 100) / 100))
+      if (zoom === prevZoom) return
+
+      // 以视口中心为锚点缩放，避免放大后内容跑偏
+      let anchorX = 0.5
+      let anchorY = 0.5
+      if (viewport) {
+        const maxScrollLeft = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
+        const maxScrollTop = Math.max(viewport.scrollHeight - viewport.clientHeight, 0)
+        anchorX = maxScrollLeft > 0
+          ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth
+          : 0.5
+        anchorY = maxScrollTop > 0
+          ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight
+          : 0.5
+      }
+
+      this.summaryFsZoom = zoom
+      this.$nextTick(() => {
+        const el = this.$refs.summaryFsViewport
+        if (!el) return
+        el.scrollLeft = Math.max(0, el.scrollWidth * anchorX - el.clientWidth / 2)
+        el.scrollTop = Math.max(0, el.scrollHeight * anchorY - el.clientHeight / 2)
+      })
+    },
+
+    onSummaryFsWheel(e) {
+      // 放大层上的滚轮：Ctrl 缩放，否则交给外层滚动
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const step = e.deltaY > 0 ? -0.1 : 0.1
+        this.setSummaryFsZoom(this.summaryFsZoom + step)
+        return
+      }
+      const viewport = this.$refs.summaryFsViewport
+      if (!viewport) return
+      viewport.scrollLeft += e.deltaX || 0
+      viewport.scrollTop += e.deltaY || 0
+      e.preventDefault()
+    },
+
+    onSummaryFsPanStart(e) {
+      if (e.button !== 0) return
+      if (this.summaryFsZoom <= 1) return
+      const viewport = this.$refs.summaryFsViewport
+      if (!viewport) return
+      e.preventDefault()
+      this.summaryFsPanning = true
+      this.summaryFsPanStartX = e.clientX
+      this.summaryFsPanStartY = e.clientY
+      this.summaryFsScrollLeft = viewport.scrollLeft
+      this.summaryFsScrollTop = viewport.scrollTop
+      document.addEventListener('mousemove', this.onSummaryFsPanMove)
+      document.addEventListener('mouseup', this.stopSummaryFsPan)
+    },
+
+    onSummaryFsPanMove(e) {
+      if (!this.summaryFsPanning) return
+      const viewport = this.$refs.summaryFsViewport
+      if (!viewport) return
+      viewport.scrollLeft = this.summaryFsScrollLeft - (e.clientX - this.summaryFsPanStartX)
+      viewport.scrollTop = this.summaryFsScrollTop - (e.clientY - this.summaryFsPanStartY)
+    },
+
+    stopSummaryFsPan() {
+      this.summaryFsPanning = false
+      document.removeEventListener('mousemove', this.onSummaryFsPanMove)
+      document.removeEventListener('mouseup', this.stopSummaryFsPan)
+    },
+
+    onSummaryFsIframeLoad() {
+      // 同源时可解除 img 宽度限制，让思维导图按原尺寸放大更清晰
+      try {
+        const iframe = this.$refs.summaryFsIframe
+        const doc = iframe && iframe.contentDocument
+        if (!doc || !doc.head) return
+        if (doc.getElementById('al-summary-fs-img-zoom')) return
+        const style = doc.createElement('style')
+        style.id = 'al-summary-fs-img-zoom'
+        style.textContent = `
+          img {
+            max-width: none !important;
+            height: auto !important;
+            image-rendering: -webkit-optimize-contrast;
+          }
+        `
+        doc.head.appendChild(style)
+      } catch (e) {
+        // 跨域 iframe 无法注入样式，依赖外层 transform 缩放
       }
     },
 
@@ -1254,6 +1458,8 @@ export default {
   },
 
   beforeDestroy() {
+    this.unbindSummaryFsZoomEvents()
+    this.stopSummaryFsPan()
     this.stopReplayLogSession()
     clearTimeout(this._scrollTimer)
     if (this.currentStreamController) {
@@ -1781,7 +1987,7 @@ height: 0;
 .al-summary-fs-mask {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 100000;
   background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
@@ -1790,8 +1996,8 @@ height: 0;
 
 .al-summary-fs-box {
   position: relative;
-  width: 90vw;
-  height: 90vh;
+  width: 96vw;
+  height: 94vh;
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
@@ -1800,11 +2006,68 @@ height: 0;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
+.al-summary-fs-toolbar {
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 12px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: flex-end;
+  border-bottom: 1px solid $border;
+  background: #fafafa;
+}
+
+.al-summary-fs-tip {
+  flex: 1;
+  min-width: 0;
+  color: $text-sub;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.al-summary-fs-zoom-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: $white;
+}
+
+.al-summary-fs-zoom-btn,
+.al-summary-fs-zoom-label {
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: $text-main;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $bg-hover;
+  }
+}
+
+.al-summary-fs-zoom-btn {
+  width: 28px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.al-summary-fs-zoom-label {
+  min-width: 56px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .al-summary-fs-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1823,10 +2086,45 @@ height: 0;
   }
 }
 
+.al-summary-fs-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #f0f2f5;
+  overscroll-behavior: contain;
+
+  &.is-zoomed {
+    cursor: grab;
+  }
+
+  &.is-panning {
+    cursor: grabbing;
+    user-select: none;
+  }
+}
+
+.al-summary-fs-scaler {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
 .al-summary-fs-iframe {
-  width: 100%;
-  height: 100%;
+  display: block;
   border: none;
+  background: #fff;
+}
+
+.al-summary-fs-pan-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+}
+
+.al-summary-fs-viewport.is-panning .al-summary-fs-pan-layer {
+  cursor: grabbing;
 }
 
 // ===== 全屏遮罩过渡动画 =====
