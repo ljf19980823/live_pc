@@ -44,6 +44,8 @@
             :main-source="videoUrl"
             :teacher-source="teacherVideoUrl"
             :title="meetingTitle"
+            :subtitles="transcriptList"
+            :subtitle-text="activeSubtitleText"
             @timeupdate="onVideoTimeUpdate"
             @play="handleReplayPlayHeartbeat"
             @pause="handleReplayPauseHeartbeat"
@@ -537,6 +539,12 @@ export default {
     },
     historyLessonId() {
       return this.$route.query.historyLessonId || ''
+    },
+    /** 当前播放进度对应的转写文案，直接驱动播放器字幕 */
+    activeSubtitleText() {
+      if (this.activeParagraphIndex < 0) return ''
+      const item = this.transcriptList[this.activeParagraphIndex]
+      return (item && item.text) || ''
     },
     teacherId() {
       const userInfo = getUserInfo() || {}
