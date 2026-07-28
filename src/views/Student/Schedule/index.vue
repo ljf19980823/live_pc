@@ -267,7 +267,7 @@ import { checkTempStudentLiveRecord } from '@/api/modules/student'
 const pad = n => String(n).padStart(2, '0')
 
 export default {
-  name: 'Schedule',
+  name: 'studentSchedule',
   data() {
     const now = new Date()
     const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`

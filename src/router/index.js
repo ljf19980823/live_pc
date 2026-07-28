@@ -84,19 +84,19 @@ const routes = [
         path: 'online',
         name: 'Online',
         component: () => import('@/views/teacher/Online/index.vue'),
-        meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['teacher'] }
+        meta: { title: '在线课堂', icon: 'el-icon-office-building', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'notes',
         name: 'Notes',
         component: () => import('@/views/teacher/ZhigouNotes/index.vue'),
-        meta: { title: '课程表', icon: 'el-icon-office-building',  roles: ['teacher'] }
+        meta: { title: '知构笔记', icon: 'el-icon-office-building', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'schedule',
         name: 'Schedule',
         component: () => import('@/views/teacher/Schedule/index.vue'),
-        meta: { title: '知构笔记', icon: 'el-icon-office-building',  roles: ['teacher'] }
+        meta: { title: '课程表', icon: 'el-icon-office-building', keepAlive: true, roles: ['teacher'] }
       },
       {
         path: 'class',
@@ -159,19 +159,19 @@ const routes = [
         name: 'StudentOnline',
         // 与老师端共用在线课堂页（内部已按角色区分能力）
         component: () => import('@/views/Student/Online/index.vue'),
-        meta: { title: '在线课堂', icon: 'el-icon-office-building',  roles: ['student'] }
+        meta: { title: '在线课堂', icon: 'el-icon-office-building', keepAlive: true,  roles: ['student'] }
       },
        {
         path: 'student/notes',
         name: 'studentNotes',
         component: () => import('@/views/Student/ZhigouNotes/index.vue'),
-        meta: { title: '课程表', icon: 'el-icon-office-building',  roles: ['student'] }
+        meta: { title: '知构笔记', icon: 'el-icon-office-building', keepAlive: true, roles: ['student'] }
       },
       {
         path: 'student/schedule',
         name: 'studentSchedule',
         component: () => import('@/views/Student/Schedule/index.vue'),
-        meta: { title: '知构笔记', icon: 'el-icon-office-building',  roles: ['student'] }
+        meta: { title: '课程表', icon: 'el-icon-office-building',  keepAlive: true, roles: ['student'] }
       },
       {
         path: 'student/live-class',

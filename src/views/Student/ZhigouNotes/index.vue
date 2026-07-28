@@ -139,7 +139,7 @@ import { getSubjectOptions, getNoteList, updateNoteIsPoint } from '@/api/modules
 import { getUserInfo } from '@/utils/auth'
 
 export default {
-  name: 'ZhigouNotes',
+  name: 'studentNotes',
   components: { EmptyState },
   data() {
     return {

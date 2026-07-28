@@ -964,7 +964,7 @@ import RankingPage from '@/views/Student/Class/RankingPage.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
-  name: 'Online',
+  name: 'StudentOnline',
   components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, ExamRecordPage, RankingPage },
   directives: { Clickoutside },
   data() {

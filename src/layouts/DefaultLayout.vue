@@ -121,6 +121,8 @@ export default {
       sidebarVisible: false,
       hoveredMenu: null,
       cacheKey: Date.now(),
+      // 仅用于驱动 cachedViews 重算，避免误改 keep-alive 的 key
+      keepAliveTick: 0,
       lastUserId: null
     }
   },
@@ -238,6 +240,8 @@ export default {
     },
 
     cachedViews() {
+      // 依赖 keepAliveTick，保证运行时修改 meta.keepAlive 后 include 列表能更新
+      void this.keepAliveTick
       return this.$router.options.routes
         .flatMap(r => r.children || [])
         .filter(r => r.meta?.keepAlive)
@@ -247,9 +251,34 @@ export default {
   methods: {
     ...mapActions('app', ['updateDevice']),
 
+    /** 临时关闭主布局子路由 keepAlive，返回被关闭的路由记录以便之后恢复 */
+    disableMainRoutesKeepAlive() {
+      const mainRoute = this.$router.options.routes.find(r => r.path === '/')
+      const aliveRoutes = []
+      if (!mainRoute?.children) return aliveRoutes
+      mainRoute.children.forEach(r => {
+        if (r.meta?.keepAlive) {
+          r.meta.keepAlive = false
+          aliveRoutes.push(r)
+        }
+      })
+      this.keepAliveTick++
+      return aliveRoutes
+    },
+
+    restoreMainRoutesKeepAlive(aliveRoutes = []) {
+      aliveRoutes.forEach(r => {
+        if (r.meta) r.meta.keepAlive = true
+      })
+      if (aliveRoutes.length) this.keepAliveTick++
+    },
+
     goTo(path) {
       if (this.$route.path !== path) {
-        this.$router.push(path)
+        const aliveRoutes = this.disableMainRoutesKeepAlive()
+        this.$router.push(path).finally(() => {
+          this.restoreMainRoutesKeepAlive(aliveRoutes)
+        })
       }
       if (this.isMobile) this.sidebarVisible = false
     },

@@ -51,7 +51,7 @@
             <div class="exam-record-banner__stat-value">{{ summary.maxScore }} <span class="exam-record-banner__stat-unit">分</span></div>
           </div>
           <div class="exam-record-banner__stat">
-            <div class="exam-record-banner__stat-label">最好正确</div>
+            <div class="exam-record-banner__stat-label">最佳作答</div>
             <div class="exam-record-banner__stat-value">{{ summary.maxCorrect }} <span class="exam-record-banner__stat-unit">题</span></div>
           </div>
         </div>
