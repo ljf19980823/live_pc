@@ -49,6 +49,8 @@ const actions = {
   async logout({ commit }) {
     try {
       await logout()
+    } catch (error) {
+      console.warn('[Logout Error]', error)
     } finally {
       commit('RESET')
       clearAuth()

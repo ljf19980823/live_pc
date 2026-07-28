@@ -1471,6 +1471,7 @@ height: 0;
   height: 0;
   padding: 14px 24px 16px;
   box-sizing: border-box;
+  overflow: auto;
 
   &::-webkit-scrollbar {
     width: 4px;
