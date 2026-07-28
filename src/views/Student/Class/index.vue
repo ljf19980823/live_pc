@@ -1297,11 +1297,14 @@ export default {
           progress: item.progressPercent || 0,
           isRead: item.isRead ,
         }))
-        const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
-        if (idx !== -1) {
-          const waitCnt = this.courseList.filter(c => Math.round(c.progress || 0) < 100).length
-          this.$set(this.classList[idx], 'courseCnt', this.courseList.length)
-          // this.$set(this.classList[idx], 'waitCourseCnt', waitCnt)
+        // 全量列表时同步左侧/顶部「待完成」数量（与 NEW 未读一致）；搜索结果不覆盖
+        if (!keyword) {
+          const idx = this.classList.findIndex(c => c.classId === this.selectedClassId)
+          if (idx !== -1) {
+            const waitCnt = this.courseList.filter(c => this.isUnreadCourse(c)).length
+            this.$set(this.classList[idx], 'courseCnt', this.courseList.length)
+            this.$set(this.classList[idx], 'waitCourseCnt', waitCnt)
+          }
         }
       } catch (e) {
         console.error(e)
