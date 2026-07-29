@@ -120,17 +120,111 @@
     <div class="page-placeholder_last full-screen" v-if="showLiveIframe">
       <LiveClassroomFrame :src="liveUrl" @exit="showLiveIframe = false" />
     </div>
+
+    <!-- 视频播放弹窗 -->
+    <VideoPlayer
+      :visible="showVideoDialog"
+      :source="currentVideoUrl"
+      :title="currentResourceTitle"
+      :allow-multiple="currentAllowMultiple"
+      :allow-fast-forward="currentAllowFastForward"
+      :allow-download="currentAllowDownload"
+      :from-task="fromLearningTask"
+      :collect-params="currentCollectParams"
+      @close="closeVideoDialog"
+      @collect-change="onChildCollectChange"
+    />
+
+    <!-- 历史课堂回放弹窗 -->
+    <history-video-player
+      :visible="playerVisible"
+      :main-source="playerSource"
+      :teacher-source="playerTeacherSource"
+      :title="playerTitle"
+      :history-lesson-id="playerHistoryLessonId"
+      :allow-download="currentAllowDownload"
+      :from-task="fromLearningTask"
+      :collect-params="currentCollectParams"
+      @close="closeHistoryPlayer"
+      @collect-change="onChildCollectChange"
+    />
+
+    <!-- 音频播放弹窗 -->
+    <el-dialog
+      :title="currentResourceTitle"
+      :visible.sync="showAudioDialog"
+      width="480px"
+      :append-to-body="true"
+      @close="closeAudioDialog"
+    >
+      <audio
+        v-if="showAudioDialog"
+        :src="currentAudioUrl"
+        controls
+        autoplay
+        style="width:100%;margin:16px 0;display:block;"
+      ></audio>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+        <el-button
+          v-if="fromLearningTask"
+          :type="isCollected ? 'warning' : 'default'"
+          size="small"
+          :loading="collecting"
+          @click="handleCollect"
+        >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
+        <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 图片预览弹窗 -->
+    <el-dialog
+      :title="currentResourceTitle"
+      :visible.sync="showImageDialog"
+      width="800px"
+      :append-to-body="true"
+      @close="closeImageDialog"
+    >
+      <img
+        v-if="showImageDialog"
+        :src="currentImageUrl"
+        style="width:100%;max-height:600px;object-fit:contain;display:block;"
+        alt=""
+      />
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <el-button
+          v-if="fromLearningTask"
+          :type="isCollected ? 'warning' : 'default'"
+          size="small"
+          :loading="collecting"
+          @click="handleCollect"
+        >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
+        <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 文件预览 -->
+    <FilePreview
+      :visible="filePreviewVisible"
+      :file="filePreviewData"
+      :allow-download="currentAllowDownload"
+      :from-task="fromLearningTask"
+      :collect-params="currentCollectParams"
+      @close="filePreviewVisible = false; fromLearningTask = false; isCollected = false"
+      @collect-change="onChildCollectChange"
+    />
   </div>
 </template>
 <script>
-import { getAgreement } from '@/api/modules/teacher'
+import { getAgreement, updateRecentStudy, updateCourseProgress, collectToggle } from '@/api/modules/teacher'
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
 import { formatDate } from '@/utils'
 import { getToken, getUserInfo } from '@/utils/auth'
-import { checkTempStudentLiveRecord, getRecentViewList } from '@/api/modules/student'
+import { checkTempStudentLiveRecord, getRecentViewList, addBusinessView } from '@/api/modules/student'
+import FilePreview from '@/components/FilePreview/index.vue'
 
 export default {
+  components: { FilePreview },
   data () {
     return {
       messageList: [],
@@ -142,7 +236,30 @@ export default {
       currentDateText: '',
       liveUrl: '',
       showLiveIframe: false,
-      limitTime:30,
+      limitTime: 30,
+      fromLearningTask: false,
+      skipProgressOnClose: false,
+      currentCollectParams: {},
+      isCollected: false,
+      collecting: false,
+      playerVisible: false,
+      playerSource: '',
+      playerTeacherSource: '',
+      playerTitle: '',
+      playerHistoryLessonId: '',
+      showVideoDialog: false,
+      currentVideoUrl: '',
+      currentPlayingItem: null,
+      showAudioDialog: false,
+      currentAudioUrl: '',
+      showImageDialog: false,
+      currentImageUrl: '',
+      currentResourceTitle: '',
+      filePreviewVisible: false,
+      filePreviewData: null,
+      currentAllowMultiple: '2',
+      currentAllowFastForward: '2',
+      currentAllowDownload: '2',
     }
   },
   computed: {
@@ -317,26 +434,305 @@ export default {
       }
       return `${formatDateLabel(startDateStr)} ${startHM} - ${formatDateLabel(endDateStr, true)} ${endHM}`
     },
-    handleRecentViewClick (item) {
-      // 直播：进入直播间；其他类型跳转课程页继续学习
-      // if (String(item.type) === '2') {
-      //   this.enterLiveRoom({
-      //     ...item,
-      //     id: item.contentId || item.id,
-      //     liveLessonId: item.lessonId || item.liveLessonId || ''
-      //   })
-      //   return
-      // }
-      this.$router.push({
-        path: '/student/course',
-        query: item.courseId ? { courseId: item.courseId } : {}
-      })
+    /** 将最近观看数据映射为班级任务点击所需结构 */
+    mapRecentViewItem (item) {
+      const type = String(item.type || '')
+      const fileList = item.fileList || []
+      const filePath = fileList.length ? (fileList[0].filePath || '') : (item.filePath || '')
+      const status = item.status || item.liveStatus || ''
+      const isFinish = item.isFinish != null
+        ? item.isFinish
+        : (String(status).includes('已结束') ? 1 : 0)
+      return {
+        id: item.lessonId || item.id || '',
+        courseId: item.courseId || '',
+        title: item.name || item.title || '',
+        name: item.name || item.title || '',
+        nodeType: type,
+        filePath,
+        fileList,
+        progress: Math.round(parseFloat(item.percent)) || 0,
+        allowMultiple: item.allowMultiple != null ? String(item.allowMultiple) : '2',
+        allowFastForward: item.allowFastForward != null ? String(item.allowFastForward) : '2',
+        allowDownload: item.allowDownload != null ? String(item.allowDownload) : '2',
+        collectCount: item.collectCount,
+        historyLessonId: item.historyLessonId || '',
+        taskUuid: item.taskUuid || '',
+        startTime: item.startTime || '',
+        liveMin: item.liveMin,
+        liveStatus: status,
+        isFinish,
+        liveId: item.contentId || item.liveId || item.id || '',
+        liveLessonId: item.liveLessonId || item.lessonId || '',
+        duration: item.duration
+      }
+    },
+    async handleRecentViewClick (item) {
+      if (!item) return
+      const mapped = this.mapRecentViewItem(item)
+      const type = String(mapped.nodeType || '')
+      // 2=直播；3/4/5/6/7=资源类（与班级任务点击一致）
+      if (type === '2') {
+        await this.enterLiveRoom(mapped)
+        return
+      }
+      await this.handleResourceClick(mapped)
+    },
+    async handleResourceClick (item) {
+      const url = item.filePath
+      // 历史课堂(3)走 fileList 双路回放，其余类型依赖 filePath
+      if (String(item.nodeType) !== '3' && !url) {
+        this.$message.warning('资源地址不存在')
+        return
+      }
+      if (String(item.nodeType) === '3' && !(item.fileList && item.fileList.length)) {
+        this.$message.warning('资源地址不存在')
+        return
+      }
+      const courseId = String(item.courseId || '')
+      const lessonId = String(item.id || '')
+      const videoTypes = ['4']
+      const historyVideoTypes = ['3']
+      const imageTypes = ['5']
+      const audioTypes = ['6']
+
+      try {
+        const apiCalls = [updateRecentStudy({ courseId, lessonId, type: '4' })]
+        if (item.progress < 100) {
+          const isVideo = videoTypes.includes(item.nodeType) || historyVideoTypes.includes(item.nodeType)
+          const percent = isVideo ? String(item.progress || 0) : '100'
+          apiCalls.push(updateCourseProgress({
+            courseId,
+            lessonId,
+            type: String(item.nodeType || ''),
+            percent
+          }))
+        }
+        await Promise.all(apiCalls)
+      } catch (_) {}
+
+      const collectBase = {
+        courseId,
+        lessonId,
+        type: String(item.nodeType || ''),
+        collectCount: String(item.collectCount || 0),
+        historyLessonId: String(item.historyLessonId || ''),
+      }
+      const initCollected = collectBase.collectCount == 1
+
+      if (videoTypes.includes(item.nodeType)) {
+        this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+        this.currentResourceTitle = item.title || '视频播放'
+        this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+        this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+        this.currentVideoUrl = url
+        this.currentPlayingItem = item
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
+        this.showVideoDialog = true
+      } else if (historyVideoTypes.includes(item.nodeType)) {
+        this.openVideoPlayer(item, false, true)
+      } else if (imageTypes.includes(item.nodeType)) {
+        this.currentResourceTitle = item.title || '图片预览'
+        this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+        this.currentImageUrl = url
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
+        this.showImageDialog = true
+      } else if (audioTypes.includes(item.nodeType)) {
+        this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+        this.currentResourceTitle = item.title || '音频播放'
+        this.currentAudioUrl = url
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
+        this.showAudioDialog = true
+      } else {
+        this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+        this.filePreviewData = { name: item.title || '', path: url }
+        this.fromLearningTask = true
+        this.currentCollectParams = collectBase
+        this.isCollected = initCollected
+        this.filePreviewVisible = true
+      }
+    },
+    async openVideoPlayer (item, updateRecent = false, fromTask = false, skipProgress = false) {
+      if (updateRecent) {
+        try {
+          const courseId = String(item.courseId || '')
+          const lessonId = String(item.id || '')
+          await updateRecentStudy({ courseId, lessonId, type: '3' })
+        } catch (_) {}
+      }
+      const fileList = item.fileList || []
+      const mainFile = fileList.find(f => f.videoType == '1')
+      const teacherFile = fileList.find(f => f.videoType == '2')
+      this.playerSource = mainFile ? mainFile.filePath || '' : ''
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.playerTitle = item.name || item.title || '视频回放'
+      this.playerHistoryLessonId = String(item.historyLessonId || '')
+      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+      this.currentPlayingItem = item
+      this.fromLearningTask = fromTask
+      this.isCollected = fromTask ? String(item.collectCount || 0) == 1 : false
+      if (fromTask) {
+        this.currentCollectParams = {
+          courseId: String(item.courseId || ''),
+          lessonId: String(item.id || ''),
+          historyLessonId: String(item.historyLessonId || ''),
+          type: '3',
+          collectCount: String(item.collectCount || 0)
+        }
+      } else {
+        this.currentCollectParams = {}
+      }
+      this.skipProgressOnClose = skipProgress
+      this.playerVisible = true
+    },
+    async closeVideoDialog (percent = 0, viewTime = 0) {
+      this.showVideoDialog = false
+      this.currentVideoUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+      await this.reportBusinessView(viewTime)
+      await this.saveVideoProgress(percent)
+      this.fetchRecentViewList()
+    },
+    async closeHistoryPlayer (percent = 0) {
+      this.playerVisible = false
+      this.fromLearningTask = false
+      this.isCollected = false
+      const skip = this.skipProgressOnClose
+      this.skipProgressOnClose = false
+      if (!skip) {
+        await this.saveVideoProgress(percent)
+      }
+      this.fetchRecentViewList()
+    },
+    async reportBusinessView (viewTime = 0) {
+      const item = this.currentPlayingItem
+      if (!item) return
+      try {
+        await addBusinessView({
+          type: '3',
+          lessonId: String(item.id || ''),
+          contentId: String(item.courseId || ''),
+          viewTime: String(Math.max(0, Math.round(Number(viewTime) || 0)))
+        })
+      } catch (_) {}
+    },
+    async saveVideoProgress (percent) {
+      const item = this.currentPlayingItem
+      this.currentPlayingItem = null
+      if (!item) return
+      const newPercent = Math.max(percent, item.progress || 0)
+      if (newPercent <= (item.progress || 0)) return
+      try {
+        await updateCourseProgress({
+          courseId: String(item.courseId || ''),
+          lessonId: String(item.id || ''),
+          type: String(item.nodeType || '3'),
+          percent: String(newPercent)
+        })
+      } catch (_) {}
+    },
+    closeAudioDialog () {
+      this.showAudioDialog = false
+      this.currentAudioUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+    },
+    async handleAudioDownload () {
+      const url = this.currentAudioUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '音频'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
+    },
+    closeImageDialog () {
+      this.showImageDialog = false
+      this.currentImageUrl = ''
+      this.fromLearningTask = false
+      this.isCollected = false
+    },
+    onChildCollectChange () {
+      this.fetchRecentViewList()
+    },
+    async handleCollect () {
+      if (this.collecting) return
+      this.collecting = true
+      try {
+        const res = await collectToggle(this.currentCollectParams)
+        const collectCount = res?.data?.collectCount
+        this.isCollected = collectCount !== undefined ? Number(collectCount) === 1 : !this.isCollected
+        this.$message.success(this.isCollected ? '收藏成功' : '已取消收藏')
+        this.fetchRecentViewList()
+      } catch (e) {
+        this.$message.error('操作失败，请重试')
+      } finally {
+        this.collecting = false
+      }
+    },
+    async handleImageDownload () {
+      const url = this.currentImageUrl
+      if (!url) return
+      const filename = this.currentResourceTitle || url.split('/').pop() || '图片'
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     },
     async enterLiveRoom (item) {
+      // 已结束且有回放 → 打开历史回放（与班级任务一致）
+      if (item.isFinish == 1 && item.liveStatus == '已结束已开播') {
+        this.openVideoPlayer(item, true, true)
+        return
+      }
+      if (item.isFinish == 1 && item.liveStatus == '已结束未开播') {
+        this.$message.warning('该课程暂无回放地址')
+        return
+      }
+
       const now = Date.now()
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
 
-      // 学生：距开始时间 30 分钟以内（含）或已开始，均可进入
+      // 学生：距开始时间 limitTime 分钟以内（含）或已开始，均可进入
       if (!startTime || now < startTime - this.limitTime * 60 * 1000) {
         this.$message.warning('时间还未到，请耐心等候')
         return
@@ -344,9 +740,17 @@ export default {
 
       this.prepareElectronMediaPermissions()
 
+      try {
+        const courseId = String(item.courseId || '')
+        const lessonId = String(item.liveLessonId || item.id || '')
+        if (courseId && lessonId) {
+          await updateRecentStudy({ courseId, lessonId, type: '2' })
+        }
+      } catch (_) {}
+
       const { userId, realName, role } = getUserInfo()
       const token = getToken()
-      const liveId = item.id
+      const liveId = item.liveId || item.contentId || item.id
       const roleNumber = role === 'STUDENT' ? 0 : 1
 
       try {
@@ -361,7 +765,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`
+      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
       this.showLiveIframe = true
     },
     prepareElectronMediaPermissions () {

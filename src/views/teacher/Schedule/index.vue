@@ -351,7 +351,7 @@ export default {
             durationText,
             fullEndTime: live.endTime || '',
             historyLessonId: live.historyLessonId || '',
-            cover: live.cover || live.coverUrl || live.imgUrl || live.image || '',
+            cover: live.coverThumb || live.cover || live.imgUrl || live.image || '',
             teacherName: live.teacherName2 || live.teacherName || this.realName || '',
             taskUuid: live.taskUuid || '',
             allowDownload: live.allowDownload
