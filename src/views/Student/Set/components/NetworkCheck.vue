@@ -54,9 +54,12 @@
 <script>
 import platformMixin from '@/mixins/platform'
 
+// const BASE = process.env.VUE_APP_BASE_API && !process.env.VUE_APP_BASE_API.startsWith('/')
+//   ? process.env.VUE_APP_BASE_API
+//   : 'https://live.fjlsjy123.com/portal/api'
 const BASE = process.env.VUE_APP_BASE_API && !process.env.VUE_APP_BASE_API.startsWith('/')
   ? process.env.VUE_APP_BASE_API
-  : 'https://live.fjlsjy123.com/portal/api'
+  : 'https://test.live.fjlsjy123.com/portal/api'
 
 const SERVERS = [
   { name: '业务服务器',     url: `${BASE}/actuator/health` },

@@ -1514,7 +1514,8 @@ created() {
      * 这里利用这段空窗期完成 DNS、TCP、TLS 预热，减少 iframe 首次建连等待。
      */
     preconnectLiveClassroomOrigins() {
-      const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
+      // const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
+      const liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits'
       const origins = ['https://g.alicdn.com']
 
       try {
@@ -1722,7 +1723,8 @@ created() {
         } catch (_) {}
       }
 
-      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1849,7 +1851,8 @@ created() {
         } catch (_) {}
       }
       
-      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1866,7 +1869,8 @@ created() {
       const { userId, realName } = getUserInfo()
       const liveId = item.liveId
 
-      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
+      // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }

@@ -398,7 +398,8 @@ export default {
         } catch (_) {}
       }
 
-      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播测试环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }

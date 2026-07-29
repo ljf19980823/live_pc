@@ -10,8 +10,10 @@ const MAX_CRASH_LOG_VALUE_LENGTH = 1200
 // 资源失败日志按 URL 和错误原因限流，避免同一个资源短时间失败时刷屏。
 const RESOURCE_LOG_THROTTLE_MS = 10 * 1000
 const LIVE_RESOURCE_DIAGNOSTIC_URLS = [
-  'https://live.fjlsjy123.com/*',
-  'http://live.fjlsjy123.com/*',
+  // 'https://live.fjlsjy123.com/*',
+  'https://test.live.fjlsjy123.com/*',
+  // 'http://live.fjlsjy123.com/*',
+  'http://test.live.fjlsjy123.com/*',
   'https://g.alicdn.com/apsara-media-box/*',
 ]
 

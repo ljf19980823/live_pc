@@ -704,7 +704,8 @@ export default {
 
     getQaRequestConfig() {
       return {
-        baseURL: 'https://live.fjlsjy123.com/aiQa',
+        // baseURL: 'https://live.fjlsjy123.com/aiQa',
+        baseURL: 'https://test.live.fjlsjy123.com/aiQa',
         rawResponse: true,
         headers: {
           'X-User-Id': this.teacherId
@@ -713,7 +714,8 @@ export default {
     },
 
     getQaBaseUrl() {
-      return 'https://live.fjlsjy123.com/aiQa'
+      // return 'https://live.fjlsjy123.com/aiQa'
+      return 'https://test.live.fjlsjy123.com/aiQa'
     },
 
     getQaHeaders() {
