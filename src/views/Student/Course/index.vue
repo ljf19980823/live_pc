@@ -153,8 +153,7 @@
                 v-loading="activeLoadingKey === `resource-${idx}`"
                 element-loading-background="rgba(255,255,255,0.7)">
                 <div class="cdi-main">
-                  <img v-if="['3','4'].includes(item.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
-                  <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                  <img :src="getResourceTypeIcon(item)" class="cdi-type-icon" alt="" />
                   <div class="cdi-info">
                     <div class="cdi-name">{{ item.title }}</div>
                     <div class="cdi-file-row">
@@ -208,8 +207,7 @@
                       v-loading="activeLoadingKey === `grandchild-${idx}-${ci}-${gi}`" element-loading-background="rgba(255,255,255,0.7)">
                       <div class="cdi-main">
                         <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
-                        <img v-else-if="['3','4'].includes(grandchild.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
-                        <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                        <img v-else :src="getResourceTypeIcon(grandchild)" class="cdi-type-icon" alt="" />
                         <div class="cdi-info">
                           <div class="cdi-name">{{ grandchild.title }}</div>
                           <div v-if="grandchild.type === 'live'" class="cdi-status-row">
@@ -244,8 +242,7 @@
                     v-loading="activeLoadingKey === `child-${idx}-${ci}`" element-loading-background="rgba(255,255,255,0.7)">
                     <div class="cdi-main">
                       <img v-if="child.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
-                      <img v-else-if="['3','4'].includes(child.nodeType)" src="@/assets/images/class/videoIcon.png" class="cdi-type-icon" alt="" />
-                      <img v-else src="@/assets/images/class/fileIcon.png" class="cdi-type-icon" alt="" />
+                      <img v-else :src="getResourceTypeIcon(child)" class="cdi-type-icon" alt="" />
                       <div class="cdi-info">
                         <div class="cdi-name">{{ child.title }}</div>
                         <div v-if="child.type === 'live'" class="cdi-status-row">
@@ -463,6 +460,43 @@ export default {
 
   methods: {
     formatDuration,
+    getResourceTypeIcon(item) {
+      const iconMap = {
+        doc: require('@/assets/images/icon/Doc.png'),
+        docx: require('@/assets/images/icon/Doc.png'),
+        xls: require('@/assets/images/icon/Excel.png'),
+        xlsx: require('@/assets/images/icon/Excel.png'),
+        csv: require('@/assets/images/icon/Excel.png'),
+        ppt: require('@/assets/images/icon/PPT.png'),
+        pptx: require('@/assets/images/icon/PPT.png'),
+        pdf: require('@/assets/images/icon/PDF.png'),
+        mp4: require('@/assets/images/icon/Mp4.png'),
+        mov: require('@/assets/images/icon/Mov.png'),
+        mp3: require('@/assets/images/icon/Mp3.png'),
+        wav: require('@/assets/images/icon/Wav.png'),
+        zip: require('@/assets/images/icon/Zip.png'),
+        rar: require('@/assets/images/icon/Zip.png'),
+        '7z': require('@/assets/images/icon/Zip.png'),
+        jpg: require('@/assets/images/icon/img.png'),
+        jpeg: require('@/assets/images/icon/img.png'),
+        png: require('@/assets/images/icon/img.png'),
+        gif: require('@/assets/images/icon/img.png'),
+        webp: require('@/assets/images/icon/img.png'),
+        bmp: require('@/assets/images/icon/img.png'),
+      }
+      const iconOther = require('@/assets/images/icon/other.png')
+      if (!item) return iconOther
+      const fromList = item.fileList && item.fileList[0]
+        ? (item.fileList[0].fileName || item.fileList[0].name || item.fileList[0].filePath || '')
+        : ''
+      const candidates = [item.title, item.filePath, item.resourceUrl, fromList].filter(Boolean)
+      for (const source of candidates) {
+        const clean = String(source).split('?')[0].split('#')[0]
+        const ext = (clean.includes('.') ? clean.split('.').pop() : '').toLowerCase()
+        if (ext && iconMap[ext]) return iconMap[ext]
+      }
+      return iconOther
+    },
      async fetchAgreement() {
       try {
         const res = await getAgreement('live_join_times')

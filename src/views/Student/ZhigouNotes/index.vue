@@ -87,8 +87,8 @@
       >
         <div class="note-card__cover">
           <img
-            v-if="item.cover"
-            :src="item.cover"
+            v-if="item.coverThumb"
+            :src="item.coverThumb"
             class="note-card__cover-img"
             alt=""
           />
