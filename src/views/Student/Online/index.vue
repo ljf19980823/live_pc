@@ -1515,7 +1515,7 @@ created() {
      */
     preconnectLiveClassroomOrigins() {
       // const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
-      const liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits'
+      const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
       const origins = ['https://g.alicdn.com']
 
       try {
@@ -1724,7 +1724,7 @@ created() {
       }
 
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
-      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1852,7 +1852,7 @@ created() {
       }
       
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
-      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1870,7 +1870,7 @@ created() {
       const liveId = item.liveId
 
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
-      let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }

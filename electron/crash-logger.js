@@ -11,7 +11,7 @@ const MAX_CRASH_LOG_VALUE_LENGTH = 1200
 const RESOURCE_LOG_THROTTLE_MS = 10 * 1000
 const LIVE_RESOURCE_DIAGNOSTIC_URLS = [
   // 'https://live.fjlsjy123.com/*',
-  'https://test.live.fjlsjy123.com/*',
+  'https://live.fjlsjy123.com/*',
   // 'http://live.fjlsjy123.com/*',
   'http://test.live.fjlsjy123.com/*',
   'https://g.alicdn.com/apsara-media-box/*',

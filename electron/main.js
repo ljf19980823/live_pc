@@ -38,7 +38,7 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 // }
 // const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
 // const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
-const VERSION_CHECK_URL = 'https://test.live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
+const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
 
 let mainWindow
 let screenGuardInterval = null
@@ -1091,7 +1091,7 @@ app.whenReady().then(async () => {
   registerLiveResourceDiagnostics()
   session.defaultSession.webRequest.onHeadersReceived(
     // { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
-    { urls: ['https://test.live.fjlsjy123.com/*', 'http://test.live.fjlsjy123.com/*'] },
+    { urls: ['https://live.fjlsjy123.com/*', 'http://test.live.fjlsjy123.com/*'] },
     (details, callback) => {
       const headers = Object.assign({}, details.responseHeaders)
       Object.keys(headers).forEach(key => {
@@ -1139,7 +1139,7 @@ app.whenReady().then(async () => {
   // preconnect 只做连接预热，不请求业务数据，失败时静默降级为正常加载。
   if (typeof session.defaultSession.preconnect === 'function') {
     // ;['https://live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
-    ;['https://test.live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
+    ;['https://live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
       try {
         session.defaultSession.preconnect({ url, numSockets: 6 })
       } catch (_) {}

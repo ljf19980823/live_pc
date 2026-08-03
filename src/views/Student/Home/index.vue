@@ -762,7 +762,7 @@ export default {
       } catch (_) {}
 
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'
-      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }

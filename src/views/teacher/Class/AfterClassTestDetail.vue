@@ -321,7 +321,7 @@ export default {
       const classId = (this.courseInfo && this.courseInfo.classId) || ''
       const recordId = row.recordId || ''
       // this.shareReportUrl = `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
-      this.shareReportUrl = `https://test.live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
+      this.shareReportUrl = `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
       this.shareCopied = false
       this.shareDialogVisible = true
     },

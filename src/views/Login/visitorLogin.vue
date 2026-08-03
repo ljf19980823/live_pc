@@ -117,10 +117,8 @@ export default {
   created() {
     const liveParams = this.getLiveParamsFromUrl()
     this.fromExitFromQuery = liveParams.fromExit
-    if (!this.isFromExit) {
-      this.liveIdFromQuery = liveParams.liveId
-      this.classroomIdFromQuery = liveParams.classroomId
-    }
+    this.liveIdFromQuery = liveParams.liveId
+    this.classroomIdFromQuery = liveParams.classroomId
     console.log(liveParams, '直播间参数')
     if (!this.liveId) {
     //   this.$message.warning('直播间参数缺失')
@@ -247,7 +245,7 @@ export default {
    
 
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
-      let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
@@ -281,7 +279,7 @@ export default {
 }
 
 .visitor-login-card {
-  width: 360px;
+  width: 400px;
   max-width: 100%;
   padding: 34px 30px 32px;
   box-sizing: border-box;
@@ -339,7 +337,7 @@ export default {
 }
 
 .visitor-login-code-btn {
-  width: 92px;
+  width: 112px;
   height: 32px;
   border: none;
   border-radius: 6px;

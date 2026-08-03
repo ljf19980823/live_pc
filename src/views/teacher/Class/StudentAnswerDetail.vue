@@ -642,7 +642,7 @@ export default {
 /* ===== 富文本 / 图片 ===== */
 .sad__rich-img {
   max-width: 100%;
-  max-height: 320px;
+zoom: 0.6;
   object-fit: contain;
   display: block;
   border-radius: 4px;
@@ -785,6 +785,7 @@ export default {
 ::v-deep .wep__opt-text.rich-text-content img {
   max-width: 100%;border-radius: 4px;
   object-fit: contain; vertical-align: middle;
+  zoom: 0.6;
   mix-blend-mode: multiply !important;
   float:none!important; 
 }

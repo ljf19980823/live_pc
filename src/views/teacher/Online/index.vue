@@ -655,6 +655,18 @@
                     >{{ item.label }}</div>
                   </div>
                 </div>
+                <div class="cc-field cc-field--half">
+                  <div class="cc-label">弹幕设置</div>
+                  <div class="cc-segment">
+                    <div
+                      v-for="item in ifBarrageOptions"
+                      :key="item.value"
+                      class="cc-segment__item"
+                      :class="{ 'is-active': ifBarrage === item.value }"
+                      @click="ifBarrage = item.value"
+                    >{{ item.label }}</div>
+                  </div>
+                </div>
               </div>
 
               <div class="cc-field">
@@ -1076,6 +1088,8 @@ export default {
       allowMicOptions: [ { label: '不支持', value: 0 },{ label: '支持', value: 1 },],
       isPlayBack: 1,
       isPlayBackOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
+      ifBarrage: 1,
+      ifBarrageOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
       createClassId: [],
       createLoading: false,
 
@@ -1140,6 +1154,7 @@ export default {
         this.recordMode = 1
         this.allowMic = 0
         this.isPlayBack = 1
+        this.ifBarrage = 1
         this.createClassId = []
         const userName = this.$store.getters['user/realName'] || ''
       
@@ -1157,6 +1172,7 @@ export default {
         this.recordMode = 1
         this.allowMic = 0
         this.isPlayBack = 1
+        this.ifBarrage = 1
         this.createClassId = []
       }
     },
@@ -1451,7 +1467,7 @@ created() {
      */
     preconnectLiveClassroomOrigins() {
       // const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
-      const liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits'
+      const liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits'
       const origins = ['https://g.alicdn.com']
 
       try {
@@ -1660,7 +1676,7 @@ created() {
       }
 
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
-      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播正式环境
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1673,7 +1689,7 @@ created() {
       if (!url) return
       if(process.env.NODE_ENV === 'development'){
         // url = url.replace('https://live.fjlsjy123.com/visitor/#', 'http://localhost:8080'); //访客-本地开发环境
-        url = url.replace('https://test.live.fjlsjy123.com/visitor/#', 'http://localhost:8080'); //访客-本地开发环境
+        url = url.replace('https://live.fjlsjy123.com/visitor/#', 'http://localhost:8080'); //访客-本地开发环境
       }
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
@@ -1792,7 +1808,7 @@ created() {
       }
       
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
-      let liveBaseUrl = window.LIVEBASE || 'https://test.live.fjlsjy123.com/auikits/'; //直播测试环境
+      let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播测试环境
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
@@ -1810,7 +1826,7 @@ created() {
       const liveId = item.liveId
 
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
-      let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
@@ -1953,6 +1969,7 @@ created() {
         }
         let isAllowMic = this.allowMic == '1' ? '1' : '2'
         let playbackSettings = this.isPlayBack
+        let ifBarrage = this.ifBarrage
         let recordingType = String(this.recordMode)
         const params = {
           name: this.name.trim(),
@@ -1963,9 +1980,10 @@ created() {
           classIds: this.createClassId.length ? this.createClassId : undefined,
           isAllowMic,
           isPlayBack: this.isPlayBack,
+          ifBarrage,
           playbackSettings: playbackSettings,
           mode: this.allowMic,
-          extends: JSON.stringify({isAllowMic,playbackSettings,recordingType}),
+          extends: JSON.stringify({isAllowMic,playbackSettings,recordingType,ifBarrage}),
           im_server: ['aliyun_new'],
         }
         await createLiveClass(params)

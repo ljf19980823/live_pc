@@ -672,7 +672,7 @@ export default {
   flex-direction: column;
   gap: 12px;
 }
-::v-deep .wep__options img { mix-blend-mode: multiply !important; float:none!important; }
+::v-deep .wep__options img { mix-blend-mode: multiply !important; float:none!important;zoom: 0.6; }
 
 .wep__option {
   display: flex;
@@ -729,7 +729,7 @@ export default {
 .wep__opt-text { font-size: 14px; color: #333; }
 ::v-deep .wep__opt-text.rich-text-content p { margin: 0; line-height: 1.7; }
 ::v-deep .wep__opt-text.rich-text-content img {
-  max-width: 100%; max-height: 160px; border-radius: 4px;
+  max-width: 100%; zoom: 0.6;border-radius: 4px;
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
   float:none!important; 
@@ -746,7 +746,7 @@ export default {
 
 .wep__opt-img {
   max-width: 100%;
-  max-height: 160px;
+  zoom: 0.6;
   border-radius: 4px;
   object-fit: contain;
   display: block;
@@ -755,7 +755,7 @@ export default {
 }
 .wep__content-img {
   max-width: 100%;
-  max-height: 300px;
+  zoom: 0.6;
   border-radius: 6px;
   object-fit: contain;
   display: block;
@@ -859,6 +859,7 @@ export default {
 ::v-deep .wep__analysis-text img {
   max-width: 100%; 
   object-fit: contain; 
+  zoom: 0.6;
   mix-blend-mode: multiply !important;
   float:none!important; 
 }

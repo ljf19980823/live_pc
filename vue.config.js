@@ -22,7 +22,7 @@ module.exports = defineConfig({
       '/api': {
         // target: 'http://47.92.30.163:8085',
         // target: 'https://live.fjlsjy123.com/portal/api',//正式服务器
-        target: 'https://test.live.fjlsjy123.com/portal/api',//测试服务器
+        target: 'https://live.fjlsjy123.com/portal/api',//测试服务器
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
       }
