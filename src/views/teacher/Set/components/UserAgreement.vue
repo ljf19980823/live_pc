@@ -4,7 +4,7 @@
       <p class="ua-page-title">用户协议</p>
 
       <div class="ua-section">
-        <div class="ua-section-body" v-html="moduleValue || '暂无内容'" />
+        <div class="ua-section-body rich-text-content" v-html="moduleValue || '暂无内容'" />
       </div>
 
       <p class="ua-update-time" v-if="updateTime">最后更新：{{ updateTime }}</p>

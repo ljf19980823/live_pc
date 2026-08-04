@@ -354,15 +354,15 @@
             >
               <!-- 用户消息 -->
               <div v-if="msg.role === 'user'" class="al-msg-user-wrap">
-                <div class="al-bubble-user al-markdown-body" v-html="renderMarkdown(msg.content)"></div>
+                <div class="al-bubble-user al-markdown-body rich-text-content" v-html="renderMarkdown(msg.content)"></div>
               </div>
 
               <!-- AI消息 -->
               <div v-else class="al-msg-ai-wrap">
                 <div v-if="msg.thinking" class="al-thinking-label">已思考{{ msg.thinkSec }}秒</div>
                 <div class="al-bubble-ai">
-                  <span v-if="msg.streaming" class="al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
-                  <span v-else class="al-markdown-body" v-html="renderMarkdown(msg.content)"></span>
+                  <span v-if="msg.streaming" class="al-markdown-body rich-text-content" v-html="renderMarkdown(msg.content)"></span>
+                  <span v-else class="al-markdown-body rich-text-content" v-html="renderMarkdown(msg.content)"></span>
                 </div>
                 <div v-if="!msg.streaming" class="al-msg-ops">
                   <!-- <button class="al-op-btn" @click="shareMsg(msg.content)">

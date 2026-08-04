@@ -113,7 +113,7 @@
             </div>
             <div class="detail-left-info-section">
               <div class="detail-left-info-section-title">课程简介</div>
-              <div class="detail-left-info-desc"  v-html="selectedCourse && selectedCourse.description"></div>
+              <div class="detail-left-info-desc rich-text-content"  v-html="selectedCourse && selectedCourse.description"></div>
             </div>
           </div>
         </div>

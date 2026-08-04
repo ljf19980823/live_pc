@@ -4,7 +4,7 @@
       <p class="privacy-page-title">隐私政策</p>
 
       <div class="privacy-section">
-        <div class="privacy-section-body" v-html="moduleValue || '暂无内容'" />
+        <div class="privacy-section-body rich-text-content" v-html="moduleValue || '暂无内容'" />
       </div>
 
       <p class="privacy-update-time" v-if="updateTime">最后更新：{{ updateTime }}</p>

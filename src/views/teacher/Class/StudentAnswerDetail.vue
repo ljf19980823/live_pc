@@ -127,7 +127,7 @@
               <!-- 填空 -->
               <!-- <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.blanks[0].correctAnswer" class="sad__rich-img" />
-                <span v-else v-html="q.blanks[0].correctAnswer || '-'"></span>
+                <span v-else class="rich-text-content" v-html="q.blanks[0].correctAnswer || '-'"></span>
               </span> -->
               <!-- 简答/主观 -->
               <span  class="sad__analysis-correct-val">

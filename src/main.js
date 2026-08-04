@@ -17,6 +17,10 @@ import '@/assets/styles/index.scss'
 // ─── 全局组件 ─────────────────────────────────────────────────
 import '@/components/index.js'
 
+// ─── 富文本图片点击预览 ───────────────────────────────────────
+import { setupRichTextImagePreview } from '@/utils/richTextImagePreview'
+setupRichTextImagePreview()
+
 // ─── 生产环境关闭控制台提示 ───────────────────────────────────
 Vue.config.productionTip = false
 
