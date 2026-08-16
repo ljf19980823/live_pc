@@ -702,22 +702,30 @@
       :append-to-body="true"
       @close="closeImageDialog"
     >
+      <div slot="title" class="resource-preview-dialog__header">
+        <span class="resource-preview-dialog__title">{{ currentResourceTitle }}</span>
+        <div class="resource-preview-dialog__actions">
+          <el-button
+            v-if="isStudent && fromLearningTask"
+            :type="isCollected ? 'warning' : 'default'"
+            size="small"
+            :loading="collecting"
+            @click.stop="handleCollect"
+          >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
+          <el-button
+            v-if="currentAllowDownload === '1'"
+            type="primary"
+            size="small"
+            @click.stop="handleImageDownload"
+          >下载图片</el-button>
+        </div>
+      </div>
       <img
         v-if="showImageDialog"
         :src="currentImageUrl"
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-        <el-button
-          v-if="isStudent && fromLearningTask"
-          :type="isCollected ? 'warning' : 'default'"
-          size="small"
-          :loading="collecting"
-          @click="handleCollect"
-        >{{ isCollected ? '已收藏' : '收藏' }}</el-button>
-        <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
-      </div>
     </el-dialog>
 
 
@@ -2153,6 +2161,28 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.resource-preview-dialog__header {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-right: 36px;
+}
+
+.resource-preview-dialog__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-preview-dialog__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
 .page-placeholder{
   width: 100%;
   height: 100%;
