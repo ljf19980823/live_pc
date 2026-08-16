@@ -734,7 +734,7 @@ export default {
 
       // 学生：距开始时间 limitTime 分钟以内（含）或已开始，均可进入
       if (!startTime || now < startTime - this.limitTime * 60 * 1000) {
-        this.$message.warning('时间还未到，请耐心等候')
+         this.$message.warning('时间还未到，仅提前'+this.limitTime+'分钟允许进入')
         return
       }
 

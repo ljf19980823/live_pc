@@ -376,7 +376,7 @@ export default {
       if (this.isTeacher) {
         // 老师：距开始时间30分钟以内（含）或已开始，均可进入
         if (!startTime || now < startTime - this.limitTimeTeacher * 60 * 1000) {
-          this.$message.warning('时间还未到，请耐心等候')
+           this.$message.warning('时间还未到，仅提前'+this.limitTimeTeacher+'分钟允许进入')
           return
         }
       }
