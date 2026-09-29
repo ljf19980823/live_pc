@@ -147,7 +147,7 @@
                 </div>
               </div>
 
-              <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
+              <!-- 资源文件（历史课程/视频/图片/音频/资料/链接） -->
               <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx"
                 @click="handleCardClickWithLoading(`resource-${idx}`, () => handleResourceClick(item))"
                 v-loading="activeLoadingKey === `resource-${idx}`"
@@ -758,15 +758,17 @@ export default {
       }
       const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       const lessonId = String(item.id || '')
-const videoTypes = ['4']
+      const nodeType = String(item.nodeType || '')
+      const videoTypes = ['4']
       const historyVideoTypes = ['3']
       const imageTypes = ['5']
       const audioTypes = ['6']
+      const linkTypes = ['8']
 
       try {
         const apiCalls = [updateRecentStudy({ courseId, lessonId ,type:'4'})]
         if (item.progress < 100) {
-          const isVideo = videoTypes.includes(item.nodeType) || historyVideoTypes.includes(item.nodeType)
+          const isVideo = videoTypes.includes(nodeType) || historyVideoTypes.includes(nodeType)
           const percent = isVideo ? String(item.progress || 0) : '100'
           apiCalls.push(updateCourseProgress({ courseId, lessonId, type: String(item.nodeType || ''), percent }))
         }
@@ -790,7 +792,7 @@ const videoTypes = ['4']
       this.currentCollectParams = collectBase
       this.isCollected = initCollected
 
-      if (videoTypes.includes(item.nodeType)) {
+      if (videoTypes.includes(nodeType)) {
            // taskUuid 有值 → 跳转 AI听记页面
         // if(item.taskUuid){
         //   const fileList = item.fileList || []
@@ -815,20 +817,34 @@ const videoTypes = ['4']
         this.currentVideoUrl = url
         this.currentPlayingItem = item
         this.showVideoDialog = true
-      }else if (historyVideoTypes.includes(item.nodeType)) {
+      }else if (historyVideoTypes.includes(nodeType)) {
         this.openVideoPlayer(item, false, true)
-      }  else if (imageTypes.includes(item.nodeType)) {
+      }  else if (imageTypes.includes(nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
         this.currentImageUrl = url
         this.showImageDialog = true
-      } else if (audioTypes.includes(item.nodeType)) {
+      } else if (audioTypes.includes(nodeType)) {
         this.currentResourceTitle = item.title || '音频播放'
         this.currentAudioUrl = url
         this.showAudioDialog = true
+      } else if (linkTypes.includes(nodeType)) {
+        this.openLinkPreview(url)
       } else {
         this.filePreviewData = { name: item.title || '', path: url }
         this.filePreviewVisible = true
       }
+    },
+    async openLinkPreview(url) {
+      if (window.electronAPI && window.electronAPI.openInAppUrl) {
+        try {
+          const opened = await window.electronAPI.openInAppUrl(url)
+          if (!opened) this.$message.warning('链接地址无效')
+        } catch (_) {
+          this.$message.error('链接打开失败')
+        }
+        return
+      }
+      window.open(url, '_blank', 'noopener,noreferrer')
     },
 
     // ─── 历史视频回放 ──────────────────────────────────────────

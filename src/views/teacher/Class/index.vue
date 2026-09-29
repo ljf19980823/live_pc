@@ -189,7 +189,7 @@
               </div>
             </div>
 
-            <!-- 资源文件（历史课程/视频/图片/音频/资料） -->
+            <!-- 资源文件（历史课程/视频/图片/音频/资料/链接） -->
             <div v-else-if="item.type === 'resource'" class="cdi-card" :key="idx" @click="handleCardClickWithLoading(`resource-${idx}`, () => handleResourceClick(item))" v-loading="activeLoadingKey === `resource-${idx}`" element-loading-background="rgba(255,255,255,0.7)">
               <div class="cdi-main">
                 <img :src="getResourceTypeIcon(item)" class="cdi-type-icon" alt="" />
@@ -900,7 +900,6 @@
     <div v-if="showLiveIframe" class="live-iframe-overlay">
       <LiveClassroomFrame :src="liveUrl" @exit="showLiveIframe = false" />
     </div>
-
 
     <!-- macOS 屏幕录制权限引导弹窗 -->
     <div v-if="showScreenPermissionDialog" class="screen-permission-mask">
@@ -1976,31 +1975,47 @@ export default {
         this.$message.warning('资源地址不存在')
         return
       }
-     const videoTypes = ['4']
+      const nodeType = String(item.nodeType || '')
+      const videoTypes = ['4']
       const historyVideoTypes = ['3']
       const imageTypes = ['5']
       const audioTypes = ['6']
-      if (videoTypes.includes(item.nodeType)) {
+      const linkTypes = ['8']
+      if (videoTypes.includes(nodeType)) {
         this.currentResourceTitle = item.title || '视频播放'
         this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         console.log(url,'视频地址')
         this.currentVideoUrl = url
         this.showVideoDialog = true
-      } else if (historyVideoTypes.includes(item.nodeType)) {
+      } else if (historyVideoTypes.includes(nodeType)) {
         this.openVideoPlayer(item, false, true)
-      } else if (imageTypes.includes(item.nodeType)) {
+      } else if (imageTypes.includes(nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
         this.currentImageUrl = url
         this.showImageDialog = true
-      } else if (audioTypes.includes(item.nodeType)) {
+      } else if (audioTypes.includes(nodeType)) {
         this.currentResourceTitle = item.title || '音频播放'
         this.currentAudioUrl = url
         this.showAudioDialog = true
+      } else if (linkTypes.includes(nodeType)) {
+        this.openLinkPreview(url)
       } else {
         console.log(item,'信息')
         this.filePreviewData = { name: item.title || '', path: url }
         this.filePreviewVisible = true
       }
+    },
+    async openLinkPreview(url) {
+      if (window.electronAPI && window.electronAPI.openInAppUrl) {
+        try {
+          const opened = await window.electronAPI.openInAppUrl(url)
+          if (!opened) this.$message.warning('链接地址无效')
+        } catch (_) {
+          this.$message.error('链接打开失败')
+        }
+        return
+      }
+      window.open(url, '_blank', 'noopener,noreferrer')
     },
     closeVideoDialog() {
       this.showVideoDialog = false
@@ -2060,7 +2075,7 @@ export default {
            historyLessonId:live.historyLessonId || ''
         }
       } else {
-        // 3=历史课程 4=视频 5=图片 6=音频 7=资料
+        // 3=历史课程 4=视频 5=图片 6=音频 7=资料 8=链接
         const res = node.resource || node.historyLesson || {}
         const sizeStr = res.size ? `${res.size}` : ''
         return {
@@ -2073,7 +2088,9 @@ export default {
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
           resourceUrl: res.resourceUrl || res.url || '',
-          filePath: res.fileList && res.fileList.lenght!=0?res.fileList[0].filePath:res.filePath,
+          filePath: res.fileList && res.fileList.length && res.fileList[0].filePath
+            ? res.fileList[0].filePath
+            : (res.filePath || ''),
           historyLessonId:node.type=='3'?res.historyLessonId:"",
           taskUuid:node.type=='3'?res.taskUuid:"",
           fileList: res.fileList || [],

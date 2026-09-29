@@ -41,6 +41,8 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
 
 let mainWindow
+const linkPreviewWindows = new Set()
+let linkPreviewSessionConfigured = false
 let screenGuardInterval = null
 // 连续检测到威胁的次数，需达到阈值才显示警告（防止瞬时误报）
 let consecutiveDetections = 0
@@ -624,6 +626,84 @@ function createWindow () {
       currentUrl: mainWindow.webContents.getURL(),
     })
   })
+}
+
+// ─── 应用内链接预览 ────────────────────────────────────────────────────────
+// 链接资源使用独立、隔离的 Electron 会话打开，避免 iframe 的嵌入限制。
+// 部分目标网页会读取跨域响应中的 x-trace-id；服务端未暴露该响应头时，
+// Chromium 会报 “Refused to get unsafe header”。这里只为链接预览会话补充暴露声明。
+function configureLinkPreviewSession () {
+  const previewSession = session.fromPartition('persist:link-preview')
+  if (linkPreviewSessionConfigured) return previewSession
+
+  previewSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = details.responseHeaders || {}
+    const exposeHeaderKey = Object.keys(responseHeaders).find(
+      key => key.toLowerCase() === 'access-control-expose-headers'
+    )
+    const currentValues = exposeHeaderKey ? responseHeaders[exposeHeaderKey] || [] : []
+    const exposedHeaders = currentValues.join(', ')
+    const exposedHeaderNames = exposedHeaders
+      .toLowerCase()
+      .split(',')
+      .map(value => value.trim())
+
+    if (!exposedHeaderNames.includes('x-trace-id')) {
+      responseHeaders[exposeHeaderKey || 'Access-Control-Expose-Headers'] = [
+        exposedHeaders ? `${exposedHeaders}, x-trace-id` : 'x-trace-id'
+      ]
+    }
+
+    callback({ responseHeaders })
+  })
+
+  linkPreviewSessionConfigured = true
+  return previewSession
+}
+
+function openLinkPreviewWindow (rawUrl) {
+  let targetUrl
+  try {
+    targetUrl = new URL(rawUrl)
+  } catch (_) {
+    return false
+  }
+
+  if (!['http:', 'https:'].includes(targetUrl.protocol)) return false
+
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, '../build/icon.ico')
+    : path.join(__dirname, '../build/icon.icns')
+  const previewSession = configureLinkPreviewSession()
+  const linkWindow = new BrowserWindow({
+    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+    width: 1200,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    show: false,
+    autoHideMenuBar: true,
+    title: '链接内容',
+    icon: iconPath,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      session: previewSession
+    }
+  })
+
+  linkPreviewWindows.add(linkWindow)
+  linkWindow.once('ready-to-show', () => linkWindow.show())
+  linkWindow.on('closed', () => linkPreviewWindows.delete(linkWindow))
+  linkWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openLinkPreviewWindow(url)
+    return { action: 'deny' }
+  })
+  linkWindow.loadURL(targetUrl.toString()).catch(() => {
+    if (!linkWindow.isDestroyed()) linkWindow.show()
+  })
+  return true
 }
 
 // ─── 版本更新：工具函数 ───────────────────────────────────────────────────────
@@ -1243,3 +1323,6 @@ ipcMain.handle('open-external-url', (_, url) => {
   shell.openExternal(url)
   return true
 })
+
+// ─── 在应用内独立窗口打开网页链接 ──────────────────────────────────────────
+ipcMain.handle('open-in-app-url', (_, url) => openLinkPreviewWindow(url))
