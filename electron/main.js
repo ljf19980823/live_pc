@@ -126,7 +126,7 @@ const RECORDER_PROCESSES_MAC = [
 // macOS App 名称（通过 osascript 获取，完整无截断）
 const RECORDER_APPS_MAC = [
   'obs studio', 'obs',
-  'quicktime player',       // QuickTime 录屏时 screencaptured 会同时出现
+  // 'quicktime player',       // QuickTime 录屏时 screencaptured 会同时出现
   'screenium',
   'kap',
   'screenpresso',
