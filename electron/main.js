@@ -67,7 +67,7 @@ const RECORDER_PROCESSES_WIN = [
   'snagit32.exe', 'snagit64.exe',              // SnagIt
   'sharex.exe',                                 // ShareX
   'xsplit.broadcaster.exe',                    // XSplit
-  'gamebar.exe', 'gamebarpresencewriter.exe',  // Windows 游戏录制
+  // 'gamebar.exe', 'gamebarpresencewriter.exe',  // Windows 游戏录制
   'loom.exe',                                   // Loom
   'flashbackrecorder.exe',                     // FlashBack
   'debut.exe',                                  // Debut Video Capture
