@@ -631,7 +631,7 @@
               </div>
 
               <div class="cc-row">
-                <div class="cc-field cc-field--half">
+                <!-- <div class="cc-field cc-field--half">
                   <div class="cc-label">是否支持上麦</div>
                   <div class="cc-segment">
                     <div
@@ -642,7 +642,7 @@
                       @click="allowMic = item.value"
                     >{{ item.label }}</div>
                   </div>
-                </div>
+                </div> -->
                 <div class="cc-field cc-field--half">
                   <div class="cc-label">回放设置</div>
                   <div class="cc-segment">

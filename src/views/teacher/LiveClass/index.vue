@@ -419,7 +419,7 @@
                 </div>
               </div>
               
-              <div class="masl_con_dialog_last_shadow">
+              <!-- <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
                   <img src="@/assets/images/liveClass/lzfs.png" class="masl_con_dialog_last_shadow_four_icon" alt="">
                   <div class="masl_con_dialog_last_shadow_four_text">是否支持上麦：</div>
@@ -440,7 +440,7 @@
                     <div class="masl_con_dialog_last_shadow_second_choose_detail_text">{{ item.label }}</div>
                   </div>
                 </div>
-              </div>
+              </div> -->
 
               <div class="masl_con_dialog_last_shadow">
                 <div class="masl_con_dialog_last_shadow_four">
