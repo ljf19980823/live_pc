@@ -192,11 +192,13 @@ export default {
      */
     visible(val) {
       if (val) {
+        this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.$nextTick(() => {
           this.initPlayer()
         })
       } else {
+        this.setScreenGuard(false)
         this.destroyPlayer()
       }
     },
@@ -211,6 +213,12 @@ export default {
     }
   },
   methods: {
+    setScreenGuard(enabled) {
+      if (window.electronAPI?.setScreenGuard) {
+        window.electronAPI.setScreenGuard(enabled)
+      }
+    },
+
     /**
      * 初始化阿里云播放器：
      * 1. 校验 source 是否有效
@@ -330,6 +338,7 @@ export default {
 
   /** 组件销毁前主动释放播放器资源 */
   beforeDestroy() {
+    this.setScreenGuard(false)
     this.destroyPlayer()
   }
 }

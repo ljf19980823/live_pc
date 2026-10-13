@@ -655,7 +655,7 @@
                     >{{ item.label }}</div>
                   </div>
                 </div>
-                <div class="cc-field cc-field--half">
+                <!-- <div class="cc-field cc-field--half">
                   <div class="cc-label">弹幕设置</div>
                   <div class="cc-segment">
                     <div
@@ -666,7 +666,7 @@
                       @click="ifBarrage = item.value"
                     >{{ item.label }}</div>
                   </div>
-                </div>
+                </div> -->
               </div>
 
               <div class="cc-field">
@@ -1088,7 +1088,7 @@ export default {
       allowMicOptions: [ { label: '不支持', value: 0 },{ label: '支持', value: 1 },],
       isPlayBack: 1,
       isPlayBackOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
-      ifBarrage: 1,
+      ifBarrage: 0,
       ifBarrageOptions: [{ label: '开启', value: 1 }, { label: '关闭', value: 0 }],
       createClassId: [],
       createLoading: false,
@@ -1154,7 +1154,7 @@ export default {
         this.recordMode = 1
         this.allowMic = 0
         this.isPlayBack = 1
-        this.ifBarrage = 1
+        this.ifBarrage = 0
         this.createClassId = []
         const userName = this.$store.getters['user/realName'] || ''
       
@@ -1172,7 +1172,7 @@ export default {
         this.recordMode = 1
         this.allowMic = 0
         this.isPlayBack = 1
-        this.ifBarrage = 1
+        this.ifBarrage = 0
         this.createClassId = []
       }
     },
