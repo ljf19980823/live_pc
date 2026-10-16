@@ -17,6 +17,7 @@ const {
   startLocalCrashReporter,
   startRunStateDiagnostics,
 } = require('./crash-logger')
+const { registerLiveAudioDiagnostics } = require('./live-audio-diagnostics')
 const isDev = process.env.NODE_ENV === 'development'
 
 // ─── V8 / Chromium 性能标志（必须在 app.whenReady 之前调用）─────────────────
@@ -472,6 +473,8 @@ function createWindow () {
     }
   })
 
+  const liveAudioDiagnostics = registerLiveAudioDiagnostics(mainWindow)
+
   if (isDev) {
     mainWindow.loadURL('http://localhost:8080')
     mainWindow.webContents.openDevTools()
@@ -497,6 +500,11 @@ function createWindow () {
     const _memCleanTimer = setInterval(() => {
       if (!mainWindow || mainWindow.isDestroyed()) {
         clearInterval(_memCleanTimer)
+        return
+      }
+      // 授课音频活动期间不强制触发 GC 或清缓存，避免额外的实时处理停顿。
+      if (liveAudioDiagnostics.isActive()) {
+        appendCrashLog('live-audio', { type: 'maintenance-skipped-during-audio' })
         return
       }
       mainWindow.webContents.session.clearCache().catch(() => {})

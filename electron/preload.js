@@ -1,6 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  getLiveAudioEnvironment: () => ipcRenderer.invoke('get-live-audio-environment'),
+  reportLiveAudioDiagnostic: payload => ipcRenderer.send('live-audio-diagnostic', payload),
+  onLiveAudioState: callback => {
+    const handler = (_, state) => callback(state)
+    ipcRenderer.on('live-audio-state', handler)
+    return () => ipcRenderer.removeListener('live-audio-state', handler)
+  },
+
   // ─── 防录屏（仅直播课堂期间启用；允许截图，拦截录屏软件） ─────────────
   onScreenGuardChange: (callback) => {
     const handler = (_, data) => callback(data)

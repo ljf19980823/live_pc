@@ -68,7 +68,8 @@ export default {
       online: navigator.onLine,
       errorMessage: '当前网络可能不稳定，请检查网络后重试。',
       loadTimer: null,
-      removeIframeLoadFailedListener: null
+      removeIframeLoadFailedListener: null,
+      removeLiveAudioListener: null
     }
   },
   computed: {
@@ -96,6 +97,9 @@ export default {
     window.addEventListener('online', this.handleOnline)
     window.addEventListener('offline', this.handleOffline)
     this.setScreenGuard(true)
+    if (window.electronAPI?.onLiveAudioState) {
+      this.removeLiveAudioListener = window.electronAPI.onLiveAudioState(this.forwardLiveAudioState)
+    }
 
     if (window.electronAPI?.onIframeLoadFailed) {
       this.removeIframeLoadFailedListener = window.electronAPI.onIframeLoadFailed(
@@ -117,6 +121,8 @@ export default {
   },
   beforeDestroy() {
     this.setScreenGuard(false)
+    window.electronAPI?.reportLiveAudioDiagnostic?.({ active: false })
+    if (this.removeLiveAudioListener) this.removeLiveAudioListener()
     this.clearLoadTimer()
     window.removeEventListener('message', this.handleMessage)
     window.removeEventListener('online', this.handleOnline)
@@ -151,8 +157,19 @@ export default {
         this.loadTimer = null
       }
     },
+    forwardLiveAudioState(state) {
+      const frame = this.$refs.frame
+      if (!frame?.contentWindow || !state) return
+      try {
+        frame.contentWindow.postMessage(
+          { type: 'LIVE_AUDIO_NATIVE_STATE', state }, new URL(this.currentSrc).origin
+        )
+      } catch (_) {}
+    },
     handleFrameLoad() {
       this.documentLoaded = true
+      window.electronAPI?.getLiveAudioEnvironment?.()
+        .then(this.forwardLiveAudioState).catch(() => {})
     },
     handleMessage(event) {
       const frame = this.$refs.frame
@@ -167,6 +184,13 @@ export default {
 
       const data = event.data
       if (!data || typeof data !== 'object') return
+
+      if (data.type === 'LIVE_AUDIO_DIAGNOSTIC') {
+        window.electronAPI?.reportLiveAudioDiagnostic?.({
+          active: data.active === true, snapshot: data.snapshot
+        })
+        return
+      }
 
       if (data.type === 'CLASSROOM_BOOTSTRAP') {
         this.bootstrapped = true
