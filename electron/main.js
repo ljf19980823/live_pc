@@ -18,6 +18,7 @@ const {
   startRunStateDiagnostics,
 } = require('./crash-logger')
 const { registerLiveAudioDiagnostics } = require('./live-audio-diagnostics')
+const { configureLiveAudioRuntime } = require('./live-audio-runtime')
 const isDev = process.env.NODE_ENV === 'development'
 
 // ─── V8 / Chromium 性能标志（必须在 app.whenReady 之前调用）─────────────────
@@ -28,6 +29,7 @@ app.commandLine.appendSwitch('js-flags', '--expose-gc --max-semi-space-size=64')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 // 开启精确内存占用信息（便于调试 performance.memory）
 app.commandLine.appendSwitch('enable-precise-memory-info')
+const liveAudioRuntime = configureLiveAudioRuntime(app)
 
 // ─── 版本检查接口地址（请修改为实际的版本检查 API）────────────────────────────
 // 接口需返回 JSON，格式示例：
@@ -473,7 +475,7 @@ function createWindow () {
     }
   })
 
-  const liveAudioDiagnostics = registerLiveAudioDiagnostics(mainWindow)
+  const liveAudioDiagnostics = registerLiveAudioDiagnostics(mainWindow, liveAudioRuntime)
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:8080')

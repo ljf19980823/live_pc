@@ -1,6 +1,7 @@
 const { app, ipcMain, powerSaveBlocker } = require('electron')
 const os = require('os')
 const { appendCrashLog } = require('./crash-logger')
+const { FIX_VERSION, readAudioRuntimeState } = require('./live-audio-runtime')
 
 const controllers = new Map()
 let registered = false
@@ -26,31 +27,53 @@ function trackSummary (track) {
 function audioSummary (value) {
   if (!value || typeof value !== 'object') return {}
   const result = {}
-  for (const key of ['reason', 'visibility']) {
+  for (const key of ['reason', 'visibility', 'diagnosticsRevision', 'audioPath']) {
     if (typeof value[key] === 'string') result[key] = value[key].slice(0, 60)
   }
   for (const key of ['focused', 'pushing', 'directMicrophoneEnabled', 'routeSupported', 'sameAudioTrack']) {
     if (typeof value[key] === 'boolean') result[key] = value[key]
   }
   result.microphone = trackSummary(value.microphone)
+  result.secondary = trackSummary(value.secondary)
   result.published = trackSummary(value.published)
+  for (const key of ['elapsedMs', 'secondaryStreamType', 'nativeStateAgeMs']) {
+    if (Number.isFinite(value[key])) result[key] = value[key]
+  }
+  if (value.volumeSettings && typeof value.volumeSettings === 'object') {
+    result.volumeSettings = {}
+    for (const key of ['audio', 'screen', 'custom']) {
+      if (Number.isFinite(value.volumeSettings[key])) result.volumeSettings[key] = value.volumeSettings[key]
+    }
+  }
   if (value.mixer && typeof value.mixer === 'object') {
     result.mixer = {}
     if (typeof value.mixer.state === 'string') result.mixer.state = value.mixer.state.slice(0, 30)
     for (const key of ['currentTime', 'sampleRate', 'baseLatency']) {
       if (Number.isFinite(value.mixer[key])) result.mixer[key] = value.mixer[key]
     }
+    if (value.mixer.clock && typeof value.mixer.clock === 'object') {
+      const clock = value.mixer.clock
+      result.mixer.clock = {}
+      for (const key of ['sampledAtMs', 'wallDeltaMs', 'audioDeltaMs', 'ratio', 'consecutiveSlowSamples']) {
+        if (Number.isFinite(clock[key])) result.mixer.clock[key] = clock[key]
+      }
+      if (typeof clock.slow === 'boolean') result.mixer.clock.slow = clock.slow
+    }
   }
   return result
 }
 
-function registerLiveAudioDiagnostics (win) {
+function registerLiveAudioDiagnostics (win, runtimeProfile = {}) {
   let active = false
   let blockerId = null
   let lastHeartbeat = 0
   let lastSample = {}
   let lastWritten = 0
   let lastAccepted = -Infinity
+  let audioServiceProcesses = []
+  let processSampleTime = null
+  let clockWarning = false
+  let lastClockWarning = -Infinity
   const contents = win.webContents
   const isWindows = process.platform === 'win32'
   const removers = []
@@ -77,11 +100,13 @@ function registerLiveAudioDiagnostics (win) {
       focused: win.isFocused(), minimized: win.isMinimized(), visible: win.isVisible(),
       backgroundThrottling: contents.getBackgroundThrottling(), active,
       suspensionBlocked: blockerId !== null,
+      audioServiceProcesses, processSampleTime,
       environment: {
-        fixVersion: 'win-audio-v1', appVersion: app.getVersion(),
+        fixVersion: FIX_VERSION, appVersion: app.getVersion(),
         electron: process.versions.electron, chrome: process.versions.chrome,
         platform: process.platform, osRelease: os.release(),
         disableRendererBackgrounding: app.commandLine.hasSwitch('disable-renderer-backgrounding'),
+        audioRuntime: readAudioRuntimeState(app, runtimeProfile),
       },
     }
   }
@@ -90,17 +115,27 @@ function registerLiveAudioDiagnostics (win) {
     if (win.isDestroyed() || contents.isDestroyed()) return
     ensureRunning()
     try {
-      const state = snapshot(reason)
       let metrics
       if (withMetrics) {
         try {
-          metrics = app.getAppMetrics().slice(0, 12).map(item => ({
+          const allMetrics = app.getAppMetrics()
+          // 记录 Electron 实际报告的服务信息；配置开关不等于服务已切换到进程内。
+          audioServiceProcesses = allMetrics.filter(item =>
+            /audio/i.test(`${item.name || ''} ${item.serviceName || ''}`)
+          ).map(item => ({
+            pid: item.pid, type: item.type, name: item.name,
+            serviceName: item.serviceName, sandboxed: item.sandboxed,
+          }))
+          processSampleTime = new Date().toISOString()
+          metrics = allMetrics.slice(0, 20).map(item => ({
             pid: item.pid, type: item.type,
+            name: item.name, serviceName: item.serviceName, sandboxed: item.sandboxed,
             cpu: item.cpu && item.cpu.percentCPUUsage,
             memoryKB: item.memory && item.memory.workingSetSize,
           }))
-        } catch (_) { metrics = [] }
+        } catch (_) { metrics = []; audioServiceProcesses = []; processSampleTime = null }
       }
+      const state = snapshot(reason)
       appendCrashLog('live-audio', {
         type: reason, window: state, audio: lastSample, processes: metrics,
       })
@@ -112,6 +147,7 @@ function registerLiveAudioDiagnostics (win) {
   function setActive (value) {
     const changed = active !== value
     active = value
+    if (!active) clockWarning = false
     if (active && isWindows && blockerId === null) {
       // 仅防止应用挂起；不强制保持屏幕点亮，也不等于提高音频线程优先级。
       try { blockerId = powerSaveBlocker.start('prevent-app-suspension') } catch (_) {}
@@ -132,6 +168,17 @@ function registerLiveAudioDiagnostics (win) {
       lastSample = audioSummary(payload.snapshot)
       ensureRunning()
       setActive(payload.active)
+      const clock = lastSample.mixer && lastSample.mixer.clock
+      if (active && clock && clock.slow && clock.consecutiveSlowSamples >= 2) {
+        if (!clockWarning || now - lastClockWarning >= 30000) {
+          write('mixer-clock-slow', true)
+          lastClockWarning = now
+        }
+        clockWarning = true
+      } else if (active && clock && clock.slow === false && clockWarning) {
+        clockWarning = false
+        write('mixer-clock-recovered', true)
+      } else if (!clock) clockWarning = false
       if (active && now - lastWritten > 15000) write('heartbeat', true)
     },
   }
