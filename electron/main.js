@@ -23,7 +23,7 @@ const isDev = process.env.NODE_ENV === 'development'
 // --expose-gc：暴露 global.gc()，允许代码主动触发垃圾回收
 // --max-semi-space-size=64：限制 V8 新生代大小，降低内存碎片
 app.commandLine.appendSwitch('js-flags', '--expose-gc --max-semi-space-size=64')
-// 禁止不可见页面的渲染进程降低优先级；页面动画/定时器节流由 backgroundThrottling 单独控制
+// 渲染进程退到后台时允许降低优先级，节省内存和 CPU
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 // 开启精确内存占用信息（便于调试 performance.memory）
 app.commandLine.appendSwitch('enable-precise-memory-info')
@@ -465,8 +465,6 @@ function createWindow () {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      // Windows 直播窗口最小化后仍需保持课堂页面运行，避免后台节流干扰采集和推流。
-      backgroundThrottling: process.platform !== 'win32',
       webSecurity: false,
       preload: path.join(__dirname, 'preload.js')
     }
@@ -1144,8 +1142,7 @@ app.whenReady().then(async () => {
         return
       }
       const streams = { video: sources[0] }
-      // 只在页面请求共享声音时回采系统音频，允许纯画面共享保留独立麦克风。
-      if (process.platform === 'win32' && request.audioRequested) {
+      if (process.platform === 'win32') {
         streams.audio = 'loopback'
       }
       callback(streams)
