@@ -337,9 +337,16 @@ async function checkScreenGuard () {
 }
 
 // ─── 启动防录屏守护（仅直播课堂期间启用） ────────────────────────────────
-// 仅通过进程检测拦截录屏/虚拟机；不启用 setContentProtection，以便允许正常截图
+// 内容保护负责阻止截图/录屏，进程检测作为录屏/虚拟机告警的补充。
 function startScreenGuard () {
   if (!mainWindow || mainWindow.isDestroyed()) return
+
+  // 进程轮询无法判断 Win11 剪辑工具、微信或钉钉是否正在采集。
+  // Electron 会调用系统级窗口捕获排除机制（支持的 Windows 版本上为
+  // WDA_EXCLUDEFROMCAPTURE），同时保护截图和录屏结果。
+  mainWindow.setContentProtection(true)
+
+  // 重复开启时仍重新施加内容保护，但不创建多个进程轮询定时器。
   if (screenGuardInterval) return
 
   consecutiveDetections = 0
@@ -360,6 +367,7 @@ function stopScreenGuard () {
   screenGuardChecking = false
 
   if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setContentProtection(false)
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: false,
       isVM: false,
@@ -1279,7 +1287,7 @@ ipcMain.on('window-minimize', (event) => {
   }
 });
 
-// 直播课堂防录屏：录屏/虚拟机进程检测（允许截图）；离开课堂后关闭
+// 课堂/回放防录屏：窗口内容保护 + 录屏/虚拟机进程告警；离开受保护页面后关闭
 ipcMain.on('set-screen-guard', (_, enabled) => {
   if (enabled) {
     startScreenGuard()
