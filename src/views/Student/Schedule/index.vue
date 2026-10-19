@@ -304,12 +304,7 @@ export default {
       currentPlayingItem: null,
 
        // macOS 屏幕录制权限引导弹窗
-      showScreenPermissionDialog: false,
-      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
-      _removeScreenPermissionDenied: null,
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
-      showScreenCaptureFailedDialog: false,
-      _removeScreenCaptureFailed: null,
 
       limitTime:30,
     }
@@ -480,19 +475,6 @@ export default {
     }
     window.addEventListener('message', this._onWindowMessage)
 
-    // macOS：监听主进程通知——屏幕录制权限被拒绝
-    if (window.electronAPI?.onScreenPermissionDenied) {
-      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
-        this.screenPermissionStatus = data?.status || 'denied'
-        this.showScreenPermissionDialog = true
-      })
-    }
-    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
-    if (window.electronAPI?.onScreenCaptureFailed) {
-      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
-        this.showScreenCaptureFailedDialog = true
-      })
-    }
       this.fetchAgreement()
     this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
   },

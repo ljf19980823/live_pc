@@ -607,6 +607,7 @@
 </template>
 
 <script>
+import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getTeachingGroupStats, getTeachingGroupList, getTeachingGroupDetail, getSsoInfo, updateSsoInfo, sendCode, updatePhone } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -1155,6 +1156,7 @@ export default {
        this.$message.warning('时间还未到，仅提前'+this.limitTimeTeacher+'分钟允许进入')
         return
       }
+      if (!(await confirmScreenPermissionBeforeEntry(1, this))) return
       if (window.electronAPI) {
         try {
           const [camStatus, micStatus] = await Promise.all([
@@ -1167,6 +1169,7 @@ export default {
           if (needsRequest.length) await Promise.all(needsRequest)
         } catch (_) {}
       }
+      if (this._isDestroyed || this._isBeingDestroyed || this._inactive) return
       const { userId, realName } = getUserInfo()
       const token = getToken()
       const liveId = course.liveId

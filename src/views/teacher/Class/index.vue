@@ -901,72 +901,14 @@
       <LiveClassroomFrame :src="liveUrl" @exit="showLiveIframe = false" />
     </div>
 
-    <!-- macOS 屏幕录制权限引导弹窗 -->
-    <div v-if="showScreenPermissionDialog" class="screen-permission-mask">
-      <div class="screen-permission-dialog">
-        <div class="screen-permission-icon">🖥️</div>
-        <div class="screen-permission-title">需要开启屏幕录制权限</div>
-        <div class="screen-permission-desc" v-if="screenPermissionStatus === 'not-determined'">
-          首次使用屏幕共享需要手动授权。请前往<br>
-          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
-          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
-        </div>
-        <div class="screen-permission-desc" v-else>
-          屏幕共享权限已被拒绝。请前往<br>
-          <strong>系统设置 → 隐私与安全性 → 屏幕录制</strong><br>
-          勾选「立升直播」后，<strong>重启应用</strong>即可正常使用屏幕共享。
-        </div>
-        <div class="screen-permission-steps">
-          <div class="screen-permission-step">
-            <span class="step-num">1</span>
-            <span>点击「前往系统设置」按钮</span>
-          </div>
-          <div class="screen-permission-step">
-            <span class="step-num">2</span>
-            <span>在列表中找到「立升直播」并勾选</span>
-          </div>
-          <div class="screen-permission-step">
-            <span class="step-num">3</span>
-            <span>重启应用后重新进入直播间</span>
-          </div>
-        </div>
-        <div class="screen-permission-btns">
-          <div class="screen-permission-btn-primary" @click="openScreenPreferences">前往系统设置</div>
-          <div class="screen-permission-btn-secondary" @click="showScreenPermissionDialog = false">稍后再说</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- macOS 屏幕采集失败弹窗（权限已授权但系统无法采集屏幕） -->
-    <div v-if="showScreenCaptureFailedDialog" class="screen-permission-mask">
-      <div class="screen-permission-dialog">
-        <div class="screen-permission-icon">⚠️</div>
-        <div class="screen-permission-title">屏幕共享启动失败</div>
-        <div class="screen-permission-desc">
-          系统暂时无法采集屏幕画面（可能由休眠唤醒或系统资源不足引起）。<br>
-          请<strong>重启应用</strong>后重新尝试屏幕共享。
-        </div>
-        <div class="screen-permission-steps">
-          <div class="screen-permission-step">
-            <span class="step-num">1</span>
-            <span>退出并重新打开「立升直播」</span>
-          </div>
-          <div class="screen-permission-step">
-            <span class="step-num">2</span>
-            <span>重新进入直播间后再次开启屏幕共享</span>
-          </div>
-        </div>
-        <div class="screen-permission-btns">
-          <div class="screen-permission-btn-secondary" @click="showScreenCaptureFailedDialog = false">知道了</div>
-        </div>
-      </div>
-    </div>
   </div>
 
   
 </template>
 
 <script>
+import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
 import FilePreview from '@/components/FilePreview/index.vue'
@@ -1129,12 +1071,7 @@ export default {
       deleteClassLoading: false,
 
        // macOS 屏幕录制权限引导弹窗
-      showScreenPermissionDialog: false,
-      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
-      _removeScreenPermissionDenied: null,
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
-      showScreenCaptureFailedDialog: false,
-      _removeScreenCaptureFailed: null,
 
       limitTimeTeacher:30
     }
@@ -1250,19 +1187,6 @@ export default {
       }
     });
 
-    // macOS：监听主进程通知——屏幕录制权限被拒绝
-    if (window.electronAPI?.onScreenPermissionDenied) {
-      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
-        this.screenPermissionStatus = data?.status || 'denied'
-        this.showScreenPermissionDialog = true
-      })
-    }
-    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
-    if (window.electronAPI?.onScreenCaptureFailed) {
-      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
-        this.showScreenCaptureFailedDialog = true
-      })
-    }
   },
   activated() {
     const currentToken = this.$store.state.user.token
@@ -2143,6 +2067,11 @@ export default {
        this.$message.warning('时间还未到，仅提前'+this.limitTimeTeacher+'分钟允许进入')
         return
       }
+      const { userId, realName, role } = getUserInfo()
+      const token = getToken()
+      const liveId = item.liveId
+      const roleNumber = role === 'STUDENT' ? 0 : 1
+      if (!(await confirmScreenPermissionBeforeEntry(roleNumber, this))) return
       if (window.electronAPI) {
         try {
           const [camStatus, micStatus] = await Promise.all([
@@ -2155,10 +2084,8 @@ export default {
           if (needsRequest.length) await Promise.all(needsRequest)
         } catch (_) {}
       }
-      const { userId, realName, role } = getUserInfo()
-      const token = getToken()
-      const liveId = item.liveId
-      const roleNumber = role === 'STUDENT' ? 0 : 1
+
+      if (this._isDestroyed || this._isBeingDestroyed || this._inactive) return
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
@@ -3370,109 +3297,6 @@ color: #333333;
 
 
 
-/* ─── macOS 屏幕录制权限引导弹窗 ──────────────────────────────────────── */
-.screen-permission-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.screen-permission-dialog {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 36px 40px 32px;
-  width: 440px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-.screen-permission-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-.screen-permission-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #101828;
-  margin-bottom: 12px;
-}
-.screen-permission-desc {
-  font-size: 14px;
-  color: #4B5563;
-  line-height: 1.7;
-  margin-bottom: 20px;
-}
-.screen-permission-steps {
-  width: 100%;
-  background: #F9FAFB;
-  border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  text-align: left;
-}
-.screen-permission-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #374151;
-}
-.step-num {
-  width: 22px;
-  height: 22px;
-  background: #0049FF;
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.screen-permission-btns {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-.screen-permission-btn-primary {
-  flex: 1;
-  height: 44px;
-  background: #0049FF;
-  color: #fff;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover { background: #003de0; }
-}
-.screen-permission-btn-secondary {
-  flex: 1;
-  height: 44px;
-  background: #F3F4F6;
-  color: #6B7280;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover { background: #E5E7EB; }
-}
 
 /* ─── 课后测试 tab 筛选栏（对齐学生端） ─────────────────────────── */
 .filter-bar {

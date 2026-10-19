@@ -4,6 +4,16 @@
       <router-view />
     </keep-alive>
 
+    <ScreenShareDialog
+      :visible="screenShareDialog.visible"
+      :kind="screenShareDialog.kind"
+      :status="screenShareDialog.status"
+      :opening="screenShareDialog.opening"
+      :error="screenShareDialog.error"
+      @dismiss="dismissScreenShareDialog"
+      @settings="openScreenPreferences"
+    />
+
     <!-- 防录屏 / 防虚拟机遮罩层 -->
     <transition name="screen-guard-fade">
       <div v-if="screenGuard.detected" class="screen-guard-overlay">
@@ -95,10 +105,20 @@
 </template>
 
 <script>
+import ScreenShareDialog from '@/components/ScreenShareDialog/index.vue'
+import {
+  screenShareDialog,
+  initializeScreenShareDialogs,
+  dismissScreenShareDialog,
+  openScreenPreferences
+} from '@/utils/screenPermission'
+
 export default {
   name: 'App',
+  components: { ScreenShareDialog },
   data () {
     return {
+      screenShareDialog,
       screenGuard: {
         detected: false,
         isRecording: false,
@@ -118,16 +138,20 @@ export default {
     }
   },
   mounted () {
+    this._removeScreenShareDialogs = initializeScreenShareDialogs()
     this.initScreenGuard()
     this.checkUpdate()
   },
   beforeDestroy () {
+    if (this._removeScreenShareDialogs) this._removeScreenShareDialogs()
     if (this._screenGuardCleanup) {
       this._screenGuardCleanup()
     }
     this.removeUpdateIpcListeners()
   },
   methods: {
+    dismissScreenShareDialog,
+    openScreenPreferences,
     initScreenGuard () {
       if (!window.electronAPI) return
 

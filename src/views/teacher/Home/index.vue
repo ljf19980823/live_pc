@@ -130,6 +130,7 @@
   </div>
 </template>
 <script>
+import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
@@ -153,12 +154,7 @@ export default {
       showLiveIframe: false,
 
        // macOS 屏幕录制权限引导弹窗
-      showScreenPermissionDialog: false,
-      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
-      _removeScreenPermissionDenied: null,
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
-      showScreenCaptureFailedDialog: false,
-      _removeScreenCaptureFailed: null,
 
        limitTimeTeacher:30
     }
@@ -193,19 +189,6 @@ export default {
       }
     });
 
-    // macOS：监听主进程通知——屏幕录制权限被拒绝
-    if (window.electronAPI?.onScreenPermissionDenied) {
-      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
-        this.screenPermissionStatus = data?.status || 'denied'
-        this.showScreenPermissionDialog = true
-      })
-    }
-    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
-    if (window.electronAPI?.onScreenCaptureFailed) {
-      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
-        this.showScreenCaptureFailedDialog = true
-      })
-    }
   },
   activated () {
     this.updateCurrentTimeInfo()
@@ -380,7 +363,6 @@ export default {
           return
         }
       }
-      this.prepareElectronMediaPermissions()
 
       const {userId,realName,userName,role}=getUserInfo();
       const token =  getToken();
@@ -397,6 +379,9 @@ export default {
           }
         } catch (_) {}
       }
+
+      if (!(await confirmScreenPermissionBeforeEntry(roleNumber, this))) return
+      this.prepareElectronMediaPermissions()
 
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播正式环境
       let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'; //直播测试环境

@@ -7,6 +7,7 @@ const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
 const { fileURLToPath } = require('url')
+const { registerScreenPermissionHandlers } = require('./screen-permissions')
 const {
   appendCrashLog,
   getCrashDumpsDirectory,
@@ -1296,19 +1297,8 @@ ipcMain.on('set-screen-guard', (_, enabled) => {
   }
 })
 
-// ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
-// 查询屏幕录制权限状态（仅 macOS 有效，其他平台返回 'granted'）
-ipcMain.handle('get-screen-access-status', () => {
-  if (process.platform !== 'darwin') return 'granted'
-  return systemPreferences.getMediaAccessStatus('screen')
-})
-
-// 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
-// macOS 屏幕录制权限无法通过代码弹窗申请，只能引导用户手动开启
-ipcMain.handle('open-screen-preferences', () => {
-  if (process.platform !== 'darwin') return
-  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
-})
+// ─── macOS 录屏权限查询与系统设置引导 ──────────────────────────────────
+registerScreenPermissionHandlers({ ipcMain, systemPreferences, desktopCapturer, shell })
 
 // ─── 打开崩溃日志所在目录（方便用户回传 crash.log） ──────────────────────
 ipcMain.handle('open-crash-log-folder', () => {
