@@ -25,6 +25,11 @@ module.exports = defineConfig({
         target: 'https://live.fjlsjy123.com/portal/api',//正式服务器
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
+      },
+      '/t1-api': {
+        target: 'https://dingtalk.fjlsjy123.com/ding-talk-t1',
+        changeOrigin: true,
+        pathRewrite: { '^/t1-api': '/api' }
       }
     }
   },

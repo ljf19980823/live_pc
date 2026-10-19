@@ -6,6 +6,7 @@ import store from './store'
 // ─── ElementUI ────────────────────────────────────────────────
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
+import 'katex/dist/katex.min.css'
 Vue.use(ElementUI, {
   size: 'medium',
   zIndex: 2000

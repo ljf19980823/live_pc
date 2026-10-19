@@ -1,0 +1,128 @@
+.practice-config-page .el-input__inner,
+.question-import-dialog .el-input__inner,
+.quiz-formula-dialog .el-input__inner {
+  /* PC 全局 input 重置使用了 !important，这里恢复原组卷页的字段外观。 */
+  border: 1px solid #dcdfe6 !important;
+  background: #fff !important;
+}
+
+.practice-config-page .el-input__inner::placeholder,
+.question-import-dialog .el-input__inner::placeholder,
+.quiz-formula-dialog .el-input__inner::placeholder {
+  color: #c0c4cc !important;
+  font-size: inherit !important;
+}
+
+.practice-config-page .el-input__inner:hover,
+.question-import-dialog .el-input__inner:hover,
+.quiz-formula-dialog .el-input__inner:hover {
+  border-color: #c0c4cc !important;
+}
+
+.practice-config-page .el-input__inner:focus,
+.practice-config-page .el-select .el-input.is-focus .el-input__inner,
+.practice-config-page .el-cascader .el-input.is-focus .el-input__inner,
+.question-import-dialog .el-input__inner:focus,
+.question-import-dialog .el-select .el-input.is-focus .el-input__inner,
+.question-import-dialog .el-cascader .el-input.is-focus .el-input__inner,
+.quiz-formula-dialog .el-input__inner:focus {
+  border-color: #1F7CFF !important;
+}
+
+.practice-config-page .el-input.is-disabled .el-input__inner,
+.question-import-dialog .el-input.is-disabled .el-input__inner,
+.quiz-formula-dialog .el-input.is-disabled .el-input__inner {
+  border-color: #e4e7ed !important;
+  background: #f5f7fa !important;
+}
+
+.practice-config-page .el-input__inner {
+  height: 40px;
+  line-height: 40px;
+}
+
+.practice-config-page .el-input__icon {
+  line-height: 40px;
+}
+
+.practice-import-knowledge-popper {
+  width: min(420px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+  box-sizing: border-box;
+}
+
+.practice-import-select-popper {
+  max-width: calc(100vw - 24px);
+}
+
+.practice-import-select-popper .el-select-dropdown__item,
+.practice-import-select-popper .el-select-group__title {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.practice-import-select-popper .el-select-dropdown__wrap {
+  overflow-x: hidden;
+}
+
+.practice-filter-taxonomy-popper {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-panel {
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-menu {
+  width: max-content;
+  min-width: 150px;
+  max-width: min(320px, calc(100vw - 34px));
+  flex: none;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-node {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  box-sizing: border-box;
+  line-height: 20px;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-node__label {
+  min-width: 0;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.practice-filter-taxonomy-popper .practice-taxonomy-label {
+  display: block;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-menu__wrap {
+  overflow-x: hidden;
+  height: 340px;
+  max-height: calc(100vh - 180px);
+}
+
+/* 单列文本已换行，横向滚动只由容纳多列的 panel 处理。 */
+.practice-filter-taxonomy-popper .el-cascader-menu .el-scrollbar__bar.is-horizontal {
+  display: none;
+}
+
+.practice-filter-taxonomy-popper .el-cascader__suggestion-list {
+  height: 340px;
+  max-height: calc(100vh - 180px);
+}

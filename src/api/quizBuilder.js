@@ -1,0 +1,508 @@
+import axios from 'axios'
+
+import request, { getRequestErrorMessage, showNetworkErrorAlert } from '@/utils/t1Request'
+
+// const TEACHING_CLOUD_BASE_URL = 'https://www.fjlsjy123.com/appTest/t1'  //测试环境
+const TEACHING_CLOUD_BASE_URL = 'https://www.fjlsjy123.com/appBack/t1' //正式环境
+
+const teachingCloud = axios.create({
+  baseURL: TEACHING_CLOUD_BASE_URL,
+  timeout: 30000
+})
+
+teachingCloud.interceptors.request.use(config => {
+  const token = localStorage.getItem('teaching_cloud_token')
+
+  config.headers = config.headers || {}
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+teachingCloud.interceptors.response.use(
+  response => response,
+  error => {
+    showNetworkErrorAlert(error)
+    error.message = getRequestErrorMessage(error)
+    return Promise.reject(error)
+  }
+)
+
+function unwrapCloudData(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+  return payload && (payload.data || payload.rows) ? payload.data || payload.rows : []
+}
+
+export async function getTeachingCloudOptions(url, params) {
+  const response = await teachingCloud.get(url, { params })
+  return unwrapCloudData(response.data)
+}
+
+export async function getTeachingCloudQuestions(url, params) {
+  const response = await teachingCloud.get(url, { params })
+  const payload = response.data || {}
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload.rows)
+      ? payload.rows
+      : Array.isArray(payload.data)
+        ? payload.data
+        : []
+
+  return {
+    rows,
+    total: Number(payload.total || rows.length)
+  }
+}
+
+/** 提交云题库题目纠错 */
+export async function addTeachingCloudError(data) {
+  const response = await teachingCloud.post('/addTeachingCloudError', data)
+  const payload = response.data || {}
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'code' in payload &&
+    !['0', '200'].includes(String(payload.code))
+  ) {
+    throw new Error(payload.message || payload.msg || '提交纠错失败')
+  }
+
+  return payload
+}
+
+function normalizeTopicList(payload) {
+  if (Array.isArray(payload)) return payload
+  if (payload && Array.isArray(payload.rows)) return payload.rows
+  if (payload && Array.isArray(payload.records)) return payload.records
+  if (payload && Array.isArray(payload.list)) return payload.list
+  return []
+}
+
+export function getTopicAreaBusiness() {
+  return request({
+    url: '/v1/topic/getAreaBusiness',
+    method: 'get'
+  })
+}
+
+/** 获取展示中的业务赛道及 standardType，不包含科目子树。 */
+export function getBusinessSubjectTree() {
+  return request({
+    url: '/v1/topic/getBusinessTracks',
+    method: 'get'
+  })
+}
+
+export function getBusinessSubjects(businessId) {
+  return request({
+    url: `/v1/topic/${encodeURIComponent(businessId)}/getSubjectTree`,
+    method: 'get'
+  })
+}
+
+export function getBusinessChapters(subjectId) {
+  return request({ url: `/v1/topic/${encodeURIComponent(subjectId)}/chapters`, method: 'get' })
+}
+
+export function getBusinessKnowledgePoints(subjectId) {
+  return request({ url: `/v1/topic/${encodeURIComponent(subjectId)}/knowledge-points`, method: 'get' })
+}
+
+export function getTopicTypeListByBusiness(businessId) {
+  return request({
+    url: `/v1/topic/${businessId}/getTypeListByBusiness`,
+    method: 'get'
+  })
+}
+
+export function getTopicSubjectListByType(typeId) {
+  return request({
+    url: `/v1/topic/${typeId}/getSubjectListByType`,
+    method: 'get'
+  })
+}
+
+export function getTopicSubjectPointTree(subjectId) {
+  return request({
+    url: `/v1/topic/${subjectId}/getSubjectPointTree`,
+    method: 'get'
+  })
+}
+
+export function getTopicSubjectPointList(subjectId) {
+  return request({
+    url: `/v1/topic/${subjectId}/getSubjectPointList`,
+    method: 'get'
+  })
+}
+
+export function getTopicKnowledgeList(subjectId, pointId) {
+  return request({
+    url: `/v1/topic/${subjectId}/${pointId}/getKnowledgeList`,
+    method: 'get'
+  })
+}
+
+export function getTopicQuestTypeTemplates(questType) {
+  return request({
+    url: `/v1/topic/${questType}/getQuestTypeTemplateList`,
+    method: 'get'
+  })
+}
+
+export function getTopicDictItemList(dictId) {
+  return request({
+    url: `/v1/topic/${dictId}/getDictItemList`,
+    method: 'get'
+  })
+}
+
+export function getTopicCompulsorySubjectList() {
+  return request({
+    url: '/v1/topic/getCompulsorySubjectList',
+    method: 'get'
+  })
+}
+
+export function getTopicUnCompulsorySubjectList() {
+  return request({
+    url: '/v1/topic/getUnCompulsorySubjectList',
+    method: 'get'
+  })
+}
+
+export function getTopicBookList(subjectId) {
+  return request({
+    url: `/v1/topic/${subjectId}/getBookList`,
+    method: 'get'
+  })
+}
+
+export function getTopicTypeList(typeId) {
+  return request({
+    url: `/v1/topic/${typeId}/getTypeList`,
+    method: 'get'
+  })
+}
+
+export function getTopicTypeListByBook(subjectId, bookId) {
+  return request({
+    url: `/v1/topic/${subjectId}/${bookId}/getTypeListByBook`,
+    method: 'get'
+  })
+}
+
+export function getTopicSubjectPointCompulsoryList(subjectId, level, bookId) {
+  return request({
+    url: `/v1/topic/${subjectId}/${level}/${bookId}/getSubjectPointCompulsoryList`,
+    method: 'get'
+  })
+}
+
+export function getTopicKnowledgeCompulsoryList(subjectId) {
+  return request({
+    url: `/v1/topic/${subjectId}/getKnowledgeCompulsoryList`,
+    method: 'get'
+  })
+}
+
+export async function getTopicQuestList(params) {
+  const payload = await request({
+    url: '/v1/topic/questList',
+    method: 'get',
+    params
+  })
+  const rows = normalizeTopicList(payload)
+
+  return {
+    rows,
+    total: Number((payload && (payload.total || payload.totalCount)) || rows.length)
+  }
+}
+
+/** 通用业务自有题库；章节使用 pointId 精确筛选，不复用专升本 treeId。 */
+export async function getTopicGeneralQuestList(params) {
+  const payload = await request({ url: '/v1/topic/getGeneralQuestList', method: 'get', params })
+  const rows = normalizeTopicList(payload)
+  const total = payload && (payload.total ?? payload.totalCount)
+  return { rows, total: Number(total ?? rows.length) }
+}
+
+export async function getTopicCompulsoryQuestList(params) {
+  const payload = await request({
+    url: '/v1/topic/getCompulsoryQuestList',
+    method: 'get',
+    params
+  })
+  const rows = normalizeTopicList(payload)
+
+  return {
+    rows,
+    total: Number((payload && (payload.total || payload.totalCount)) || rows.length)
+  }
+}
+
+export function addTopic(data) {
+  return request({
+    url: '/v1/topic/addTopic',
+    method: 'post',
+    data
+  })
+}
+
+export function addTopicByAi(data) {
+  return request({
+    url: '/v1/topic/addTopicByAi',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+/** 批量入库；接口请求体直接是 TopicDTO 数组。 */
+export function addTopicByTeachingBatch(questions, { signal } = {}) {
+  return request({
+    url: '/v1/topic/addTopicByTeachingBatch',
+    method: 'post',
+    data: questions,
+    signal,
+    skipErrorMessage: true
+  })
+}
+
+export function addTopicByTeaching(data) {
+  return request({
+    url: '/v1/topic/addTopicByTeaching',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+export function getTopicDetail(questId) {
+  return request({
+    url: `/v1/topic/detail/${questId}`,
+    method: 'get'
+  })
+}
+
+export function updateTopic(data) {
+  return request({
+    url: '/v1/topic/editTopic',
+    method: 'post',
+    data
+  })
+}
+
+export function deleteTopic(data) {
+  return request({
+    url: '/v1/topic/deleteTopic',
+    method: 'post',
+    data
+  })
+}
+
+// 旧组卷页保留原 GET 下载方式；业务导入弹框使用下方带目录快照的 POST 封装。
+export function downloadTopicTemplate() {
+  return request({ url: '/v1/topic/template', method: 'get', responseType: 'blob' })
+}
+
+export function downloadTopicCompulsoryTemplate(subjectId) {
+  return request({ url: '/v1/topic/templateCompulsory', method: 'get', params: { subjectId }, responseType: 'blob' })
+}
+
+export function downloadTopicTemplateWithCatalog(data) {
+  return request({
+    url: '/v1/topic/template',
+    method: 'post',
+    data,
+    responseType: 'blob'
+  })
+}
+
+export function downloadTopicCompulsoryTemplateWithCatalog(data) {
+  return request({
+    url: '/v1/topic/templateCompulsory',
+    method: 'post',
+    data,
+    responseType: 'blob'
+  })
+}
+
+export function importTopicQuestions(data, params) {
+  return request({
+    url: '/v1/topic/import',
+    method: 'post',
+    data,
+    params
+  })
+}
+
+export function importTopicCompulsoryQuestions(data, params) {
+  return request({
+    url: '/v1/topic/importCompulsory',
+    method: 'post',
+    data,
+    params
+  })
+}
+
+export function downloadTopicGeneralTemplate(data) {
+  return request({ url: '/v1/topic/templateWithoutType', method: 'post', data, responseType: 'blob' })
+}
+
+export function importTopicGeneralQuestions(data, params) {
+  return request({ url: '/v1/topic/importWithoutType', method: 'post', data, params })
+}
+
+export async function uploadTopicImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const result = await request({
+    url: '/v1/topic/uploadImg',
+    method: 'post',
+    data: formData,
+    skipErrorMessage: true
+  })
+  const imageUrl = typeof result === 'string'
+    ? result
+    : result && (result.data || result.url)
+
+  if (!imageUrl) {
+    throw new Error('图片上传接口未返回图片地址')
+  }
+  return String(imageUrl)
+}
+
+export async function updateTeacherOneResource(data) {
+  const response = await teachingCloud.get('/addTeacherOneResource', { params: data })
+  const payload = response.data || {}
+
+  if (payload && typeof payload === 'object' && 'code' in payload && payload.code !== 200 && payload.code !== 0) {
+    throw new Error(payload.message || payload.msg || '资源篮操作失败')
+  }
+
+  return payload
+}
+
+/** 云题库资源篮数量 */
+export async function getTeacherOneResourceTotal(params) {
+  const response = await teachingCloud.get('/getTeacherOneResourceTotal', { params })
+  const payload = response.data || {}
+
+  if (payload && typeof payload === 'object' && 'code' in payload && payload.code !== 200 && payload.code !== 0) {
+    throw new Error(payload.message || payload.msg || '获取资源篮数量失败')
+  }
+
+  const count = payload.count != null
+    ? payload.count
+    : (payload.data && typeof payload.data === 'object' ? payload.data.count : payload.data)
+
+  return Number(count) || 0
+}
+
+/** 智能题库加入/取消资源篮：type 1 加入，0 取消 */
+export function updateTopicResource(data) {
+  return request({
+    url: '/v1/topic/topicResource',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+/** 智能题库资源篮数量 */
+export function getTopicResourceTotal() {
+  return request({
+    url: '/v1/topic/selectTopicResourceTotal',
+    method: 'get'
+  })
+}
+
+export function generateQuizQuestions(data) {
+  return request({
+    url: '/edu/after/quiz/generateQuest',
+    method: 'post',
+    data
+  })
+}
+
+export function generatePartQuest(data) {
+  return request({
+    url: '/v1/topic/generatePartQuest',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+/** 教师课后测 AI 出题（仅返回草稿，不发布、不落库） */
+export function generateAfterQuizQuestions(data) {
+  return request({
+    baseURL: process.env.VUE_APP_T1_AI_BASE_URL || process.env.VUE_APP_API_BASE_URL,
+    url: '/v1/t1-ai/after-quiz/questions',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    skipErrorMessage: true,
+    data
+  })
+}
+
+/** 获取当前听记对应的科目，用于课后测 AI 出题条件回显 */
+export function getMinutesSubject(minutesId) {
+  return request({
+    baseURL: process.env.VUE_APP_T1_AI_BASE_URL || process.env.VUE_APP_API_BASE_URL,
+    url: `/v1/t1-ai/minutes/${encodeURIComponent(minutesId)}/subject`,
+    method: 'get',
+    skipErrorMessage: true
+  })
+}
+
+export function getQuestListByKnowledge(data) {
+  return request({
+    url: '/v1/topic/getQuestListByKnowledge',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+export function getQuestListByKnowledgeByUpgrade(data) {
+  return request({
+    url: '/v1/topic/getQuestListByKnowledgeByUpgrade',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}
+
+export function publishAfterQuiz(data) {
+  return request({
+    url: '/v1/after-quizzes',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    data
+  })
+}

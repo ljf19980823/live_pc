@@ -18,6 +18,10 @@
           <img src="@/assets/images/online/add_btn.png" class="btn-create__icon" alt="" />
           <span>新建课堂</span>
         </div>
+        <div class="btn-after-test" v-if="isTeacher" @click="publishStandaloneAfterClassTest">
+          <i class="el-icon-document-add btn-after-test__icon"></i>
+          <span>发布课后测</span>
+        </div>
         <div class="btn-schedule" @click="openSchedule">
           <img src="@/assets/images/online/kb_btn.png" class="btn-schedule__icon" alt="" />
           <span>查看课表</span>
@@ -892,6 +896,12 @@
       @close="playerVisible = false"
     />
 
+    <publish-after-quiz-dialog
+      v-if="publishDialogVisible"
+      @close="closePublishDialog"
+      @confirm="confirmAfterQuiz"
+    />
+
   </div>
 </template>
 
@@ -904,14 +914,17 @@ import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import AfterClassTestDetail from '@/views/teacher/Class/AfterClassTestDetail.vue'
+import PublishAfterQuizDialog from '@/views/teacher/publishTest/components/PublishAfterQuizDialog.vue'
+import { savePracticeRouteConfig } from '@/utils/practiceRoute'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'Online',
-  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail },
+  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail, PublishAfterQuizDialog },
   directives: { Clickoutside },
   data() {
     return {
+      publishDialogVisible: false,
       activeTab: 'live',
       tabs: [
         { key: 'live', label: '待启课堂' },
@@ -1817,13 +1830,32 @@ created() {
      this.activeTab = 'liveui'
     },
 
-    async publishAfterClassTest(item) {
+    publishStandaloneAfterClassTest() {
+      this.publishDialogVisible = true
+    },
+
+    closePublishDialog() {
+      this.publishDialogVisible = false
+    },
+
+    confirmAfterQuiz(config) {
+      const practiceConfig = { ...config, entrySource: 'teacher-home' }
+      savePracticeRouteConfig(practiceConfig)
+      this.publishDialogVisible = false
+      this.$router.push({
+        name: 'create-practice',
+        query: { entrySource: 'teacher-home' }
+      })
+    },
+
+    async publishAfterClassTest(item = {}) {
       this.prepareElectronMediaPermissions()
 
       const token =  getToken()
       console.log(token,'token值')
       const { userId, realName } = getUserInfo()
-      const liveId = item.liveId
+      const liveId = item.liveId || ''
+      const classroomId = item.liveLessonId || ''
 
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
@@ -1831,7 +1863,7 @@ created() {
         liveBaseUrl = 'http://localhost:8000'
       }
 
-      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`
+      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${classroomId}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${classroomId}`
       console.log(this.liveUrl, '发布课后测直播地址')
       this.activeTab = 'liveui'
     },
@@ -2547,6 +2579,34 @@ created() {
     width: 14px;
     height: 14px;
     object-fit: contain;
+  }
+}
+
+.btn-after-test {
+  width: 126px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1px solid #1F7CFF;
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: #1F7CFF;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: #EFF6FF;
+    border-color: #1768D9;
+  }
+
+  &__icon {
+    font-size: 16px;
   }
 }
 

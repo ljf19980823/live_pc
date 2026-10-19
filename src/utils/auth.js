@@ -37,3 +37,19 @@ export function clearAuth() {
   removeToken()
   removeUserInfo()
 }
+
+// 下面这些兼容方法供从 TeacherOne 迁移过来的课后测链路使用。
+export function getAuthInfo() {
+  const userInfo = getUserInfo()
+  if (!userInfo) return null
+  return {
+    ...userInfo,
+    id: userInfo.id || userInfo.userId || '',
+    userId: userInfo.userId || userInfo.id || '',
+    userName: userInfo.userName || userInfo.realName || ''
+  }
+}
+
+export function clearAuthInfo() {
+  clearAuth()
+}
