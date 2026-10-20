@@ -4,7 +4,7 @@
       v-if="bankEditorVisible"
       :value="bankEditor"
       :quest-id="bankEditorQuestId"
-      :edu-type="eduType"
+      :edu-type="activeFilterEduType"
       :business-mode="sourceTab === '自有题库'"
       :editing="bankEditingIndex !== null"
       @back="closeBankEditor"
@@ -82,7 +82,7 @@
                 ref="ai-subject"
                 :key="aiSubjectPickerKey"
                 v-model="aiFilters.subjectPath"
-                :options="aiBusinessOptions"
+                :options="aiCloudSubjectOptions"
                 :props="aiSubjectCascaderProps"
                 :disabled="sourceSwitching"
                 popper-class="practice-filter-taxonomy-popper"
@@ -91,7 +91,7 @@
                 @visible-change="handleTaxonomyVisibleChange($event, 'ai-subject')"
                 @expand-change="updateTaxonomyPopper('ai-subject')"
               />
-              <button v-if="!aiBusinessOptions.length" class="reset-button" type="button" :disabled="sourceSwitching" @click="loadAiBase">重新加载学段</button>
+              <button v-if="!aiCloudSubjectOptions.length" class="reset-button" type="button" :disabled="sourceSwitching" @click="loadAiBase">重新加载学段</button>
               <template>
                 <template v-if="aiDisplayStandardType === 1">
                   <el-select v-model="aiFilters.bookId" clearable filterable placeholder="教材版本" @change="handleAiBookChange">
@@ -126,51 +126,6 @@
                 <el-input-number v-model="aiCount" :min="1" :max="aiCountMax" :controls="false" placeholder="出题数量" />
               </template>
             </div>
-            <div v-else-if="sourceTab === '自有题库'" class="condition-grid own-grid">
-              <el-cascader
-                ref="own-subject"
-                :key="ownSubjectPickerKey"
-                v-model="ownFilters.subjectPath"
-                :options="ownBusinessOptions"
-                :props="ownSubjectCascaderProps"
-                :disabled="sourceSwitching || autoImportLoading"
-                popper-class="practice-filter-taxonomy-popper"
-                clearable filterable placeholder="学段 / 科目"
-                @change="handleOwnSubjectChange"
-                @visible-change="handleTaxonomyVisibleChange($event, 'own-subject')"
-                @expand-change="updateTaxonomyPopper('own-subject')"
-              />
-              <button v-if="!ownBusinessOptions.length" class="reset-button" type="button" :disabled="sourceSwitching" @click="loadOwnBase">重新加载学段</button>
-              <template>
-                <template v-if="ownDisplayStandardType === 1">
-                  <div v-if="!isOwnChineseSubject" class="filter-mode">
-                    <button type="button" :class="{ active: ownFilterMode === 'chapter' }" @click="changeOwnMode('chapter')">按章节筛选</button>
-                    <button type="button" :class="{ active: ownFilterMode === 'knowledge' }" @click="changeOwnMode('knowledge')">按知识点筛选</button>
-                  </div>
-                  <template v-if="ownFilterMode === 'chapter'">
-                    <el-select v-model="ownFilters.bookId" clearable filterable placeholder="教材版本" @change="handleOwnBookChange">
-                      <el-option v-for="item in ownOptions.books" :key="item.id" :label="item.name" :value="String(item.id)" />
-                    </el-select>
-                    <el-select v-model="ownFilters.level" clearable filterable placeholder="年级" @change="loadOwnChapters">
-                      <el-option v-for="item in ownOptions.levels" :key="item.id || item.name" :label="item.name" :value="String(item.id || item.name)" />
-                    </el-select>
-                  </template>
-                </template>
-                <el-cascader v-if="ownDisplayStandardType !== 1 || ownFilterMode === 'chapter'" ref="own-chapter" v-model="ownFilters.pointPath" :options="ownOptions.chapters" :props="{ expandTrigger: 'hover', checkStrictly: true }" clearable filterable placeholder="章节" popper-class="practice-filter-taxonomy-popper" @visible-change="handleTaxonomyVisibleChange($event, 'own-chapter')" @expand-change="updateTaxonomyPopper('own-chapter')">
-                  <template slot-scope="{ node }"><span class="practice-taxonomy-label" @click.stop="handleTaxonomyLabelClick(node, $event)">{{ node.label }}</span></template>
-                </el-cascader>
-                <el-cascader v-else ref="own-knowledge" v-model="ownFilters.knowledgePath" :options="ownOptions.knowledge" :props="k12KnowledgeCascaderProps" clearable filterable placeholder="知识点" popper-class="practice-filter-taxonomy-popper" @visible-change="handleTaxonomyVisibleChange($event, 'own-knowledge')" @expand-change="updateTaxonomyPopper('own-knowledge')">
-                  <template slot-scope="{ node }"><span class="practice-taxonomy-label" @click.stop="handleTaxonomyLabelClick(node, $event)">{{ node.label }}</span></template>
-                </el-cascader>
-                <el-select v-model="ownFilters.questType" clearable filterable placeholder="题型">
-                  <el-option v-for="item in ownOptions.questTypes" :key="item.id" :label="item.name" :value="String(item.id)" />
-                </el-select>
-                <el-select v-model="ownFilters.difficulty" clearable filterable :placeholder="ownDisplayStandardType === 1 ? '难度' : '难易程度'">
-                  <el-option v-for="item in ownOptions.difficulties" :key="item.id" :label="item.name" :value="String(item.id)" />
-                </el-select>
-                <el-input v-model="ownFilters.name" class="question-content-input" clearable placeholder="题目内容/题目id" />
-              </template>
-            </div>
             <div v-else-if="activeFilterEduType === '专升本'" class="condition-grid zsb-grid">
             <div v-if="showAiMinutesSwitch" class="minutes-content-switch">
               <span>根据当前听记内容出题</span>
@@ -181,7 +136,7 @@
               />
             </div>
             <el-cascader
-              v-if="sourceTab === '云端题库'"
+              v-if="sourceTab !== 'AI出题'"
               v-model="cloudSubjectPath"
               :options="cloudSubjectOptions"
               :props="{ expandTrigger: 'hover' }"
@@ -269,7 +224,7 @@
               />
             </div>
             <el-cascader
-              v-if="sourceTab === '云端题库'"
+              v-if="sourceTab !== 'AI出题'"
               v-model="cloudSubjectPath"
               :options="cloudSubjectOptions"
               :props="{ expandTrigger: 'hover' }"
@@ -1039,6 +994,7 @@ import {
   downloadTopicGeneralTemplate,
   generateAfterQuizQuestions,
   generatePartQuest,
+  getAfterQuizIntehubToken,
   getMinutesSubject,
   getBusinessSubjectTree,
   getBusinessSubjects,
@@ -1048,20 +1004,17 @@ import {
   getQuestListByKnowledgeByUpgrade,
   getTeachingCloudOptions,
   getTeachingCloudQuestions,
+  getTeachingCloudUpgradeSubjectList,
   getTopicAreaBusiness,
   getTopicBookList,
-  getTopicCompulsoryQuestList,
   getTopicCompulsorySubjectList,
   getTopicUnCompulsorySubjectList,
   getTopicDictItemList,
   getTopicKnowledgeCompulsoryList,
-  getTopicQuestList,
-  getTopicGeneralQuestList,
   getTopicQuestTypeTemplates,
   getTopicSubjectListByType,
   getTopicSubjectPointCompulsoryList,
   getTopicSubjectPointList,
-  getTopicSubjectPointTree,
   getTopicKnowledgeList,
   getTopicTypeListByBook,
   getTopicTypeListByBusiness,
@@ -1135,8 +1088,6 @@ const CHILDREN_PER_MOTHER = 5
 const AI_LEARNING_TRACKS = { 0: 'OTHER_STAGES', 1: 'K9_K12', 2: 'FUJIAN_COLLEGE_UPGRADE' }
 const emptyAiFilters = () => ({ subjectPath: [], bookId: '', level: '', pointPath: [], knowledgePath: [], chapterSelection: '', knowledgeSelection: '', questType: '', difficulty: '' })
 const emptyAiOptions = () => ({ books: [], levels: [], chapters: [], knowledge: [], difficulties: [] })
-const emptyOwnFilters = () => ({ subjectPath: [], mode: 'chapter', bookId: '', level: '', pointPath: [], knowledgePath: [], questType: '', difficulty: '', name: '' })
-const emptyOwnOptions = () => ({ books: [], levels: [], chapters: [], knowledge: [], questTypes: [], difficulties: [] })
 
 const createPaperGroup = id => ({
   id,
@@ -1235,13 +1186,7 @@ export default {
       aiFilters: emptyAiFilters(),
       aiOptions: emptyAiOptions(),
       aiBusinessOptions: [],
-      aiSubjectTrees: {},
       aiSubjectPickerKey: 0,
-      ownFilters: emptyOwnFilters(),
-      ownOptions: emptyOwnOptions(),
-      ownBusinessOptions: [],
-      ownSubjectTrees: {},
-      ownSubjectPickerKey: 0,
       total: 0,
       page: 1,
       pageSize: 10,
@@ -1364,9 +1309,7 @@ export default {
     },
     activeFilterEduType() {
       if (this.sourceTab === 'AI出题') return this.aiStandardType === 1 ? 'K9K12' : '专升本'
-      if (this.sourceTab === '自有题库') return this.ownStandardType === 1 ? 'K9K12' : '专升本'
-      // 云端按所选科目决定筛选类型，不读取顶部学习赛道。
-      if (this.sourceTab !== '云端题库') return this.eduType
+      // 云端题库和自有题库共用科目树，按所选科目决定筛选类型。
       const group = this.cloudSubjectOptions.find(item => item.value === this.cloudSubjectPath[0])
       return group ? group.eduType : 'K9K12'
     },
@@ -1376,9 +1319,6 @@ export default {
         '自有题库': '老师个人上传、收藏或编辑的题目集合，支持Excel导入',
         'AI出题': '由AI模型实时生成的题目'
       }[this.sourceTab] || ''
-    },
-    ownBusiness() {
-      return this.ownBusinessOptions.find(item => item.value === this.ownFilters.subjectPath[0]) || null
     },
     importBusiness() {
       return this.importBusinessOptions.find(item => item.value === this.importForm.subjectPath[0]) || null
@@ -1413,52 +1353,60 @@ export default {
         disabled: !(this.importKnowledgeCache[chapter.id] || []).length
       }))
     },
-    ownStandardType() {
-      return this.ownBusiness ? this.ownBusiness.standardType : -1
-    },
-    ownSubject() {
-      return this.findBusinessSubject(this.ownBusiness, this.ownSubjectTrees, this.ownFilters.subjectPath)
-    },
-    ownDisplayStandardType() {
-      // 未选有效科目时只默认展示 K9K12 条件，接口仍使用真实科目类型。
-      return this.ownSubject ? this.ownStandardType : 1
-    },
-    ownSubjectCascaderProps() {
-      return { expandTrigger: 'click', lazy: true, checkStrictly: false, lazyLoad: this.loadOwnSubjectNode }
-    },
-    isOwnChineseSubject() {
-      if (this.ownStandardType !== 1 || !this.ownSubject) return false
-      const names = [this.ownSubject.name, this.ownSubject.otherName, this.ownSubject.label].map(name => String(name || '').replace(/\s+/g, ''))
-      if (names.some(name => ['小学语文', '初中语文', '高中语文'].includes(name))) return true
-      // 懒加载子树存放在独立缓存中，不能依赖根 options 是否已有 children。
-      let nodes = this.ownSubjectTrees[this.ownBusiness.id] || []
-      const ancestorNames = [this.ownBusiness.label]
-      for (const value of this.ownFilters.subjectPath.slice(1, -1)) {
-        const node = nodes.find(item => item.value === value)
-        if (!node) break
-        ancestorNames.push(node.label)
-        nodes = node.children || []
-      }
-      const ancestors = ancestorNames.join('/')
-      return names.includes('语文') && ['小学', '初中', '高中'].some(stage => ancestors.includes(stage))
-    },
-    ownFilterMode() {
-      return this.isOwnChineseSubject ? 'knowledge' : this.ownFilters.mode
+    aiCloudSubjectOptions() {
+      const toGroups = (root, prefix, eduType) => (root && root.children || []).map((group, groupIndex) => ({
+        ...group,
+        value: `${prefix}:${group.id || groupIndex}`,
+        originalValue: group.value,
+        eduType,
+        children: (group.children || []).map(subject => ({
+          ...subject,
+          value: String(subject.id),
+          leaf: true
+        }))
+      })).filter(group => group.children.length)
+      const k12Root = this.aiBusinessOptions.find(item => item.standardType === 1)
+      const upgradeRoot = this.aiBusinessOptions.find(item => item.standardType === 2)
+      const k12 = toGroups(k12Root, 'k12', 'K9K12')
+      const upgradeGroups = toGroups(upgradeRoot, 'zsb', '专升本')
+      const zsb = upgradeGroups.length ? [{
+        value: 'zsb',
+        label: '专升本',
+        eduType: '专升本',
+        children: upgradeGroups
+      }] : []
+      return [...k12, ...zsb]
     },
     aiBusiness() {
-      return this.aiBusinessOptions.find(item => item.value === this.aiFilters.subjectPath[0]) || null
+      const root = this.aiCloudSubjectOptions.find(item => item.value === this.aiFilters.subjectPath[0])
+      if (!root) return null
+      const group = root.eduType === '专升本'
+        ? (root.children || []).find(item => item.value === this.aiFilters.subjectPath[1])
+        : root
+      return group ? {
+        id: String(group.id || ''),
+        label: group.label || '',
+        standardType: root.eduType === 'K9K12' ? 1 : 2
+      } : null
     },
     aiStandardType() {
       return this.aiBusiness ? this.aiBusiness.standardType : -1
     },
     aiSubject() {
-      return this.findBusinessSubject(this.aiBusiness, this.aiSubjectTrees, this.aiFilters.subjectPath)
+      let nodes = this.aiCloudSubjectOptions
+      let selected = null
+      for (const value of this.aiFilters.subjectPath) {
+        selected = nodes.find(item => item.value === value)
+        if (!selected) return null
+        nodes = selected.children || []
+      }
+      return selected && selected.leaf ? selected : null
     },
     aiDisplayStandardType() {
       return this.aiSubject ? this.aiStandardType : 1
     },
     aiSubjectCascaderProps() {
-      return { expandTrigger: 'click', lazy: true, checkStrictly: false, lazyLoad: this.loadAiSubjectNode }
+      return { expandTrigger: 'hover', checkStrictly: false }
     },
     allowAiCustomNames() {
       return this.enableAiCustomNames && this.aiStandardType === 0 && !this.useAiMinutesContent
@@ -1542,21 +1490,15 @@ export default {
     childLimit() {
       return this.paperGroups.reduce((count, group) => count + group.children.length, 0)
     },
-    isZsbSmartBank() {
-      return [0, 2].includes(this.ownStandardType) && this.sourceTab === '自有题库'
-    },
     usesZsbSubjectCascader() {
       return this.eduType === '专升本'
     },
     usesZsbTopicOptions() {
       // 新增、编辑、导入尚未学段化，其旧选项接口继续读取顶部学习赛道。
-      return this.eduType === '专升本' && (this.sourceTab === '自有题库' || this.sourceTab === 'AI出题')
-    },
-    isK12SmartBank() {
-      return this.ownStandardType === 1 && this.sourceTab === '自有题库'
+      return this.eduType === '专升本' && this.sourceTab === 'AI出题'
     },
     usesK12TopicOptions() {
-      return this.eduType === 'K9K12' && (this.sourceTab === '自有题库' || this.sourceTab === 'AI出题')
+      return this.eduType === 'K9K12' && this.sourceTab === 'AI出题'
     },
     isSmartEditable() {
       return this.sourceTab === '自有题库'
@@ -1565,7 +1507,8 @@ export default {
       return this.sourceTab === 'AI出题' && this.loading
     },
     sourceTabSwitchLocked() {
-      return this.sourceSwitching || this.autoImportLoading || (this.sourceTab !== '自有题库' && this.filterOptionsLoading > 0) || (!['AI出题', '自有题库'].includes(this.sourceTab) && this.loading)
+      return this.sourceSwitching || this.autoImportLoading ||
+        (this.sourceTab !== 'AI出题' && (this.filterOptionsLoading > 0 || this.loading))
     },
     motherCount() {
       return this.paperGroups.filter(group => group.mother).length
@@ -1597,7 +1540,10 @@ export default {
   },
   async mounted() {
     try {
+      await getAfterQuizIntehubToken()
       await this.loadCurrentBase()
+    } catch (error) {
+      this.$message.warning(error.message || '课后测初始化失败，请稍后重试')
     } finally {
       this.sourceSwitching = false
     }
@@ -1637,192 +1583,6 @@ export default {
         .filter(item => item.standardType != null && [0, 1, 2].includes(Number(item.standardType)) && (internal || Number(item.standardType) !== 2))
         .map(item => ({ id: String(item.id), value: 'business:' + item.id, label: item.name, standardType: Number(item.standardType), leaf: false }))
     },
-    captureOwnFilterRequest(kind) {
-      const key = 'own-' + kind
-      const sequence = (this.filterRequestSequences[key] || 0) + 1
-      this.filterRequestSequences[key] = sequence
-      // 自有筛选上下文不包含 eduType，顶部切赛道不使联动失效。
-      // 科目基础选项同时加载教材和知识点，切换筛选方式不使这批选项失效。
-      // 教材、章节请求则必须核对当前联动条件，避免隐藏模式回写旧选项。
-      const context = () => JSON.stringify([
-        this.filterStateSequence, this.sourceTab, this.ownFilters.subjectPath,
-        ...(kind === 'subject' ? [] : [this.ownFilters.bookId, this.ownFilters.level, this.ownFilterMode])
-      ])
-      const original = context()
-      return () => this.filterRequestSequences[key] === sequence && context() === original
-    },
-    async loadOwnBase() {
-      const revision = this.filterStateSequence
-      const sequence = (this.filterRequestSequences['own-base'] || 0) + 1
-      this.filterRequestSequences['own-base'] = sequence
-      const [businesses, difficulties] = await Promise.allSettled([getBusinessSubjectTree(), getTopicDictItemList(TOPIC_DIFFICULTY_DICT_ID)])
-      if (this.sourceTab !== '自有题库' || revision !== this.filterStateSequence || sequence !== this.filterRequestSequences['own-base']) return
-      this.ownBusinessOptions = businesses.status === 'fulfilled' ? this.businessTrackOptions(businesses.value) : []
-      if (businesses.status !== 'fulfilled') this.$message.warning('学段赛道加载失败，请重新加载学段')
-      if (difficulties.status === 'fulfilled') this.ownOptions.difficulties = difficulties.value || []
-      else this.$message.warning('难度选项加载失败，请重新选择科目重试')
-    },
-    async ensureOwnBusinessSubjects(business) {
-      if (this.ownSubjectTrees[business.id]) return this.ownSubjectTrees[business.id]
-      const revision = this.filterStateSequence
-      const key = 'own-tree:' + business.id
-      const sequence = (this.filterRequestSequences[key] || 0) + 1
-      this.filterRequestSequences[key] = sequence
-      const rows = await getBusinessSubjects(business.id)
-      if (this.sourceTab !== '自有题库' || revision !== this.filterStateSequence || sequence !== this.filterRequestSequences[key]) return null
-      const tree = this.normalizeBusinessSubjectTree(rows, business.value)
-      this.$set(this.ownSubjectTrees, business.id, tree)
-      return tree
-    },
-    async loadOwnSubjectNode(node, resolve) {
-      const revision = this.filterStateSequence
-      if (node.root) { resolve(this.ownBusinessOptions); return }
-      if (node.level !== 1 || (node.children && node.children.length)) { resolve([]); return }
-      const business = this.ownBusinessOptions.find(item => item.value === node.value)
-      if (!business) { resolve([]); return }
-      try {
-        const children = await this.ensureOwnBusinessSubjects(business)
-        if (children === null) { node.loading = false; return }
-        node.data.leaf = false
-        resolve(children)
-        this.updateTaxonomyPopper('own-subject')
-        if (!children.length) this.$message.warning('该学段暂无可选科目')
-      } catch (error) {
-        node.loading = false
-        node.loaded = false
-        if (this.sourceTab === '自有题库' && revision === this.filterStateSequence) this.$message.warning('科目加载失败，请重新展开学段重试')
-      }
-    },
-    async handleOwnSubjectChange() {
-      // 仅清空自有题库左侧状态，已导入的母题、子题继续保留。
-      const path = [...this.ownFilters.subjectPath]
-      this.filterStateSequence += 1
-      this.requestSequence += 1
-      this.ownFilters = { ...emptyOwnFilters(), subjectPath: path }
-      this.ownOptions = { ...emptyOwnOptions(), difficulties: this.ownOptions.difficulties }
-      this.loading = false
-      this.releaseErrorImageUrls(this.questions)
-      this.questions = []
-      this.total = 0
-      this.page = 1
-      this.hasSearched = false
-      if (!this.ownSubject) return
-      const subject = this.ownSubject
-      const isCurrent = this.captureOwnFilterRequest('subject')
-      try {
-        const first = this.ownStandardType === 1 ? getTopicBookList(subject.id)
-          : this.ownStandardType === 0 ? getBusinessChapters(subject.id) : getTopicSubjectPointTree(subject.id)
-        const [options, knowledge, questTypes, difficulties] = await this.waitForFilterOptions(Promise.all([
-          first,
-          this.ownStandardType === 1 ? getTopicKnowledgeCompulsoryList(subject.id) : Promise.resolve([]),
-          subject.questType ? getTopicQuestTypeTemplates(subject.questType) : Promise.resolve([]),
-          this.ownOptions.difficulties.length ? Promise.resolve(this.ownOptions.difficulties) : getTopicDictItemList(TOPIC_DIFFICULTY_DICT_ID)
-        ]))
-        if (!isCurrent()) return
-        if (this.ownStandardType === 1) this.ownOptions.books = options || []
-        else if (this.ownStandardType === 0) {
-          // 通用章节 children 是知识点；章节按 parentId 还原，查询只提交所选 pointId。
-          this.ownOptions.chapters = this.normalizeFlatTree((options || []).map(({ children, ...item }) => item))
-        } else this.ownOptions.chapters = this.normalizeTree(options || [])
-        this.ownOptions.knowledge = this.normalizeAiKnowledgeTree(knowledge)
-        this.ownOptions.questTypes = questTypes || []
-        this.ownOptions.difficulties = difficulties || []
-      } catch (error) { if (isCurrent()) this.$message.warning('筛选条件加载失败，请重新选择科目重试') }
-    },
-    async handleOwnBookChange() {
-      this.ownFilters.level = ''
-      this.ownFilters.pointPath = []
-      this.ownOptions.levels = []
-      this.ownOptions.chapters = []
-      const isCurrent = this.captureOwnFilterRequest('book')
-      if (!this.ownSubject || !this.ownFilters.bookId || this.ownFilterMode !== 'chapter') return
-      try {
-        const levels = await this.waitForFilterOptions(getTopicTypeListByBook(this.ownSubject.id, this.ownFilters.bookId))
-        if (isCurrent()) this.ownOptions.levels = levels || []
-      } catch (error) { if (isCurrent()) this.$message.warning('年级加载失败，请重新选择教材重试') }
-    },
-    async loadOwnChapters() {
-      this.ownFilters.pointPath = []
-      this.ownOptions.chapters = []
-      const isCurrent = this.captureOwnFilterRequest('chapter')
-      if (!this.ownSubject || !this.ownFilters.bookId || !this.ownFilters.level || this.ownFilterMode !== 'chapter') return
-      try {
-        const rows = await this.waitForFilterOptions(getTopicSubjectPointCompulsoryList(this.ownSubject.id, this.ownFilters.level, this.ownFilters.bookId))
-        if (isCurrent()) this.ownOptions.chapters = this.normalizeFlatTree(rows)
-      } catch (error) { if (isCurrent()) this.$message.warning('章节加载失败，请重新选择年级重试') }
-    },
-    changeOwnMode(mode) {
-      if (!['chapter', 'knowledge'].includes(mode) || this.isOwnChineseSubject || mode === this.ownFilters.mode) return
-      this.filterRequestSequences['own-book'] = (this.filterRequestSequences['own-book'] || 0) + 1
-      this.filterRequestSequences['own-chapter'] = (this.filterRequestSequences['own-chapter'] || 0) + 1
-      this.ownFilters.mode = mode
-      this.ownFilters.pointPath = []
-      this.ownFilters.knowledgePath = []
-      this.ownFilters.bookId = ''
-      this.ownFilters.level = ''
-      this.ownOptions.levels = []
-      this.ownOptions.chapters = []
-    },
-    buildOwnQueryParams() {
-      const filters = this.ownFilters
-      const params = { pageNo: this.page, pageSize: this.pageSize, subjectId: this.ownSubject ? this.ownSubject.id : '', questTemplateId: filters.questType, difficulty: filters.difficulty, name: filters.name }
-      if (this.ownStandardType === 0) {
-        params.businessId = this.ownBusiness.id
-        params.pointId = this.lastValue(filters.pointPath)
-      } else if (this.ownStandardType === 2) params.treeId = this.lastValue(filters.pointPath)
-      else if (this.ownStandardType === 1 && this.ownFilterMode === 'chapter') {
-        params.bookId = filters.bookId
-        params.typeId = filters.level
-        params.pointId = this.lastValue(filters.pointPath)
-      } else if (this.ownStandardType === 1) params.knowledge = this.lastValue(filters.knowledgePath)
-      return this.removeEmptyParams(params)
-    },
-    buildOwnQuestionContext() {
-      const filters = this.ownFilters
-      const chapterMode = this.ownStandardType !== 1 || this.ownFilterMode === 'chapter'
-      const pointId = chapterMode ? this.lastValue(filters.pointPath) : ''
-      const knowledgeId = chapterMode ? '' : this.lastValue(filters.knowledgePath)
-      return this.removeEmptyParams({
-        businessId: this.ownBusiness ? this.ownBusiness.id : '', businessName: this.ownBusiness ? this.ownBusiness.label : '',
-        subjectId: this.ownSubject ? this.ownSubject.id : '', subjectName: this.ownSubject ? this.ownSubject.label : '',
-        pointId, pointName: pointId ? this.treeName(this.ownOptions.chapters, filters.pointPath) : '',
-        knowledge: knowledgeId, knowledgeId, knowledgeName: knowledgeId ? this.treeName(this.ownOptions.knowledge, filters.knowledgePath) : '',
-        bookId: this.ownStandardType === 1 && chapterMode ? filters.bookId : '', bookName: this.ownStandardType === 1 && chapterMode ? this.optionName(this.ownOptions.books, filters.bookId) : '',
-        typeId: this.ownStandardType === 1 && chapterMode ? filters.level : '', typeName: this.ownStandardType === 1 && chapterMode ? this.optionName(this.ownOptions.levels, filters.level) : '',
-        questTemplateId: filters.questType, questTemplateName: this.optionName(this.ownOptions.questTypes, filters.questType),
-        questType: this.optionItem(this.ownOptions.questTypes, filters.questType).questType || '', difficulty: filters.difficulty,
-        difficultyName: this.optionName(this.ownOptions.difficulties, filters.difficulty), compulsory: this.ownStandardType === 1 ? '1' : '0'
-      })
-    },
-    restoreOwnBankSnapshot() {
-      const snapshot = this.bankTabSnapshots.own
-      const selected = snapshot && snapshot.businesses.find(item => item.value === snapshot.filters.subjectPath[0])
-      const allowed = selected && this.ownBusinessOptions.find(item => item.id === selected.id && item.standardType === selected.standardType)
-      // 权限或学段类型变化后不能恢复旧科目；重新选科目不会影响当前组卷。
-      if (!snapshot || (selected && !allowed)) {
-        this.$delete(this.bankTabSnapshots, 'own')
-        this.ownFilters = emptyOwnFilters()
-        this.ownOptions = { ...emptyOwnOptions(), difficulties: this.ownOptions.difficulties }
-        this.ownSubjectTrees = {}
-        this.ownSubjectPickerKey += 1
-        this.questions = []
-        this.total = 0
-        this.page = 1
-        this.hasSearched = false
-        return false
-      }
-      this.ownFilters = this.cloneAiSnapshotValue(snapshot.filters)
-      this.ownOptions = { ...this.cloneAiSnapshotValue(snapshot.options), difficulties: this.ownOptions.difficulties }
-      this.ownSubjectTrees = this.cloneAiSnapshotValue(snapshot.subjectTrees)
-      this.ownBusinessOptions = this.ownBusinessOptions.map(item => ({ ...item, ...(this.ownSubjectTrees[item.id] ? { children: this.ownSubjectTrees[item.id] } : {}) }))
-      this.ownSubjectPickerKey += 1
-      this.questions = snapshot.questions
-      this.total = snapshot.total
-      this.page = snapshot.page
-      this.hasSearched = snapshot.hasSearched
-      this.$nextTick(() => { if (this.$refs.questionList) this.$refs.questionList.scrollTop = snapshot.scrollTop })
-      return true
-    },
     captureAiFilterRequest(kind) {
       // 同类请求只接受最新响应；上下文不包含 eduType，切换学习赛道不会使 AI 请求失效。
       const sequence = (this.filterRequestSequences['ai-' + kind] || 0) + 1
@@ -1850,6 +1610,29 @@ export default {
         const children = this.normalizeBusinessSubjectTree(item.subjectList || [], value)
         return { ...item, id: String(item.id), value, label: item.name || item.otherName || '', leaf: !children.length, ...(children.length ? { children } : {}) }
       })
+    },
+    normalizeLiveSubjectGroups(groups, prefix) {
+      return (Array.isArray(groups) ? groups : []).map((group, groupIndex) => {
+        const groupId = String(group.id ?? group.value ?? group.name ?? groupIndex)
+        const groupValue = `${prefix}/${encodeURIComponent(groupId)}`
+        const subjects = group.subjectList || group.children || group.childList || []
+        const children = subjects.filter(item => item && item.id != null).map(subject => ({
+          ...subject,
+          id: String(subject.id),
+          value: `${groupValue}/${encodeURIComponent(String(subject.id))}`,
+          label: subject.otherName || subject.name || '',
+          businessName: subject.businessName || group.businessName || group.name || '',
+          leaf: true
+        }))
+        return {
+          ...group,
+          id: groupId,
+          value: groupValue,
+          label: group.name || group.label || '',
+          leaf: false,
+          children
+        }
+      }).filter(group => group.children.length)
     },
     normalizeAiKnowledgeTree(rows) {
       // 部分接口返回空 children 的扁平列表，此时需按 parentId 还原层级。
@@ -1882,45 +1665,37 @@ export default {
       const sequence = (this.filterRequestSequences['ai-base'] || 0) + 1
       this.filterRequestSequences['ai-base'] = sequence
       const isCurrent = () => this.sourceTab === 'AI出题' && revision === this.filterStateSequence && sequence === this.filterRequestSequences['ai-base']
-      const [businesses, difficulties] = await Promise.allSettled([
-        getBusinessSubjectTree(), getTopicDictItemList(TOPIC_DIFFICULTY_DICT_ID)
+      const params = this.aiTeachingCloudParams()
+      const [k12Groups, k12Subjects, upgradeGroups, difficulties] = await Promise.allSettled([
+        getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+        getTeachingCloudOptions('/home/getCompulsorySubjectAll', params),
+        this.eduTypes.includes('专升本') ? getTeachingCloudUpgradeSubjectList(params) : Promise.resolve([]),
+        getTeachingCloudOptions('/dict/getAll', this.aiTeachingCloudParams({ id: TOPIC_DIFFICULTY_DICT_ID }))
       ])
       if (!isCurrent()) return
-      if (businesses.status === 'fulfilled') {
-        this.aiBusinessOptions = this.businessTrackOptions(businesses.value)
-      } else this.$message.warning('学段赛道加载失败，请重试')
-      if (difficulties.status === 'fulfilled') this.aiOptions.difficulties = difficulties.value || []
-      else this.$message.warning('难度选项加载失败，请重试')
-    },
-    async ensureAiBusinessSubjects(business) {
-      if (this.aiSubjectTrees[business.id]) return this.aiSubjectTrees[business.id]
-      const revision = this.filterStateSequence
-      const rows = await getBusinessSubjects(business.id)
-      if (this.sourceTab !== 'AI出题' || revision !== this.filterStateSequence) return null
-      const tree = this.normalizeBusinessSubjectTree(rows, business.value)
-      this.$set(this.aiSubjectTrees, business.id, tree)
-      return tree
-    },
-    async loadAiSubjectNode(node, resolve) {
-      const revision = this.filterStateSequence
-      if (node.root) { resolve(this.aiBusinessOptions); return }
-      // 只在展开学段时请求一次完整科目树，地区、类别等下级节点使用已返回的数据。
-      if (node.level !== 1 || (node.children && node.children.length)) { resolve([]); return }
-      const business = this.aiBusinessOptions.find(item => item.value === node.value)
-      if (!business) { resolve([]); return }
-      try {
-        const children = await this.ensureAiBusinessSubjects(business)
-        if (children === null) { node.loading = false; return }
-        // 空学段不能变成可选择的科目。
-        node.data.leaf = false
-        resolve(children)
-        this.updateTaxonomyPopper('ai-subject')
-        if (!children.length) this.$message.warning('该学段暂无可选科目')
-      } catch (error) {
-        node.loading = false
-        node.loaded = false
-        if (this.sourceTab === 'AI出题' && revision === this.filterStateSequence) this.$message.warning('科目加载失败，请重新展开学段重试')
+      const roots = []
+      if (k12Groups.status === 'fulfilled') {
+        const subjectDetails = new Map((k12Subjects.status === 'fulfilled' ? k12Subjects.value : []).map(subject => [String(subject.id), subject]))
+        const groups = (k12Groups.value || []).map(group => ({
+          ...group,
+          subjectList: (group.subjectList || group.children || group.childList || []).map(subject => ({
+            ...(subjectDetails.get(String(subject.id)) || {}),
+            ...subject
+          }))
+        }))
+        const root = { id: 'live-k9k12', value: 'business:live-k9k12', label: 'K9K12', standardType: 1, leaf: false }
+        const tree = this.normalizeLiveSubjectGroups(groups, root.value)
+        roots.push({ ...root, children: tree })
       }
+      if (upgradeGroups.status === 'fulfilled' && upgradeGroups.value.length) {
+        const root = { id: 'live-upgrade', value: 'business:live-upgrade', label: '专升本', standardType: 2, leaf: false }
+        const tree = this.normalizeLiveSubjectGroups(upgradeGroups.value, root.value)
+        roots.push({ ...root, children: tree })
+      }
+      this.aiBusinessOptions = roots
+      if (difficulties.status === 'fulfilled') this.aiOptions.difficulties = difficulties.value || []
+      if (!roots.length) this.$message.warning('学段赛道加载失败，请重试')
+      if (difficulties.status !== 'fulfilled') this.$message.warning('难度选项加载失败，请重试')
     },
     async handleAiSubjectChange() {
       // 切换科目清空联动条件与生成结果，使旧请求失效；已导入的组卷题目继续保留。
@@ -1942,18 +1717,21 @@ export default {
       const standardType = this.aiStandardType
       const isCurrent = this.captureAiFilterRequest('subject')
       try {
-        // K9K12 加载教材与知识点；通用并行加载章节与知识点；专升本知识点等待章节选择。
+        // K9K12 加载教材与知识点；专升本知识点等待章节选择。
         const tasks = standardType === 1
-          ? [getTopicBookList(subjectId), getTopicKnowledgeCompulsoryList(subjectId)]
-          : standardType === 0
-            ? [getBusinessChapters(subjectId), getBusinessKnowledgePoints(subjectId)]
-            : [getTopicSubjectPointList(subjectId), Promise.resolve([])]
+          ? [
+              getTeachingCloudOptions('/dict/getAll', this.aiTeachingCloudParams({ id: '22', subjectId })),
+              getTeachingCloudOptions('/knowledgeCompulsory/getList', this.aiTeachingCloudParams({ subjectId }))
+            ]
+          : [
+              getTeachingCloudOptions('/home/getSubjectPointTree', this.aiTeachingCloudParams({ subjectId })),
+              Promise.resolve([])
+            ]
         const [first, knowledge] = await this.waitForFilterOptions(Promise.all(tasks))
         if (!isCurrent()) return
         if (standardType === 1) this.aiOptions.books = first || []
         else {
-          // 章节接口 children 是知识点，按 parentId 还原章节层级。
-          this.aiOptions.chapters = this.normalizeFlatTree((first || []).map(({ children, ...item }) => item))
+          this.aiOptions.chapters = this.normalizeTree(first || [])
         }
         this.aiOptions.knowledge = this.normalizeAiKnowledgeTree(knowledge)
       } catch (error) {
@@ -1968,7 +1746,10 @@ export default {
       const isCurrent = this.captureAiFilterRequest('book')
       if (!this.aiSubject || !this.aiFilters.bookId) return
       try {
-        const levels = await this.waitForFilterOptions(getTopicTypeListByBook(this.aiSubject.id, this.aiFilters.bookId))
+        const levels = await this.waitForFilterOptions(getTeachingCloudOptions('/book/getTypeByBook', this.aiTeachingCloudParams({
+          subjectId: this.aiSubject.id,
+          bookId: this.aiFilters.bookId
+        })))
         if (isCurrent()) this.aiOptions.levels = levels || []
       } catch (error) { if (isCurrent()) this.$message.warning('年级加载失败，请重新选择教材重试') }
     },
@@ -1978,7 +1759,11 @@ export default {
       const isCurrent = this.captureAiFilterRequest('chapter')
       if (!this.aiSubject || !this.aiFilters.bookId || !this.aiFilters.level) return
       try {
-        const rows = await this.waitForFilterOptions(getTopicSubjectPointCompulsoryList(this.aiSubject.id, this.aiFilters.level, this.aiFilters.bookId))
+        const rows = await this.waitForFilterOptions(getTeachingCloudOptions('/subjectPointCompulsory/getList', this.aiTeachingCloudParams({
+          subjectId: this.aiSubject.id,
+          bookId: this.aiFilters.bookId,
+          level: this.aiFilters.level
+        })))
         if (isCurrent()) this.aiOptions.chapters = this.normalizeFlatTree(rows)
       } catch (error) { if (isCurrent()) this.$message.warning('章节加载失败，请重新选择年级重试') }
     },
@@ -1990,7 +1775,12 @@ export default {
       const isCurrent = this.captureAiFilterRequest('knowledge')
       if (!this.aiSubject || !chapterIds.length) return
       try {
-        const lists = await this.waitForFilterOptions(Promise.all(chapterIds.map(id => getTopicKnowledgeList(this.aiSubject.id, id))))
+        const lists = await this.waitForFilterOptions(Promise.all(chapterIds.map(id => (
+          getTeachingCloudOptions('/knowledge/getList', this.aiTeachingCloudParams({
+            subjectId: this.aiSubject.id,
+            pointId: id
+          }))
+        ))))
         if (isCurrent()) this.aiOptions.knowledge = this.mergeAiKnowledgeTrees(lists.map(rows => this.normalizeAiKnowledgeTree(rows)))
       } catch (error) { if (isCurrent()) this.$message.warning('知识点加载失败，请重新选择章节重试') }
     },
@@ -2013,7 +1803,7 @@ export default {
       // 云端上下文不包含当前赛道，因此单独切赛道不会使云端联动失效。
       const context = () => JSON.stringify([
         this.filterStateSequence, this.sourceTab,
-        this.sourceTab === '云端题库' ? 'cloud' : this.eduType,
+        ['云端题库', '自有题库'].includes(this.sourceTab) ? 'shared-bank' : this.eduType,
         this.cloudSubjectPath, this.zsb.subjectId, this.k12.subjectPath,
         this.k12.bookId, this.k12.level
       ])
@@ -2199,7 +1989,7 @@ export default {
       }))
     },
     getTaxonomyFilterOptions(options) {
-      if (this.sourceTab !== '云端题库') return options
+      if (!['云端题库', '自有题库'].includes(this.sourceTab)) return options
       // 仅裁剪搜索条件的选项副本，保留完整的章节和知识点数据。
       return (options || []).map(option => {
         const node = { ...option }
@@ -2271,13 +2061,33 @@ export default {
         return result
       }, {})
     },
+    teachingCloudParams(params = {}, isHome) {
+      const institutionId = localStorage.getItem('teaching_cloud_institution_id') || ''
+      return {
+        ...params,
+        ...(isHome === undefined ? {} : { isHome: Number(isHome) }),
+        institutionId
+      }
+    },
+    bankTeachingCloudParams(params = {}) {
+      return this.teachingCloudParams(params, this.sourceTab === '云端题库' ? 1 : 0)
+    },
+    aiTeachingCloudParams(params = {}) {
+      return this.teachingCloudParams(params, 1)
+    },
+    currentLiveId() {
+      const authInfo = getAuthInfo() || {}
+      const routeQuery = this.$route && this.$route.query ? this.$route.query : {}
+      return String(
+        this.practiceConfig.liveId || this.practiceConfig.t1Id || routeQuery.liveId ||
+        authInfo.liveId || authInfo.t1Id || ''
+      )
+    },
     async loadCurrentBase() {
       try {
         if (this.sourceTab === 'AI出题') {
           await this.loadAiBase()
-        } else if (this.sourceTab === '自有题库') {
-          await this.loadOwnBase()
-        } else if (this.sourceTab === '云端题库') {
+        } else if (['云端题库', '自有题库'].includes(this.sourceTab)) {
           await Promise.all([
             this.loadDifficulty(), this.loadK12Base(),
             ...(this.eduTypes.includes('专升本') ? [this.loadZsbSubjectBase()] : [])
@@ -2306,14 +2116,14 @@ export default {
       const isCurrent = this.captureFilterRequest('difficulty')
       const options = (this.usesZsbTopicOptions || this.usesK12TopicOptions)
         ? await getTopicDictItemList(TOPIC_DIFFICULTY_DICT_ID)
-        : await getTeachingCloudOptions('/getDictList', { id: TOPIC_DIFFICULTY_DICT_ID })
+        : await getTeachingCloudOptions('/dict/getAll', this.bankTeachingCloudParams({ id: TOPIC_DIFFICULTY_DICT_ID }))
       if (isCurrent()) this.difficultyOptions = options
     },
     async loadZsbSubjectBase() {
       const isCurrent = this.captureFilterRequest('zsbBase')
       const groups = this.usesZsbTopicOptions
         ? await getTopicUnCompulsorySubjectList()
-        : await getTeachingCloudOptions('/getUnCompulsorySubjectList')
+        : await getTeachingCloudUpgradeSubjectList(this.bankTeachingCloudParams())
       if (!isCurrent()) return
       this.zsbSubjectOptions = normalizeZsbSubjectOptions(groups)
       this.subjectOptions = this.zsbSubjectOptions.flatMap(group => group.children.map(subject => ({
@@ -2329,7 +2139,7 @@ export default {
     async loadZsbAreas() {
       const rows = this.usesZsbTopicOptions
         ? await getTopicAreaBusiness()
-        : await getTeachingCloudOptions('/getAreaBusiness')
+        : await getTeachingCloudOptions('/area/getAreaBusiness')
       this.areaOptions = this.usesZsbTopicOptions
         ? this.normalizeAreaBusiness(rows)
         : this.normalizeTree(rows)
@@ -2345,7 +2155,7 @@ export default {
       if (value && value.length > 1) {
         this.typeOptions = this.usesZsbTopicOptions
           ? await getTopicTypeListByBusiness(value[1])
-          : await getTeachingCloudOptions('/getTypeList', { businessId: value[1] })
+          : await getTeachingCloudOptions('/dict/getAll', { id: '3', businessId: value[1] })
       }
     },
     async loadZsbSubjects(value) {
@@ -2354,7 +2164,7 @@ export default {
       this.subjectOptions = value
         ? this.usesZsbTopicOptions
           ? await getTopicSubjectListByType(value)
-          : await getTeachingCloudOptions('/getSubjectList', { typeId: value })
+          : await getTeachingCloudOptions('/subject/getAllByType', { id: value, isQuest: '1,0' })
         : []
       this.pointOptions = []
       this.questTypeOptions = []
@@ -2370,15 +2180,13 @@ export default {
       if (!value) return
       const subject = this.subjectOptions.find(item => String(item.id) === String(value)) || {}
       const [points, questTypes] = await this.waitForFilterOptions(Promise.all([
-        this.eduType === '专升本' && this.sourceTab === '自有题库'
-          ? getTopicSubjectPointTree(value)
-          : this.usesZsbTopicOptions
-            ? getTopicSubjectPointList(value)
-            : getTeachingCloudOptions('/getSubjectPointTree', { subjectId: value }),
+        this.usesZsbTopicOptions
+          ? getTopicSubjectPointList(value)
+          : getTeachingCloudOptions('/home/getSubjectPointTree', this.bankTeachingCloudParams({ subjectId: value })),
         this.sourceTab !== 'AI出题' && subject.questType
           ? this.usesZsbTopicOptions
             ? getTopicQuestTypeTemplates(subject.questType)
-            : getTeachingCloudOptions('/getQuestTypeTemplate', { id: subject.questType })
+            : getTeachingCloudOptions('/questTypeTemplate/getAll', this.bankTeachingCloudParams({ id: subject.questType }))
           : Promise.resolve([])
       ]))
       if (!isCurrent()) return
@@ -2400,12 +2208,20 @@ export default {
     },
     async loadK12Base() {
       const isCurrent = this.captureFilterRequest('k12Base')
-      const groups = this.usesK12TopicOptions
-        ? await getTopicCompulsorySubjectList()
-        : await getTeachingCloudOptions('/getCompulsorySubjectList')
+      let groups
+      let subjectRows = []
+      if (this.usesK12TopicOptions) {
+        groups = await getTopicCompulsorySubjectList()
+      } else {
+        const params = this.bankTeachingCloudParams()
+        ;[groups, subjectRows] = await Promise.all([
+          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+          getTeachingCloudOptions('/home/getCompulsorySubjectAll', params)
+        ])
+      }
       if (!isCurrent()) return
       this.k12SubjectGroups = groups || []
-      this.k12SubjectRaw = (groups || []).flatMap(group => (
+      this.k12SubjectRaw = subjectRows.length ? subjectRows : (groups || []).flatMap(group => (
         group.subjectList || group.children || group.childList || []
       ))
       this.k12SubjectOptions = (groups || []).map(group => ({
@@ -2452,8 +2268,12 @@ export default {
     },
     buildAiGenerationDetails() {
       return {
-        businessId: this.aiBusiness ? this.aiBusiness.id : '',
-        stageName: this.aiBusiness ? this.aiBusiness.label : '',
+        businessId: this.aiSubject && this.aiSubject.businessId
+          ? this.aiSubject.businessId
+          : this.aiBusiness ? this.aiBusiness.id : '',
+        stageName: this.aiSubject && this.aiSubject.businessName
+          ? this.aiSubject.businessName
+          : this.aiBusiness ? this.aiBusiness.label : '',
         subjectId: this.aiSubject ? this.aiSubject.id : '',
         subjectName: this.aiSubject ? this.aiSubject.label : '',
         bookId: this.aiStandardType === 1 ? this.aiFilters.bookId : '',
@@ -2512,14 +2332,14 @@ export default {
       const [books, knowledge, questTypes] = await this.waitForFilterOptions(Promise.all([
         this.usesK12TopicOptions
           ? getTopicBookList(subjectId)
-          : getTeachingCloudOptions('/getBookList', { subjectId }),
+          : getTeachingCloudOptions('/dict/getAll', this.bankTeachingCloudParams({ id: '22', subjectId })),
         this.usesK12TopicOptions
           ? getTopicKnowledgeCompulsoryList(subjectId)
-          : getTeachingCloudOptions('/getKnowledgeCompulsoryList', { subjectId }),
+          : getTeachingCloudOptions('/knowledgeCompulsory/getList', this.bankTeachingCloudParams({ subjectId })),
         this.sourceTab !== 'AI出题' && subject.questType
           ? this.usesK12TopicOptions
             ? getTopicQuestTypeTemplates(subject.questType)
-            : getTeachingCloudOptions('/getQuestTypeTemplate', { id: subject.questType })
+            : getTeachingCloudOptions('/questTypeTemplate/getAll', this.bankTeachingCloudParams({ id: subject.questType }))
           : Promise.resolve([])
       ]))
       if (!isCurrent()) return
@@ -2530,14 +2350,14 @@ export default {
     async handleK12BookChange(bookId) {
       this.k12.pointPath = []
       this.k12PointOptions = []
-      if (this.sourceTab === '云端题库' || this.usesK12TopicOptions) {
+      if (this.sourceTab !== 'AI出题' || this.usesK12TopicOptions) {
         this.k12.level = ''
         this.levelOptions = []
         const subjectId = this.lastValue(this.k12.subjectPath)
         const isCurrent = this.captureFilterRequest('book')
         const levels = subjectId && bookId
-          ? await this.waitForFilterOptions(this.sourceTab === '云端题库'
-            ? getTeachingCloudOptions('/getTypeByBook', { subjectId, bookId })
+          ? await this.waitForFilterOptions(this.sourceTab !== 'AI出题'
+            ? getTeachingCloudOptions('/book/getTypeByBook', this.bankTeachingCloudParams({ subjectId, bookId }))
             : getTopicTypeListByBook(subjectId, bookId))
           : []
         if (!isCurrent()) return
@@ -2575,34 +2395,41 @@ export default {
         if (!isCurrent() || this.hasAiSubjectSelection() || previousPath !== JSON.stringify(this.aiFilters.subjectPath)) return
         const subjectId = String(info && info.subjectId || '').trim()
         const businessId = String(info && info.businessId || '').trim()
-        const candidates = this.aiBusinessOptions.filter(item => businessId ? item.id === businessId : info && info.stage && item.label === info.stage)
-        if (!subjectId || subjectId === '-1' || candidates.length !== 1) {
+        const stageName = String(info && info.stage || '').trim()
+        if (!subjectId || subjectId === '-1') {
           this.$message.warning('听记科目无法匹配，请手动选择学段和科目')
           return
         }
-        const business = candidates[0]
-        const tree = await this.ensureAiBusinessSubjects(business)
-        if (!isCurrent() || !tree || previousPath !== JSON.stringify(this.aiFilters.subjectPath)) return
-        // 同一学段中也可能有重复科目 ID，只有唯一叶节点匹配才自动回显。
         const matches = []
-        const find = (nodes, path) => nodes.forEach(node => {
+        const find = (nodes, path, ancestors = []) => nodes.forEach(node => {
           const current = [...path, node.value]
-          if (node.leaf && node.id === subjectId) matches.push(current)
-          if (node.children) find(node.children, current)
+          if (node.leaf && String(node.id) === subjectId) {
+            const group = ancestors[ancestors.length - 1] || {}
+            matches.push({
+              path: current,
+              businessIds: [node.businessId, group.id].filter(Boolean).map(String),
+              stageNames: [node.businessName, group.label].filter(Boolean).map(String)
+            })
+          }
+          if (node.children) find(node.children, current, [...ancestors, node])
         })
-        find(tree, [business.value])
-        if (matches.length !== 1) {
+        find(this.aiCloudSubjectOptions, [])
+        let candidates = matches
+        const businessMatches = businessId ? candidates.filter(item => item.businessIds.includes(businessId)) : []
+        if (businessMatches.length) candidates = businessMatches
+        const stageMatches = stageName ? candidates.filter(item => item.stageNames.includes(stageName)) : []
+        if (stageMatches.length) candidates = stageMatches
+        if (!isCurrent() || previousPath !== JSON.stringify(this.aiFilters.subjectPath)) return
+        if (candidates.length !== 1) {
           this.$message.warning('听记科目无法匹配，请手动选择学段和科目')
           return
         }
-        // 用已加载树重建级联器，保证回显路径能够解析。
-        this.aiBusinessOptions = this.aiBusinessOptions.map(item => ({ ...item, ...(this.aiSubjectTrees[item.id] ? { children: this.aiSubjectTrees[item.id] } : {}) }))
         this.aiSubjectPickerKey += 1
-        this.aiFilters.subjectPath = matches[0]
+        this.aiFilters.subjectPath = candidates[0].path
         const loading = this.handleAiSubjectChange()
         requestId = this.minutesSubjectRequestSequence
         await loading
-        if (!isCurrent() || JSON.stringify(this.aiFilters.subjectPath) !== JSON.stringify(matches[0])) return
+        if (!isCurrent() || JSON.stringify(this.aiFilters.subjectPath) !== JSON.stringify(candidates[0].path)) return
         const firstBook = this.aiOptions.books[0]
         if (this.aiStandardType === 1 && firstBook && firstBook.id != null) {
           this.aiFilters.bookId = String(firstBook.id)
@@ -2620,11 +2447,11 @@ export default {
       if (!subjectId || !this.k12.bookId || !this.k12.level) return
       const rows = await this.waitForFilterOptions(this.usesK12TopicOptions
         ? getTopicSubjectPointCompulsoryList(subjectId, this.k12.level, this.k12.bookId)
-        : getTeachingCloudOptions('/getSubjectPointCompulsoryList', {
+        : getTeachingCloudOptions('/subjectPointCompulsory/getList', this.bankTeachingCloudParams({
           subjectId,
           bookId: this.k12.bookId,
           level: this.k12.level
-        }))
+        })))
       if (isCurrent()) this.k12PointOptions = this.normalizeFlatTree(rows)
     },
     changeK12Mode(mode) {
@@ -2655,15 +2482,6 @@ export default {
     },
     cacheBankTab() {
       if (this.sourceTab === 'AI出题') return
-      if (this.sourceTab === '自有题库') {
-        this.$set(this.bankTabSnapshots, 'own', {
-          filters: this.cloneAiSnapshotValue(this.ownFilters), options: this.cloneAiSnapshotValue(this.ownOptions),
-          businesses: this.cloneAiSnapshotValue(this.ownBusinessOptions), subjectTrees: this.cloneAiSnapshotValue(this.ownSubjectTrees),
-          questions: this.questions, total: this.total, page: this.page, hasSearched: this.hasSearched,
-          scrollTop: this.$refs.questionList ? this.$refs.questionList.scrollTop : 0
-        })
-        return
-      }
       const options = FILTER_OPTION_FIELDS.reduce((result, field) => {
         result[field] = this.cloneAiSnapshotValue(this[field])
         return result
@@ -2714,10 +2532,7 @@ export default {
         this.hasSearched = false
         if (this.$refs.questionList) this.$refs.questionList.scrollTop = 0
         const snapshot = source !== 'AI出题' && this.bankTabSnapshots[this.bankTabKey()]
-        if (source === '自有题库') {
-          await this.loadOwnBase()
-          this.restoreOwnBankSnapshot()
-        } else if (snapshot) {
+        if (snapshot) {
           this.cloudSubjectPath = this.cloneAiSnapshotValue(snapshot.cloudSubjectPath || [])
           this.zsb = this.cloneAiSnapshotValue(snapshot.zsb)
           this.k12 = this.cloneAiSnapshotValue(snapshot.k12)
@@ -2754,11 +2569,6 @@ export default {
       this.aiQuestionRows = []
       this.aiExportSelectedKeys = []
       this.aiExportFileType = ''
-      this.ownFilters = emptyOwnFilters()
-      this.ownOptions = emptyOwnOptions()
-      this.ownBusinessOptions = []
-      this.ownSubjectTrees = {}
-      this.ownSubjectPickerKey += 1
       this.zsb = emptyZsb()
       this.k12 = emptyK12()
       this.useMinutesContent = true
@@ -2802,16 +2612,15 @@ export default {
       }
     },
     buildQueryParams() {
-      if (this.sourceTab === '自有题库') return this.buildOwnQueryParams()
       const authInfo = getAuthInfo() || {}
       const common = {
         pageNum: this.page,
         pageSize: this.pageSize,
         order: 2,
-        institutionId: authInfo.institutionId || '',
+        institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || '',
         userId: authInfo.userId || authInfo.id || ''
       }
-      if (this.sourceTab === '云端题库') common.isHome = 1
+      common.isHome = this.sourceTab === '云端题库' ? 1 : 0
       if (this.activeFilterEduType === '专升本') {
         const params = {
           ...common,
@@ -2821,7 +2630,7 @@ export default {
           difficulty: this.zsb.difficulty,
           name: this.zsb.name
         }
-        if (this.sourceTab !== '云端题库' && !this.usesZsbSubjectCascader) {
+        if (this.sourceTab === 'AI出题' && !this.usesZsbSubjectCascader) {
           params.areaId = this.zsb.areaPath[0] || ''
           params.businessId = this.zsb.areaPath[1] || ''
           params.typeId = this.zsb.typeId
@@ -2846,16 +2655,12 @@ export default {
     },
     runSearch() {
       if (this.loading || this.sourceSwitching || this.filterOptionsLoading > 0) return
-      if (this.sourceTab === '自有题库' && !this.ownSubject) {
-        this.$message.warning('请选择学段科目至最后一级')
-        return
-      }
       if (this.sourceTab !== 'AI出题' && !this.hasBankFilter()) {
         this.$message.warning('请先选择筛选条件')
         return
       }
       if (
-        this.sourceTab === '云端题库' &&
+        ['云端题库', '自有题库'].includes(this.sourceTab) &&
         this.activeFilterEduType === 'K9K12' &&
         this.k12FilterMode === 'chapter'
       ) {
@@ -2876,7 +2681,6 @@ export default {
       else return this.searchQuestions()
     },
     hasBankFilter() {
-      if (this.sourceTab === '自有题库') return Boolean(this.ownSubject)
       const filters = this.activeFilterEduType === '专升本' ? this.zsb : this.k12
       const fields = this.activeFilterEduType === '专升本'
         ? ['subjectId', 'pointPath', 'questType', 'difficulty', 'name']
@@ -2930,6 +2734,40 @@ export default {
       const knowledgePoint = reference(knowledge)
       if (knowledgePoint) params.knowledgePoint = knowledgePoint
       return this.removeEmptyParams(params)
+    },
+    buildLiveAfterQuizAiParams() {
+      const subject = this.aiSubject || {}
+      const details = this.buildAiGenerationDetails()
+      const questTemplate = this.optionItem(this.aiQuestTypeOptions, this.aiFilters.questType)
+      const chapters = this.aiSelectedChapters()
+      const knowledge = this.aiSelectedKnowledge()
+
+      // 字段与直播端 AfterClassTest 的 generateAfterQuizQuest 请求保持一致；
+      // 同时保留 ID 字段，兼容服务端按 ID 或名称匹配题目的两种实现。
+      return this.removeEmptyParams({
+        eduType: this.aiStandardType === 1 ? 'K9K12' : '专升本',
+        areaId: subject.areaId || '',
+        businessId: details.businessId,
+        typeId: details.typeId,
+        subjectId: details.subjectId,
+        pointId: details.pointId,
+        knowledge: details.knowledgeId,
+        questTemplateId: details.questTemplateId,
+        difficulty: details.difficultyId,
+        questCount: Number(this.aiCount),
+        bookId: details.bookId,
+        levelId: details.typeId,
+        area: subject.areaName || subject.area || '',
+        businessName: details.stageName,
+        subject: details.subjectName,
+        pointName: details.chapterName || chapters.map(item => item.name).filter(Boolean).join('、'),
+        knowledgeName: details.knowledgeName || knowledge.name || '',
+        questTypeName: questTemplate.name || '',
+        difficultyName: details.difficultyName,
+        num: Number(this.aiCount),
+        institutionId: localStorage.getItem('teaching_cloud_institution_id') || '',
+        liveId: this.currentLiveId()
+      })
     },
     validateAfterQuizAiParams(params) {
       const requiredFields = [
@@ -2987,22 +2825,14 @@ export default {
         const params = this.buildQueryParams()
         // 在等待接口前固定类型和科目信息，后续入库不受用户换筛选条件影响。
         const requestEduType = this.activeFilterEduType
-        const requestOwnType = this.sourceTab === '自有题库' ? this.ownStandardType : null
-        const questionContext = this.sourceTab === '云端题库' ? this.buildCloudQuestionContext() : this.buildOwnQuestionContext()
-        const result = requestOwnType === 0
-          ? await getTopicGeneralQuestList(params)
-          : this.isZsbSmartBank
-          ? await getTopicQuestList(params)
-          : this.isK12SmartBank
-            ? await getTopicCompulsoryQuestList(params)
-            : await getTeachingCloudQuestions(
-              requestEduType === '专升本' ? '/getQuestList' : '/getCompulsoryQuestList',
-              params
-            )
+        const questionContext = this.buildCloudQuestionContext()
+        const result = await getTeachingCloudQuestions(
+          requestEduType === '专升本' ? '/home/getQuestList' : '/home/getCompulsoryQuestList',
+          params
+        )
         if (sequence !== this.requestSequence) return
         const rows = (result.rows || []).map(item => ({
           ...this.withQuestionContext(item, questionContext, requestEduType),
-          ...(requestOwnType !== null ? { _ownStandardType: requestOwnType } : {}),
           _banked: this.sourceTab === '云端题库' ? String(item.hasJoin) === '1' : item._banked
         }))
         this.releaseErrorImageUrls(this.questions)
@@ -3090,15 +2920,19 @@ export default {
     },
     generateAiQuestions(params) {
       if (this.useAfterQuizAiApi) {
-        return generateAfterQuizQuestions(params).then(data => {
+        return generateAfterQuizQuestions(this.buildLiveAfterQuizAiParams(params)).then(data => {
           const generation = data && data.generation ? data.generation : {}
-          const sourceQuestions = Array.isArray(data && data.questions) ? data.questions.filter(item => item && typeof item === 'object') : []
+          const isLiveQuestionList = Array.isArray(data)
+          const sourceQuestions = (isLiveQuestionList
+            ? data
+            : Array.isArray(data && data.questions) ? data.questions : [])
+            .filter(item => item && typeof item === 'object')
           return {
-            rows: normalizeT1AiQuestions(sourceQuestions, generation).map((question, index) => ({
+            rows: (isLiveQuestionList ? sourceQuestions : normalizeT1AiQuestions(sourceQuestions, generation)).map((question, index) => ({
               ...question,
               _aiExportSource: sourceQuestions[index],
-              difficulty: question.difficultyId || '',
-              knowledge: question.knowledgeId || ''
+              difficulty: question.difficulty || question.difficultyId || '',
+              knowledge: question.knowledge || question.knowledgeId || ''
             })),
             matchedChapters: Array.isArray(data && data.matchedChapters) ? data.matchedChapters : [],
             unavailableChapters: Array.isArray(data && data.unavailableChapters) ? data.unavailableChapters : [],
@@ -3116,8 +2950,6 @@ export default {
       this.$set(this.aiGenerationSnapshots, 'ai', {
         filters: this.cloneAiSnapshotValue(this.aiFilters),
         options: this.cloneAiSnapshotValue(this.aiOptions),
-        businesses: this.cloneAiSnapshotValue(this.aiBusinessOptions),
-        subjectTrees: this.cloneAiSnapshotValue(this.aiSubjectTrees),
         useMinutesContent: this.useMinutesContent, aiCount: this.aiCount,
         aiGenerationMeta: this.cloneAiSnapshotValue(this.aiGenerationMeta),
         rows: this.cloneAiSnapshotValue(this.aiQuestionRows),
@@ -3128,7 +2960,6 @@ export default {
       const snapshot = this.aiGenerationSnapshots.ai
       if (!snapshot) {
         this.aiFilters = emptyAiFilters()
-        this.aiSubjectTrees = {}
         this.aiOptions = { ...emptyAiOptions(), difficulties: this.aiOptions.difficulties }
         this.aiQuestionRows = []
         this.aiExportSelectedKeys = []
@@ -3137,17 +2968,20 @@ export default {
         this.aiSubjectPickerKey += 1
         return false
       }
-      // 以当前机构权限重新核对学段，防止缓存恢复已无权使用的福建专升本科目。
-      const allowedIds = new Set(this.aiBusinessOptions.map(item => item.id))
-      const selectedBusiness = snapshot.businesses.find(item => item.value === snapshot.filters.subjectPath[0])
-      if (selectedBusiness && !allowedIds.has(selectedBusiness.id)) {
+      // 以当前机构返回的云题库科目树核对缓存路径。
+      let nodes = this.aiCloudSubjectOptions
+      let selected = null
+      for (const value of snapshot.filters.subjectPath || []) {
+        selected = nodes.find(item => item.value === value)
+        if (!selected) break
+        nodes = selected.children || []
+      }
+      if ((snapshot.filters.subjectPath || []).length && (!selected || !selected.leaf)) {
         this.$delete(this.aiGenerationSnapshots, 'ai')
         return this.restoreAiGenerationSnapshot()
       }
       this.aiFilters = this.cloneAiSnapshotValue(snapshot.filters)
       this.aiOptions = this.cloneAiSnapshotValue(snapshot.options)
-      this.aiSubjectTrees = this.cloneAiSnapshotValue(snapshot.subjectTrees)
-      this.aiBusinessOptions = this.aiBusinessOptions.map(item => ({ ...item, ...(this.aiSubjectTrees[item.id] ? { children: this.aiSubjectTrees[item.id] } : {}) }))
       this.aiSubjectPickerKey += 1
       this.useMinutesContent = snapshot.useMinutesContent
       this.aiCount = snapshot.aiCount
@@ -3323,7 +3157,6 @@ export default {
     },
     activeQuestionTypeOptions() {
       if (this.sourceTab === 'AI出题') return this.aiQuestTypeOptions
-      if (this.sourceTab === '自有题库') return this.ownOptions.questTypes
       return this.activeFilterEduType === '专升本' ? this.questTypeOptions : this.k12QuestTypeOptions
     },
     resolveQuestionTypeCode(question = {}) {
@@ -3405,7 +3238,7 @@ export default {
       if (this.errorReasonLoaded || this.errorReasonLoading) return
       this.errorReasonLoading = true
       try {
-        const rows = await getTeachingCloudOptions('/getDictList', {
+        const rows = await getTeachingCloudOptions('/dict/getAll', {
           id: TEACHING_CLOUD_ERROR_DICT_ID
         })
         this.errorReasonOptions = (Array.isArray(rows) ? rows : []).map(item => ({
@@ -3645,28 +3478,8 @@ export default {
     openBankEditor(question, index = null) {
       this.bankEditingIndex = index
       this.bankEditorQuestId = question ? String(question.questId || question.id || '') : ''
-      if (this.sourceTab === '自有题库') {
-        // 表单独立于列表；学段根节点拆成 businessId，科目路径只保留学段下面的层级。
-        const context = question && question._questionContext || {}
-        const filters = this.ownFilters
-        this.bankEditor = question
-          ? { ...question, businessId: question.businessId || context.businessId || '', subjectId: question.subjectId || context.subjectId || '' }
-          : {
-            name: '', optionA: '', optionB: '', optionC: '', optionD: '', optionE: '', answer: '', analysis: '',
-            businessId: this.ownBusiness ? this.ownBusiness.id : '',
-            subjectId: this.ownSubject ? this.ownSubject.id : '',
-            subjectPath: [...filters.subjectPath.slice(1)],
-            pointPath: [...filters.pointPath], pointId: this.lastValue(filters.pointPath),
-            knowledgePath: [...filters.knowledgePath], knowledge: this.lastValue(filters.knowledgePath),
-            bookId: this.ownStandardType === 1 && this.ownFilterMode === 'chapter' ? filters.bookId : '',
-            typeId: this.ownStandardType === 1 && this.ownFilterMode === 'chapter' ? filters.level : '',
-            questTemplateId: filters.questType, difficulty: filters.difficulty, serialNumber: '1'
-          }
-        this.bankEditorVisible = true
-        return
-      }
       const k12SubjectId = this.lastValue(this.k12.subjectPath)
-      const isK12 = this.eduType === 'K9K12'
+      const isK12 = this.activeFilterEduType === 'K9K12'
       const questionSubjectId = question && (question.subjectId || (isK12 ? k12SubjectId : this.zsb.subjectId))
       const questionPointId = question && (question.pointId || this.lastValue(question.pointPath))
       const questionKnowledge = question && (question.knowledge || this.lastValue(question.knowledgePath))
@@ -3679,15 +3492,15 @@ export default {
         ? {
           ...question,
           id: question.id || question.questId || '',
-          areaPath: this.eduType === '专升本' ? questionAreaPath.map(String) : [],
+          areaPath: isK12 ? [] : questionAreaPath.map(String),
           subjectPath: isK12 && questionSubjectId ? [String(questionSubjectId)] : [],
-          typeId: question.typeId || (this.eduType === '专升本' ? this.zsb.typeId : this.k12.level),
+          typeId: question.typeId || (isK12 ? this.k12.level : this.zsb.typeId),
           subjectId: questionSubjectId,
           pointPath: questionPointId ? [String(questionPointId)] : [],
           pointId: questionPointId,
           knowledgePath: questionKnowledge ? [String(questionKnowledge)] : [],
           knowledge: questionKnowledge,
-          bookId: question.bookId || (this.eduType === 'K9K12' ? this.k12.bookId : ''),
+          bookId: question.bookId || (isK12 ? this.k12.bookId : ''),
           questTemplateId: question.questTemplateId || question.questType || '',
           difficulty: question.difficulty || '',
           serialNumber: question.serialNumber || '1'
@@ -3701,17 +3514,17 @@ export default {
           optionE: '',
           answer: '',
           analysis: '',
-          areaPath: this.eduType === '专升本' ? this.zsb.areaPath : [],
-          subjectPath: this.eduType === 'K9K12' ? this.k12.subjectPath : [],
-          typeId: this.eduType === '专升本' ? this.zsb.typeId : this.k12.level,
-          subjectId: this.eduType === '专升本' ? this.zsb.subjectId : k12SubjectId,
-          pointPath: this.eduType === '专升本' ? this.zsb.pointPath : this.k12.pointPath,
-          pointId: this.eduType === '专升本' ? this.lastValue(this.zsb.pointPath) : this.lastValue(this.k12.pointPath),
-          knowledgePath: this.eduType === 'K9K12' ? this.k12.knowledgePath : [],
-          knowledge: this.eduType === 'K9K12' ? this.lastValue(this.k12.knowledgePath) : '',
-          bookId: this.eduType === 'K9K12' ? this.k12.bookId : '',
-          questTemplateId: this.eduType === '专升本' ? this.zsb.questType : this.k12.questType,
-          difficulty: this.eduType === '专升本' ? this.zsb.difficulty : this.k12.difficulty,
+          areaPath: isK12 ? [] : this.zsb.areaPath,
+          subjectPath: isK12 ? this.k12.subjectPath : [],
+          typeId: isK12 ? this.k12.level : this.zsb.typeId,
+          subjectId: isK12 ? k12SubjectId : this.zsb.subjectId,
+          pointPath: isK12 ? this.k12.pointPath : this.zsb.pointPath,
+          pointId: isK12 ? this.lastValue(this.k12.pointPath) : this.lastValue(this.zsb.pointPath),
+          knowledgePath: isK12 ? this.k12.knowledgePath : [],
+          knowledge: isK12 ? this.lastValue(this.k12.knowledgePath) : '',
+          bookId: isK12 ? this.k12.bookId : '',
+          questTemplateId: isK12 ? this.k12.questType : this.zsb.questType,
+          difficulty: isK12 ? this.k12.difficulty : this.zsb.difficulty,
           serialNumber: '1'
         }
       this.bankEditorVisible = true
@@ -3756,9 +3569,7 @@ export default {
       if (this.importLoading || this.importVisible) return
       this.resetImportForm()
       this.importVisible = true
-      const seed = this.sourceTab === '自有题库' && this.ownSubject
-        ? { path: [...this.ownFilters.subjectPath], bookId: this.ownFilters.bookId, typeId: this.ownFilters.level }
-        : null
+      const seed = null
       const isCurrent = this.captureImportRequest('open', false)
       await this.loadImportBusinesses()
       if (!isCurrent() || !seed) return
@@ -4365,27 +4176,25 @@ export default {
       const mother = group && group.mother
       if (!mother) return null
       const id = mother.id || mother.questId
-      const subjectId = mother.subjectId || (this.questionEduType(mother) === '专升本'
-        ? this.zsb.subjectId
-        : this.lastValue(this.k12.subjectPath))
       const pointId = mother.pointId || mother.treeId
       const knowledge = mother.knowledge || mother.knowledgeId
       const pointName = mother.pointName
       const knowledgeName = mother.knowledgeName
-      if (!id || !num) return null
-      return {
-        id: String(id),
-        subjectId: String(subjectId || ''),
-        pointId: String(pointId),
-        knowledge: String(knowledge),
-        knowledgeName: String(knowledgeName),
-        pointName: String(pointName),
-        questTemplateId: mother.questTemplateId || mother.questType || '',
-        matchQuestType: this.matchQuestType ? 1 : 0,
-        allowRepeat: this.allowRepeat ? 1 : 0,
+      const isAiQuestion = String(mother.isAi || '') === '1' || Boolean(mother._aiExportSource)
+      if (!num || (!isAiQuestion && !id)) return null
+      const payload = {
         uniqueId: this.createUniqueId(),
+        knowledgeName: String(knowledgeName || ''),
+        pointName: String(pointName || ''),
         num
       }
+      if (!isAiQuestion) {
+        payload.id = String(id)
+        payload.pointId = String(pointId || '')
+        payload.knowledge = String(knowledge || '')
+        payload.compulsory = this.questionEduType(mother) === 'K9K12' ? 1 : 0
+      }
+      return payload
     },
     async autoImportQuestions() {
       const importTasks = this.paperGroups
@@ -4513,12 +4322,14 @@ export default {
     buildPublishTopic(question, serialNumber) {
       // 发布使用字段白名单，避免将题目内部类型、上下文及交互状态提交给后端。
       const editableFields = [
-        'intehubId', 'sourceQuestionId',
+        'id', 'spiderId', 'intehubId', 'sourceQuestionId',
         'institutionId', 'examConfigId', 't1Id', 'name', 'subjectId', 'subjectName',
-        'difficultyId', 'difficultyName', 'bookId', 'bookName', 'knowledgeId',
+        'isImg', 'difficulty', 'difficultyId', 'difficultyName', 'bookId', 'bookName', 'knowledge', 'knowledgeId',
         'knowledgeName', 'pointId', 'pointName', 'typeId', 'typeName',
-        'questTemplateId', 'questTemplateName', 'material', 'answer', 'analysis',
-        'optionA', 'optionB', 'optionC', 'optionD', 'optionE', 'isAi'
+        'questTemplateId', 'questTemplateName', 'questTypeName', 'material', 'answer', 'answerIsImg', 'analysis', 'analysisIsImg',
+        'optionA', 'optionIsImgA', 'optionB', 'optionIsImgB', 'optionC', 'optionIsImgC',
+        'optionD', 'optionIsImgD', 'optionE', 'optionIsImgE', 'source', 'areaName',
+        'businessName', 'compulsory', 'isAi'
       ]
       const topic = editableFields.reduce((result, field) => {
         if (question[field] !== undefined && question[field] !== null) {
@@ -4533,11 +4344,9 @@ export default {
       return topic
     },
     buildPublishPayload(publishConfig = this.practiceConfig) {
-      const authInfo = getAuthInfo() || {}
       // 发布科目优先取当前有效筛选，云端按科目类型读取；未选时回退首道母题。
       const selectedSubjectId = this.sourceTab === 'AI出题'
         ? (this.aiSubject ? this.aiSubject.id : '')
-        : this.sourceTab === '自有题库' ? (this.ownSubject ? this.ownSubject.id : '')
         : this.activeFilterEduType === '专升本'
         ? this.zsb.subjectId
         : this.lastValue(this.k12.subjectPath)
@@ -4551,7 +4360,6 @@ export default {
       const subjectId = selectedSubjectId || generatedSubjectId
       const selectedSubject = this.sourceTab === 'AI出题'
         ? (this.aiSubject || {})
-        : this.sourceTab === '自有题库' ? (this.ownSubject || {})
         : this.activeFilterEduType === '专升本'
         ? this.subjectOptions.find(item => String(item.id) === String(subjectId)) || {}
         : this.findK12Subject(subjectId)
@@ -4570,27 +4378,23 @@ export default {
             .map(child => this.buildPublishTopic(child, serialNumber++))
           return topic
         })
-      const students = (publishConfig.students || []).map(student => {
-        const userId = String(student.userId || student.studentId || student.id || '')
-        return {
-          ...student,
-          id: String(student.id || userId),
-          userId,
-          userName: student.studentName || student.name || ''
-        }
-      })
+      const classId = String(publishConfig.classId || '')
+      const classs = classId ? [{
+        classId,
+        className: String(publishConfig.className || '')
+      }] : []
 
       return {
-        t1Id: this.practiceEntrySource === 'teacher-home'
-          ? ''
-          : String(authInfo.t1Id || authInfo.liveId || ''),
+        liveId: this.currentLiveId(),
         name: publishConfig.name || '',
         subjectId: String(subjectId || this.practiceConfig.subjectId || ''),
-        students,
-        examDurationMinutes: Number(publishConfig.duration),
+        examDuration: Number(publishConfig.duration),
+        topicNum: Number(publishConfig.originalCount),
         topicInitScore: Number(publishConfig.score),
         errorTopicPushNum: Number(publishConfig.wrongCount),
-        topics
+        classs,
+        topics,
+        institutionId: localStorage.getItem('teaching_cloud_institution_id') || ''
       }
     },
     publishPractice() {

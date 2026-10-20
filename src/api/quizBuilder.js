@@ -1,16 +1,28 @@
 import axios from 'axios'
 
 import request, { getRequestErrorMessage, showNetworkErrorAlert } from '@/utils/t1Request'
+import liveRequest from '@/utils/request'
 
-// const TEACHING_CLOUD_BASE_URL = 'https://www.fjlsjy123.com/appTest/t1'  //测试环境
-const TEACHING_CLOUD_BASE_URL = 'https://www.fjlsjy123.com/appBack/t1' //正式环境
+// 与直播端 AfterClassTest 保持同一套教研云地址。开发环境继续连接测试库，
+// 生产环境默认连接正式库；如需临时切换可通过环境变量覆盖。
+const TEACHING_CLOUD_BASE_URL = process.env.VUE_APP_TEACHING_CLOUD_BASE_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://www.fjlsjy123.com/appBack'
+    : 'https://www.fjlsjy123.com/appTest')
+const LEGACY_TEACHING_CLOUD_BASE_URL = `${TEACHING_CLOUD_BASE_URL}/t1`
 
 const teachingCloud = axios.create({
   baseURL: TEACHING_CLOUD_BASE_URL,
   timeout: 30000
 })
 
-teachingCloud.interceptors.request.use(config => {
+// 纠错、资源篮等扩展功能不在直播端课后测接口中，仍沿用原 /t1 路径。
+const legacyTeachingCloud = axios.create({
+  baseURL: LEGACY_TEACHING_CLOUD_BASE_URL,
+  timeout: 30000
+})
+
+function attachTeachingCloudToken(config) {
   const token = localStorage.getItem('teaching_cloud_token')
 
   config.headers = config.headers || {}
@@ -19,15 +31,24 @@ teachingCloud.interceptors.request.use(config => {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
-})
+}
+
+teachingCloud.interceptors.request.use(attachTeachingCloudToken)
+legacyTeachingCloud.interceptors.request.use(attachTeachingCloudToken)
+
+function handleTeachingCloudError(error) {
+  showNetworkErrorAlert(error)
+  error.message = getRequestErrorMessage(error)
+  return Promise.reject(error)
+}
 
 teachingCloud.interceptors.response.use(
   response => response,
-  error => {
-    showNetworkErrorAlert(error)
-    error.message = getRequestErrorMessage(error)
-    return Promise.reject(error)
-  }
+  handleTeachingCloudError
+)
+legacyTeachingCloud.interceptors.response.use(
+  response => response,
+  handleTeachingCloudError
 )
 
 function unwrapCloudData(payload) {
@@ -59,9 +80,33 @@ export async function getTeachingCloudQuestions(url, params) {
   }
 }
 
+function unwrapLiveData(payload) {
+  return payload && payload.data !== undefined ? payload.data : payload
+}
+
+/**
+ * 与直播端一致：先换取教研云 token 和机构 ID，再访问教研云题库。
+ */
+export async function getAfterQuizIntehubToken() {
+  const response = await liveRequest.get('/edu/after/quiz/intehub/getToken')
+  const data = unwrapLiveData(response) || {}
+  const token = String(data.token || '')
+  const institutionId = String(data.institutionId || '')
+
+  if (token) localStorage.setItem('teaching_cloud_token', token)
+  if (institutionId) localStorage.setItem('teaching_cloud_institution_id', institutionId)
+
+  return { token, institutionId }
+}
+
+/** 直播端专升本科目树。 */
+export function getTeachingCloudUpgradeSubjectList(params) {
+  return getTeachingCloudOptions('/home/getUnCompulsorySubjectList', params)
+}
+
 /** 提交云题库题目纠错 */
 export async function addTeachingCloudError(data) {
-  const response = await teachingCloud.post('/addTeachingCloudError', data)
+  const response = await legacyTeachingCloud.post('/addTeachingCloudError', data)
   const payload = response.data || {}
 
   if (
@@ -385,7 +430,7 @@ export async function uploadTopicImage(file) {
 }
 
 export async function updateTeacherOneResource(data) {
-  const response = await teachingCloud.get('/addTeacherOneResource', { params: data })
+  const response = await legacyTeachingCloud.get('/addTeacherOneResource', { params: data })
   const payload = response.data || {}
 
   if (payload && typeof payload === 'object' && 'code' in payload && payload.code !== 200 && payload.code !== 0) {
@@ -397,7 +442,7 @@ export async function updateTeacherOneResource(data) {
 
 /** 云题库资源篮数量 */
 export async function getTeacherOneResourceTotal(params) {
-  const response = await teachingCloud.get('/getTeacherOneResourceTotal', { params })
+  const response = await legacyTeachingCloud.get('/getTeacherOneResourceTotal', { params })
   const payload = response.data || {}
 
   if (payload && typeof payload === 'object' && 'code' in payload && payload.code !== 200 && payload.code !== 0) {
@@ -432,11 +477,12 @@ export function getTopicResourceTotal() {
 }
 
 export function generateQuizQuestions(data) {
-  return request({
+  return liveRequest({
     url: '/edu/after/quiz/generateQuest',
     method: 'post',
+    timeout: 120000,
     data
-  })
+  }).then(unwrapLiveData)
 }
 
 export function generatePartQuest(data) {
@@ -452,16 +498,16 @@ export function generatePartQuest(data) {
 
 /** 教师课后测 AI 出题（仅返回草稿，不发布、不落库） */
 export function generateAfterQuizQuestions(data) {
-  return request({
-    baseURL: process.env.VUE_APP_T1_AI_BASE_URL || process.env.VUE_APP_API_BASE_URL,
-    url: '/v1/t1-ai/after-quiz/questions',
+  return liveRequest({
+    url: '/edu/after/quiz/generateQuest',
     method: 'post',
+    timeout: 120000,
     headers: {
       'Content-Type': 'application/json'
     },
     skipErrorMessage: true,
     data
-  })
+  }).then(unwrapLiveData)
 }
 
 /** 获取当前听记对应的科目，用于课后测 AI 出题条件回显 */
@@ -475,34 +521,26 @@ export function getMinutesSubject(minutesId) {
 }
 
 export function getQuestListByKnowledge(data) {
-  return request({
-    url: '/v1/topic/getQuestListByKnowledge',
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    data
+  return teachingCloud.post('/home/getQuestListByKnowledge', data).then(response => {
+    const payload = response.data || {}
+    const result = payload && payload.data !== undefined ? payload.data : payload
+    if (Array.isArray(result)) return result
+    if (!result || typeof result !== 'object') return []
+    return Object.keys(result).map(uniqueId => ({ uniqueId, questList: result[uniqueId] || [] }))
   })
 }
 
 export function getQuestListByKnowledgeByUpgrade(data) {
-  return request({
-    url: '/v1/topic/getQuestListByKnowledgeByUpgrade',
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    data
-  })
+  return getQuestListByKnowledge(data)
 }
 
 export function publishAfterQuiz(data) {
-  return request({
-    url: '/v1/after-quizzes',
+  return liveRequest({
+    url: '/edu/after/quiz/publish',
     method: 'post',
     headers: {
       'Content-Type': 'application/json'
     },
     data
-  })
+  }).then(unwrapLiveData)
 }

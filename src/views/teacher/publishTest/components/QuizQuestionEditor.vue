@@ -259,7 +259,7 @@
               </el-form-item>
             </template>
             <el-form-item label="章节" required>
-              <el-select v-if="businessStandardType === 0" :value="businessPointSelection" value-key="id" clearable filterable allow-create default-first-option placeholder="请选择或输入创建章节" @change="handleBusinessGeneralPointChange">
+              <el-select v-if="businessStandardType === 2" :value="businessPointSelection" value-key="id" clearable filterable allow-create default-first-option placeholder="请选择或输入创建章节" @change="handleBusinessGeneralPointChange">
                 <el-option v-for="item in businessGeneralPoints" :key="item.id" :label="item.label" :value="item" />
               </el-select>
               <el-cascader v-else ref="business-point" v-model="localEditor.pointPath" :options="businessPointOptions" :props="businessTaxonomyProps" :disabled="businessStandardType === 1 && (!localEditor.bookId || !localEditor.typeId)" clearable filterable placeholder="请选择章节" popper-class="practice-filter-taxonomy-popper" @change="handleBusinessPointChange" @visible-change="handleBusinessPopperVisible($event, 'business-point')" @expand-change="updateBusinessPopper('business-point')">
@@ -267,10 +267,10 @@
               </el-cascader>
             </el-form-item>
             <el-form-item label="知识点" required>
-              <el-select v-if="businessStandardType === 0" :value="businessKnowledgeSelection" value-key="id" clearable filterable allow-create default-first-option placeholder="请选择或输入创建知识点" @change="handleBusinessGeneralKnowledgeChange">
+              <el-select v-if="businessStandardType === 2" :value="businessKnowledgeSelection" value-key="id" clearable filterable allow-create default-first-option placeholder="请选择或输入创建知识点" @change="handleBusinessGeneralKnowledgeChange">
                 <el-option v-for="item in businessGeneralKnowledge" :key="item.id" :label="item.label" :value="item" />
               </el-select>
-              <el-cascader v-else ref="business-knowledge" v-model="localEditor.knowledgePath" :options="businessKnowledgeOptions" :props="businessTaxonomyProps" :disabled="businessStandardType === 2 && !localEditor.pointId" clearable filterable placeholder="请选择知识点" popper-class="practice-filter-taxonomy-popper" @change="handleKnowledgeChange" @visible-change="handleBusinessPopperVisible($event, 'business-knowledge')" @expand-change="updateBusinessPopper('business-knowledge')">
+              <el-cascader v-else ref="business-knowledge" v-model="localEditor.knowledgePath" :options="businessKnowledgeOptions" :props="businessTaxonomyProps" :disabled="businessStandardType === 0 && !localEditor.pointId" clearable filterable placeholder="请选择知识点" popper-class="practice-filter-taxonomy-popper" @change="handleKnowledgeChange" @visible-change="handleBusinessPopperVisible($event, 'business-knowledge')" @expand-change="updateBusinessPopper('business-knowledge')">
                 <template slot-scope="{ node }"><span class="practice-taxonomy-label" @click.stop="handleTaxonomyLabelClick(node, $event)">{{ node.label }}</span></template>
               </el-cascader>
             </el-form-item>
@@ -337,10 +337,7 @@ import { normalizeZsbSubjectOptions, findZsbSubjectPath, getZsbSubject } from '@
 
 import {
   addTopic,
-  getBusinessSubjectTree,
-  getBusinessSubjects,
-  getBusinessChapters,
-  getBusinessKnowledgePoints,
+  getTeachingCloudOptions,
   getTopicDetail,
   getTopicBookList,
   getTopicCompulsorySubjectList,
@@ -356,6 +353,7 @@ import {
 } from '@/api/quizBuilder'
 
 const TOPIC_DIFFICULTY_DICT_ID = '2'
+const TOPIC_KNOWLEDGE_DICT_ID = '1'
 
 const emptyEditor = () => ({
   name: '',
@@ -590,6 +588,14 @@ export default {
       this.businessPending += 1
       try { return await request } finally { this.businessPending -= 1 }
     },
+    businessTeachingCloudParams(params = {}) {
+      const authInfo = getAuthInfo() || {}
+      return {
+        ...params,
+        isHome: 0,
+        institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
+      }
+    },
     normalizeBusinessSubjects(rows, prefix) {
       return (Array.isArray(rows) ? rows : []).map(item => {
         const value = prefix + '/' + encodeURIComponent(String(item.id))
@@ -613,7 +619,7 @@ export default {
         pointId: String(seed.pointId || seed.treeId || this.lastValue(seed.pointPath) || ''),
         knowledge: String(seed.knowledge || seed.knowledgeId || this.lastValue(seed.knowledgePath) || ''),
         difficulty: String(seed.difficulty || seed.difficultyId || ''),
-        questTemplateId: String(seed.questTemplateId || ''),
+        questTemplateId: String(seed.questTemplateId || context.questTemplateId || seed.questTypeTemplateId || seed.questTypeId || seed.questType || ''),
         bookId: String(seed.bookId || ''), typeId: String(seed.typeId || ''),
         serialNumber: seed.serialNumber || '1'
       }
@@ -633,15 +639,17 @@ export default {
     },
     async loadBusinessBase() {
       const isCurrent = this.captureBusinessRequest('base')
+      const authInfo = getAuthInfo() || {}
+      const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
       const [businesses, difficulties] = await this.waitBusinessOptions(Promise.allSettled([
-        getBusinessSubjectTree(), getTopicDictItemList(TOPIC_DIFFICULTY_DICT_ID)
+        getTeachingCloudOptions('/home/getBusinessAll', { institutionId }),
+        getTeachingCloudOptions('/dict/getAll', { id: TOPIC_DIFFICULTY_DICT_ID })
       ]))
       if (!isCurrent()) return false
       if (businesses.status === 'fulfilled') {
-        const internal = String((getAuthInfo() || {}).isInternalOrganization) === '1'
         const previousBusiness = this.selectedBusiness
         this.businessOptions = (Array.isArray(businesses.value) ? businesses.value : [])
-          .filter(item => item.standardType != null && [0, 1, 2].includes(Number(item.standardType)) && (internal || Number(item.standardType) !== 2))
+          .filter(item => item.standardType != null && [0, 1, 2].includes(Number(item.standardType)))
           .map(item => ({ ...item, id: String(item.id), standardType: Number(item.standardType) }))
         if (previousBusiness && this.selectedBusiness && previousBusiness.standardType !== this.selectedBusiness.standardType) {
           this.businessRevision += 1
@@ -674,7 +682,13 @@ export default {
       this.businessTreeLoading = true
       this.businessTreeError = false
       try {
-        const rows = await getBusinessSubjects(business.id)
+        const authInfo = getAuthInfo() || {}
+        const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
+        const rows = await getTeachingCloudOptions('/home/getSubjectByBusiness', {
+          institutionId,
+          id: business.id,
+          standardType: business.standardType
+        })
         if (!isCurrent()) return null
         const tree = this.normalizeBusinessSubjects(rows, 'business:' + business.id)
         this.$set(this.businessSubjectTrees, business.id, tree)
@@ -721,7 +735,8 @@ export default {
               businessId: detail && detail.businessId || seed.businessId,
               pointId: detail && (detail.pointId || detail.treeId) || seed.pointId,
               knowledge: detail && (detail.knowledge || detail.knowledgeId) || seed.knowledge,
-              difficulty: detail && (detail.difficulty || detail.difficultyId) || seed.difficulty
+              difficulty: detail && (detail.difficulty || detail.difficultyId) || seed.difficulty,
+              questTemplateId: detail && (detail.questTemplateId || detail.questTypeTemplateId || detail.questTypeId || detail.questType) || seed.questTemplateId
             })
           } catch (error) {
             if (!isCurrent()) return
@@ -731,7 +746,7 @@ export default {
         }
         await this.loadBusinessBase()
         if (!isCurrent()) return
-        if (this.businessStandardType === 0 && loadedDetail) {
+        if (this.businessStandardType === 2 && loadedDetail) {
           // 加载学段后才能确认是否支持自定义；详情只有名称时，清除列表带入的旧 ID、别名和路径。
           if (loadedDetail.pointName != null && !loadedDetail.pointId && !loadedDetail.treeId) {
             this.handleBusinessGeneralPointChange(loadedDetail.pointName)
@@ -741,7 +756,6 @@ export default {
           }
         }
         if (!this.selectedBusiness) {
-          if (this.localEditor.subjectId && !this.localEditor.businessId) this.$message.warning('无法确定题目学段，请手动选择学段和科目')
           if (!this.localEditor.businessId) this.clearBusinessClassification()
           return
         }
@@ -807,7 +821,7 @@ export default {
       const value = this.localEditor[field]
       const path = value ? this.findTreePath(options, value) : []
       this.localEditor[pathField] = path
-      if (this.businessStandardType === 0) {
+      if (this.businessStandardType === 2) {
         // 重载选项时保留无 ID 的自定义名称；已有 ID 失效时仍要求重新选择，不降级为自定义。
         const nameField = field === 'pointId' ? 'pointName' : 'knowledgeName'
         this.localEditor[field === 'pointId' ? 'treeId' : 'knowledgeId'] = field === 'pointId' ? '' : (path.length ? value : '')
@@ -832,30 +846,73 @@ export default {
     async retryBusinessSubjectOptions() {
       await this.loadBusinessSubjectOptions(true)
     },
+    async loadBusinessQuestTypes(subject) {
+      const businessId = this.localEditor.businessId
+      const subjectId = String(subject.id)
+      const subjectPath = JSON.stringify(this.localEditor.subjectPath || [])
+      const isCurrentSubject = () => {
+        const current = this.businessSubject
+        return !this.businessDestroyed && this.businessMode &&
+          this.localEditor.businessId === businessId &&
+          JSON.stringify(this.localEditor.subjectPath || []) === subjectPath &&
+          current && current.id === subjectId
+      }
+      if (!subject.questType) {
+        if (isCurrentSubject()) this.businessQuestTypeOptions = []
+        return []
+      }
+      try {
+        const institutionId = localStorage.getItem('teaching_cloud_institution_id') || ''
+        const templates = await this.waitBusinessOptions(getTeachingCloudOptions('/questTypeTemplate/getAll', {
+          id: subject.questType,
+          isHome: 0,
+          institutionId
+        }))
+        if (!isCurrentSubject()) return null
+        const options = (Array.isArray(templates) ? templates : []).map(item => ({
+          ...item,
+          id: String(item.id),
+          questType: String(item.questType || '')
+        }))
+        this.businessQuestTypeOptions = options
+        return options
+      } catch (error) {
+        if (isCurrentSubject()) {
+          this.businessQuestTypeOptions = []
+          this.businessOptionsError = true
+          this.$message.warning('题型加载失败，请重新加载分类选项')
+        }
+        return null
+      }
+    },
     async loadBusinessSubjectOptions(restore = false) {
       if (!this.businessSubject) return
       const subject = this.businessSubject
       const type = this.businessStandardType
       const isCurrent = this.captureBusinessRequest('subject', ['subjectPath'])
+      const questTypesRequest = this.loadBusinessQuestTypes(subject)
       this.businessOptionsError = false
       try {
-        const [first, knowledge, templates] = await this.waitBusinessOptions(Promise.all([
-          type === 1 ? getTopicBookList(subject.id) : type === 0 ? getBusinessChapters(subject.id) : getTopicSubjectPointList(subject.id),
-          type === 1 ? getTopicKnowledgeCompulsoryList(subject.id) : type === 0 ? getBusinessKnowledgePoints(subject.id) : Promise.resolve([]),
-          subject.questType ? getTopicQuestTypeTemplates(subject.questType) : Promise.resolve([])
+        const [first, knowledge] = await this.waitBusinessOptions(Promise.all([
+          type === 1
+            ? getTeachingCloudOptions('/dict/getAll', this.businessTeachingCloudParams({ id: '22', subjectId: subject.id }))
+            : getTeachingCloudOptions('/subjectPoint/getAll', { id: subject.id }),
+          type === 1
+            ? getTeachingCloudOptions('/knowledgeCompulsory/getList', this.businessTeachingCloudParams({ subjectId: subject.id }))
+            : Promise.resolve([])
         ]))
         if (!isCurrent()) return
         if (type === 1) this.businessBookOptions = first || []
         else {
           this.localEditor.bookId = ''
           this.localEditor.typeId = ''
-          this.businessPointOptions = type === 0
-            ? this.normalizeFlatTree((first || []).map(({ children, ...item }) => item)) : this.normalizeTree(first || [])
+          this.businessPointOptions = this.normalizeBusinessKnowledge(first)
         }
         this.businessKnowledgeOptions = this.normalizeBusinessKnowledge(knowledge)
-        this.businessQuestTypeOptions = templates || []
+        const questTypes = await questTypesRequest
+        if (!isCurrent()) return
         if (!restore) return
-        this.restoreBusinessSelect('questTemplateId', this.businessQuestTypeOptions)
+        if (questTypes !== null) this.restoreBusinessSelect('questTemplateId', this.businessQuestTypeOptions)
         this.restoreBusinessSelect('difficulty', this.difficultyOptions)
         if (type === 1) {
           this.restoreBusinessSelect('bookId', this.businessBookOptions)
@@ -866,8 +923,8 @@ export default {
           if (!isCurrent()) return
         }
         this.restoreBusinessTreeChoice('pointId', 'pointPath', this.businessPointOptions)
-        if (type === 2 && this.localEditor.pointId) await this.loadBusinessKnowledge()
-        else if (type !== 2) this.restoreBusinessTreeChoice('knowledge', 'knowledgePath', this.businessKnowledgeOptions)
+        if (type !== 1 && this.localEditor.pointId) await this.loadBusinessKnowledge()
+        else if (type === 1) this.restoreBusinessTreeChoice('knowledge', 'knowledgePath', this.businessKnowledgeOptions)
         else this.restoreBusinessTreeChoice('knowledge', 'knowledgePath', [])
       } catch (error) {
         if (isCurrent()) {
@@ -880,7 +937,10 @@ export default {
       const isCurrent = this.captureBusinessRequest('levels', ['subjectPath', 'bookId'])
       if (!this.businessSubject || !this.localEditor.bookId) return
       try {
-        const rows = await this.waitBusinessOptions(getTopicTypeListByBook(this.businessSubject.id, this.localEditor.bookId))
+        const rows = await this.waitBusinessOptions(getTeachingCloudOptions('/book/getTypeByBook', this.businessTeachingCloudParams({
+          subjectId: this.businessSubject.id,
+          bookId: this.localEditor.bookId
+        })))
         if (isCurrent()) this.businessLevelOptions = rows || []
       } catch (error) { if (isCurrent()) this.$message.warning('年级加载失败，请重新选择教材重试') }
     },
@@ -888,7 +948,11 @@ export default {
       const isCurrent = this.captureBusinessRequest('points', ['subjectPath', 'bookId', 'typeId'])
       if (!this.businessSubject || !this.localEditor.bookId || !this.localEditor.typeId) return
       try {
-        const rows = await this.waitBusinessOptions(getTopicSubjectPointCompulsoryList(this.businessSubject.id, this.localEditor.typeId, this.localEditor.bookId))
+        const rows = await this.waitBusinessOptions(getTeachingCloudOptions('/subjectPointCompulsory/getList', this.businessTeachingCloudParams({
+          subjectId: this.businessSubject.id,
+          bookId: this.localEditor.bookId,
+          level: this.localEditor.typeId
+        })))
         if (isCurrent()) this.businessPointOptions = this.normalizeFlatTree(rows || [])
       } catch (error) { if (isCurrent()) this.$message.warning('章节加载失败，请重新选择年级重试') }
     },
@@ -896,7 +960,11 @@ export default {
       const isCurrent = this.captureBusinessRequest('knowledge', ['subjectPath', 'pointId'])
       if (!this.businessSubject || !this.localEditor.pointId) return
       try {
-        const rows = await this.waitBusinessOptions(getTopicKnowledgeList(this.businessSubject.id, this.localEditor.pointId))
+        const rows = await this.waitBusinessOptions(getTeachingCloudOptions('/dict/getAll', {
+          id: TOPIC_KNOWLEDGE_DICT_ID,
+          subjectId: this.businessSubject.id,
+          pointId: this.localEditor.pointId
+        }))
         if (!isCurrent()) return
         this.businessKnowledgeOptions = this.normalizeBusinessKnowledge(rows)
         this.restoreBusinessTreeChoice('knowledge', 'knowledgePath', this.businessKnowledgeOptions)
@@ -920,7 +988,7 @@ export default {
     },
     async handleBusinessPointChange(path) {
       this.localEditor.pointId = this.lastValue(path)
-      if (this.businessStandardType !== 2) return
+      if (this.businessStandardType === 1) return
       this.localEditor.knowledge = ''
       this.localEditor.knowledgeId = ''
       this.localEditor.knowledgePath = []
@@ -938,18 +1006,21 @@ export default {
       })
     },
     // 两个通用下拉框都用对象表示已有项、字符串表示自定义输入，避免名称与 ID 文本混淆。
-    handleBusinessGeneralPointChange(value) {
+    async handleBusinessGeneralPointChange(value) {
       const existing = value && typeof value === 'object'
       // 自定义或清空时同步清除 ID 和路径，防止保存或再次初始化时恢复旧章节。
       Object.assign(this.localEditor, {
         pointId: existing ? value.id : '', treeId: '',
         pointPath: existing ? [...value.path] : [],
-        pointName: existing ? value.name : String(value || '').trim()
+        pointName: existing ? value.name : String(value || '').trim(),
+        knowledge: '', knowledgeId: '', knowledgePath: [], knowledgeName: ''
       })
+      this.businessKnowledgeOptions = []
+      if (this.localEditor.pointId) await this.loadBusinessKnowledge()
     },
     handleBusinessGeneralKnowledgeChange(value) {
       const existing = value && typeof value === 'object'
-      // 知识点独立于章节维护；knowledgeId 是 knowledge 的回显别名，必须同步更新或清空。
+      // knowledgeId 是 knowledge 的回显别名，选择或清空时必须同步更新。
       Object.assign(this.localEditor, {
         knowledge: existing ? value.id : '', knowledgeId: existing ? value.id : '',
         knowledgePath: existing ? [...value.path] : [],
@@ -974,8 +1045,8 @@ export default {
           { valid: this.businessBookOptions.some(item => String(item.id) === editor.bookId), message: '请选择教材版本' },
           { valid: this.businessLevelOptions.some(item => String(item.id || item.name) === editor.typeId), message: '请选择年级' }
         ] : []),
-        { valid: this.businessStandardType === 0 && !editor.pointId ? String(editor.pointName || '').trim() : this.findTreeNode(this.businessPointOptions, editor.pointId), message: this.businessStandardType === 0 ? '请选择或输入章节' : '请选择章节' },
-        { valid: this.businessStandardType === 0 && !editor.knowledge ? String(editor.knowledgeName || '').trim() : this.findTreeNode(this.businessKnowledgeOptions, editor.knowledge), message: this.businessStandardType === 0 ? '请选择或输入知识点' : '请选择知识点' },
+        { valid: this.businessStandardType === 2 && !editor.pointId ? String(editor.pointName || '').trim() : this.findTreeNode(this.businessPointOptions, editor.pointId), message: this.businessStandardType === 2 ? '请选择或输入章节' : '请选择章节' },
+        { valid: this.businessStandardType === 2 && !editor.knowledge ? String(editor.knowledgeName || '').trim() : this.findTreeNode(this.businessKnowledgeOptions, editor.knowledge), message: this.businessStandardType === 2 ? '请选择或输入知识点' : '请选择知识点' },
         { valid: this.businessQuestTypeOptions.some(item => String(item.id) === editor.questTemplateId), message: '请选择题型' },
         { valid: this.difficultyOptions.some(item => String(item.id) === editor.difficulty), message: '请选择难度' },
         { valid: !this.isBlank(editor.name), message: '请输入题目内容' },
@@ -1002,8 +1073,8 @@ export default {
       const context = {
         businessId: this.selectedBusiness.id, businessName: this.selectedBusiness.name,
         subjectId: subject.id, subjectName: subject.label,
-        pointId: editor.pointId, pointName: point ? point.label : type === 0 && !editor.pointId ? String(editor.pointName || '').trim() : '',
-        knowledge: editor.knowledge, knowledgeId: editor.knowledge, knowledgeName: knowledge ? knowledge.label : type === 0 && !editor.knowledge ? String(editor.knowledgeName || '').trim() : '',
+        pointId: editor.pointId, pointName: point ? point.label : type === 2 && !editor.pointId ? String(editor.pointName || '').trim() : '',
+        knowledge: editor.knowledge, knowledgeId: editor.knowledge, knowledgeName: knowledge ? knowledge.label : type === 2 && !editor.knowledge ? String(editor.knowledgeName || '').trim() : '',
         questTemplateId: editor.questTemplateId, questTemplateName: this.optionName(this.businessQuestTypeOptions, editor.questTemplateId),
         questType: this.selectedQuestType, difficulty: editor.difficulty, difficultyId: editor.difficulty,
         difficultyName: this.optionName(this.difficultyOptions, editor.difficulty),
@@ -1041,7 +1112,7 @@ export default {
       const type = this.businessStandardType
       // 学段和级联路径只供前端使用；通用学段自定义分类只提交名称。
       const payload = this.buildTopicPayload({ ...editor, bookId: type === 1 ? editor.bookId : '', typeId: type === 1 ? editor.typeId : '' })
-      if (type === 0) {
+      if (type === 2) {
         // 基础 payload 会从路径补 ID；自定义时必须显式删除，确保 ID 与名称只提交其中一个。
         if (!editor.pointId) {
           delete payload.pointId
