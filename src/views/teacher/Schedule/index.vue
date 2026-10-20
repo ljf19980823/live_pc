@@ -257,6 +257,7 @@
 </template>
 
 <script>
+import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -298,12 +299,7 @@ export default {
       playerAllowDownload: '2',
 
        // macOS 屏幕录制权限引导弹窗
-      showScreenPermissionDialog: false,
-      screenPermissionStatus: '',   // 'not-determined' | 'denied' | 'restricted'
-      _removeScreenPermissionDenied: null,
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
-      showScreenCaptureFailedDialog: false,
-      _removeScreenCaptureFailed: null,
 
        limitTimeTeacher:30
     }
@@ -490,19 +486,6 @@ export default {
     }
     window.addEventListener('message', this._onWindowMessage)
 
-    // macOS：监听主进程通知——屏幕录制权限被拒绝
-    if (window.electronAPI?.onScreenPermissionDenied) {
-      this._removeScreenPermissionDenied = window.electronAPI.onScreenPermissionDenied((data) => {
-        this.screenPermissionStatus = data?.status || 'denied'
-        this.showScreenPermissionDialog = true
-      })
-    }
-    // macOS：监听主进程通知——权限已授权但屏幕采集仍然失败
-    if (window.electronAPI?.onScreenCaptureFailed) {
-      this._removeScreenCaptureFailed = window.electronAPI.onScreenCaptureFailed(() => {
-        this.showScreenCaptureFailedDialog = true
-      })
-    }
       this.fetchAgreementTeacher()
     this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
   },
@@ -702,10 +685,12 @@ export default {
         this.$message.warning('时间还未到，仅提前'+this.limitTimeTeacher+'分钟允许进入')
         return
       }
-      this.prepareElectronMediaPermissions()
       const { userId, realName, role } = getUserInfo()
       const token = getToken()
       const roleNumber = role === 'STUDENT' ? 0 : 1
+      if (!(await confirmScreenPermissionBeforeEntry(roleNumber, this))) return
+      this.prepareElectronMediaPermissions()
+
       // let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'
       let liveBaseUrl = window.LIVEBASE || 'https://live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {

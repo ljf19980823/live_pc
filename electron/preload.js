@@ -61,9 +61,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
   // 查询屏幕录制权限状态（与摄像头/麦克风不同，无法通过代码弹窗申请）
-  // 返回：'not-determined' | 'granted' | 'denied' | 'restricted'（非 macOS 返回 'granted'）
+  // 返回：'not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown'（非 macOS 返回 'granted'）
   getScreenAccessStatus: () => ipcRenderer.invoke('get-screen-access-status'),
-  // 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
+  // 打开录屏与系统录音设置，返回 { success, message? }，引导用户手动授权
   openScreenPreferences: () => ipcRenderer.invoke('open-screen-preferences'),
   // 打开崩溃日志所在目录（用于"反馈崩溃问题"按钮）
   openCrashLogFolder: () => ipcRenderer.invoke('open-crash-log-folder'),

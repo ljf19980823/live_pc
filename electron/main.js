@@ -7,6 +7,7 @@ const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
 const { fileURLToPath } = require('url')
+const { registerScreenPermissionHandlers } = require('./screen-permissions')
 const {
   appendCrashLog,
   getCrashDumpsDirectory,
@@ -41,6 +42,8 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
 
 let mainWindow
+let exitConfirmWindow = null
+let isQuitting = false
 const linkPreviewWindows = new Set()
 let linkPreviewSessionConfigured = false
 let screenGuardInterval = null
@@ -378,15 +381,36 @@ function stopScreenGuard () {
   }
 }
 
+// 用户确认退出或安装更新后，结束整个应用，而不只是关闭主窗口。
+function quitApplication () {
+  if (isQuitting) return
+  isQuitting = true
+  stopScreenGuard()
+
+  // 沿用确认后的强制关窗行为，避免课堂 iframe 的 beforeunload 再次阻止退出。
+  // 同时关闭链接预览等窗口，随后让 Electron 正常结束主进程及辅助进程。
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.destroy()
+  }
+  app.quit()
+}
+
 // ─── 自定义退出确认弹窗 ───────────────────────────────────────────────────
 function showExitConfirmDialog () {
-  const bounds = mainWindow.getBounds()
+  if (isQuitting || !mainWindow || mainWindow.isDestroyed()) return
+  if (exitConfirmWindow && !exitConfirmWindow.isDestroyed()) {
+    exitConfirmWindow.focus()
+    return
+  }
+
+  const ownerWindow = mainWindow
+  const bounds = ownerWindow.getBounds()
   const confirmWin = new BrowserWindow({
     width: bounds.width,
     height: bounds.height,
     x: bounds.x,
     y: bounds.y,
-    parent: mainWindow,
+    parent: ownerWindow,
     modal: true,
     resizable: false,
     movable: false,
@@ -401,29 +425,34 @@ function showExitConfirmDialog () {
       preload: path.join(__dirname, 'confirm-dialog-preload.js')
     }
   })
+  exitConfirmWindow = confirmWin
 
   confirmWin.loadFile(path.join(__dirname, 'confirm-dialog.html'))
 
   // 主窗口移动或缩放时同步更新弹窗的位置和尺寸
   const syncBounds = () => {
-    if (!confirmWin.isDestroyed()) {
-      confirmWin.setBounds(mainWindow.getBounds())
+    if (!confirmWin.isDestroyed() && !ownerWindow.isDestroyed()) {
+      confirmWin.setBounds(ownerWindow.getBounds())
     }
   }
-  mainWindow.on('move', syncBounds)
-  mainWindow.on('resize', syncBounds)
+  ownerWindow.on('move', syncBounds)
+  ownerWindow.on('resize', syncBounds)
 
   confirmWin.once('ready-to-show', () => {
-    confirmWin.show()
+    if (!confirmWin.isDestroyed()) confirmWin.show()
   })
 
+  let cleanedUp = false
   const cleanup = () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.removeListener('move', syncBounds)
-      mainWindow.removeListener('resize', syncBounds)
+    if (cleanedUp) return
+    cleanedUp = true
+    if (!ownerWindow.isDestroyed()) {
+      ownerWindow.removeListener('move', syncBounds)
+      ownerWindow.removeListener('resize', syncBounds)
     }
     ipcMain.removeListener('exit-dialog-confirm', onConfirm)
     ipcMain.removeListener('exit-dialog-cancel', onCancel)
+    if (exitConfirmWindow === confirmWin) exitConfirmWindow = null
     if (!confirmWin.isDestroyed()) confirmWin.destroy()
   }
 
@@ -435,8 +464,7 @@ function showExitConfirmDialog () {
       name: app.getVersion(),
     })
     cleanup()
-    stopScreenGuard()
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy()
+    quitApplication()
   }
 
   const onCancel = () => {
@@ -446,14 +474,7 @@ function showExitConfirmDialog () {
   ipcMain.once('exit-dialog-confirm', onConfirm)
   ipcMain.once('exit-dialog-cancel', onCancel)
 
-  confirmWin.on('closed', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.removeListener('move', syncBounds)
-      mainWindow.removeListener('resize', syncBounds)
-    }
-    ipcMain.removeListener('exit-dialog-confirm', onConfirm)
-    ipcMain.removeListener('exit-dialog-cancel', onCancel)
-  })
+  confirmWin.once('closed', cleanup)
 }
 
 // ─── 创建主窗口 ──────────────────────────────────────────────────────────
@@ -521,6 +542,7 @@ function createWindow () {
   })
 
   mainWindow.on('close', (event) => {
+    if (isQuitting) return
     event.preventDefault()
     showExitConfirmDialog()
   })
@@ -1001,17 +1023,10 @@ ipcMain.on('download-update', async (event, downloadUrl) => {
 })
 
 // ─── 打开安装包并退出应用 ─────────────────────────────────────────────────────
-ipcMain.on('install-update', (event, filePath) => {
-  // 先打开安装包，再通过 destroy() 绕过 close 事件的 preventDefault 拦截，
-  // 确保旧版进程在 NSIS/DMG 安装程序启动前已退出，避免出现"请手动关闭"弹窗
-  shell.openPath(filePath)
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.destroy()
-  }
-  // window-all-closed 在非 macOS 上会自动 quit；macOS 需手动退出
-  if (process.platform === 'darwin') {
-    setTimeout(() => app.quit(), 300)
-  }
+ipcMain.on('install-update', async (event, filePath) => {
+  // 安装包交给系统打开后，复用已确认的退出流程，关闭所有窗口及应用进程。
+  await shell.openPath(filePath)
+  quitApplication()
 })
 
 // ─── 检测重新安装并清除旧会话数据（Windows + macOS 通用）────────────────────
@@ -1237,25 +1252,30 @@ app.whenReady().then(async () => {
   createWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (!isQuitting && BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     }
   })
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (!isQuitting && process.platform !== 'darwin') {
     app.quit()
   }
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
   appendCrashLog('app-exit', {
     type: 'before-quit',
     reason: 'app is quitting',
     exitCode: 0,
     name: app.getVersion(),
   })
+  // Dock、Cmd+Q 和系统发起的退出也只确认一次；确认后不再拦截。
+  if (!isQuitting && mainWindow && !mainWindow.isDestroyed()) {
+    event.preventDefault()
+    showExitConfirmDialog()
+  }
 })
 
 app.on('will-quit', () => {
@@ -1296,19 +1316,8 @@ ipcMain.on('set-screen-guard', (_, enabled) => {
   }
 })
 
-// ─── macOS 屏幕录制权限 ───────────────────────────────────────────────────
-// 查询屏幕录制权限状态（仅 macOS 有效，其他平台返回 'granted'）
-ipcMain.handle('get-screen-access-status', () => {
-  if (process.platform !== 'darwin') return 'granted'
-  return systemPreferences.getMediaAccessStatus('screen')
-})
-
-// 打开系统设置 → 隐私与安全性 → 屏幕录制，引导用户手动授权
-// macOS 屏幕录制权限无法通过代码弹窗申请，只能引导用户手动开启
-ipcMain.handle('open-screen-preferences', () => {
-  if (process.platform !== 'darwin') return
-  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
-})
+// ─── macOS 录屏权限查询与系统设置引导 ──────────────────────────────────
+registerScreenPermissionHandlers({ ipcMain, systemPreferences, desktopCapturer, shell })
 
 // ─── 打开崩溃日志所在目录（方便用户回传 crash.log） ──────────────────────
 ipcMain.handle('open-crash-log-folder', () => {

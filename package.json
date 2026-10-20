@@ -1,7 +1,7 @@
 {
   "name": "lisheng-live-pc",
   "chname": "Learn InClass",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -10,6 +10,8 @@
     "build:prod": "vue-cli-service build --mode production",
     "build:stage": "vue-cli-service build --mode staging",
     "lint": "vue-cli-service lint",
+    "test:screen-permission": "node scripts/test-screen-permission.cjs",
+    "test:app-exit": "node scripts/test-app-exit.cjs",
     "electron:serve": "cross-env NODE_ENV=development electron .",
     "electron:build": "vue-cli-service build --mode production && electron-builder build --win",
     "electron:build:mac": "vue-cli-service build --mode production && electron-builder build --mac",
