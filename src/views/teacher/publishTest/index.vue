@@ -900,7 +900,7 @@
       <section class="edit-dialog">
         <header>
           <div class="edit-dialog-title">
-            <strong>{{ editingTarget.type === 'aiBank' ? '编辑题目并加入自有题库' : (editingTarget.type === 'mother' ? '编辑母题' : '编辑子题') }}</strong>
+            <strong>{{ ['cloudBank', 'aiBank'].includes(editingTarget.type) ? '编辑题目并加入自有题库' : (editingTarget.type === 'mother' ? '编辑母题' : '编辑子题') }}</strong>
             <span>{{ editingQuestionTypeName }}</span>
           </div>
           <button type="button" :disabled="bankAddSaving" @click="closeQuestionEditor">×</button>
@@ -941,7 +941,7 @@
               :min-height="100"
             />
           </div>
-          <div v-if="editingTarget.type !== 'aiBank'" class="edit-field">
+          <div v-if="!['cloudBank', 'aiBank'].includes(editingTarget.type)" class="edit-field">
             <span>知识点</span>
             <Editor
               v-model="editingQuestion.knowledgeName"
@@ -1230,6 +1230,7 @@ export default {
       bankAddSubjectsError: false,
       bankAddSubjectsSequence: 0,
       bankAddQuestion: null,
+      bankAddDraft: null,
       bankAddSaving: false,
       paperTabSnapshots: {},
       paperGroups: [],
@@ -1522,6 +1523,7 @@ export default {
       return this.resolveQuestionTypeName(this.editingQuestion, this.editingQuestionTypeCode)
     },
     showEditingOptionEditors() {
+      if (this.editingTarget.type === 'cloudBank') return ['1', '2'].includes(this.editingQuestionTypeCode)
       if (['1', '2', '8'].includes(this.editingQuestionTypeCode)) return true
       if (this.editingQuestionTypeCode) return false
       return ['optionA', 'optionB', 'optionC', 'optionD', 'optionE']
@@ -3432,13 +3434,18 @@ export default {
     },
     saveToSmartBank(question) {
       if (this.sourceTab === '自有题库') return
-      if (this.bankAddSaving || this.bankAddVisible || question._bankLoading || question._banked) return
+      if (this.bankAddSaving || this.bankAddVisible || this.editVisible || question._bankLoading || question._banked) return
 
       if (this.sourceTab === '云端题库') {
+        const templates = this.questionEduType(question) === this.activeFilterEduType ? this.activeQuestionTypeOptions() : []
+        const template = templates.find(item => String(item.id) === String(question.questTemplateId)) || {}
         this.bankAddQuestion = question
-        this.bankAddSubjectPath = []
-        this.bankAddVisible = true
-        return this.loadBankAddSubjects()
+        this.bankAddDraft = null
+        this.openQuestionEditor({
+          ...question,
+          questType: String(template.questType || this.resolveQuestionTypeCode(question))
+        }, 'cloudBank', -1)
+        return
       }
 
       // 下划线字段仅供前端保存类型、上下文和交互状态，不进入入库请求。
@@ -3488,20 +3495,27 @@ export default {
         if (isCurrent()) this.bankAddSubjectsLoading = false
       }
     },
-    closeCloudBankAdd(done) {
-      if (this.bankAddSaving) return
+    resetCloudBankAdd() {
       this.bankAddSubjectsSequence += 1
       this.bankAddVisible = false
-      this.bankAddQuestion = null
+      this.bankAddDraft = null
       this.bankAddSubjectPath = []
       this.bankAddSubjectOptions = []
       this.bankAddSubjectsLoading = false
       this.bankAddSubjectsError = false
+    },
+    closeCloudBankAdd(done) {
+      if (this.bankAddSaving) return
+      this.resetCloudBankAdd()
+      if (this.bankAddQuestion && this.editingTarget.type === 'cloudBank') {
+        this.editZIndex = PopupManager.nextZIndex()
+        this.editVisible = true
+      }
       if (typeof done === 'function') done()
     },
     async confirmCloudBankAdd() {
       const question = this.bankAddQuestion
-      if (!this.bankAddVisible || !question || this.bankAddSaving || question._banked) return
+      if (!this.bankAddVisible || !question || !this.bankAddDraft || this.bankAddSaving || question._banked) return
       const subject = this.bankAddSubject
       if (!subject) {
         this.$message.warning('请选择学段及科目至最后一级')
@@ -3509,6 +3523,7 @@ export default {
       }
       const authInfo = getAuthInfo() || {}
       const payload = {
+        ...this.bankAddDraft,
         institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || '',
         subjectId: String(subject.value),
         id: question.id || question.questId || ''
@@ -3526,7 +3541,7 @@ export default {
         this.bankAddSaving = false
         this.$set(question, '_bankLoading', false)
       }
-      if (question._banked) this.closeCloudBankAdd()
+      if (question._banked) this.closeQuestionEditor()
     },
     async submitBankAddEditor(editor) {
       const question = this.bankAddQuestion
@@ -4117,13 +4132,14 @@ export default {
     },
     closeQuestionEditor() {
       if (this.bankAddSaving) return
+      this.resetCloudBankAdd()
       this.bankAddQuestion = null
       this.editVisible = false
       this.editingQuestion = {}
       this.editingTarget = { type: '', groupIndex: -1, childIndex: -1 }
     },
     saveEditedQuestion() {
-      if (this.bankAddSaving) return
+      if (this.bankAddSaving || this.bankAddVisible) return
       if (this.isBlankContent(this.editingQuestion.name)) {
         this.$message.warning('请输入题目')
         return
@@ -4139,6 +4155,19 @@ export default {
         }
       }
       const { type, groupIndex, childIndex } = this.editingTarget
+      if (type === 'cloudBank') {
+        if (!this.bankAddQuestion) return
+        const editor = this.editingQuestion
+        this.bankAddDraft = { name: editor.name || '', answer: editor.answer || '', analysis: editor.analysis || '' }
+        if (['1', '2'].includes(this.editingQuestionTypeCode)) {
+          ;['optionA', 'optionB', 'optionC', 'optionD', 'optionE'].forEach(field => {
+            this.bankAddDraft[field] = editor[field] || ''
+          })
+        }
+        this.editVisible = false
+        this.bankAddVisible = true
+        return this.loadBankAddSubjects()
+      }
       if (type === 'aiBank') {
         return this.submitBankAddEditor(this.editingQuestion)
       }

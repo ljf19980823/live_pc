@@ -332,12 +332,16 @@ export function addTopicByTeachingBatch(questions, { signal } = {}) {
   })
 }
 
-export async function addQuestByIntehub({ institutionId, subjectId, id }) {
+export async function addQuestByIntehub({ institutionId, subjectId, id, name, answer, analysis, ...options }) {
   if (!institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
   if (!subjectId) throw new Error('请选择学段及科目至最后一级')
   if (!id) throw new Error('当前题目缺少题目 ID，无法加入自有题库')
 
-  const response = await teachingCloud.post('/home/addQuestByIntehub', { institutionId, subjectId, id }, {
+  const data = { institutionId, subjectId, id, name, answer, analysis }
+  ;['optionA', 'optionB', 'optionC', 'optionD', 'optionE'].forEach(field => {
+    if (options[field] !== undefined) data[field] = options[field]
+  })
+  const response = await teachingCloud.post('/home/addQuestByIntehub', data, {
     headers: { 'Content-Type': 'application/json' }
   })
   const payload = response.data
