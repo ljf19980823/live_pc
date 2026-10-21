@@ -1,3 +1,5 @@
+import katex from 'katex'
+
 // 只修复 width 的无单位数字，保留其他属性、已有单位和 !important。
 export function normalizeInlineWidths(style) {
   const normalizeDeclaration = declaration => declaration.replace(
@@ -25,6 +27,20 @@ export function normalizeInlineWidths(style) {
 
 function renderRichText(el, { value }) {
   el.innerHTML = value == null ? '' : String(value)
+  el.querySelectorAll('.ql-formula[data-value]').forEach(node => {
+    const formula = node.getAttribute('data-value') || ''
+    if (!formula) return
+
+    try {
+      katex.render(formula, node, {
+        throwOnError: false,
+        trust: false,
+        strict: 'ignore'
+      })
+    } catch (error) {
+      node.textContent = formula
+    }
+  })
   el.querySelectorAll('[style]').forEach(node => {
     // 从原始属性读取：浏览器的 CSSStyleDeclaration 会丢弃 width:131。
     const style = node.getAttribute('style')

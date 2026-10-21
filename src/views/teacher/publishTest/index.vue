@@ -486,8 +486,9 @@
                       ? (sourceTab === 'AI出题' ? '收起详情' : '收起解析')
                       : (sourceTab === 'AI出题' ? '查看详情' : '答案解析') }}
                   </button>
+                  <!-- 纠错功能暂时隐藏。 -->
                   <button
-                    v-if="sourceTab === '云端题库' && String(question.hasErrorReport) !== '1'"
+                    v-if="false"
                     class="error-correction-action"
                     :class="{ active: question._showErrorCorrection }"
                     type="button"
@@ -516,7 +517,7 @@
               </div>
 
               <div
-                v-if="question._showErrorCorrection && question._errorCorrection"
+                v-if="false"
                 class="error-correction-panel"
                 @dragstart.stop.prevent
               >
@@ -760,6 +761,7 @@
 
     <el-dialog
       title="导入题目"
+      class="question-import-wrapper"
       :visible.sync="importVisible"
       width="540px"
       :show-close="false"
@@ -780,47 +782,6 @@
             @expand-change="updateTaxonomyPopper('import-subject')" />
         </div>
         <button v-if="importBaseError" type="button" class="import-template-button" :disabled="importBaseLoading || importLoading" @click="loadImportBusinesses">重新加载学段</button>
-        <template v-if="importSubject">
-          <template v-if="importStandardType === 1">
-            <div class="import-form-row">
-              <label>教材版本</label>
-              <el-select v-model="importForm.bookId" clearable filterable :loading="importBooksLoading" :disabled="importLoading || importBooksLoading" @change="handleImportBookChange()">
-                <el-option v-for="item in importBooks" :key="item.id" :label="item.name" :value="String(item.id)" />
-              </el-select>
-            </div>
-            <div class="import-form-row">
-              <label>年级</label>
-              <el-select v-model="importForm.typeId" clearable filterable :loading="importLevelsLoading" :disabled="importLoading || !importForm.bookId || importLevelsLoading" @change="handleImportLevelChange">
-                <el-option v-for="item in importLevels" :key="item.id" :label="item.name" :value="String(item.id)" />
-              </el-select>
-            </div>
-          </template>
-          <p class="import-directory-hint">章节、知识点仅用于下载模板，可筛选或清空；导入使用文件内的目录。</p>
-          <template v-if="importStandardType === 2">
-            <div class="import-form-row">
-              <label>章节</label>
-              <el-select v-model="importForm.chapterValues" multiple filterable collapse-tags clearable popper-class="practice-import-select-popper" :loading="importCatalogLoading" :disabled="importLoading || importCatalogLoading" @change="handleImportChapterChange">
-                <el-option v-for="item in importChapterItems" :key="item.value" :value="item.value" :label="item.pathLabel" />
-              </el-select>
-            </div>
-            <div class="import-form-row">
-              <label>知识点</label>
-              <import-knowledge-tree-picker v-model="importForm.knowledgeValues" :options="importKnowledgeTree"
-                :loading="importKnowledgeLoading" :disabled="importLoading || importCatalogLoading || !importForm.chapterValues.length" />
-            </div>
-          </template>
-          <template v-else>
-            <div class="import-form-row">
-              <label>章节</label>
-              <el-cascader ref="import-chapter" v-model="importForm.chapterValues" :options="importChapters" :props="importCatalogProps" collapse-tags clearable filterable :disabled="importLoading || importCatalogLoading" popper-class="practice-filter-taxonomy-popper" @visible-change="handleImportPopperVisible($event, 'import-chapter')" @expand-change="updateTaxonomyPopper('import-chapter')" />
-            </div>
-            <div class="import-form-row">
-              <label>知识点</label>
-              <el-cascader ref="import-knowledge" v-model="importForm.knowledgeValues" :options="importKnowledge" :props="importCatalogProps" collapse-tags clearable filterable :disabled="importLoading || importCatalogLoading" popper-class="practice-filter-taxonomy-popper" @visible-change="handleImportPopperVisible($event, 'import-knowledge')" @expand-change="updateTaxonomyPopper('import-knowledge')" />
-            </div>
-          </template>
-          <button v-if="importOptionsError" type="button" class="import-template-button" :disabled="importLoading || importCatalogLoading || importKnowledgeLoading || importBooksLoading || importLevelsLoading" @click="retryImportOptions">{{ importOptionsError }}，点击重试</button>
-        </template>
         <div class="import-form-row">
           <label>导入文件</label>
           <div class="import-file-actions">
@@ -829,7 +790,7 @@
             </button>
             <button class="import-template-button" type="button" :disabled="importLoading || importDownloadLoading" @click="downloadImportTemplate">{{ importDownloadLoading ? '下载中...' : '下载模板' }}</button>
           </div>
-          <input ref="importInput" type="file" accept=".xlsx,.xls,.json" :disabled="importLoading || importDownloadLoading" hidden @change="selectImportFile">
+          <input ref="importInput" type="file" accept=".xlsx" :disabled="importLoading || importDownloadLoading" hidden @change="selectImportFile">
         </div>
       </div>
       <template slot="footer">
@@ -930,16 +891,16 @@
             <p v-if="editingQuestionTypeCode === '3'" class="answer-tip">提示：请填写 A 或 B，A 代表对，B 代表错。</p>
             <Editor
               v-model="editingQuestion.answer"
+              :enable-formula="true"
               :min-height="70"
-            
             />
           </div>
           <div class="edit-field">
             <span>解析</span>
             <Editor
               v-model="editingQuestion.analysis"
+              :enable-formula="true"
               :min-height="100"
-             
             />
           </div>
           <div v-if="!['cloudBank', 'aiBank'].includes(editingTarget.type)" class="edit-field">
@@ -989,15 +950,10 @@ import {
   addTopicByAi,
   addTopicByTeaching,
   deleteTopic,
-  downloadTopicCompulsoryTemplateWithCatalog,
-  downloadTopicTemplateWithCatalog,
-  downloadTopicGeneralTemplate,
   generateAfterQuizQuestions,
   generatePartQuest,
   getAfterQuizIntehubToken,
   getMinutesSubject,
-  getBusinessSubjectTree,
-  getBusinessSubjects,
   getBusinessChapters,
   getBusinessKnowledgePoints,
   getQuestListByKnowledge,
@@ -1018,9 +974,9 @@ import {
   getTopicKnowledgeList,
   getTopicTypeListByBook,
   getTopicTypeListByBusiness,
-  importTopicCompulsoryQuestions,
-  importTopicQuestions,
-  importTopicGeneralQuestions,
+  getQuestImportTemplateUrl,
+  uploadNonCompulsoryLearnClassQuestions,
+  uploadCompulsoryLearnClassQuestions,
   publishAfterQuiz
 } from '@/api/quizBuilder'
 import Editor from '@/components/Editor'
@@ -1037,7 +993,7 @@ import { normalizeT1AiQuestions } from '@/utils/smartQuiz'
 import { normalizeZsbSubjectOptions, getZsbSubject } from '@/utils/zsbSubjects'
 import adaptiveQuestionOptions from '@/utils/adaptiveQuestionOptions'
 import richHtml from '@/utils/richTextHtml'
-import { normalizeImportCatalog, flattenImportCatalog, expandImportSelection, serializeImportCatalog } from '@/utils/topicImportCatalog'
+import { normalizeImportCatalog, flattenImportCatalog, expandImportSelection } from '@/utils/topicImportCatalog'
 
 const TOPIC_DIFFICULTY_DICT_ID = '2'
 const TEACHING_CLOUD_ERROR_DICT_ID = '23'
@@ -1211,7 +1167,6 @@ export default {
       importSequences: {},
       importBusinessOptions: [],
       importSubjectTrees: {},
-      importTreeRequests: {},
       importSubjectPickerKey: 0,
       importBooks: [],
       importLevels: [],
@@ -1330,7 +1285,7 @@ export default {
       return this.findBusinessSubject(this.importBusiness, this.importSubjectTrees, this.importForm.subjectPath)
     },
     importSubjectProps() {
-      return { expandTrigger: 'click', lazy: true, checkStrictly: false, lazyLoad: this.loadImportSubjectNode }
+      return { expandTrigger: 'click', checkStrictly: false }
     },
     importCatalogProps() {
       return { multiple: true, emitPath: false, checkStrictly: false, expandTrigger: 'click' }
@@ -1577,11 +1532,30 @@ export default {
       }
       return selected && selected.leaf ? selected : null
     },
-    businessTrackOptions(rows) {
-      const internal = String((getAuthInfo() || {}).isInternalOrganization) === '1'
-      return (Array.isArray(rows) ? rows : [])
-        .filter(item => item.standardType != null && [0, 1, 2].includes(Number(item.standardType)) && (internal || Number(item.standardType) !== 2))
-        .map(item => ({ id: String(item.id), value: 'business:' + item.id, label: item.name, standardType: Number(item.standardType), leaf: false }))
+    buildImportSubjectOptionsFromSearch() {
+      const normalizeChildren = (nodes, standardType) => (nodes || []).map(node => {
+        const children = normalizeChildren(node.children || [], standardType)
+        const sourceId = node.id != null ? node.id : node.value
+        const detail = standardType === 1 && !children.length ? this.findK12Subject(sourceId) : {}
+        return {
+          ...detail,
+          ...node,
+          id: String(detail.id != null ? detail.id : sourceId),
+          value: String(node.value),
+          leaf: !children.length,
+          ...(children.length ? { children } : {})
+        }
+      })
+      return this.cloudSubjectOptions.map(root => {
+        const standardType = root.eduType === 'K9K12' ? 1 : 2
+        return {
+          ...root,
+          id: String(root.value),
+          standardType,
+          leaf: false,
+          children: normalizeChildren(root.children, standardType)
+        }
+      }).filter(root => root.children.length)
     },
     captureAiFilterRequest(kind) {
       // 同类请求只接受最新响应；上下文不包含 eduType，切换学习赛道不会使 AI 请求失效。
@@ -1601,14 +1575,6 @@ export default {
       return (nodes || []).flatMap(node => {
         const labels = [...path, node.label]
         return [{ value: 'id:' + node.value, id: node.value, name: node.label, label: labels.join(' / ') }, ...this.flattenAiTaxonomy(node.children, labels)]
-      })
-    },
-    normalizeBusinessSubjectTree(rows, prefix) {
-      // 级联值带学段及祖先路径，避免不同学段的重复 ID 冲突；接口请求仍使用原始 id。
-      return (Array.isArray(rows) ? rows : []).map(item => {
-        const value = prefix + '/' + encodeURIComponent(String(item.id))
-        const children = this.normalizeBusinessSubjectTree(item.subjectList || [], value)
-        return { ...item, id: String(item.id), value, label: item.name || item.otherName || '', leaf: !children.length, ...(children.length ? { children } : {}) }
       })
     },
     normalizeLiveSubjectGroups(groups, prefix) {
@@ -2813,12 +2779,12 @@ export default {
     chapterSummaryNames(chapters) {
       return (chapters || []).map(chapter => chapter.name || chapter.id).filter(Boolean).join('、')
     },
-    async searchQuestions() {
+    async searchQuestions({ allowEmptyFilter = false } = {}) {
       if (this.sourceTab === 'AI出题') {
         this.filterAiQuestions()
         return
       }
-      if (!this.hasBankFilter()) return
+      if (!allowEmptyFilter && !this.hasBankFilter()) return
       const sequence = ++this.requestSequence
       this.loading = true
       try {
@@ -3131,13 +3097,16 @@ export default {
       this.activeTarget = { type: 'child', groupIndex, childIndex }
     },
     getOptions(question) {
+      const questionType = this.resolveQuestionTypeCode(question)
       // 判断题仅在展示时补齐固定选项，不写回题目或提交数据。
-      if (question && this.resolveQuestionTypeCode(question) === '3') {
+      if (question && questionType === '3') {
         return [
           { key: 'A', value: '对' },
           { key: 'B', value: '错' }
         ]
       }
+      // 接口可能为非选择题返回历史选项，列表只按真实题型展示单选、多选的选项。
+      if (!['1', '2'].includes(questionType)) return []
       return ['A', 'B', 'C', 'D', 'E'].map(key => ({
         key,
         value: question && question[`option${key}`]
@@ -3477,7 +3446,7 @@ export default {
     },
     openBankEditor(question, index = null) {
       this.bankEditingIndex = index
-      this.bankEditorQuestId = question ? String(question.questId || question.id || '') : ''
+      this.bankEditorQuestId = question ? String(question.id ?? question.questId ?? '').trim() : ''
       const k12SubjectId = this.lastValue(this.k12.subjectPath)
       const isK12 = this.activeFilterEduType === 'K9K12'
       const questionSubjectId = question && (question.subjectId || (isK12 ? k12SubjectId : this.zsb.subjectId))
@@ -3491,7 +3460,7 @@ export default {
       this.bankEditor = question
         ? {
           ...question,
-          id: question.id || question.questId || '',
+          id: this.bankEditorQuestId,
           areaPath: isK12 ? [] : questionAreaPath.map(String),
           subjectPath: isK12 && questionSubjectId ? [String(questionSubjectId)] : [],
           typeId: question.typeId || (isK12 ? this.k12.level : this.zsb.typeId),
@@ -3569,22 +3538,7 @@ export default {
       if (this.importLoading || this.importVisible) return
       this.resetImportForm()
       this.importVisible = true
-      const seed = null
-      const isCurrent = this.captureImportRequest('open', false)
       await this.loadImportBusinesses()
-      if (!isCurrent() || !seed) return
-      const business = this.importBusinessOptions.find(item => item.value === seed.path[0])
-      if (!business) return
-      try {
-        await this.ensureImportSubjects(business)
-        if (!isCurrent()) return
-        if (!this.findBusinessSubject(business, this.importSubjectTrees, seed.path)) return
-        this.importForm.subjectPath = seed.path
-        this.importSubjectPickerKey += 1
-        await this.handleImportSubjectChange(seed)
-      } catch (error) {
-        if (isCurrent()) this.$message.warning('科目加载失败，请重新展开学段重试')
-      }
     },
     resetImportForm() {
       this.importRevision += 1
@@ -3592,7 +3546,6 @@ export default {
       this.importForm = emptyImportForm()
       this.importBusinessOptions = []
       this.importSubjectTrees = {}
-      this.importTreeRequests = {}
       this.importSubjectPickerKey += 1
       this.importBooks = []
       this.importLevels = []
@@ -3627,24 +3580,18 @@ export default {
       this.importBaseLoading = true
       this.importBaseError = false
       try {
-        const rows = await getBusinessSubjectTree()
+        const tasks = [this.loadK12Base()]
+        if (this.eduTypes.includes('专升本')) tasks.push(this.loadZsbSubjectBase())
+        await Promise.all(tasks)
         if (!isCurrent()) return
-        const businesses = this.businessTrackOptions(rows)
+        const businesses = this.buildImportSubjectOptionsFromSearch()
+        const subjectTrees = {}
         businesses.forEach(business => {
-          const old = this.importBusinessOptions.find(item => item.id === business.id)
-          if (!old || old.standardType !== business.standardType) this.$delete(this.importSubjectTrees, business.id)
-          if (this.importSubjectTrees[business.id]) business.children = this.importSubjectTrees[business.id]
+          subjectTrees[business.id] = business.children || []
         })
-        const selected = businesses.find(item => item.value === this.importForm.subjectPath[0])
-        const changed = this.importBusiness && (!selected || selected.standardType !== this.importStandardType)
+        this.importSubjectTrees = subjectTrees
         this.importBusinessOptions = businesses
         this.importSubjectPickerKey += 1
-        this.importBaseLoading = false
-        if (changed) {
-          this.importForm.subjectPath = []
-          await this.handleImportSubjectChange()
-          this.$message.warning('当前学段已不可用，请重新选择科目')
-        }
       } catch (error) {
         if (isCurrent()) {
           this.importBaseError = true
@@ -3654,45 +3601,10 @@ export default {
         if (isCurrent()) this.importBaseLoading = false
       }
     },
-    async ensureImportSubjects(business) {
-      if (this.importSubjectTrees[business.id]) return this.importSubjectTrees[business.id]
-      if (this.importTreeRequests[business.id]) return this.importTreeRequests[business.id]
-      const isCurrent = this.captureImportRequest('tree:' + business.id, false)
-      const pending = getBusinessSubjects(business.id).then(rows => {
-        if (!isCurrent()) return null
-        const tree = this.normalizeBusinessSubjectTree(rows, business.value)
-        this.$set(this.importSubjectTrees, business.id, tree)
-        this.$set(business, 'children', tree)
-        return tree
-      }).finally(() => {
-        if (this.importTreeRequests[business.id] === pending) this.$delete(this.importTreeRequests, business.id)
-      })
-      this.$set(this.importTreeRequests, business.id, pending)
-      return pending
-    },
-    async loadImportSubjectNode(node, resolve) {
-      if (node.root) { resolve(this.importBusinessOptions); return }
-      if (node.level !== 1) { resolve([]); return }
-      const business = this.importBusinessOptions.find(item => item.value === node.value)
-      if (!business) { resolve([]); return }
-      const revision = this.importRevision
-      try {
-        const children = await this.ensureImportSubjects(business)
-        if (!this.importVisible || revision !== this.importRevision || children === null) { node.loading = false; return }
-        node.data.leaf = false
-        resolve(children)
-        this.updateTaxonomyPopper('import-subject')
-        if (!children.length) this.$message.warning('该学段暂无可选科目')
-      } catch (error) {
-        node.loading = false
-        node.loaded = false
-        if (this.importVisible && revision === this.importRevision) this.$message.warning('科目加载失败，请重新展开学段重试')
-      }
-    },
     handleImportPopperVisible(visible, ref) {
       if (visible) this.updateTaxonomyPopper(ref)
     },
-    async handleImportSubjectChange(seed = {}) {
+    handleImportSubjectChange() {
       this.importRevision += 1
       this.importBooks = []
       this.importLevels = []
@@ -3703,9 +3615,6 @@ export default {
       this.importForm.typeId = ''
       this.clearImportCatalogs()
       this.clearImportFile()
-      if (!this.importSubject) return
-      if (this.importStandardType === 1) await this.loadImportBooks(seed)
-      else await this.loadImportCatalogs()
     },
     async loadImportBooks(seed = this.importForm) {
       const isCurrent = this.captureImportRequest('books')
@@ -3851,6 +3760,11 @@ export default {
       if (this.importLoading || this.importDownloadLoading) return
       const file = event.target.files && event.target.files[0]
       if (!file) return
+      if (!/\.xlsx$/i.test(file.name)) {
+        this.clearImportFile()
+        this.$message.warning('仅支持导入 xlsx 文件')
+        return
+      }
       this.importForm.file = file
       this.importForm.fileName = file.name
     },
@@ -3875,82 +3789,18 @@ export default {
       }
     },
     validateImportConditions() {
-      if (!this.importSubject || (this.importStandardType === 2 && String((getAuthInfo() || {}).isInternalOrganization) !== '1')) {
+      if (!this.importSubject) {
         this.$message.warning('请选择学段及科目至最后一级')
-        return false
-      }
-      if (this.importStandardType === 1 && !this.importBooks.some(item => String(item.id) === this.importForm.bookId)) {
-        this.$message.warning('请选择教材版本')
-        return false
-      }
-      if (this.importStandardType === 1 && !this.importLevels.some(item => String(item.id) === this.importForm.typeId)) {
-        this.$message.warning('请选择年级')
         return false
       }
       return true
     },
-    buildImportQuery() {
-      const params = { subjectId: this.importSubject.id, echoParentChild: false }
-      if (this.importStandardType === 1) Object.assign(params, { bookId: this.importForm.bookId, typeId: this.importForm.typeId })
-      return params
-    },
-    buildImportTemplatePayload() {
-      const knowledge = this.importStandardType === 2
-        ? expandImportSelection(this.importChapters, this.importForm.chapterValues).flatMap(chapter => this.importKnowledgeCache[chapter.id] || [])
-        : this.importKnowledge
-      return {
-        ...this.buildImportQuery(), questType: this.importSubject.questType,
-        chapters: serializeImportCatalog(this.importChapters, this.importForm.chapterValues),
-        knowledgePoints: serializeImportCatalog(knowledge, this.importForm.knowledgeValues)
-      }
-    },
-    async validateImportTemplateBlob(blob) {
-      if (!blob || !blob.size) throw new Error('模板文件为空，请重试')
-      // 成功与错误均可能以 Blob 返回，只将实际的 Excel 响应保存为文件。
-      const head = (await blob.slice(0, 512).text()).replace(/^\uFEFF/, '').trim()
-      if (/json|text\//i.test(blob.type || '') || /^[{[]/.test(head)) {
-        let result
-        try { result = JSON.parse((await blob.text()).replace(/^\uFEFF/, '')) } catch (error) { throw new Error('模板接口返回了无效文件，请重试') }
-        throw new Error(result.message || result.msg || '模板下载失败，请重试')
-      }
-    },
-    saveImportTemplateBlob(blob) {
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      try {
-        link.href = url
-        link.download = '题目导入模板.xlsx'
-        document.body.appendChild(link)
-        link.click()
-      } finally {
-        if (link.parentNode) link.parentNode.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      }
-    },
-    async downloadImportTemplate() {
+    downloadImportTemplate() {
       if (this.importLoading || this.importDownloadLoading || !this.validateImportConditions()) return
-      if (!String(this.importSubject.questType || '').trim()) {
-        this.$message.warning('当前科目缺少题型配置，无法下载模板')
-        return
-      }
-      if (!this.importCatalogReady || this.importCatalogLoading || this.importKnowledgeLoading || this.importOptionsError) {
-        this.$message.warning('请等待目录加载完成；加载失败时请点击重试')
-        return
-      }
-      const isCurrent = this.captureImportRequest('download')
-      const download = [downloadTopicGeneralTemplate, downloadTopicCompulsoryTemplateWithCatalog, downloadTopicTemplateWithCatalog][this.importStandardType]
-      const payload = this.buildImportTemplatePayload()
-      this.importDownloadLoading = true
-      try {
-        const blob = await download(payload)
-        if (!isCurrent()) return
-        await this.validateImportTemplateBlob(blob)
-        if (isCurrent()) this.saveImportTemplateBlob(blob)
-      } catch (error) {
-        if (isCurrent()) this.$message.error(error.message || '模板下载失败，请稍后重试')
-      } finally {
-        if (isCurrent()) this.importDownloadLoading = false
-      }
+      const fileName = this.importStandardType === 1 ? 'questCompulsoryClass.xlsx' : 'questClass.xlsx'
+      const subjectName = String(this.importSubject.name || '').trim()
+      const downName = `${subjectName}科目导入模板.xlsx`
+      window.location.href = getQuestImportTemplateUrl({ fileName, downName })
     },
     async confirmImport() {
       if (this.importLoading || this.importDownloadLoading || !this.validateImportConditions()) return
@@ -3958,24 +3808,37 @@ export default {
         this.$message.warning('请选择导入文件')
         return
       }
-      // 上传只提交 file；分类参数在 Query，目录和题型取文件内快照。
+      if (!/\.xlsx$/i.test(this.importForm.file.name)) {
+        this.clearImportFile()
+        this.$message.warning('仅支持导入 xlsx 文件')
+        return
+      }
+      const authInfo = getAuthInfo() || {}
+      const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
+      if (!institutionId) {
+        this.$message.warning('未获取到当前机构，请刷新页面后重试')
+        return
+      }
       const formData = new FormData()
       formData.append('file', this.importForm.file)
-      const params = this.buildImportQuery()
+      formData.append('subjectId', this.importSubject.id)
+      formData.append('institutionId', institutionId)
       const isCurrent = this.captureImportRequest('upload')
-      const importQuestions = [importTopicGeneralQuestions, importTopicCompulsoryQuestions, importTopicQuestions][this.importStandardType]
+      const importQuestions = this.importStandardType === 1
+        ? uploadCompulsoryLearnClassQuestions
+        : uploadNonCompulsoryLearnClassQuestions
       this.importLoading = true
       try {
-        const result = await importQuestions(formData, params)
+        const result = await importQuestions(formData)
         if (!isCurrent()) return
         const importResult = this.normalizeImportResult(result)
         this.importLoading = false
         this.importVisible = false
-        this.$message.success(`导入完成：共 ${importResult.totalRows} 行，成功 ${importResult.successCount} 行，失败 ${importResult.failureCount} 行`)
+        this.$message.success(`${result.msg}`)
         this.showImportFailures(importResult)
         if (this.sourceTab === '自有题库') {
           this.page = 1
-          if (this.hasSearched) await this.searchQuestions()
+          await this.searchQuestions({ allowEmptyFilter: true })
         }
       } catch (error) {
         if (!isCurrent()) return

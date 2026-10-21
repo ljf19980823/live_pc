@@ -293,12 +293,21 @@ export async function getTopicCompulsoryQuestList(params) {
   }
 }
 
-export function addTopic(data) {
-  return request({
-    url: '/v1/topic/addTopic',
-    method: 'post',
-    data
+export async function addTopic(data) {
+  if (!data || !data.institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
+
+  const formData = new FormData()
+  Object.keys(data || {}).forEach(key => {
+    const value = data[key]
+    if (value !== undefined && value !== null) formData.append(key, value)
   })
+
+  const response = await teachingCloud.post('/quest/add', formData)
+  const payload = response.data
+  if (payload && typeof payload === 'object' && 'code' in payload && ![0, 200].includes(Number(payload.code))) {
+    throw new Error(payload.message || payload.msg || '新增题目失败')
+  }
+  return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
 }
 
 export function addTopicByAi(data) {
@@ -334,27 +343,55 @@ export function addTopicByTeaching(data) {
   })
 }
 
-export function getTopicDetail(questId) {
-  return request({
-    url: `/v1/topic/detail/${questId}`,
-    method: 'get'
-  })
+export async function getTopicDetail(id) {
+  if (!id) throw new Error('缺少题目 ID，无法获取题目详情')
+
+  const response = await teachingCloud.get('/quest/getById', { params: { id } })
+  const payload = response.data
+  if (payload && typeof payload === 'object') {
+    if (
+      ('code' in payload && ![0, 200].includes(Number(payload.code))) ||
+      payload.success === false || payload.success === 'false'
+    ) {
+      throw new Error(payload.message || payload.msg || '获取题目详情失败')
+    }
+    // /quest/getById 的详情放在 obj 中，统一解包后交给编辑器回显。
+    if ('obj' in payload) return payload.obj
+    if ('data' in payload) return payload.data
+  }
+  return payload
 }
 
-export function updateTopic(data) {
-  return request({
-    url: '/v1/topic/editTopic',
-    method: 'post',
-    data
+export async function updateTopic(data) {
+  if (!data || !data.id) throw new Error('缺少题目 ID，无法编辑')
+  if (!data.institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
+
+  const formData = new FormData()
+  Object.keys(data).forEach(key => {
+    const value = data[key]
+    if (value !== undefined && value !== null) formData.append(key, value)
   })
+
+  const response = await teachingCloud.post('/quest/edit', formData)
+  const payload = response.data
+  if (payload && typeof payload === 'object' && 'code' in payload && ![0, 200].includes(Number(payload.code))) {
+    throw new Error(payload.message || payload.msg || '编辑题目失败')
+  }
+  return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
 }
 
-export function deleteTopic(data) {
-  return request({
-    url: '/v1/topic/deleteTopic',
-    method: 'post',
-    data
+export async function deleteTopic(data) {
+  const id = data && data.id
+  if (!id) throw new Error('缺少题目 ID，无法删除')
+
+  const response = await teachingCloud.post('/quest/delete', { id }, {
+    headers: { 'Content-Type': 'application/json' }
   })
+  const payload = response.data
+  if (payload && typeof payload === 'object' && 'code' in payload && ![0, 200].includes(Number(payload.code))) {
+    throw new Error(payload.message || payload.msg || '删除题目失败')
+  }
+  return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
 }
 
 // 旧组卷页保留原 GET 下载方式；业务导入弹框使用下方带目录快照的 POST 封装。
@@ -408,6 +445,28 @@ export function downloadTopicGeneralTemplate(data) {
 
 export function importTopicGeneralQuestions(data, params) {
   return request({ url: '/v1/topic/importWithoutType', method: 'post', data, params })
+}
+
+async function uploadLearnClassQuestions(url, formData) {
+  const response = await teachingCloud.post(url, formData)
+  const payload = response.data
+  if (payload && typeof payload === 'object' && 'code' in payload && ![0, 200].includes(Number(payload.code))) {
+    throw new Error(payload.message || payload.msg || '题目导入失败')
+  }
+  return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
+}
+
+export function uploadNonCompulsoryLearnClassQuestions(formData) {
+  return uploadLearnClassQuestions('/quest/uploadLearnClass', formData)
+}
+
+export function uploadCompulsoryLearnClassQuestions(formData) {
+  return uploadLearnClassQuestions('/quest/uploadCompulsoryLearnClass', formData)
+}
+
+export function getQuestImportTemplateUrl({ fileName, downName }) {
+  const query = new URLSearchParams({ fileName, downName }).toString()
+  return `${TEACHING_CLOUD_BASE_URL.replace(/\/+$/, '')}/file/down?${query}`
 }
 
 export async function uploadTopicImage(file) {

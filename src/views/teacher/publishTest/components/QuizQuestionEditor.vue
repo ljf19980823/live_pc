@@ -236,8 +236,8 @@
         <h3>题目信息</h3>
         <div class="form-grid">
           <el-form-item label="学段" required>
-            <el-select v-model="localEditor.businessId" clearable filterable placeholder="请选择学段" @change="handleBusinessChange">
-              <el-option v-for="item in businessOptions" :key="item.id" :label="item.name" :value="item.id" />
+            <el-select :key="businessPickerKey" v-model="localEditor.businessId" clearable filterable placeholder="请选择学段" @change="handleBusinessChange">
+              <el-option v-for="item in businessOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
             </el-select>
             <el-button v-if="!businessOptions.length" type="text" @click="loadBusinessBase">重新加载学段</el-button>
           </el-form-item>
@@ -364,6 +364,9 @@ const emptyEditor = () => ({
   optionE: '',
   answer: '',
   analysis: '',
+  businessId: '',
+  businessName: '',
+  compulsory: '',
   areaPath: [],
   typeId: '',
   subjectId: '',
@@ -373,6 +376,7 @@ const emptyEditor = () => ({
   knowledgePath: [],
   subjectPath: [],
   questTemplateId: '',
+  questType: '',
   difficulty: '',
   knowledge: '',
   knowledgeId: '',
@@ -384,6 +388,7 @@ const emptyEditor = () => ({
   questTypeName: '',
   difficultyName: '',
   bookName: '',
+  typeName: '',
   levelName: ''
 })
 
@@ -426,6 +431,7 @@ export default {
       businessPointOptions: [],
       businessKnowledgeOptions: [],
       businessQuestTypeOptions: [],
+      businessPickerKey: 0,
       businessSubjectPickerKey: 0,
       businessInitializing: false,
       businessTreeLoading: false,
@@ -523,9 +529,14 @@ export default {
   },
   computed: {
     selectedBusiness() {
-      return this.businessOptions.find(item => item.id === this.localEditor.businessId) || null
+      const businessId = this.normalizeBusinessId(this.localEditor.businessId)
+      if (!businessId) return null
+      return this.businessOptions.find(item => this.normalizeBusinessId(item.id) === businessId) || null
     },
     businessStandardType() {
+      // 编辑题目的模式由详情 compulsory 决定，学段项只负责 ID 和名称回显。
+      if (this.selectedBusiness && String(this.localEditor.compulsory) === '1') return 1
+      if (this.selectedBusiness && String(this.localEditor.compulsory) === '0') return 2
       return this.selectedBusiness ? this.selectedBusiness.standardType : -1
     },
     businessSubjectOptions() {
@@ -563,7 +574,7 @@ export default {
     },
     selectedQuestType() {
       const template = this.activeQuestTypeOptions.find(item => String(item.id) === String(this.localEditor.questTemplateId)) || {}
-      return String(template.questType || '')
+      return String(template.questType || this.localEditor.questType || '')
     },
     showOptionEditors() {
       return ['1', '2', '8'].includes(this.selectedQuestType)
@@ -576,6 +587,9 @@ export default {
     }
   },
   methods: {
+    normalizeBusinessId(value) {
+      return value == null ? '' : String(value).trim()
+    },
     captureBusinessRequest(kind, dependencies = []) {
       const sequence = (this.businessRequestSequences[kind] || 0) + 1
       this.businessRequestSequences[kind] = sequence
@@ -589,18 +603,25 @@ export default {
       try { return await request } finally { this.businessPending -= 1 }
     },
     businessTeachingCloudParams(params = {}) {
-      const authInfo = getAuthInfo() || {}
       return {
         ...params,
         isHome: 0,
-        institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
+        institutionId: this.currentInstitutionId()
       }
+    },
+    currentInstitutionId() {
+      const authInfo = getAuthInfo() || {}
+      return localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
     },
     normalizeBusinessSubjects(rows, prefix) {
       return (Array.isArray(rows) ? rows : []).map(item => {
-        const value = prefix + '/' + encodeURIComponent(String(item.id))
-        const children = this.normalizeBusinessSubjects(item.subjectList, value)
-        return { ...item, id: String(item.id), value, label: item.name || item.otherName || '', leaf: !children.length, ...(children.length ? { children } : {}) }
+        const itemId = item.id != null && String(item.id).trim() !== '' ? item.id : item.subjectId
+        const id = String(itemId == null ? '' : itemId).trim()
+        const value = prefix + '/' + encodeURIComponent(id)
+        const childRows = [item.subjectList, item.children, item.childList]
+          .find(list => Array.isArray(list) && list.length) || []
+        const children = this.normalizeBusinessSubjects(childRows, value)
+        return { ...item, id, value, label: item.name || item.otherName || '', leaf: !children.length, ...(children.length ? { children } : {}) }
       })
     },
     normalizeBusinessKnowledge(rows) {
@@ -611,16 +632,25 @@ export default {
     businessSeed(value) {
       const seed = JSON.parse(JSON.stringify(value || {}))
       const context = seed._questionContext || {}
+      const typeName = seed.typeName || seed.levelName || ''
       return {
         ...emptyEditor(), ...seed,
-        businessId: String(seed.businessId || context.businessId || ''),
-        subjectId: String(seed.subjectId || context.subjectId || ''),
+        id: String(seed.id || seed.questId || ''),
+        businessId: this.normalizeBusinessId(
+          seed.businessId != null && String(seed.businessId).trim() !== ''
+            ? seed.businessId
+            : context.businessId
+        ),
+        subjectId: String(seed.subjectId || context.subjectId || '').trim(),
         subjectPath: Array.isArray(seed.subjectPath) ? seed.subjectPath : [],
         pointId: String(seed.pointId || seed.treeId || this.lastValue(seed.pointPath) || ''),
         knowledge: String(seed.knowledge || seed.knowledgeId || this.lastValue(seed.knowledgePath) || ''),
         difficulty: String(seed.difficulty || seed.difficultyId || ''),
         questTemplateId: String(seed.questTemplateId || context.questTemplateId || seed.questTypeTemplateId || seed.questTypeId || seed.questType || ''),
+        questType: String(seed.questType || ''),
         bookId: String(seed.bookId || ''), typeId: String(seed.typeId || ''),
+        typeName,
+        levelName: typeName,
         serialNumber: seed.serialNumber || '1'
       }
     },
@@ -647,25 +677,15 @@ export default {
       ]))
       if (!isCurrent()) return false
       if (businesses.status === 'fulfilled') {
-        const previousBusiness = this.selectedBusiness
         this.businessOptions = (Array.isArray(businesses.value) ? businesses.value : [])
-          .filter(item => item.standardType != null && [0, 1, 2].includes(Number(item.standardType)))
-          .map(item => ({ ...item, id: String(item.id), standardType: Number(item.standardType) }))
-        if (previousBusiness && this.selectedBusiness && previousBusiness.standardType !== this.selectedBusiness.standardType) {
-          this.businessRevision += 1
-          this.businessInitializing = false
-          this.businessTreeLoading = false
-          this.$delete(this.businessSubjectTrees, previousBusiness.id)
-          this.clearBusinessClassification()
-          this.businessSubjectPickerKey += 1
-          this.$message.warning('学段类型已变化，请重新选择科目')
-          await this.ensureBusinessSubjects()
-        }
-        if (this.localEditor.businessId && !this.selectedBusiness) {
-          this.localEditor.businessId = ''
-          this.clearBusinessClassification()
-          this.$message.warning('原学段已不可用，请重新选择学段和科目')
-        }
+          .filter(item => item && this.normalizeBusinessId(item.id))
+          .map(item => ({
+            ...item,
+            id: this.normalizeBusinessId(item.id),
+            standardType: item.standardType == null ? -1 : Number(item.standardType)
+          }))
+        // 加载下拉数据不修改题目字段；空 ID 保持未选，详情 ID 也不会被清空或猜测替换。
+        this.businessPickerKey += 1
       } else {
         this.businessOptions = []
         this.$message.warning('学段加载失败，请重新加载学段')
@@ -687,7 +707,7 @@ export default {
         const rows = await getTeachingCloudOptions('/home/getSubjectByBusiness', {
           institutionId,
           id: business.id,
-          standardType: business.standardType
+          standardType: this.businessStandardType
         })
         if (!isCurrent()) return null
         const tree = this.normalizeBusinessSubjects(rows, 'business:' + business.id)
@@ -706,11 +726,32 @@ export default {
       const tree = await this.ensureBusinessSubjects()
       if (tree && this.localEditor.subjectId) await this.restoreBusinessSubject()
     },
+    restoreDetailBusiness(detail) {
+      if (!detail) return false
+      const compulsory = this.normalizeBusinessId(detail.compulsory)
+      const detailBusinessId = this.normalizeBusinessId(detail.businessId)
+      if (['0', '1'].includes(compulsory)) this.$set(this.localEditor, 'compulsory', compulsory)
+      if (!detailBusinessId) return false
+      const business = this.businessOptions.find(item => (
+        item.id === detailBusinessId
+      ))
+      this.$set(this.localEditor, 'businessId', detailBusinessId)
+      if (!business) return false
+      this.$set(this.localEditor, 'businessName', business.name || '')
+      this.businessPickerKey += 1
+      return true
+    },
     async initializeBusinessEditor(value) {
       const revision = ++this.businessRevision
       const isCurrent = () => !this.businessDestroyed && this.businessMode && revision === this.businessRevision
       this.businessInitialQuestId = String(this.questId || '')
       this.localEditor = this.businessSeed(value)
+      if (!this.editing && !this.businessInitialQuestId) {
+        // 新增题目必须由用户主动选择学段，不能沿用列表筛选或外部传入的学段上下文。
+        this.localEditor.businessId = ''
+        this.localEditor.businessName = ''
+        this.localEditor.compulsory = ''
+      }
       this.businessDetailFallback = { ...this.localEditor }
       this.businessInitializing = true
       this.businessTreeLoading = false
@@ -732,7 +773,9 @@ export default {
             const seed = this.localEditor
             // 详情缺少学段时用列表上下文；知识点、难度别名不能被列表旧值遮盖。
             this.localEditor = this.businessSeed({ ...seed, ...(detail || {}),
-              businessId: detail && detail.businessId || seed.businessId,
+              businessId: detail && detail.businessId != null && String(detail.businessId).trim() !== ''
+                ? detail.businessId
+                : seed.businessId,
               pointId: detail && (detail.pointId || detail.treeId) || seed.pointId,
               knowledge: detail && (detail.knowledge || detail.knowledgeId) || seed.knowledge,
               difficulty: detail && (detail.difficulty || detail.difficultyId) || seed.difficulty,
@@ -746,6 +789,8 @@ export default {
         }
         await this.loadBusinessBase()
         if (!isCurrent()) return
+        // 详情的 compulsory 决定题目模式，学段严格使用详情 businessId 在选项加载完成后回显。
+        if (loadedDetail) this.restoreDetailBusiness(loadedDetail)
         if (this.businessStandardType === 2 && loadedDetail) {
           // 加载学段后才能确认是否支持自定义；详情只有名称时，清除列表带入的旧 ID、别名和路径。
           if (loadedDetail.pointName != null && !loadedDetail.pointId && !loadedDetail.treeId) {
@@ -784,12 +829,12 @@ export default {
         collect(node.children, next)
       })
       collect(this.businessSubjectOptions)
-      // 已有完整路径可区分同学段的重复 ID；没有路径时只接受唯一匹配。
+      // 科目树已按 businessId 加载；同一学段内重复出现的 subjectId 代表同一科目，取首条有效路径回显。
       const selected = this.businessSubject
-      const path = selected && selected.id === subjectId ? [...this.localEditor.subjectPath] : matches.length === 1 ? matches[0] : []
+      const path = selected && selected.id === subjectId ? [...this.localEditor.subjectPath] : matches[0] || []
       if (!path.length) {
         this.clearBusinessClassification()
-        if (subjectId) this.$message.warning('科目已不可用或无法唯一匹配，请手动选择科目')
+        if (subjectId) this.$message.warning('科目已不可用，请手动选择科目')
         return
       }
       this.localEditor.subjectPath = path
@@ -802,6 +847,9 @@ export default {
       this.businessInitializing = false
       this.businessTreeLoading = false
       this.businessTreeError = false
+      // 用户切换学段后，后续联动使用新学段的模式，不沿用原题目 compulsory。
+      this.localEditor.compulsory = ''
+      this.localEditor.businessName = this.selectedBusiness ? this.selectedBusiness.name : ''
       this.clearBusinessClassification()
       this.businessSubjectPickerKey += 1
       await this.ensureBusinessSubjects()
@@ -1090,7 +1138,9 @@ export default {
       const editor = { ...this.localEditor, subjectId: this.businessSubject ? this.businessSubject.id : '' }
       if (!this.validateBusinessEditor(editor)) return
       const type = this.businessStandardType
-      const payload = this.buildBusinessTopicPayload(editor)
+      const payload = this.editing
+        ? this.buildEditTopicPayload(editor, type === 1)
+        : this.buildAddTopicPayload(editor, type === 1)
       const display = this.withBusinessDisplayNames(editor)
       const revision = this.businessRevision
       this.saving = true
@@ -1107,23 +1157,6 @@ export default {
       } catch (error) {
         if (!this.businessDestroyed && revision === this.businessRevision) this.$message.error(error.message || '题目保存失败，请稍后重试')
       } finally { this.saving = false }
-    },
-    buildBusinessTopicPayload(editor) {
-      const type = this.businessStandardType
-      // 学段和级联路径只供前端使用；通用学段自定义分类只提交名称。
-      const payload = this.buildTopicPayload({ ...editor, bookId: type === 1 ? editor.bookId : '', typeId: type === 1 ? editor.typeId : '' })
-      if (type === 2) {
-        // 基础 payload 会从路径补 ID；自定义时必须显式删除，确保 ID 与名称只提交其中一个。
-        if (!editor.pointId) {
-          delete payload.pointId
-          payload.pointName = String(editor.pointName || '').trim()
-        }
-        if (!editor.knowledge) {
-          delete payload.knowledge
-          payload.knowledgeName = String(editor.knowledgeName || '').trim()
-        }
-      }
-      return this.removeEmptyParams(payload)
     },
     handleTaxonomyLabelClick(node, event) {
       if (node.isDisabled || node.loading) return
@@ -1246,28 +1279,38 @@ export default {
       }, {})
     },
     normalizeTopicDetail(detail) {
-      const pointId = detail.pointId || this.lastValue(detail.pointPath)
-      const knowledge = detail.knowledge || this.lastValue(detail.knowledgePath)
+      const stringValue = value => value == null ? '' : String(value)
+      const businessId = stringValue(detail.businessId || this.localEditor.businessId)
+      const pointId = stringValue(detail.pointId || this.lastValue(detail.pointPath))
+      const knowledge = stringValue(detail.knowledge || this.lastValue(detail.knowledgePath))
       // 详情未返回地区/学段时，保留列表传入的路径；空数组不能覆盖已有值。
       const areaPath = Array.isArray(detail.areaPath) && detail.areaPath.length > 1
         ? detail.areaPath
-        : detail.areaId && detail.businessId
-          ? [detail.areaId, detail.businessId]
+        : detail.areaId && businessId
+          ? [detail.areaId, businessId]
           : this.localEditor.areaPath || []
-      const subjectId = detail.subjectId || this.lastValue(detail.subjectPath)
+      const subjectId = stringValue(detail.subjectId || this.lastValue(detail.subjectPath))
+      const typeName = detail.typeName || detail.levelName || this.localEditor.typeName || this.localEditor.levelName || ''
       return {
         ...emptyEditor(),
         ...this.localEditor,
         ...(detail || {}),
-        id: detail.id || detail.questId || this.questId,
+        id: stringValue(detail.id || detail.questId || this.questId),
+        businessId,
         areaPath: areaPath.map(String),
         subjectId,
         subjectPath: detail.subjectPath || (subjectId ? [String(subjectId)] : []),
-        questTemplateId: detail.questTemplateId || detail.questType || '',
+        questTemplateId: stringValue(detail.questTemplateId),
+        questType: stringValue(detail.questType),
         pointId,
         pointPath: detail.pointPath || (pointId ? [String(pointId)] : []),
         knowledge,
         knowledgePath: detail.knowledgePath || (knowledge ? [String(knowledge)] : []),
+        difficulty: stringValue(detail.difficulty),
+        bookId: stringValue(detail.bookId),
+        typeId: stringValue(detail.typeId),
+        typeName,
+        levelName: typeName,
         serialNumber: detail.serialNumber || '1'
       }
     },
@@ -1564,51 +1607,44 @@ export default {
         .replace(/\D/g, '')
         .replace(/^0+/, '')
     },
-    buildZsbTopicPayload(editor) {
+    buildAddTopicPayload(editor, isK12) {
       const pointId = editor.pointId || this.lastValue(editor.pointPath)
       const knowledge = editor.knowledge || this.lastValue(editor.knowledgePath)
-      return this.removeEmptyParams({
-        id: editor.id,
-        subjectId: editor.subjectId,
-        name: editor.name,
-        answer: editor.answer,
-        analysis: editor.analysis,
-        difficulty: editor.difficulty,
-        questTemplateId: editor.questTemplateId,
-        optionA: editor.optionA,
-        optionB: editor.optionB,
-        optionC: editor.optionC,
-        optionD: editor.optionD,
-        optionE: editor.optionE,
-        knowledge,
-        pointId,
-        typeId: editor.typeId,
-        bookId: editor.bookId,
-        serialNumber: editor.serialNumber
-      })
-    },
-    buildTopicPayload(editor) {
-      const pointId = editor.pointId || this.lastValue(editor.pointPath)
-      const knowledge = editor.knowledge || this.lastValue(editor.knowledgePath)
-      return this.removeEmptyParams({
-        id: editor.id,
+      const payload = {
+        institutionId: this.currentInstitutionId(),
         subjectId: editor.subjectId || this.lastValue(editor.subjectPath),
         name: editor.name,
         answer: editor.answer,
         analysis: editor.analysis,
-        difficulty: editor.difficulty,
         questTemplateId: editor.questTemplateId,
-        optionA: editor.optionA,
-        optionB: editor.optionB,
-        optionC: editor.optionC,
-        optionD: editor.optionD,
-        optionE: editor.optionE,
-        knowledge,
         pointId,
-        typeId: editor.typeId,
-        bookId: editor.bookId,
-        serialNumber: editor.serialNumber
-      })
+        knowledge,
+        difficulty: editor.difficulty,
+        isTrue: 0,
+        isMember: 0,
+        isMemberAnalysis: 0
+      }
+
+      if (['1', '2'].includes(this.selectedQuestType)) {
+        Object.assign(payload, {
+          optionA: editor.optionA,
+          optionB: editor.optionB,
+          optionC: editor.optionC,
+          optionD: editor.optionD,
+          optionE: editor.optionE
+        })
+      }
+      if (isK12) {
+        payload.bookId = editor.bookId
+        payload.typeId = editor.typeId
+      }
+      return this.removeEmptyParams(payload)
+    },
+    buildEditTopicPayload(editor, isK12) {
+      return {
+        ...this.buildAddTopicPayload(editor, isK12),
+        id: editor.id || editor.questId || this.questId || this.businessInitialQuestId
+      }
     },
     withDisplayNames(editor) {
       const pointId = editor.pointId || this.lastValue(editor.pointPath)
@@ -1720,8 +1756,8 @@ export default {
         this.saving = true
         try {
           const saved = this.editing
-            ? await updateTopic(this.buildTopicPayload(nextEditor))
-            : await addTopic(this.buildTopicPayload(nextEditor))
+            ? await updateTopic(this.buildEditTopicPayload(nextEditor, true))
+            : await addTopic(this.buildAddTopicPayload(nextEditor, true))
           const result = this.withDisplayNames({
             ...nextEditor,
             ...(saved && typeof saved === 'object' ? saved : {})
@@ -1741,8 +1777,8 @@ export default {
       this.saving = true
       try {
         const saved = this.editing
-          ? await updateTopic(this.buildZsbTopicPayload(nextEditor))
-          : await addTopic(this.buildZsbTopicPayload(nextEditor))
+          ? await updateTopic(this.buildEditTopicPayload(nextEditor, false))
+          : await addTopic(this.buildAddTopicPayload(nextEditor, false))
         const result = this.withDisplayNames({
           ...nextEditor,
           ...(saved && typeof saved === 'object' ? saved : {})
