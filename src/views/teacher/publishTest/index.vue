@@ -776,17 +776,18 @@
           <el-cascader
             ref="bank-add-subject"
             v-model="bankAddSubjectPath"
-            :options="cloudSubjectOptions"
+            :options="bankAddSubjectOptions"
             :props="{ expandTrigger: 'hover', checkStrictly: false }"
-            :disabled="bankAddSaving"
+            :disabled="bankAddSaving || bankAddSubjectsLoading"
             clearable
             filterable
-            placeholder="请选择学段及科目"
+            :placeholder="bankAddSubjectsLoading ? '正在加载学段及科目' : '请选择学段及科目'"
             popper-class="practice-filter-taxonomy-popper"
             @visible-change="handleTaxonomyVisibleChange($event, 'bank-add-subject')"
             @expand-change="updateTaxonomyPopper('bank-add-subject')"
           />
         </div>
+        <el-button v-if="bankAddSubjectsError" type="text" :disabled="bankAddSubjectsLoading" @click="loadBankAddSubjects">重新加载学段及科目</el-button>
       </div>
       <template slot="footer">
         <el-button :disabled="bankAddSaving" @click="closeCloudBankAdd">取消</el-button>
@@ -1004,7 +1005,6 @@ import {
   getTopicUnCompulsorySubjectList,
   getTopicDictItemList,
   getTopicKnowledgeCompulsoryList,
-  getTopicQuestTypeTemplates,
   getTopicSubjectListByType,
   getTopicSubjectPointCompulsoryList,
   getTopicSubjectPointList,
@@ -1225,6 +1225,10 @@ export default {
       bankEditor: {},
       bankAddVisible: false,
       bankAddSubjectPath: [],
+      bankAddSubjectOptions: [],
+      bankAddSubjectsLoading: false,
+      bankAddSubjectsError: false,
+      bankAddSubjectsSequence: 0,
       bankAddQuestion: null,
       bankAddSaving: false,
       paperTabSnapshots: {},
@@ -1281,29 +1285,11 @@ export default {
       return this.sourceTab !== 'AI出题' || this.loading || this.sourceSwitching || !this.aiExportSelectedQuestions.length
     },
     cloudSubjectOptions() {
-      // 小初高保持“学段 → 科目”，专升本展示“专升本 → 类别 → 科目”。
-      // 分组值加前缀用于区分两套数据，originalValue 保留原值供接口使用。
-      const k12 = this.k12SubjectOptions.map(group => ({
-        ...group,
-        value: `k12:${group.value}`,
-        eduType: 'K9K12',
-        originalValue: group.value
-      }))
-      const zsb = this.eduTypes.includes('专升本') && this.zsbSubjectOptions.length ? [{
-        value: 'zsb',
-        label: '专升本',
-        eduType: '专升本',
-        children: this.zsbSubjectOptions.map(group => ({
-          ...group,
-          value: `zsb:${group.value}`,
-          originalValue: group.value
-        }))
-      }] : []
-      return [...k12, ...zsb]
+      return this.buildBankSubjectOptions(this.k12SubjectOptions, this.zsbSubjectOptions)
     },
     bankAddSubject() {
-      if (this.bankAddSubjectPath.length < 2) return null
-      let nodes = this.cloudSubjectOptions
+      if (this.bankAddSubjectsLoading || this.bankAddSubjectsError || this.bankAddSubjectPath.length < 2) return null
+      let nodes = this.bankAddSubjectOptions
       let selected = null
       for (const value of this.bankAddSubjectPath) {
         selected = nodes.find(item => item.value === value)
@@ -1554,6 +1540,7 @@ export default {
     }
   },
   beforeDestroy() {
+    this.bankAddSubjectsSequence += 1
     this.importRevision += 1
     this.filterStateSequence += 1
     this.requestSequence += 1
@@ -1571,6 +1558,37 @@ export default {
     })
   },
   methods: {
+    buildBankSubjectOptions(k12Options, zsbOptions) {
+      // 共用树形展示结构；调用方各自加载云题库或机构科目数据。
+      const k12 = k12Options.map(group => ({
+        ...group,
+        value: `k12:${group.value}`,
+        eduType: 'K9K12',
+        originalValue: group.value
+      }))
+      const zsb = this.eduTypes.includes('专升本') && zsbOptions.length ? [{
+        value: 'zsb',
+        label: '专升本',
+        eduType: '专升本',
+        children: zsbOptions.map(group => ({
+          ...group,
+          value: `zsb:${group.value}`,
+          originalValue: group.value
+        }))
+      }] : []
+      return [...k12, ...zsb]
+    },
+    normalizeK12SubjectOptions(groups) {
+      return (groups || []).map(group => ({
+        value: String(group.name),
+        label: group.name,
+        children: (group.subjectList || group.children || group.childList || []).map(subject => ({
+          ...subject,
+          value: String(subject.id),
+          label: subject.otherName || subject.name
+        }))
+      }))
+    },
     findBusinessSubject(business, trees, path) {
       if (!business || path.length < 2) return null
       let nodes = trees[business.id] || []
@@ -2185,6 +2203,10 @@ export default {
       this.pointOptions = []
       this.questTypeOptions = []
     },
+    loadBankQuestTypes(subject) {
+      if (this.sourceTab === 'AI出题' || !subject.questType) return Promise.resolve([])
+      return getTeachingCloudOptions('/questTypeTemplate/getAll', this.bankTeachingCloudParams({ id: subject.questType }))
+    },
     async handleZsbSubjectChange(value) {
       this.zsb.pointPath = []
       this.zsb.knowledgePath = []
@@ -2199,11 +2221,7 @@ export default {
         this.usesZsbTopicOptions
           ? getTopicSubjectPointList(value)
           : getTeachingCloudOptions('/home/getSubjectPointTree', this.bankTeachingCloudParams({ subjectId: value })),
-        this.sourceTab !== 'AI出题' && subject.questType
-          ? this.usesZsbTopicOptions
-            ? getTopicQuestTypeTemplates(subject.questType)
-            : getTeachingCloudOptions('/questTypeTemplate/getAll', this.bankTeachingCloudParams({ id: subject.questType }))
-          : Promise.resolve([])
+        this.loadBankQuestTypes(subject)
       ]))
       if (!isCurrent()) return
       this.pointOptions = this.normalizeTree(points)
@@ -2240,17 +2258,16 @@ export default {
       this.k12SubjectRaw = subjectRows.length ? subjectRows : (groups || []).flatMap(group => (
         group.subjectList || group.children || group.childList || []
       ))
-      this.k12SubjectOptions = (groups || []).map(group => ({
-        value: String(group.name),
-        label: group.name,
-        children: (group.subjectList || group.children || group.childList || []).map(subject => ({
-          value: String(subject.id),
-          label: subject.otherName || subject.name
-        }))
-      }))
+      this.k12SubjectOptions = this.normalizeK12SubjectOptions(groups)
     },
     findK12Subject(subjectId) {
-      return this.k12SubjectRaw.find(item => String(item.id) === String(subjectId)) || {}
+      const matches = item => String(item.id) === String(subjectId)
+      const detail = this.k12SubjectRaw.find(matches) || {}
+      const treeSubject = this.k12SubjectGroups.flatMap(group => (
+        group.subjectList || group.children || group.childList || []
+      )).find(matches) || {}
+      // 明细列表可能缺少当前科目或题型配置，保留学段科目树返回的 questType。
+      return { ...treeSubject, ...detail, questType: detail.questType || treeSubject.questType || '' }
     },
     optionItem(list, value) {
       return (list || []).find(option => String(option.id) === String(value)) || {}
@@ -2329,7 +2346,7 @@ export default {
     },
     async handleK12SubjectChange(value) {
       const subjectId = this.lastValue(value)
-            if (this.sourceTab !== 'AI出题' && this.isK12ChineseSubject) {
+      if (this.sourceTab !== 'AI出题' && this.isK12ChineseSubject) {
         this.k12.mode = 'knowledge'
       }
       this.k12.bookId = ''
@@ -2352,11 +2369,7 @@ export default {
         this.usesK12TopicOptions
           ? getTopicKnowledgeCompulsoryList(subjectId)
           : getTeachingCloudOptions('/knowledgeCompulsory/getList', this.bankTeachingCloudParams({ subjectId })),
-        this.sourceTab !== 'AI出题' && subject.questType
-          ? this.usesK12TopicOptions
-            ? getTopicQuestTypeTemplates(subject.questType)
-            : getTeachingCloudOptions('/questTypeTemplate/getAll', this.bankTeachingCloudParams({ id: subject.questType }))
-          : Promise.resolve([])
+        this.loadBankQuestTypes(subject)
       ]))
       if (!isCurrent()) return
       this.bookOptions = books
@@ -2849,7 +2862,7 @@ export default {
         if (sequence !== this.requestSequence) return
         const rows = (result.rows || []).map(item => ({
           ...this.withQuestionContext(item, questionContext, requestEduType),
-          _banked: this.sourceTab === '云端题库' ? String(item.hasJoin) === '1' : item._banked
+          _banked: this.sourceTab === '云端题库' ? String(item.quote) === '1' : item._banked
         }))
         this.releaseErrorImageUrls(this.questions)
         this.questions = rows
@@ -3423,7 +3436,7 @@ export default {
         this.bankAddQuestion = question
         this.bankAddSubjectPath = []
         this.bankAddVisible = true
-        return
+        return this.loadBankAddSubjects()
       }
 
       // 下划线字段仅供前端保存类型、上下文和交互状态，不进入入库请求。
@@ -3437,11 +3450,44 @@ export default {
       this.bankAddQuestion = question
       this.openQuestionEditor(payload, 'aiBank', -1)
     },
+    async loadBankAddSubjects() {
+      const sequence = ++this.bankAddSubjectsSequence
+      const isCurrent = () => this.bankAddVisible && sequence === this.bankAddSubjectsSequence
+      this.bankAddSubjectsLoading = true
+      this.bankAddSubjectsError = false
+      this.bankAddSubjectOptions = []
+      this.bankAddSubjectPath = []
+      try {
+        const authInfo = getAuthInfo() || {}
+        const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
+        if (!institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
+        const params = { isHome: 0, institutionId }
+        const [k12Groups, zsbGroups] = await Promise.all([
+          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+          this.eduTypes.includes('专升本') ? getTeachingCloudUpgradeSubjectList(params) : Promise.resolve([])
+        ])
+        if (!isCurrent()) return
+        this.bankAddSubjectOptions = this.buildBankSubjectOptions(
+          this.normalizeK12SubjectOptions(k12Groups), normalizeZsbSubjectOptions(zsbGroups)
+        )
+      } catch (error) {
+        if (isCurrent()) {
+          this.bankAddSubjectsError = true
+          this.$message.warning(error.message || '学段科目加载失败，请重试')
+        }
+      } finally {
+        if (isCurrent()) this.bankAddSubjectsLoading = false
+      }
+    },
     closeCloudBankAdd(done) {
       if (this.bankAddSaving) return
+      this.bankAddSubjectsSequence += 1
       this.bankAddVisible = false
       this.bankAddQuestion = null
       this.bankAddSubjectPath = []
+      this.bankAddSubjectOptions = []
+      this.bankAddSubjectsLoading = false
+      this.bankAddSubjectsError = false
       if (typeof done === 'function') done()
     },
     async confirmCloudBankAdd() {
@@ -3463,7 +3509,7 @@ export default {
       try {
         await addQuestByIntehub(payload)
         this.$set(question, '_banked', true)
-        this.$set(question, 'hasJoin', '1')
+        this.$set(question, 'quote', '1')
         this.$message.success('题目加入自有题库成功')
       } catch (error) {
         this.$message.error(error.message || '题目加入自有题库失败，请稍后重试')
