@@ -1285,7 +1285,9 @@ export default {
       return this.sourceTab !== 'AI出题' || this.loading || this.sourceSwitching || !this.aiExportSelectedQuestions.length
     },
     cloudSubjectOptions() {
-      return this.buildBankSubjectOptions(this.k12SubjectOptions, this.zsbSubjectOptions)
+      return this.buildBankSubjectOptions(
+        this.k12SubjectOptions, this.eduTypes.includes('专升本') ? this.zsbSubjectOptions : []
+      )
     },
     bankAddSubject() {
       if (this.bankAddSubjectsLoading || this.bankAddSubjectsError || this.bankAddSubjectPath.length < 2) return null
@@ -1566,7 +1568,7 @@ export default {
         eduType: 'K9K12',
         originalValue: group.value
       }))
-      const zsb = this.eduTypes.includes('专升本') && zsbOptions.length ? [{
+      const zsb = zsbOptions.length ? [{
         value: 'zsb',
         label: '专升本',
         eduType: '专升本',
@@ -3451,8 +3453,15 @@ export default {
       this.openQuestionEditor(payload, 'aiBank', -1)
     },
     async loadBankAddSubjects() {
+      const question = this.bankAddQuestion
+      if (!this.bankAddVisible || !question) return
+      // 接口的 compulsory 优先于列表筛选上下文，重试也始终按所选题目的类型加载。
+      const compulsory = String(question.compulsory)
+      const isK12 = ['0', '1'].includes(compulsory)
+        ? compulsory === '1'
+        : this.questionEduType(question) === 'K9K12'
       const sequence = ++this.bankAddSubjectsSequence
-      const isCurrent = () => this.bankAddVisible && sequence === this.bankAddSubjectsSequence
+      const isCurrent = () => this.bankAddVisible && this.bankAddQuestion === question && sequence === this.bankAddSubjectsSequence
       this.bankAddSubjectsLoading = true
       this.bankAddSubjectsError = false
       this.bankAddSubjectOptions = []
@@ -3462,13 +3471,13 @@ export default {
         const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
         if (!institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
         const params = { isHome: 0, institutionId }
-        const [k12Groups, zsbGroups] = await Promise.all([
-          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
-          this.eduTypes.includes('专升本') ? getTeachingCloudUpgradeSubjectList(params) : Promise.resolve([])
-        ])
+        const groups = isK12
+          ? await getTeachingCloudOptions('/home/getCompulsorySubjectList', params)
+          : await getTeachingCloudUpgradeSubjectList(params)
         if (!isCurrent()) return
         this.bankAddSubjectOptions = this.buildBankSubjectOptions(
-          this.normalizeK12SubjectOptions(k12Groups), normalizeZsbSubjectOptions(zsbGroups)
+          isK12 ? this.normalizeK12SubjectOptions(groups) : [],
+          isK12 ? [] : normalizeZsbSubjectOptions(groups)
         )
       } catch (error) {
         if (isCurrent()) {
