@@ -760,6 +760,43 @@
     </main>
 
     <el-dialog
+      title="加入自有题库"
+      class="question-import-wrapper"
+      :visible="bankAddVisible"
+      width="540px"
+      custom-class="question-import-dialog"
+      :show-close="!bankAddSaving"
+      :close-on-click-modal="false"
+      :close-on-press-escape="!bankAddSaving"
+      :before-close="closeCloudBankAdd"
+    >
+      <div class="import-form">
+        <div class="import-form-row">
+          <label>学段 / 科目</label>
+          <el-cascader
+            ref="bank-add-subject"
+            v-model="bankAddSubjectPath"
+            :options="cloudSubjectOptions"
+            :props="{ expandTrigger: 'hover', checkStrictly: false }"
+            :disabled="bankAddSaving"
+            clearable
+            filterable
+            placeholder="请选择学段及科目"
+            popper-class="practice-filter-taxonomy-popper"
+            @visible-change="handleTaxonomyVisibleChange($event, 'bank-add-subject')"
+            @expand-change="updateTaxonomyPopper('bank-add-subject')"
+          />
+        </div>
+      </div>
+      <template slot="footer">
+        <el-button :disabled="bankAddSaving" @click="closeCloudBankAdd">取消</el-button>
+        <el-button type="primary" :disabled="!bankAddSubject" :loading="bankAddSaving" @click="confirmCloudBankAdd">
+          {{ bankAddSaving ? '加入中...' : '确定' }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       title="导入题目"
       class="question-import-wrapper"
       :visible.sync="importVisible"
@@ -862,7 +899,7 @@
       <section class="edit-dialog">
         <header>
           <div class="edit-dialog-title">
-            <strong>{{ ['cloudBank', 'aiBank'].includes(editingTarget.type) ? '编辑题目并加入自有题库' : (editingTarget.type === 'mother' ? '编辑母题' : '编辑子题') }}</strong>
+            <strong>{{ editingTarget.type === 'aiBank' ? '编辑题目并加入自有题库' : (editingTarget.type === 'mother' ? '编辑母题' : '编辑子题') }}</strong>
             <span>{{ editingQuestionTypeName }}</span>
           </div>
           <button type="button" :disabled="bankAddSaving" @click="closeQuestionEditor">×</button>
@@ -903,7 +940,7 @@
               :min-height="100"
             />
           </div>
-          <div v-if="!['cloudBank', 'aiBank'].includes(editingTarget.type)" class="edit-field">
+          <div v-if="editingTarget.type !== 'aiBank'" class="edit-field">
             <span>知识点</span>
             <Editor
               v-model="editingQuestion.knowledgeName"
@@ -948,7 +985,7 @@
 import {
   addTeachingCloudError,
   addTopicByAi,
-  addTopicByTeaching,
+  addQuestByIntehub,
   deleteTopic,
   generateAfterQuizQuestions,
   generatePartQuest,
@@ -1186,6 +1223,8 @@ export default {
       bankEditingIndex: null,
       bankEditorQuestId: '',
       bankEditor: {},
+      bankAddVisible: false,
+      bankAddSubjectPath: [],
       bankAddQuestion: null,
       bankAddSaving: false,
       paperTabSnapshots: {},
@@ -1261,6 +1300,17 @@ export default {
         }))
       }] : []
       return [...k12, ...zsb]
+    },
+    bankAddSubject() {
+      if (this.bankAddSubjectPath.length < 2) return null
+      let nodes = this.cloudSubjectOptions
+      let selected = null
+      for (const value of this.bankAddSubjectPath) {
+        selected = nodes.find(item => item.value === value)
+        if (!selected || selected.disabled) return null
+        nodes = selected.children || []
+      }
+      return selected && !nodes.length && selected.value ? selected : null
     },
     activeFilterEduType() {
       if (this.sourceTab === 'AI出题') return this.aiStandardType === 1 ? 'K9K12' : '专升本'
@@ -3367,9 +3417,15 @@ export default {
     },
     saveToSmartBank(question) {
       if (this.sourceTab === '自有题库') return
-      if (question._bankLoading || question._banked) return
+      if (this.bankAddSaving || this.bankAddVisible || question._bankLoading || question._banked) return
 
-      const isCloudBank = this.sourceTab === '云端题库'
+      if (this.sourceTab === '云端题库') {
+        this.bankAddQuestion = question
+        this.bankAddSubjectPath = []
+        this.bankAddVisible = true
+        return
+      }
+
       // 下划线字段仅供前端保存类型、上下文和交互状态，不进入入库请求。
       const payload = Object.keys(question).reduce((result, key) => {
         if (!key.startsWith('_')) {
@@ -3378,45 +3434,60 @@ export default {
         return result
       }, {})
 
-      if (isCloudBank) {
-        const context = question._questionContext || this.buildCloudQuestionContext()
-        Object.keys(context).forEach(field => {
-          if (payload[field] === undefined || payload[field] === null || payload[field] === '') payload[field] = context[field]
-        })
-        payload.id = question.id || question.questId || ''
-        payload.pointId = question.pointId || question.treeId || payload.pointId || ''
-        payload.questTemplateName = question.questTemplateName || question.questTypeName || payload.questTemplateName || ''
-        payload.compulsory = this.questionEduType(question) === '专升本' ? '0' : '1'
-      }
-
       this.bankAddQuestion = question
-      this.openQuestionEditor(payload, isCloudBank ? 'cloudBank' : 'aiBank', -1)
+      this.openQuestionEditor(payload, 'aiBank', -1)
     },
-    async submitBankAddEditor(editor) {
+    closeCloudBankAdd(done) {
+      if (this.bankAddSaving) return
+      this.bankAddVisible = false
+      this.bankAddQuestion = null
+      this.bankAddSubjectPath = []
+      if (typeof done === 'function') done()
+    },
+    async confirmCloudBankAdd() {
       const question = this.bankAddQuestion
-      if (!question || this.bankAddSaving) return
-      const isCloudBank = this.editingTarget.type === 'cloudBank'
-      const payload = Object.keys(editor).reduce((result, key) => {
-        if (!key.startsWith('_')) result[key] = editor[key]
-        return result
-      }, {})
-      if (isCloudBank) {
-        payload.id = question.id || question.questId || ''
-        payload.spiderId = question.spiderId
-        payload.compulsory = this.questionEduType(question) === '专升本' ? '0' : '1'
+      if (!this.bankAddVisible || !question || this.bankAddSaving || question._banked) return
+      const subject = this.bankAddSubject
+      if (!subject) {
+        this.$message.warning('请选择学段及科目至最后一级')
+        return
+      }
+      const authInfo = getAuthInfo() || {}
+      const payload = {
+        institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || '',
+        subjectId: String(subject.value),
+        id: question.id || question.questId || ''
       }
       this.bankAddSaving = true
       this.$set(question, '_bankLoading', true)
       try {
-        await (isCloudBank ? addTopicByTeaching(payload) : addTopicByAi(payload))
+        await addQuestByIntehub(payload)
         this.$set(question, '_banked', true)
-        if (isCloudBank) {
-          this.$set(question, 'hasJoin', '1')
-        } else {
-          const aiQuestion = this.aiQuestionRows.find(item => item === question || this.isSameQuestion(item, question))
-          if (aiQuestion) this.$set(aiQuestion, '_banked', true)
-          this.cacheAiGenerationSnapshot()
-        }
+        this.$set(question, 'hasJoin', '1')
+        this.$message.success('题目加入自有题库成功')
+      } catch (error) {
+        this.$message.error(error.message || '题目加入自有题库失败，请稍后重试')
+      } finally {
+        this.bankAddSaving = false
+        this.$set(question, '_bankLoading', false)
+      }
+      if (question._banked) this.closeCloudBankAdd()
+    },
+    async submitBankAddEditor(editor) {
+      const question = this.bankAddQuestion
+      if (!question || this.bankAddSaving) return
+      const payload = Object.keys(editor).reduce((result, key) => {
+        if (!key.startsWith('_')) result[key] = editor[key]
+        return result
+      }, {})
+      this.bankAddSaving = true
+      this.$set(question, '_bankLoading', true)
+      try {
+        await addTopicByAi(payload)
+        this.$set(question, '_banked', true)
+        const aiQuestion = this.aiQuestionRows.find(item => item === question || this.isSameQuestion(item, question))
+        if (aiQuestion) this.$set(aiQuestion, '_banked', true)
+        this.cacheAiGenerationSnapshot()
         this.$message.success('题目加入自有题库成功')
       } catch (error) {
         // 请求层已统一展示后端错误信息，保留编辑弹窗供重试。
@@ -4013,7 +4084,7 @@ export default {
         }
       }
       const { type, groupIndex, childIndex } = this.editingTarget
-      if (type === 'cloudBank' || type === 'aiBank') {
+      if (type === 'aiBank') {
         return this.submitBankAddEditor(this.editingQuestion)
       }
       const group = this.ensureGroup(groupIndex)

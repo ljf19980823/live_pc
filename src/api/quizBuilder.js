@@ -332,15 +332,22 @@ export function addTopicByTeachingBatch(questions, { signal } = {}) {
   })
 }
 
-export function addTopicByTeaching(data) {
-  return request({
-    url: '/v1/topic/addTopicByTeaching',
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    data
+export async function addQuestByIntehub({ institutionId, subjectId, id }) {
+  if (!institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
+  if (!subjectId) throw new Error('请选择学段及科目至最后一级')
+  if (!id) throw new Error('当前题目缺少题目 ID，无法加入自有题库')
+
+  const response = await teachingCloud.post('/home/addQuestByIntehub', { institutionId, subjectId, id }, {
+    headers: { 'Content-Type': 'application/json' }
   })
+  const payload = response.data
+  if (payload && typeof payload === 'object' && (
+    ('code' in payload && ![0, 200].includes(Number(payload.code))) ||
+    payload.success === false || payload.success === 'false'
+  )) {
+    throw new Error(payload.message || payload.msg || '题目加入自有题库失败')
+  }
+  return payload
 }
 
 export async function getTopicDetail(id) {
