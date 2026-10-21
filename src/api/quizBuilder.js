@@ -472,20 +472,25 @@ export function getQuestImportTemplateUrl({ fileName, downName }) {
 export async function uploadTopicImage(file) {
   const formData = new FormData()
   formData.append('file', file)
-  const result = await request({
-    url: '/v1/topic/uploadImg',
-    method: 'post',
-    data: formData,
-    skipErrorMessage: true
-  })
+  const response = await teachingCloud.post('/file/uploadImg', formData)
+  const payload = response.data
+  if (payload && typeof payload === 'object' && (
+    ('code' in payload && ![0, 200].includes(Number(payload.code))) ||
+    payload.success === false || payload.success === 'false'
+  )) {
+    throw new Error(payload.message || payload.msg || '图片上传失败')
+  }
+  const result = payload && typeof payload === 'object'
+    ? payload.obj ?? payload.data ?? payload
+    : payload
   const imageUrl = typeof result === 'string'
     ? result
-    : result && (result.data || result.url)
+    : result && (result.src || result.url || result.data)
 
-  if (!imageUrl) {
+  if (typeof imageUrl !== 'string' || !imageUrl.trim()) {
     throw new Error('图片上传接口未返回图片地址')
   }
-  return String(imageUrl)
+  return imageUrl
 }
 
 export async function updateTeacherOneResource(data) {
