@@ -8,7 +8,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('screen-guard-change', handler)
   },
   // 开启/关闭防录屏守护（窗口内容保护 + 录屏/虚拟机进程告警）
-  setScreenGuard: (enabled) => ipcRenderer.send('set-screen-guard', !!enabled),
+  setScreenGuard: (enabled, options) => ipcRenderer.send('set-screen-guard', !!enabled, {
+    allowTeacherScreenShare: options?.allowTeacherScreenShare === true
+  }),
+  // 课堂宿主验证教师身份后，同步本机共享状态；不影响学生窗口保护。
+  setClassroomScreenSharing: (active) => ipcRenderer.send('set-classroom-screen-sharing', active === true),
 
   // ─── 系统信息 ─────────────────────────────────────────────────────────────
   // 获取操作系统、CPU、内存信息

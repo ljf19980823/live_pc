@@ -48,6 +48,8 @@
 </template>
 
 <script>
+import { getUserInfo } from '@/utils/auth'
+
 const ResourceLoadTimeout = 30 * 1000
 const ClassroomReadyTimeout = 90 * 1000
 
@@ -116,6 +118,7 @@ export default {
     }
   },
   beforeDestroy() {
+    this.setScreenSharing(false)
     this.setScreenGuard(false)
     this.clearLoadTimer()
     window.removeEventListener('message', this.handleMessage)
@@ -128,10 +131,21 @@ export default {
   methods: {
     setScreenGuard(enabled) {
       if (window.electronAPI?.setScreenGuard) {
-        window.electronAPI.setScreenGuard(enabled)
+        window.electronAPI.setScreenGuard(enabled, {
+          allowTeacherScreenShare: enabled && getUserInfo()?.role === 'TEACHER'
+        })
+      }
+    },
+    setScreenSharing(active) {
+      if (window.electronAPI?.setClassroomScreenSharing) {
+        // 以桌面端登录身份判断，不能由 iframe 消息自报教师身份。
+        window.electronAPI.setClassroomScreenSharing(
+          active === true && getUserInfo()?.role === 'TEACHER'
+        )
       }
     },
     beginLoading(timeout) {
+      this.setScreenSharing(false)
       this.clearLoadTimer()
       this.status = 'loading'
       this.documentLoaded = false
@@ -169,12 +183,18 @@ export default {
       if (!data || typeof data !== 'object') return
 
       if (data.type === 'CLASSROOM_BOOTSTRAP') {
+        this.setScreenSharing(false)
         this.bootstrapped = true
         this.clearLoadTimer()
         this.loadTimer = window.setTimeout(
           () => this.fail('课堂服务连接超时，请检查网络后重试。'),
           ClassroomReadyTimeout
         )
+      } else if (data.type === 'CLASSROOM_SCREEN_SHARE') {
+        if (typeof data.active !== 'boolean') return
+        this.setScreenSharing(data.active)
+      } else if (data.type === 'CLASSROOM_EXIT') {
+        this.setScreenSharing(false)
       } else if (data.type === 'CLASSROOM_READY') {
         this.clearLoadTimer()
         this.status = 'ready'
@@ -194,6 +214,7 @@ export default {
       this.online = false
     },
     fail(message) {
+      this.setScreenSharing(false)
       this.clearLoadTimer()
       this.status = 'error'
       this.errorMessage = message

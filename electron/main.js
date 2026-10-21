@@ -55,6 +55,9 @@ const SCREEN_GUARD_INTERVAL_NORMAL = 3000
 const SCREEN_GUARD_INTERVAL_ALERT = 500
 let screenGuardChecking = false
 let screenGuardAlerting = false
+let screenGuardEnabled = false
+let allowTeacherScreenShare = false
+let teacherScreenSharing = false
 
 startLocalCrashReporter()
 registerMainProcessDiagnostics()
@@ -341,13 +344,26 @@ async function checkScreenGuard () {
 
 // ─── 启动防录屏守护（仅直播课堂期间启用） ────────────────────────────────
 // 内容保护负责阻止截图/录屏，进程检测作为录屏/虚拟机告警的补充。
-function startScreenGuard () {
+function updateWindowContentProtection () {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.setContentProtection(screenGuardEnabled && !teacherScreenSharing)
+}
+
+function setTeacherScreenSharing (active) {
+  teacherScreenSharing = screenGuardEnabled && allowTeacherScreenShare && active === true
+  updateWindowContentProtection()
+}
+
+function startScreenGuard (options = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
   // 进程轮询无法判断 Win11 剪辑工具、微信或钉钉是否正在采集。
   // Electron 会调用系统级窗口捕获排除机制（支持的 Windows 版本上为
   // WDA_EXCLUDEFROMCAPTURE），同时保护截图和录屏结果。
-  mainWindow.setContentProtection(true)
+  screenGuardEnabled = true
+  allowTeacherScreenShare = options?.allowTeacherScreenShare === true
+  teacherScreenSharing = false
+  updateWindowContentProtection()
 
   // 重复开启时仍重新施加内容保护，但不创建多个进程轮询定时器。
   if (screenGuardInterval) return
@@ -361,6 +377,9 @@ function startScreenGuard () {
 }
 
 function stopScreenGuard () {
+  screenGuardEnabled = false
+  allowTeacherScreenShare = false
+  teacherScreenSharing = false
   if (screenGuardInterval) {
     clearInterval(screenGuardInterval)
     screenGuardInterval = null
@@ -370,7 +389,7 @@ function stopScreenGuard () {
   screenGuardChecking = false
 
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setContentProtection(false)
+    updateWindowContentProtection()
     mainWindow.webContents.send('screen-guard-change', {
       isRecording: false,
       isVM: false,
@@ -557,6 +576,7 @@ function createWindow () {
   // 用于排查长时间运行后偶发崩溃：oom 表示内存泄漏，crashed 表示渲染进程异常，
   // 区分主项目与 iframe 直播子项目责任时直接看此日志。
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    setTeacherScreenSharing(false)
     appendCrashLog('renderer', Object.assign({}, details, {
       name: mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getURL() : '',
       processId: mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getOSProcessId() : '',
@@ -1308,12 +1328,19 @@ ipcMain.on('window-minimize', (event) => {
 });
 
 // 课堂/回放防录屏：窗口内容保护 + 录屏/虚拟机进程告警；离开受保护页面后关闭
-ipcMain.on('set-screen-guard', (_, enabled) => {
+ipcMain.on('set-screen-guard', (event, enabled, options) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) return
   if (enabled) {
-    startScreenGuard()
+    startScreenGuard(options)
   } else {
     stopScreenGuard()
   }
+})
+
+// 仅教师课堂允许在共享期间暂停窗口内容保护，进程检测仍继续运行。
+ipcMain.on('set-classroom-screen-sharing', (event, active) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) return
+  setTeacherScreenSharing(active)
 })
 
 // ─── macOS 录屏权限查询与系统设置引导 ──────────────────────────────────
