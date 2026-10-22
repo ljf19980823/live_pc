@@ -137,6 +137,9 @@ let idCounter = 0
 /** 进度漂移修正阈值（秒）：双流时间差超过该值时强制同步 */
 const DRIFT_THRESHOLD = 1.5
 
+/** 左右方向键每次跳转的秒数 */
+const KEYBOARD_SEEK_STEP = 10
+
 /** 单行字幕最多字数（中文按字计），保证画面上只出现一行 */
 const SUBTITLE_MAX_CHARS = 16
 
@@ -379,6 +382,8 @@ export default {
           playsinline: true,
           preload: true,
           useH5Prism: true,
+          // SDK 快捷键会拦截输入框，统一由组件处理，并只操作主视频。
+          keyShortCuts: false,
           license: ALIPLAYER_LICENSE
         }
 
@@ -389,6 +394,7 @@ export default {
               this.mainPlayer = mainPlayer
               this.mainLoading = false
               this.setupSync(mainPlayer)
+              document.addEventListener('keydown', this.handlePlayerKeydown)
               this.$nextTick(() => this.injectCcButton())
               if (this.teacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
@@ -591,6 +597,40 @@ export default {
     safePlay(player) {
       if (!player) return
       try { player.play() } catch (e) {}
+    },
+
+    handlePlayerKeydown(e) {
+      const player = this.mainPlayer
+      const videoEl = this._mainVideoEl
+      if (!player || !videoEl || this.mainError || !(this.inline || this.visible)) return
+      if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
+
+      const target = e.target
+      if (target && (target.isContentEditable || (target.closest && target.closest(
+        'input, textarea, select, button, a, [role="button"], [role="textbox"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
+      )))) return
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const current = Number(player.getCurrentTime())
+        const duration = Number(player.getDuration())
+        if (!Number.isFinite(current) || !Number.isFinite(duration) || duration <= 0) return
+        e.preventDefault()
+        const offset = e.key === 'ArrowLeft' ? -KEYBOARD_SEEK_STEP : KEYBOARD_SEEK_STEP
+        this.seekTo(Math.max(0, Math.min(duration, current + offset)))
+      } else if (e.key === ' ') {
+        e.preventDefault()
+        // 长按空格时只切换一次，避免连续暂停、播放。
+        if (!e.repeat) {
+          if (videoEl.paused || videoEl.ended) this.safePlay(player)
+          else player.pause()
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const volume = Number(player.getVolume())
+        if (!Number.isFinite(volume)) return
+        e.preventDefault()
+        const offset = e.key === 'ArrowUp' ? 0.1 : -0.1
+        player.setVolume(Math.max(0, Math.min(1, Number((volume + offset).toFixed(1)))))
+      }
     },
 
     /** 播放中用 rAF 刷新字幕，保证逐字渐显更跟手 */
@@ -846,6 +886,7 @@ export default {
     // ─────────────── 销毁 ───────────────
 
     destroyPlayers() {
+      document.removeEventListener('keydown', this.handlePlayerKeydown)
       clearInterval(this.syncTimer)
       this.syncTimer = null
       this.mainLoading = false
