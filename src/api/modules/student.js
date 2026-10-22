@@ -27,3 +27,9 @@ export const getRecentViewList = (params) => get('/edu/recentView/view', params)
 
 // 上报业务观看时长（type: 3 视频等）
 export const addBusinessView = data => post('/edu/recentView/addBusinessView', data)
+
+// 保存检测到的录屏软件
+export const addSoftwareCheck = data => post('/edu/recentView/addSoftwareCheck', data, {
+  // 检测上报失败不能影响课堂观看，错误会由调用方记录到控制台
+  skipErrorMessage: true
+})
