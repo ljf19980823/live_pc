@@ -364,10 +364,10 @@
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
             <img v-if="rightTab === 'course'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
-          <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'quiz'">
+          <!-- <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'quiz'">
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'quiz' }">课后测</div>
             <img v-if="rightTab === 'quiz'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
-          </div>
+          </div> -->
         </div>
       </div>
       <!-- 课程tab列表 -->
@@ -409,6 +409,39 @@
         <div class="app_container_box_right_last quiz-list-wrap" v-loading="afterQuizLoading">
           <div class="filter-bar">
             <div class="filter-bar__left">
+              <div class="filter-item">
+                <div class="filter-item__control filter-item__control--select">
+                  <div class="ls_class_select_wrap">
+                    <el-select
+                      v-model="afterQuizFilter.classIds"
+                      multiple
+                      collapse-tags
+                      placeholder="全部班级"
+                      size="mini"
+                      :clearable="false"
+                      filterable
+                      class="ls_class_select ls_class_select--multiple"
+                      @change="handleAfterQuizSearch"
+                    >
+                      <el-option
+                        v-for="item in classList"
+                        :key="item.classId"
+                        :label="item.alias || item.name"
+                        :value="item.classId"
+                      />
+                    </el-select>
+                    <i
+                      v-if="afterQuizFilter.classIds.length"
+                      class="el-icon-circle-close ls_class_select_clear"
+                      @click.stop="clearAfterQuizField('classIds')"
+                    />
+                    <i
+                      v-else
+                      class="el-icon-arrow-down ls_class_select_arrow"
+                    />
+                  </div>
+                </div>
+              </div>
               <div class="filter-item">
                 <!-- <span class="filter-item__label">时间</span> -->
                 <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
@@ -546,9 +579,9 @@
                 <div class="quiz-card__title" :title="item.name">{{ item.name }}</div>
                 <span
                   class="quiz-card__status"
-                  :class="item.finishStatus === '1' ? 'quiz-card__status--done' : 'quiz-card__status--todo'"
+                  :class="isAfterQuizFinished(item) ? 'quiz-card__status--done' : 'quiz-card__status--todo'"
                 >
-                  {{ item.finishStatus === '1' ? '已做题' : '未做题' }}
+                  {{ isAfterQuizFinished(item) ? '已做题' : '未做题' }}
                 </span>
               </div>
               <div class="quiz-card__meta">
@@ -560,11 +593,11 @@
                   <span class="quiz-card__meta-label">发布时间</span>
                   <span class="quiz-card__meta-value">{{ formatQuizTime(item.createTime) }}</span>
                 </div>
-                <div class="quiz-card__meta-row" v-if="item.finishStatus === '1' || item.topicNum">
+                <div class="quiz-card__meta-row" v-if="isAfterQuizFinished(item) || item.topicNum">
                   <span class="quiz-card__meta-label">做题信息</span>
                   <span class="quiz-card__meta-value">
                     {{ item.finishNum || 0 }}次 · {{ item.topicNum || 0 }}题
-                    <template v-if="item.finishStatus === '1'"> · {{ item.finishScore }}分</template>
+                    <template v-if="isAfterQuizFinished(item)"> · {{ item.finishScore }}分</template>
                   </span>
                 </div>
               </div>
@@ -576,8 +609,8 @@
                 >查看回放</button>
                
                   <button class="quiz-card__btn quiz-card__btn--outline"  @click.stop="openRanking(item)">排行榜</button>
-                  <button class="quiz-card__btn quiz-card__btn--record" v-if=" item.finishStatus === '1'" @click.stop="openExamRecord(item)">考试记录</button>
-                  <button class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
+                  <button class="quiz-card__btn quiz-card__btn--record" v-if="isAfterQuizFinished(item)" @click.stop="openExamRecord(item)">考试记录</button>
+                  <button v-if="isAfterQuizIncomplete(item)" class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
               
               </div>
             </div>
@@ -853,7 +886,7 @@
     <ExamPage
       v-if="showExam"
       :examInfo="currentExamItem"
-      :classId="selectedClassId"
+      :classId="(currentExamItem && currentExamItem.classId) || selectedClassId"
       @back="onExamBack"
       @submitted="onExamSubmitted"
     />
@@ -862,7 +895,7 @@
     <ExamRecordPage
       v-if="showExamRecord"
       :examInfo="currentExamRecordItem"
-      :classId="selectedClassId"
+      :classId="(currentExamRecordItem && currentExamRecordItem.classId) || selectedClassId"
       @back="showExamRecord = false"
     />
 
@@ -870,7 +903,7 @@
     <RankingPage
       :visible="showRanking"
       :examConfigId="rankingExamConfigId"
-      :classId="selectedClassId"
+      :classId="rankingClassId || selectedClassId"
       @back="showRanking = false"
     />
 
@@ -974,7 +1007,7 @@ export default {
       // 课后测
       afterQuizList: [],
       afterQuizLoading: false,
-      afterQuizFilter: { subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' },
+      afterQuizFilter: { classIds: [], subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' },
       afterQuizTimeRange: [],
       afterQuizDatePickerOptions: { disabledDate: (time) => time.getTime() > Date.now() },
       subjectOptions: [],
@@ -992,6 +1025,7 @@ export default {
       // 排行榜
       showRanking: false,
       rankingExamConfigId: '',
+      rankingClassId: '',
 
        // macOS 屏幕录制权限引导弹窗
       // macOS 屏幕采集失败弹窗（权限已授权但系统无法获取屏幕源）
@@ -1018,7 +1052,13 @@ export default {
     },
     rightTab(val) {
       if (val === 'course') this.fetchCourseList()
-      if (val === 'quiz') { this.fetchAfterQuizFilterOptions(); this.fetchAfterQuizList() }
+      if (val === 'quiz') {
+        if (!this.afterQuizFilter.classIds.length && this.selectedClassId) {
+          this.afterQuizFilter.classIds = [this.selectedClassId]
+        }
+        this.fetchAfterQuizFilterOptions()
+        this.fetchAfterQuizList()
+      }
     },
     rightCourseSearch(val) {
       clearTimeout(this._courseSearchTimer)
@@ -1278,12 +1318,12 @@ export default {
       }
     },
     async fetchAfterQuizList() {
-      if (!this.selectedClassId) return
       const userInfo = getUserInfo() || {}
       const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
       this.afterQuizLoading = true
       try {
-        const params = { classId: this.selectedClassId, studentId }
+        const params = { studentId }
+        if (this.afterQuizFilter.classIds.length) params.classId = this.afterQuizFilter.classIds.join(',')
         if (this.afterQuizFilter.subjectId) params.subjectId = this.afterQuizFilter.subjectId
         if (this.afterQuizFilter.quizStartTime) params.quizStartTime = this.afterQuizFilter.quizStartTime
         if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
@@ -1328,11 +1368,18 @@ export default {
       this.handleAfterQuizSearch()
     },
     clearAfterQuizField(field) {
-      this.afterQuizFilter[field] = ''
+      this.afterQuizFilter[field] = field === 'classIds' ? [] : ''
       this.handleAfterQuizSearch()
+    },
+    isAfterQuizFinished(item) {
+      return String(item && item.finishStatus) === '1'
+    },
+    isAfterQuizIncomplete(item) {
+      return String(item && item.finishStatus) === '0'
     },
     openRanking(item) {
       this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
+      this.rankingClassId = item.classId || this.selectedClassId
       this.showRanking = true
     },
     startExam(item) {
@@ -1341,16 +1388,19 @@ export default {
         name: item.name || item.examName || '',
         duration: item.duration || 60,
         examConfigId: item.examConfigId || item.configId || '',
-        liveId: item.liveId || ''
+        liveId: item.liveId || '',
+        classId: item.classId || this.selectedClassId
       }
       this.showExam = true
     },
     openExamRecord(item) {
-      const cls = this.currentClass || {}
+      const classId = item.classId || this.selectedClassId
+      const cls = this.classList.find(classItem => String(classItem.classId) === String(classId)) || this.currentClass || {}
       this.currentExamRecordItem = {
         id: item.id || item.quizId || item.examId,
         name: item.name || item.examName || '',
-        className: cls.alias || cls.name || ''
+        classId,
+        className: item.className || cls.alias || cls.name || ''
       }
       this.showExamRecord = true
     },
@@ -1394,6 +1444,8 @@ export default {
       if (this.rightTab === 'course') {
         this.fetchCourseList()
       } else if (this.rightTab === 'quiz') {
+        this.afterQuizFilter.classIds = this.selectedClassId ? [this.selectedClassId] : []
+        this.fetchAfterQuizFilterOptions()
         this.fetchAfterQuizList()
       } else {
         this.rightTab = 'course'
@@ -3414,6 +3466,13 @@ border-bottom: 1px solid #DBEAFE;
   }
   ::v-deep .el-select__input {
     margin-left: 0 !important;
+  }
+}
+.ls_class_select--multiple {
+  width: 180px;
+
+  ::v-deep .el-select__tags {
+    max-width: calc(100% - 24px) !important;
   }
 }
 .filter-item__clear {

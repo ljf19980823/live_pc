@@ -265,11 +265,14 @@
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
-                  v-model="quizClassId"
-                  placeholder="请选择班级"
+                  v-model="quizClassIds"
+                  multiple
+                  collapse-tags
+                  placeholder="全部班级"
                   size="mini"
                   filterable
-                  class="ls_class_select"
+                  clearable
+                  class="ls_class_select ls_class_select--multiple"
                   @change="handleQuizClassChange"
                 >
                   <el-option
@@ -351,7 +354,7 @@
         <template v-if="!quizLoading">
           <div
             v-for="item in filteredQuizList"
-            :key="item.examConfigId || item.id"
+            :key="`${item.classId || ''}-${item.examConfigId || item.id}`"
             class="quiz-card"
             @click="openQuizDetail(item)"
           >
@@ -875,7 +878,7 @@ export default {
       quizKeyword: '',
       quizList: [],
       quizLoading: false,
-      quizClassId: '',
+      quizClassIds: [],
       quizSubjectId: '',
       quizDateRange: [],
       quizSubjectOptions: [],
@@ -1234,8 +1237,9 @@ created() {
     ...mapGetters('user', ['userInfo']),
     ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
     quizClassName() {
-      const cls = this.classList.find(c => c.value === this.quizClassId)
-      return cls ? cls.label : ''
+      const classId = (this.currentQuizCourse && this.currentQuizCourse.classId) || this.quizClassIds[0]
+      const cls = this.classList.find(c => String(c.value) === String(classId))
+      return (this.currentQuizCourse && this.currentQuizCourse.className) || (cls ? cls.label : '')
     },
     filteredQuizList() {
       return this.quizList
@@ -2039,10 +2043,10 @@ created() {
       this.quizList = []
       this.quizLoading = true
       await this.fetchClassList()
-      if (!this.quizClassId && this.classList.length) {
-        this.quizClassId = this.classList[0].value
+      if (!this.quizClassIds.length && this.classList.length) {
+        this.quizClassIds = [this.classList[0].value]
       }
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.quizList = []
         this.quizSubjectOptions = []
         this.afterQuizOptions = []
@@ -2164,12 +2168,12 @@ created() {
       this.$nextTick(() => apply())
     },
     async fetchQuizSubjectOptions() {
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.quizSubjectOptions = []
         return
       }
       try {
-        const res = await getSubjectOptions({ classId: this.quizClassId })
+        const res = await getSubjectOptions({ classId: this.quizClassIds[0] })
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
       } catch (e) {
@@ -2178,15 +2182,16 @@ created() {
       }
     },
     async fetchQuizFilterOptions() {
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.afterQuizOptions = []
         this.teacherOptions = []
         return
       }
       try {
+        const classId = this.quizClassIds[0]
         const [quizRes, teacherRes] = await Promise.all([
-          getAfterQuizOptions({ classId: this.quizClassId }),
-          getTeacherOptions({ classId: this.quizClassId })
+          getAfterQuizOptions({ classId }),
+          getTeacherOptions({ classId })
         ])
         this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
         this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
@@ -2238,11 +2243,11 @@ created() {
       this.quizSuggestVisible = false
     },
     async fetchQuizList() {
-      if (!this.quizClassId) return
       const { userId } = getUserInfo()
       this.quizLoading = true
       try {
-        const params = { classId: this.quizClassId, teacherId: userId }
+        const params = { teacherId: userId }
+        if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
         if (this.quizSubjectId) params.subjectId = this.quizSubjectId
         if (this.quizDateRange && this.quizDateRange.length === 2) {
           params.quizStartTime = this.quizDateRange[0]
@@ -2260,7 +2265,7 @@ created() {
       }
     },
     openQuizDetail(item) {
-      this.currentQuizCourse = { ...item, classId: this.quizClassId }
+      this.currentQuizCourse = { ...item, classId: item.classId || this.quizClassIds[0] || '' }
       this.showQuizDetail = true
     },
 
@@ -4424,6 +4429,13 @@ margin-bottom: 12px;
   }
   ::v-deep .el-select__input {
     margin-left: 0 !important;
+  }
+}
+.ls_class_select--multiple {
+  width: 180px;
+
+  ::v-deep .el-select__tags {
+    max-width: calc(100% - 24px) !important;
   }
 }
 

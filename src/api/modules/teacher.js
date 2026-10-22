@@ -177,8 +177,8 @@ export const getTeacherOptions = params => get('/edu/sso/teacher/options', param
 // 获取课后测列表
 export const getAfterQuizList = params => get('/edu/after/quiz/list', params)
 
-// 获取考试题目详情（Path 参数 examId）
-export const getExamDetail = examId => get(`/edu/after/quiz/quests/${examId}`)
+// 根据考试配置 ID 获取考试题目（Path 参数 configId）
+export const getExamQuestionsByConfig = configId => get(`/edu/after/quiz/quests/config/${configId}`)
 
 // 提交单题答案（过程保存）
 export const saveExamAnswer = data => post('/edu/after/quiz/answer/save', data)

@@ -960,7 +960,7 @@
     <publish-after-quiz-dialog
       v-if="publishConfirmVisible"
       :initial-config="publishConfirmConfig"
-      :show-title="practiceEntrySource === 'teacher-home'"
+      show-title
       :show-numbers="false"
       require-students
       :submitting="publishing"
@@ -4194,25 +4194,28 @@ export default {
       const mother = group && group.mother
       if (!mother) return null
       const id = mother.id || mother.questId
+      const subjectId = mother.subjectId || (this.questionEduType(mother) === '专升本'
+        ? this.zsb.subjectId
+        : this.lastValue(this.k12.subjectPath))
       const pointId = mother.pointId || mother.treeId
       const knowledge = mother.knowledge || mother.knowledgeId
       const pointName = mother.pointName
       const knowledgeName = mother.knowledgeName
-      const isAiQuestion = String(mother.isAi || '') === '1' || Boolean(mother._aiExportSource)
-      if (!num || (!isAiQuestion && !id)) return null
-      const payload = {
+      if (!id || !num) return null
+      return {
+        id: String(id),
+        subjectId: String(subjectId || ''),
+        compulsory: mother.compulsory,
+        pointId: String(pointId),
+        knowledge: String(knowledge),
+        knowledgeName: String(knowledgeName),
+        pointName: String(pointName),
+        questTemplateId: mother.questTemplateId || mother.questType || '',
+        matchQuestType: this.matchQuestType ? 1 : 0,
+        allowRepeat: this.allowRepeat ? 1 : 0,
         uniqueId: this.createUniqueId(),
-        knowledgeName: String(knowledgeName || ''),
-        pointName: String(pointName || ''),
         num
       }
-      if (!isAiQuestion) {
-        payload.id = String(id)
-        payload.pointId = String(pointId || '')
-        payload.knowledge = String(knowledge || '')
-        payload.compulsory = this.questionEduType(mother) === 'K9K12' ? 1 : 0
-      }
-      return payload
     },
     async autoImportQuestions() {
       const importTasks = this.paperGroups
@@ -4401,10 +4404,11 @@ export default {
         classId,
         className: String(publishConfig.className || '')
       }] : []
+      const liveId = this.currentLiveId()
 
       return {
-        liveId: this.currentLiveId(),
-        name: publishConfig.name || '',
+        ...(liveId ? { liveId } : {}),
+        name: String(publishConfig.name || '').trim(),
         subjectId: String(subjectId || this.practiceConfig.subjectId || ''),
         examDuration: Number(publishConfig.duration),
         topicNum: Number(publishConfig.originalCount),
@@ -4446,15 +4450,22 @@ export default {
     },
     async confirmPublishPractice(config) {
       if (this.publishing) return
+      const name = String(config.name || '').trim()
+      if (!name) {
+        this.$message.warning('请输入课后测名称')
+        return
+      }
       this.publishConfirmConfig = {
         ...config,
+        name,
         entrySource: this.practiceEntrySource,
         students: (config.students || []).map(student => ({ ...student }))
       }
       savePracticeRouteConfig(this.publishConfirmConfig)
       this.publishing = true
       try {
-        await publishAfterQuiz(this.buildPublishPayload(this.publishConfirmConfig))
+        const payload = this.buildPublishPayload(this.publishConfirmConfig)
+        await publishAfterQuiz(payload)
         this.publishConfirmVisible = false
         this.$message.success('练习发布成功')
         this.handleBack()

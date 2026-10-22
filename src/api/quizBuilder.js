@@ -596,7 +596,7 @@ export function getMinutesSubject(minutesId) {
 }
 
 export function getQuestListByKnowledge(data) {
-  return teachingCloud.post('/home/getQuestListByKnowledge', data).then(response => {
+  return teachingCloud.post('/home/getQuestListByKnowledgeFromLearnClass', data).then(response => {
     const payload = response.data || {}
     const result = payload && payload.data !== undefined ? payload.data : payload
     if (Array.isArray(result)) return result
