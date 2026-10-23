@@ -387,6 +387,22 @@
                 <span class="quiz-card__meta-label">发布时间</span>
                 <span class="quiz-card__meta-value">{{ formatQuizTime(item.createTime) }}</span>
               </div>
+              <template v-if="isQuizFinished(item)">
+                <div class="quiz-card__meta-row">
+                  <span class="quiz-card__meta-label">提交时间</span>
+                  <span class="quiz-card__meta-value">{{ formatQuizTime(item.submitTime) }}</span>
+                </div>
+                <div class="quiz-card__result">
+                  <div class="quiz-card__result-item">
+                    <span class="quiz-card__result-label">得分</span>
+                    <span class="quiz-card__result-score">{{ getQuizScore(item) }} 分</span>
+                  </div>
+                  <div class="quiz-card__result-item">
+                    <span class="quiz-card__result-label">正确数量</span>
+                    <span class="quiz-card__result-value">{{ item.correctNum || 0 }} / {{ item.topicNum || 0 }} 题</span>
+                  </div>
+                </div>
+              </template>
             </div>
             <div class="quiz-card__actions">
               <template v-if="isQuizFinished(item)">
@@ -396,7 +412,21 @@
                   @click.stop="openVideoPlayer(item)"
                 >查看回放</button>
                 <button class="quiz-card__btn quiz-card__btn--outline" @click.stop="openRanking(item)">排行榜</button>
-                <button class="quiz-card__btn quiz-card__btn--record" @click.stop="openExamRecord(item)">考试记录</button>
+                <button
+                  v-if="item.reportUrl"
+                  class="quiz-card__btn quiz-card__btn--outline"
+                  @click.stop="openQuizReport(item)"
+                >查看报告</button>
+                <button
+                  v-if="item.bestRecordId"
+                  class="quiz-card__btn quiz-card__btn--record"
+                  @click.stop="openAnswerDetail(item)"
+                >查看详情</button>
+                <button
+                  v-if="hasQuizErrorExercises(item) && item.bestRecordId"
+                  class="quiz-card__btn quiz-card__btn--primary"
+                  @click.stop="openWrongExercise(item)"
+                >错题提升</button>
               </template>
               <template v-else>
                 <button
@@ -422,12 +452,28 @@
       @submitted="onExamSubmitted"
     />
 
-    <!-- 考试记录页面 -->
-    <ExamRecordPage
-      v-if="showExamRecord"
-      :examInfo="currentExamRecordItem"
-      :classId="(currentExamRecordItem && currentExamRecordItem.classId) || quizClassIds[0] || ''"
-      @back="showExamRecord = false"
+    <!-- 做题详情 -->
+    <StudentAnswerDetail
+      :visible="showAnswerDetail"
+      :record-id="selectedRecordId"
+      :attempt-index="1"
+      @close="showAnswerDetail = false"
+    />
+
+    <!-- 错题提升 -->
+    <WrongExercisePage
+      :visible="showWrongExercise"
+      :record-id="wrongRecordId"
+      @close="showWrongExercise = false"
+    />
+
+    <!-- 课后测诊断报告 -->
+    <AfterClassReport
+      :visible="showReport"
+      :class-id="reportClassId"
+      :record-id="reportRecordId"
+      :report-url="reportUrl"
+      @close="showReport = false"
     />
 
     <!-- 排行榜页面 -->
@@ -899,13 +945,15 @@ import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from '@/views/Student/Class/ExamPage.vue'
-import ExamRecordPage from '@/views/Student/Class/ExamRecordPage.vue'
+import StudentAnswerDetail from '@/views/Student/Class/StudentAnswerDetail.vue'
+import WrongExercisePage from '@/views/Student/Class/WrongExercisePage.vue'
 import RankingPage from '@/views/Student/Class/RankingPage.vue'
+import AfterClassReport from '@/views/teacher/Class/AfterClassReport.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'StudentOnline',
-  components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, ExamRecordPage, RankingPage },
+  components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, StudentAnswerDetail, WrongExercisePage, RankingPage, AfterClassReport },
   directives: { Clickoutside },
   data() {
     return {
@@ -932,8 +980,14 @@ export default {
       quizFilterTeacherId: '',
       showExam: false,
       currentExamItem: null,
-      showExamRecord: false,
-      currentExamRecordItem: null,
+      showAnswerDetail: false,
+      selectedRecordId: '',
+      showWrongExercise: false,
+      wrongRecordId: '',
+      showReport: false,
+      reportClassId: '',
+      reportRecordId: '',
+      reportUrl: '',
       showRanking: false,
       rankingExamConfigId: '',
       rankingClassId: '',
@@ -2246,6 +2300,18 @@ created() {
     isQuizIncomplete(item) {
       return String(item && item.finishStatus) === '0'
     },
+    hasQuizErrorExercises(item) {
+      return String(item && item.hasErrorExercises) === '1'
+    },
+    getQuizScore(item) {
+      if (item && item.finishScore !== undefined && item.finishScore !== null && item.finishScore !== '') {
+        return item.finishScore
+      }
+      if (item && item.score !== undefined && item.score !== null && item.score !== '') {
+        return item.score
+      }
+      return 0
+    },
     openRanking(item) {
       this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
       this.rankingClassId = item.classId || this.quizClassIds[0] || ''
@@ -2262,16 +2328,22 @@ created() {
       }
       this.showExam = true
     },
-    openExamRecord(item) {
+    openAnswerDetail(item) {
+      this.selectedRecordId = String(item.bestRecordId || '')
+      if (!this.selectedRecordId) return
+      this.showAnswerDetail = true
+    },
+    openWrongExercise(item) {
+      this.wrongRecordId = String(item.bestRecordId || '')
+      if (!this.wrongRecordId) return
+      this.showWrongExercise = true
+    },
+    openQuizReport(item) {
       const classId = item.classId || this.quizClassIds[0] || ''
-      const cls = this.classList.find(classItem => String(classItem.value) === String(classId))
-      this.currentExamRecordItem = {
-        id: item.id || item.quizId || item.examId,
-        name: item.name || item.examName || '',
-        className: item.className || (cls && cls.label) || '',
-        classId
-      }
-      this.showExamRecord = true
+      this.reportClassId = classId
+      this.reportRecordId = item.bestRecordId || ''
+      this.reportUrl = item.reportUrl || ''
+      this.showReport = true
     },
     onExamBack() {
       this.showExam = false
@@ -3115,6 +3187,38 @@ border-radius: 10px 10px 10px 10px;
     font-size: 12px;
     color: #314158;
     font-weight: 600;
+  }
+
+  &__result {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  &__result-item {
+    min-width: 0;
+    padding: 10px 12px;
+    background: rgba(239, 246, 255, 0.7);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__result-label {
+    font-size: 11px;
+    color: #90A1B9;
+  }
+
+  &__result-score,
+  &__result-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1F7CFF;
+  }
+
+  &__result-score {
+    color: #22B877;
   }
 
   &__actions {

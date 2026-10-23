@@ -6,7 +6,7 @@
         <img src="@/assets/images/class/back_icon.png" class="act-detail__back-arrow" alt="返回" />
         <span class="act-detail__back-text">返回</span>
       </div>
-      <div class="act-detail__title">{{ className }} - 学生做题情况</div>
+      <div class="act-detail__title">学生做题情况</div>
       <div class="act-detail__header-right"></div>
     </div>
 
@@ -320,7 +320,7 @@ export default {
     shareReport(row) {
       const classId = (this.courseInfo && this.courseInfo.classId) || ''
       const recordId = row.recordId || ''
-      // this.shareReportUrl = `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
+      // this.shareReportUrl = `https://test.live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
       this.shareReportUrl = `https://live.fjlsjy123.com/portal/api/afterClassReport.html?classId=${classId}&recordId=${recordId}`
       this.shareCopied = false
       this.shareDialogVisible = true
