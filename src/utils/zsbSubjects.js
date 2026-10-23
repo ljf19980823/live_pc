@@ -1,5 +1,5 @@
-export function normalizeZsbSubjectOptions(groups) {
-  return (Array.isArray(groups) ? groups : []).filter(group => group && group.id != null).map(group => ({
+export function normalizeZsbSubjectOptions(groups, { keepEmpty = false } = {}) {
+  const options = (Array.isArray(groups) ? groups : []).filter(group => group && group.id != null).map(group => ({
     value: String(group.id),
     label: group.name || '',
     children: (Array.isArray(group.subjectList) ? group.subjectList : [])
@@ -9,7 +9,8 @@ export function normalizeZsbSubjectOptions(groups) {
         value: String(subject.id),
         label: subject.name || subject.otherName || ''
       }))
-  })).filter(group => group.children.length)
+  }))
+  return keepEmpty ? options : options.filter(group => group.children.length)
 }
 
 export function findZsbSubjectPath(options, subjectId) {

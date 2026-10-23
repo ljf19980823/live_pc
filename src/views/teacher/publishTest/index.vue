@@ -1346,17 +1346,21 @@ export default {
       }))
     },
     aiCloudSubjectOptions() {
-      const toGroups = (root, prefix, eduType) => (root && root.children || []).map((group, groupIndex) => ({
-        ...group,
-        value: `${prefix}:${group.id || groupIndex}`,
-        originalValue: group.value,
-        eduType,
-        children: (group.children || []).map(subject => ({
+      const toGroups = (root, prefix, eduType) => (root && root.children || []).map((group, groupIndex) => {
+        const children = (group.children || []).map(subject => ({
           ...subject,
           value: String(subject.id),
           leaf: true
         }))
-      })).filter(group => group.children.length)
+        return {
+          ...group,
+          value: `${prefix}:${group.id || groupIndex}`,
+          originalValue: group.value,
+          eduType,
+          leaf: false,
+          children
+        }
+      })
       const k12Root = this.aiBusinessOptions.find(item => item.standardType === 1)
       const upgradeRoot = this.aiBusinessOptions.find(item => item.standardType === 2)
       const k12 = toGroups(k12Root, 'k12', 'K9K12')
@@ -1571,7 +1575,8 @@ export default {
         children: zsbOptions.map(group => ({
           ...group,
           value: `zsb:${group.value}`,
-          originalValue: group.value
+          originalValue: group.value,
+          isSubjectGroup: true
         }))
       }] : []
       return [...k12, ...zsb]
@@ -1598,30 +1603,32 @@ export default {
       }
       return selected && selected.leaf ? selected : null
     },
-    buildImportSubjectOptionsFromSearch() {
+    buildImportSubjectOptionsFromSearch(subjectOptions = this.cloudSubjectOptions) {
       const normalizeChildren = (nodes, standardType) => (nodes || []).map(node => {
         const children = normalizeChildren(node.children || [], standardType)
         const sourceId = node.id != null ? node.id : node.value
         const detail = standardType === 1 && !children.length ? this.findK12Subject(sourceId) : {}
+        const isEmptyStage = node.isSubjectGroup && !children.length
         return {
           ...detail,
           ...node,
           id: String(detail.id != null ? detail.id : sourceId),
           value: String(node.value),
-          leaf: !children.length,
-          ...(children.length ? { children } : {})
+          leaf: !children.length && !isEmptyStage,
+          ...(children.length || isEmptyStage ? { children } : {})
         }
       })
-      return this.cloudSubjectOptions.map(root => {
+      return subjectOptions.map(root => {
         const standardType = root.eduType === 'K9K12' ? 1 : 2
+        const children = normalizeChildren(root.children, standardType)
         return {
           ...root,
           id: String(root.value),
           standardType,
           leaf: false,
-          children: normalizeChildren(root.children, standardType)
+          children
         }
-      }).filter(root => root.children.length)
+      })
     },
     captureAiFilterRequest(kind) {
       // 同类请求只接受最新响应；上下文不包含 eduType，切换学习赛道不会使 AI 请求失效。
@@ -1664,7 +1671,7 @@ export default {
           leaf: false,
           children
         }
-      }).filter(group => group.children.length)
+      })
     },
     normalizeAiKnowledgeTree(rows) {
       // 部分接口返回空 children 的扁平列表，此时需按 parentId 还原层级。
@@ -2166,6 +2173,7 @@ export default {
         ...subject,
         name: subject.name || subject.label
       })))
+      return groups || []
     },
     async handleZsbSubjectPathChange(path) {
       const subject = getZsbSubject(this.zsbSubjectOptions, path)
@@ -2261,6 +2269,7 @@ export default {
         group.subjectList || group.children || group.childList || []
       ))
       this.k12SubjectOptions = this.normalizeK12SubjectOptions(groups)
+      return groups || []
     },
     findK12Subject(subjectId) {
       const matches = item => String(item.id) === String(subjectId)
@@ -3668,9 +3677,13 @@ export default {
       try {
         const tasks = [this.loadK12Base()]
         if (this.eduTypes.includes('专升本')) tasks.push(this.loadZsbSubjectBase())
-        await Promise.all(tasks)
+        const [k12Groups, zsbGroups = []] = await Promise.all(tasks)
         if (!isCurrent()) return
-        const businesses = this.buildImportSubjectOptionsFromSearch()
+        const subjectOptions = this.buildBankSubjectOptions(
+          this.normalizeK12SubjectOptions(k12Groups),
+          normalizeZsbSubjectOptions(zsbGroups, { keepEmpty: true })
+        )
+        const businesses = this.buildImportSubjectOptionsFromSearch(subjectOptions)
         const subjectTrees = {}
         businesses.forEach(business => {
           subjectTrees[business.id] = business.children || []
