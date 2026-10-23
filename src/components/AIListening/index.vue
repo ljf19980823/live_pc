@@ -180,12 +180,11 @@
              <div v-else class="al-summary-empty">
               <span>暂无AI纪要</span>
             </div>
-            <!-- 全屏遮罩（支持缩放，便于查看思维导图等大图） -->
+            <!-- 全屏遮罩（支持缩放，纪要正文由 iframe 自身滚动） -->
             <transition name="al-fs-fade">
               <div v-if="summaryFullscreen" class="al-summary-fs-mask" @click.self="closeSummaryFullscreen">
                 <div class="al-summary-fs-box">
                   <div class="al-summary-fs-toolbar">
-                    <!-- <span class="al-summary-fs-tip">Ctrl + 滚轮缩放思维导图，放大后可拖拽平移</span> -->
                     <div class="al-summary-fs-zoom-btns">
                       <button type="button" class="al-summary-fs-zoom-btn" title="缩小" @click="setSummaryFsZoom(summaryFsZoom - 0.25)">−</button>
                       <button type="button" class="al-summary-fs-zoom-label" title="重置缩放" @click="setSummaryFsZoom(1)">
@@ -202,12 +201,12 @@
                   <div
                     ref="summaryFsViewport"
                     class="al-summary-fs-viewport"
-                    :class="{ 'is-zoomed': summaryFsZoom > 1, 'is-panning': summaryFsPanning }"
                   >
                     <div
                       class="al-summary-fs-scaler"
                       :style="summaryFsScalerStyle"
                     >
+                      <!-- 保留 iframe 的原生滚动，跨域纪要也能查看完整正文。 -->
                       <iframe
                         ref="summaryFsIframe"
                         :src="summaryHtmlUrl"
@@ -217,13 +216,6 @@
                         allowfullscreen
                         @load="onSummaryFsIframeLoad"
                       ></iframe>
-                      <!-- 放大后盖一层透明层，避免跨域 iframe 吞掉拖拽/滚轮事件 -->
-                      <div
-                        v-show="summaryFsZoom > 1"
-                        class="al-summary-fs-pan-layer"
-                        @mousedown="onSummaryFsPanStart"
-                        @wheel="onSummaryFsWheel"
-                      ></div>
                     </div>
                   </div>
                 </div>
@@ -519,11 +511,6 @@ export default {
       summaryHtmlUrl: '',
       summaryFullscreen: false,
       summaryFsZoom: 1,
-      summaryFsPanning: false,
-      summaryFsPanStartX: 0,
-      summaryFsPanStartY: 0,
-      summaryFsScrollLeft: 0,
-      summaryFsScrollTop: 0,
 
       transcriptFullscreen: false,
 
@@ -955,13 +942,12 @@ export default {
 
     closeSummaryFullscreen() {
       this.unbindSummaryFsZoomEvents()
-      this.stopSummaryFsPan()
       this.summaryFullscreen = false
       this.summaryFsZoom = 1
     },
 
     bindSummaryFsZoomEvents() {
-      // capture 监听，确保鼠标在跨域 iframe 上时 Ctrl+滚轮仍可缩放
+      // 监听外层视口的缩放快捷操作；iframe 内保留原生滚动
       window.addEventListener('wheel', this.onSummaryFsWheelCapture, { passive: false, capture: true })
       window.addEventListener('keydown', this.onSummaryFsKeydown)
     },
@@ -1025,50 +1011,6 @@ export default {
         el.scrollLeft = Math.max(0, el.scrollWidth * anchorX - el.clientWidth / 2)
         el.scrollTop = Math.max(0, el.scrollHeight * anchorY - el.clientHeight / 2)
       })
-    },
-
-    onSummaryFsWheel(e) {
-      // 放大层上的滚轮：Ctrl 缩放，否则交给外层滚动
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
-        const step = e.deltaY > 0 ? -0.1 : 0.1
-        this.setSummaryFsZoom(this.summaryFsZoom + step)
-        return
-      }
-      const viewport = this.$refs.summaryFsViewport
-      if (!viewport) return
-      viewport.scrollLeft += e.deltaX || 0
-      viewport.scrollTop += e.deltaY || 0
-      e.preventDefault()
-    },
-
-    onSummaryFsPanStart(e) {
-      if (e.button !== 0) return
-      if (this.summaryFsZoom <= 1) return
-      const viewport = this.$refs.summaryFsViewport
-      if (!viewport) return
-      e.preventDefault()
-      this.summaryFsPanning = true
-      this.summaryFsPanStartX = e.clientX
-      this.summaryFsPanStartY = e.clientY
-      this.summaryFsScrollLeft = viewport.scrollLeft
-      this.summaryFsScrollTop = viewport.scrollTop
-      document.addEventListener('mousemove', this.onSummaryFsPanMove)
-      document.addEventListener('mouseup', this.stopSummaryFsPan)
-    },
-
-    onSummaryFsPanMove(e) {
-      if (!this.summaryFsPanning) return
-      const viewport = this.$refs.summaryFsViewport
-      if (!viewport) return
-      viewport.scrollLeft = this.summaryFsScrollLeft - (e.clientX - this.summaryFsPanStartX)
-      viewport.scrollTop = this.summaryFsScrollTop - (e.clientY - this.summaryFsPanStartY)
-    },
-
-    stopSummaryFsPan() {
-      this.summaryFsPanning = false
-      document.removeEventListener('mousemove', this.onSummaryFsPanMove)
-      document.removeEventListener('mouseup', this.stopSummaryFsPan)
     },
 
     onSummaryFsIframeLoad() {
@@ -1461,7 +1403,6 @@ export default {
 
   beforeDestroy() {
     this.unbindSummaryFsZoomEvents()
-    this.stopSummaryFsPan()
     this.stopReplayLogSession()
     clearTimeout(this._scrollTimer)
     if (this.currentStreamController) {
@@ -2094,15 +2035,6 @@ height: 0;
   overflow: auto;
   background: #f0f2f5;
   overscroll-behavior: contain;
-
-  &.is-zoomed {
-    cursor: grab;
-  }
-
-  &.is-panning {
-    cursor: grabbing;
-    user-select: none;
-  }
 }
 
 .al-summary-fs-scaler {
@@ -2115,18 +2047,6 @@ height: 0;
   display: block;
   border: none;
   background: #fff;
-}
-
-.al-summary-fs-pan-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  cursor: grab;
-  touch-action: none;
-}
-
-.al-summary-fs-viewport.is-panning .al-summary-fs-pan-layer {
-  cursor: grabbing;
 }
 
 // ===== 全屏遮罩过渡动画 =====
