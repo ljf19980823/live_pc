@@ -1032,6 +1032,7 @@ import richHtml from '@/utils/richTextHtml'
 import { normalizeImportCatalog, flattenImportCatalog, expandImportSelection } from '@/utils/topicImportCatalog'
 
 const TOPIC_DIFFICULTY_DICT_ID = '2'
+const TOPIC_KNOWLEDGE_DICT_ID = '1'
 const TEACHING_CLOUD_ERROR_DICT_ID = '23'
 const FILTER_OPTION_FIELDS = [
   'areaOptions', 'typeOptions', 'subjectOptions', 'zsbSubjectOptions',
@@ -1755,14 +1756,15 @@ export default {
               getTeachingCloudOptions('/knowledgeCompulsory/getList', this.aiTeachingCloudParams({ subjectId }))
             ]
           : [
-              getTeachingCloudOptions('/home/getSubjectPointTree', this.aiTeachingCloudParams({ subjectId })),
+              // 与自有题库“新增题目”的专升本章节接口保持一致。
+              getTeachingCloudOptions('/subjectPoint/getAll', { id: subjectId }),
               Promise.resolve([])
             ]
         const [first, knowledge] = await this.waitForFilterOptions(Promise.all(tasks))
         if (!isCurrent()) return
         if (standardType === 1) this.aiOptions.books = first || []
         else {
-          this.aiOptions.chapters = this.normalizeTree(first || [])
+          this.aiOptions.chapters = this.normalizeAiKnowledgeTree(first || [])
         }
         this.aiOptions.knowledge = this.normalizeAiKnowledgeTree(knowledge)
       } catch (error) {
@@ -1807,10 +1809,12 @@ export default {
       if (!this.aiSubject || !chapterIds.length) return
       try {
         const lists = await this.waitForFilterOptions(Promise.all(chapterIds.map(id => (
-          getTeachingCloudOptions('/knowledge/getList', this.aiTeachingCloudParams({
+          // 与自有题库“新增题目”的专升本知识点接口保持一致。
+          getTeachingCloudOptions('/dict/getAll', {
+            id: TOPIC_KNOWLEDGE_DICT_ID,
             subjectId: this.aiSubject.id,
             pointId: id
-          }))
+          })
         ))))
         if (isCurrent()) this.aiOptions.knowledge = this.mergeAiKnowledgeTrees(lists.map(rows => this.normalizeAiKnowledgeTree(rows)))
       } catch (error) { if (isCurrent()) this.$message.warning('知识点加载失败，请重新选择章节重试') }
@@ -2104,7 +2108,8 @@ export default {
       return this.teachingCloudParams(params, this.sourceTab === '云端题库' ? 1 : 0)
     },
     aiTeachingCloudParams(params = {}) {
-      return this.teachingCloudParams(params, 1)
+      // AI 出题与自有题库使用同一套机构科目及其关联教材、章节、知识点。
+      return this.teachingCloudParams(params, 0)
     },
     currentLiveId() {
       const authInfo = getAuthInfo() || {}
