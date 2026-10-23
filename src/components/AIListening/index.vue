@@ -232,20 +232,22 @@
         <div class="al-chat-hd">
           <span class="al-chat-title">AI问答</span>
           <div class="al-chat-hd-btns">
-            <!-- 有对话时显示新建对话，无对话时显示搜索 -->
-            <!-- <button
+            <!-- 新建对话入口暂时隐藏
+            <button
+              v-if="currentStatus=='Success' && currentStatus2=='Success'"
+              type="button"
               class="al-hd-btn"
               title="新建对话"
+              aria-label="新建对话"
+              :disabled="aiLoading || qaSessionCreating"
               @click="newChatSession()"
             >
-           
-              <svg  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="16"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 11.5a8.5 8.5 0 1 0-4.4 7.45L21 20l-1.05-5.4A8.5 8.5 0 0 0 20 11.5Z"/>
+                <path d="M11.5 7.5v8M7.5 11.5h8"/>
               </svg>
-             
-            </button> -->
+            </button>
+            -->
             <!-- 菜单按钮 -->
             <button v-if="currentStatus=='Success' && currentStatus2=='Success'" class="al-hd-btn" title="会话列表" @click="toggleQaSessionList">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -320,7 +322,7 @@
               <span class="al-welcome-emoji">👋</span>
               <span class="al-welcome-text">Hi，我可以帮你干什么？</span>
             </div>
-            <p class="al-scope-hint">问答范围：{{ meetingTitle || '未命名笔记' }}</p>
+            <p class="al-scope-hint"><span class="al-scope-label">问答范围：</span>{{ meetingTitle || '未命名笔记' }}</p>
             <div class="al-quick-questions">
               <template v-if="quickQuestionsLoading">
                 <span class="al-quick-skeleton" v-for="i in 2" :key="'quick-loading-' + i"></span>
@@ -408,42 +410,49 @@
               v-model="inputText"
               class="al-textarea"
               placeholder="有问题尽管问我..."
+              aria-label="输入问题"
               rows="1"
               @keydown.enter.exact.prevent="sendChat(inputText)"
               @input="autoResizeTextarea"
             ></textarea>
           </div>
           <div class="al-ft-toolbar">
-            <!-- <button class="al-ft-btn al-ft-attach" title="附件">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button> -->
             <button
+              type="button"
+              class="al-ft-btn al-ft-attach"
+              title="附件"
+              aria-label="附件"
+            >
+              <img src="@/assets/icons/ai-listening/add.svg" width="29" height="29" alt="" />
+            </button>
+            <span class="al-ft-divider" aria-hidden="true"></span>
+            <button
+              type="button"
               class="al-ft-btn al-deep-think-btn"
               :class="{ active: deepThinkMode }"
+              :aria-pressed="deepThinkMode ? 'true' : 'false'"
+              aria-label="深度思考"
               @click="deepThinkMode = !deepThinkMode"
               title="深度思考"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <path d="M9 9h6M9 12h6M9 15h4"/>
-              </svg>
-              深度思考
+              <img
+                :src="deepThinkMode ? require('@/assets/icons/ai-listening/deep-active.png') : require('@/assets/icons/ai-listening/deep.png')"
+                width="80"
+                height="24"
+                alt=""
+              />
             </button>
             <div class="al-ft-spacer"></div>
             <button
+              type="button"
               class="al-send-btn"
-              :class="{ enabled: inputText.trim() && !aiLoading }"
-              :disabled="!inputText.trim() || aiLoading"
+              :class="{ enabled: inputText.trim() && !aiLoading && !qaSessionCreating }"
+              :disabled="!inputText.trim() || aiLoading || qaSessionCreating"
               @click="sendChat(inputText)"
               title="发送"
+              aria-label="发送"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
+              <img src="@/assets/icons/ai-listening/send.svg" width="24" height="24" alt="" />
             </button>
           </div>
         </div>
@@ -519,6 +528,7 @@ export default {
       inputText: '',
       aiLoading: false,
       qaSessionLoading: false,
+      qaSessionCreating: false,
       qaSessionList: [],
       currentQaSessionId: '',
       showQaSessionList: false,
@@ -1100,7 +1110,7 @@ export default {
 
     // ===== AI问答 =====
     async sendChat(text) {
-      if (!text || !text.trim() || this.aiLoading) return
+      if (!text || !text.trim() || this.aiLoading || this.qaSessionCreating) return
       const question = text.trim()
 
       if (!this.liveLessonId || !this.teacherId) {
@@ -1338,10 +1348,12 @@ export default {
     },
 
     async newChatSession() {
+      if (this.aiLoading || this.qaSessionCreating) return
       if (!this.liveLessonId || !this.teacherId) {
         this.$message && this.$message.warning('缺少课程或教师信息，暂时无法新建会话')
         return
       }
+      this.qaSessionCreating = true
       try {
         const sessionId = await this.createQaSession(this.meetingTitle || '新建会话')
         if (sessionId) {
@@ -1349,10 +1361,17 @@ export default {
           this.chatMessages = []
           this.followUpList = []
           this.inputText = ''
+          this.showQaSessionList = false
+          this.$nextTick(() => {
+            this.autoResizeTextarea()
+            if (this.$refs.chatInput) this.$refs.chatInput.focus()
+          })
         }
         this.fetchQaSessions()
       } catch (e) {
         console.error('AI问答新建会话失败', e)
+      } finally {
+        this.qaSessionCreating = false
       }
     },
 
@@ -2105,8 +2124,13 @@ height: 0;
   flex-direction: column;
   background: $white;
   min-width: 0;
-  padding-bottom: 16px;
+  padding-bottom: 35px;
   box-sizing: border-box;
+
+  button:focus-visible {
+    outline: 2px solid #8CAEFF;
+    outline-offset: 3px;
+  }
 }
 
 // ===== AI问答 Header =====
@@ -2114,20 +2138,21 @@ height: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 13px;
-  border-bottom: 1px solid $border;
+  height: 56px;
+  padding: 0 28px 0 16px;
+  border-bottom: 1px solid #E4E6EA;
   flex-shrink: 0;
 
   .al-chat-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: $text-main;
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
   }
 
   .al-chat-hd-btns {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 6px;
   }
 
   .al-hd-btn {
@@ -2140,12 +2165,17 @@ height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #888;
-    transition: all 0.2s;
+    color: #666;
+    transition: background 0.2s, color 0.2s;
 
-    &:hover {
-      border-color: $primary;
+    &:hover:not(:disabled) {
+      background: $bg-hover;
       color: $primary;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     svg {
@@ -2167,8 +2197,9 @@ height: 0;
 .al-chat-body {
   position: relative;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 16px 16px 8px;
+  padding: 26px 30px 24px;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -2321,45 +2352,58 @@ height: 0;
 
 // 欢迎状态
 .al-welcome-area {
-  padding: 16px 4px;
+  padding: 0;
 }
 
 .al-welcome-greeting {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 22px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #F8F9FA;
+  line-height: 1.2;
 
   .al-welcome-emoji {
     font-size: 24px;
+    flex-shrink: 0;
   }
 
   .al-welcome-text {
-    font-size: 18px;
-    font-weight: 700;
-    color: $text-main;
+    font-size: clamp(18px, 1.9vw, 24px);
+    font-weight: 400;
+    color: #333;
   }
 }
 
 .al-scope-hint {
   font-size: 14px;
-  color: $text-hint;
-  margin: 21px 0 16px;
+  color: #333;
+  margin: 0;
   line-height: 1.6;
-  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.al-scope-label {
+  color: #999;
 }
 
 .al-quick-questions {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 30px;
-  margin-top: 30px;
+  margin-top: 40px;
 }
 
 .al-quick-skeleton {
   display: block;
   width: 240px;
-  height: 44px;
+  max-width: 100%;
+  height: 48px;
   border-radius: 48px;
   background: linear-gradient(90deg, #EEF3F8 0%, #F8FBFF 48%, #EEF3F8 100%);
   background-size: 200% 100%;
@@ -2374,17 +2418,22 @@ height: 0;
 .al-quick-btn {
   display: block;
   text-align: left;
-  padding: 10px 23px;
+  max-width: 100%;
+  padding: 12px 23px;
   box-sizing: border-box;
- background: linear-gradient( 90deg, #DFF6FF 0%, rgba(255,255,255,0) 71.63%);
-border-radius: 48px 48px 48px 48px;
+  background: linear-gradient(90deg, #DFF6FF 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 48px;
   border: none;
   font-size: 16px;
-  color: $text-main;
+  color: #222;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: box-shadow 0.2s;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 
+  &:hover {
+    box-shadow: inset 0 0 0 1px #DAF0FF;
+  }
 }
 
 .al-quick-btn2 {
@@ -2612,43 +2661,49 @@ border-radius: 48px 48px 48px 48px;
 // ===== Chat Footer =====
 .al-chat-ft {
   flex-shrink: 0;
-  padding:21px 21px 18px 21px;
+  min-height: 112px;
+  margin: 0 30px;
+  padding: 14px 12px 16px;
   box-sizing: border-box;
-  background: #FFFFFF;
-border-radius: 24px 24px 24px 24px;
-border: 2px solid #D9D9D9;
-margin:0 28px
+  background: $white;
+  border: 1px solid #A5BFFF;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px rgba(147, 181, 255, 0.16),
+    -5px 3px 24px rgba(119, 95, 255, 0.14),
+    5px 8px 24px rgba(74, 178, 255, 0.16);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: #7FA5FF;
+    box-shadow: 0 0 0 1px rgba(147, 181, 255, 0.24),
+      -5px 3px 24px rgba(119, 95, 255, 0.2),
+      5px 8px 24px rgba(74, 178, 255, 0.2);
+  }
 }
 
 .al-input-box {
-  // background: #F7F8FA;
-  // border-radius: 10px;
-  // padding: 10px 12px;
-  margin-bottom: 8px;
-  // border: 1px solid transparent;
-  transition: border-color 0.2s;
-
-  &:focus-within {
-    border-color: $primary;
-    background: $white;
-  }
+  margin-bottom: 12px;
+  padding: 0 4px;
 
   .al-textarea {
+    display: block;
     width: 100%;
+    box-sizing: border-box;
+    padding: 0;
     background: none;
     border: none;
     outline: none;
     resize: none;
-    font-size: 16px;
-    color: #666666;
-    line-height: 1.6;
+    font-size: 14px;
+    color: #353941;
+    line-height: 22px;
     font-family: inherit;
     min-height: 40px;
     max-height: 120px;
     overflow-y: auto;
 
     &::placeholder {
-      color: $text-hint;
+      color: #B8BCC5;
     }
 
     &::-webkit-scrollbar {
@@ -2660,45 +2715,55 @@ margin:0 28px
 .al-ft-toolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  height: 29px;
 }
 
 .al-ft-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  color: $text-sub;
-  transition: all 0.2s;
+  padding: 0;
+  border-radius: 20px;
+  transition: background 0.2s, opacity 0.2s;
 
-  &:hover {
-    background: $bg-hover;
-    color: $text-main;
+  img {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 }
 
 .al-ft-attach {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 6px;
-  font-size: 18px;
-  font-weight: 300;
+  width: 29px;
+  height: 29px;
+
+  &:hover:not(:disabled) {
+    background: $bg-hover;
+  }
+}
+
+.al-ft-divider {
+  width: 1px;
+  height: 22px;
+  flex-shrink: 0;
+  background: #E4E6EA;
 }
 
 .al-deep-think-btn {
-  border: 1px solid $border;
+  width: 80px;
+  height: 24px;
 
-  &.active {
-    background: $primary-light;
-    color: $primary;
-    border-color: lighten($primary, 20%);
+  &:hover {
+    background: #F5F3FF;
   }
 }
 
@@ -2707,30 +2772,55 @@ margin:0 28px
 }
 
 .al-send-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 50%;
   border: none;
-  background: #E5E5E5;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: not-allowed;
-  color: #AAA;
-  transition: all 0.2s;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+
+  img {
+    display: block;
+  }
 
   &.enabled {
-    background: $primary;
-    color: $white;
+    opacity: 1;
     cursor: pointer;
 
     &:hover {
-      background: darken($primary, 8%);
+      transform: translateY(-1px);
     }
   }
 
   &:disabled {
     cursor: not-allowed;
+  }
+}
+
+@media (max-width: 1100px) {
+  .al-chat-hd {
+    padding-right: 16px;
+  }
+
+  .al-chat-body {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .al-chat-ft {
+    margin-right: 20px;
+    margin-left: 20px;
+  }
+
+  .al-welcome-greeting {
+    padding: 14px 12px;
   }
 }
 
