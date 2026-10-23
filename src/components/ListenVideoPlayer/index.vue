@@ -682,7 +682,7 @@ export default {
           const backward = offset < 0
           const btn = document.createElement('button')
           btn.type = 'button'
-          btn.className = 'hrp-seek-btn'
+          btn.className = `hrp-seek-btn hrp-seek-btn--${backward ? 'backward' : 'forward'}`
           btn.title = backward ? '后退 10 秒（←）' : '前进 10 秒（→）'
           btn.setAttribute('aria-label', backward ? '后退 10 秒' : '前进 10 秒')
           const icon = document.createElement('img')
@@ -1404,6 +1404,7 @@ export default {
 }
 
 ::v-deep .hrp-seek-btn {
+  --hrp-seek-angle: 45deg;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1425,10 +1426,19 @@ export default {
     width: 26px;
     height: 26px;
     pointer-events: none;
+    transform-origin: center;
+  }
+
+  &--backward {
+    --hrp-seek-angle: -45deg;
   }
 
   &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.15);
+
+    .hrp-seek-btn__icon {
+      animation: hrp-seek-hover 1s ease-in-out 1;
+    }
   }
 
   &:active:not(:disabled) {
@@ -1443,6 +1453,17 @@ export default {
   &:disabled {
     opacity: 0.35;
     cursor: default;
+  }
+}
+
+@keyframes hrp-seek-hover {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(var(--hrp-seek-angle)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::v-deep .hrp-seek-btn:hover:not(:disabled) .hrp-seek-btn__icon {
+    animation: none;
   }
 }
 
