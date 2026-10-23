@@ -662,6 +662,7 @@ export default {
   mix-blend-mode: multiply !important;
   float:none!important; 
   zoom: 0.6;
+  display: inline-block;
 }
 
 /* ===== 空状态 ===== */

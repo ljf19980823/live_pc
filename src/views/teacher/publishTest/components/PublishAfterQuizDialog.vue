@@ -17,6 +17,26 @@
           <input v-model.trim="form.name" type="text" maxlength="50" placeholder="请输入课后测标题">
         </label>
 
+        <div class="subject-field">
+          <label for="publish-subject">学段 / 科目 <span class="required-mark">*</span></label>
+          <el-cascader
+            id="publish-subject"
+            v-model="subjectPath"
+            class="subject-picker"
+            :options="subjectOptions"
+            :props="{ expandTrigger: 'hover', checkStrictly: false }"
+            :disabled="subjectLoading || submitting"
+            clearable
+            filterable
+            aria-required="true"
+            :placeholder="subjectLoading ? '正在加载学段及科目' : '请选择学段及科目'"
+          />
+          <div v-if="!subjectLoading && (subjectLoadError || !subjectOptions.length)" class="subject-tip">
+            <span>{{ subjectLoadError ? '学段科目加载失败' : '暂无可选学段及科目' }}</span>
+            <button type="button" @click="loadSubjectOptions">重新加载</button>
+          </div>
+        </div>
+
         <div v-if="showNumbers" class="number-grid">
           <label v-for="field in numberFields" :key="field.key">
             <span>{{ field.label }}</span>
@@ -28,7 +48,7 @@
           </label>
         </div>
 
-        <div v-if="showTitle || showNumbers" class="dialog-divider"></div>
+        <div class="dialog-divider"></div>
 
         <div class="student-heading">
           <div>
@@ -84,7 +104,7 @@
           共 <strong>{{ selectedStudents.length }}</strong> 名学生
         </span>
         <button class="cancel-button" type="button" :disabled="submitting" @click="$emit('close')">取消</button>
-        <button class="confirm-button" type="button" :disabled="submitting || pickerLoading" @click="confirm">
+        <button class="confirm-button" type="button" :disabled="submitting || pickerLoading || subjectLoading" @click="confirm">
           {{ submitting ? '发布中...' : '确定' }}
         </button>
       </footer>
@@ -94,6 +114,10 @@
 
 <script>
 import { getClassList, getClassStudents } from '@/api/modules/teacher'
+import { getAfterQuizIntehubToken, getTeachingCloudOptions, getTeachingCloudUpgradeSubjectList } from '@/api/quizBuilder'
+import { getAuthInfo } from '@/utils/auth'
+import { buildBankSubjectOptions, normalizeK12SubjectOptions } from '@/utils/quizSubjects'
+import { normalizeZsbSubjectOptions } from '@/utils/zsbSubjects'
 
 export default {
   name: 'PublishAfterQuizDialog',
@@ -125,6 +149,11 @@ export default {
   },
   data() {
     return {
+      subjectLoading: false,
+      subjectLoadError: false,
+      subjectOptions: [],
+      subjectPath: [],
+      subjectRequestId: 0,
       classLoading: false,
       pickerLoading: false,
       classOptions: [],
@@ -147,6 +176,18 @@ export default {
     }
   },
   computed: {
+    selectedSubject() {
+      const group = this.subjectOptions.find(item => item.value === this.subjectPath[0])
+      if (!group || this.subjectPath.length !== (group.eduType === '专升本' ? 3 : 2)) return null
+      let nodes = this.subjectOptions
+      let selected = null
+      for (const value of this.subjectPath) {
+        selected = nodes.find(item => item.value === value)
+        if (!selected || selected.disabled) return null
+        nodes = selected.children || []
+      }
+      return selected && !nodes.length && selected.value && !selected.isSubjectGroup ? selected : null
+    },
     selectedClassName() {
       const selected = this.classOptions.find(item => item.id === this.selectedClassId)
       return selected ? selected.name : String(this.initialConfig.className || '')
@@ -176,12 +217,62 @@ export default {
       .filter(Boolean)
       .map(this.normalizeStudent)
       .filter(student => student.id)
+    this.subjectPath = Array.isArray(config.subjectPath) ? config.subjectPath.map(String) : []
+    this.loadSubjectOptions()
     this.loadClassOptions()
   },
   beforeDestroy() {
+    this.subjectRequestId += 1
     this.studentRequestId += 1
   },
   methods: {
+    async loadSubjectOptions() {
+      const requestId = ++this.subjectRequestId
+      this.subjectLoading = true
+      this.subjectLoadError = false
+      try {
+        const { institutionId } = await getAfterQuizIntehubToken()
+        if (requestId !== this.subjectRequestId) return
+        const authInfo = getAuthInfo() || {}
+        const params = { isHome: 0, institutionId }
+        const [k12Groups, zsbGroups] = await Promise.all([
+          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+          String(authInfo.isInternalOrganization) !== '1'
+            ? getTeachingCloudUpgradeSubjectList(params)
+            : Promise.resolve([])
+        ])
+        if (requestId !== this.subjectRequestId) return
+        this.subjectOptions = buildBankSubjectOptions(
+          normalizeK12SubjectOptions(k12Groups), normalizeZsbSubjectOptions(zsbGroups)
+        )
+        this.restoreSubjectSelection()
+      } catch (error) {
+        if (requestId !== this.subjectRequestId) return
+        console.error('加载学段科目失败', error)
+        this.subjectOptions = []
+        this.subjectLoadError = true
+      } finally {
+        if (requestId === this.subjectRequestId) this.subjectLoading = false
+      }
+    },
+    restoreSubjectSelection() {
+      const subjectId = String(this.initialConfig.subjectId || '')
+      if (this.selectedSubject && (!subjectId || this.selectedSubject.value === subjectId)) return
+      const findPath = (nodes, path = []) => {
+        for (const node of nodes) {
+          const nextPath = [...path, node.value]
+          if (node.children && node.children.length) {
+            const result = findPath(node.children, nextPath)
+            if (result) return result
+          } else if (subjectId && node.value === subjectId) {
+            return nextPath
+          }
+        }
+        return null
+      }
+      this.subjectPath = findPath(this.subjectOptions) || []
+      if (!this.selectedSubject) this.subjectPath = []
+    },
     adjustNumber(key, delta) {
       const value = Number(this.form[key])
       this.form[key] = Math.max(1, (Number.isFinite(value) ? value : 1) + delta)
@@ -253,9 +344,13 @@ export default {
       }
     },
     confirm() {
-      if (this.submitting || this.pickerLoading) return
+      if (this.submitting || this.pickerLoading || this.subjectLoading) return
       if (this.showTitle && !this.form.name) {
         this.$message.warning('请输入标题')
+        return
+      }
+      if (!this.selectedSubject) {
+        this.$message.warning('请选择学段及科目至最后一级')
         return
       }
       const invalidField = this.showNumbers && this.numberFields.find(field => {
@@ -278,6 +373,9 @@ export default {
       this.$emit('confirm', {
         ...this.initialConfig,
         ...this.form,
+        subjectId: String(this.selectedSubject.value),
+        subjectName: this.selectedSubject.label,
+        subjectPath: [...this.subjectPath],
         classId: this.selectedClassId,
         className: this.selectedClassName,
         studentIds: this.selectedStudents.map(student => student.id),
@@ -359,6 +457,7 @@ export default {
 }
 
 .title-field,
+.subject-field,
 .number-grid label {
   display: flex;
   min-width: 0;
@@ -367,6 +466,7 @@ export default {
 }
 
 .title-field > span,
+.subject-field > label,
 .number-grid label > span:first-child {
   color: #6e7f91;
   font-size: 13px;
@@ -400,6 +500,35 @@ export default {
   margin-top: 16px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.subject-field {
+  margin-top: 16px;
+}
+
+.required-mark {
+  color: #f56c6c;
+}
+
+.subject-picker {
+  width: 100%;
+}
+
+.subject-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8795a5;
+  font-size: 12px;
+}
+
+.subject-tip button {
+  padding: 0;
+  border: 0;
+  color: #1F7CFF;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 .number-field {
@@ -472,13 +601,16 @@ export default {
   margin-top: 12px;
 }
 
-.class-picker ::v-deep .el-input__inner {
+.class-picker ::v-deep .el-input__inner,
+.subject-picker ::v-deep .el-input__inner {
   border: 1px solid #d4e0ea !important;
   background: #fff !important;
 }
 
 .class-picker ::v-deep .el-input__inner:focus,
-.class-picker ::v-deep .el-input.is-focus .el-input__inner {
+.class-picker ::v-deep .el-input.is-focus .el-input__inner,
+.subject-picker ::v-deep .el-input__inner:focus,
+.subject-picker ::v-deep .el-input.is-focus .el-input__inner {
   border-color: #1F7CFF !important;
 }
 

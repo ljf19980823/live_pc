@@ -250,7 +250,7 @@
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
           </div>
-          <div class="filter-item">
+          <div v-if="false" class="filter-item">
             <!-- <span class="filter-item__label">班级</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">

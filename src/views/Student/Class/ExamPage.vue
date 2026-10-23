@@ -308,7 +308,7 @@ export default {
   methods: {
     getTypeName(q) {
       // questName 为自定义题型名称（如"完形填空"），优先展示
-      return q.questName || q.typeName || TYPE_MAP[q.type] || '未知题型'
+      return q.questName  || TYPE_MAP[q.questType] || '未知题型'
     },
     isTextType(type) {
       return TEXT_TYPES.has(type)

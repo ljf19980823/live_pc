@@ -1027,6 +1027,7 @@ import { snapshotAiExportQuestion } from '@/utils/aiPaperExport'
 import { clearPracticeRouteConfig, savePracticeRouteConfig } from '@/utils/practiceRoute'
 import { normalizeT1AiQuestions } from '@/utils/smartQuiz'
 import { normalizeZsbSubjectOptions, getZsbSubject } from '@/utils/zsbSubjects'
+import { buildBankSubjectOptions, normalizeK12SubjectOptions } from '@/utils/quizSubjects'
 import adaptiveQuestionOptions from '@/utils/adaptiveQuestionOptions'
 import richHtml from '@/utils/richTextHtml'
 import { normalizeImportCatalog, flattenImportCatalog, expandImportSelection } from '@/utils/topicImportCatalog'
@@ -1560,38 +1561,8 @@ export default {
     })
   },
   methods: {
-    buildBankSubjectOptions(k12Options, zsbOptions) {
-      // 共用树形展示结构；调用方各自加载云题库或机构科目数据。
-      const k12 = k12Options.map(group => ({
-        ...group,
-        value: `k12:${group.value}`,
-        eduType: 'K9K12',
-        originalValue: group.value
-      }))
-      const zsb = zsbOptions.length ? [{
-        value: 'zsb',
-        label: '专升本',
-        eduType: '专升本',
-        children: zsbOptions.map(group => ({
-          ...group,
-          value: `zsb:${group.value}`,
-          originalValue: group.value,
-          isSubjectGroup: true
-        }))
-      }] : []
-      return [...k12, ...zsb]
-    },
-    normalizeK12SubjectOptions(groups) {
-      return (groups || []).map(group => ({
-        value: String(group.name),
-        label: group.name,
-        children: (group.subjectList || group.children || group.childList || []).map(subject => ({
-          ...subject,
-          value: String(subject.id),
-          label: subject.otherName || subject.name
-        }))
-      }))
-    },
+    buildBankSubjectOptions,
+    normalizeK12SubjectOptions,
     findBusinessSubject(business, trees, path) {
       if (!business || path.length < 2) return null
       let nodes = trees[business.id] || []
@@ -4323,30 +4294,6 @@ export default {
       return topic
     },
     buildPublishPayload(publishConfig = this.practiceConfig) {
-      // 发布科目优先取当前有效筛选，云端按科目类型读取；未选时回退首道母题。
-      const selectedSubjectId = this.sourceTab === 'AI出题'
-        ? (this.aiSubject ? this.aiSubject.id : '')
-        : this.activeFilterEduType === '专升本'
-        ? this.zsb.subjectId
-        : this.lastValue(this.k12.subjectPath)
-      const firstPaperQuestion = this.paperGroups.find(group => group.mother)
-      const generatedSubjectId = firstPaperQuestion && firstPaperQuestion.mother
-        ? firstPaperQuestion.mother.subjectId
-        : ''
-      const generatedSubjectName = firstPaperQuestion && firstPaperQuestion.mother
-        ? firstPaperQuestion.mother.subjectName
-        : ''
-      const subjectId = selectedSubjectId || generatedSubjectId
-      const selectedSubject = this.sourceTab === 'AI出题'
-        ? (this.aiSubject || {})
-        : this.activeFilterEduType === '专升本'
-        ? this.subjectOptions.find(item => String(item.id) === String(subjectId)) || {}
-        : this.findK12Subject(subjectId)
-      const subjectName = selectedSubject.label || selectedSubject.otherName ||
-        selectedSubject.name ||
-        generatedSubjectName ||
-        this.practiceConfig.subject ||
-        ''
       let serialNumber = 1
       const topics = this.paperGroups
         .filter(group => group.mother)
@@ -4367,7 +4314,7 @@ export default {
       return {
         ...(liveId ? { liveId } : {}),
         name: String(publishConfig.name || '').trim(),
-        subjectId: String(subjectId || this.practiceConfig.subjectId || ''),
+        subjectId: String(publishConfig.subjectId || ''),
         examDuration: Number(publishConfig.duration),
         topicNum: Number(publishConfig.originalCount),
         topicInitScore: Number(publishConfig.score),
@@ -4411,6 +4358,10 @@ export default {
       const name = String(config.name || '').trim()
       if (!name) {
         this.$message.warning('请输入课后测名称')
+        return
+      }
+      if (!String(config.subjectId || '').trim()) {
+        this.$message.warning('请选择学段及科目至最后一级')
         return
       }
       this.publishConfirmConfig = {

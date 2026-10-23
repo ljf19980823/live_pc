@@ -733,6 +733,7 @@ export default {
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
   float:none!important; 
+    display: inline-block;
 }
 
 .wep__opt-icon {
