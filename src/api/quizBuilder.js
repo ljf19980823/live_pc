@@ -7,7 +7,7 @@ import liveRequest from '@/utils/request'
 // 生产环境默认连接正式库；如需临时切换可通过环境变量覆盖。
 const TEACHING_CLOUD_BASE_URL = process.env.VUE_APP_TEACHING_CLOUD_BASE_URL ||
   (process.env.NODE_ENV === 'production'
-    ? 'https://www.fjlsjy123.com/appBack'
+    ? 'https://www.fjlsjy123.com/appTest'
     : 'https://www.fjlsjy123.com/appTest')
 const LEGACY_TEACHING_CLOUD_BASE_URL = `${TEACHING_CLOUD_BASE_URL}/t1`
 
