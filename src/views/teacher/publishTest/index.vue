@@ -462,7 +462,7 @@
                     <button class="text-action delete" type="button" @click="deleteBankQuestion(index)">删除</button>
                   </template>
                   <button
-                    v-if="sourceTab !== '自有题库'"
+                    v-if="sourceTab === '云端题库'"
                     class="outline-action"
                     type="button"
                     :disabled="question._bankLoading || question._banked"
@@ -989,7 +989,6 @@ import {
   addQuestByIntehub,
   deleteTopic,
   generateAfterQuizQuestions,
-  generatePartQuest,
   getAfterQuizIntehubToken,
   getMinutesSubject,
   getBusinessChapters,
@@ -1077,8 +1076,6 @@ const emptyImportForm = () => ({
 
 const CHILDREN_PER_MOTHER = 5
 
-// AI 请求的赛道枚举由科目所属学段决定，与顶部学习赛道选择无关。
-const AI_LEARNING_TRACKS = { 0: 'OTHER_STAGES', 1: 'K9_K12', 2: 'FUJIAN_COLLEGE_UPGRADE' }
 const emptyAiFilters = () => ({ subjectPath: [], bookId: '', level: '', pointPath: [], knowledgePath: [], chapterSelection: '', knowledgeSelection: '', questType: '', difficulty: '' })
 const emptyAiOptions = () => ({ books: [], levels: [], chapters: [], knowledge: [], difficulties: [] })
 
@@ -1419,10 +1416,6 @@ export default {
     },
     showAiMinutesSwitch() {
       return this.practiceEntrySource === 'homework' && this.sourceTab === 'AI出题'
-    },
-    useAfterQuizAiApi() {
-      return ['homework', 'teacher-home'].includes(this.practiceEntrySource) &&
-        this.sourceTab === 'AI出题'
     },
     useAiMinutesContent() {
       return this.showAiMinutesSwitch && this.useMinutesContent
@@ -2304,6 +2297,7 @@ export default {
       return group ? group.name || '' : ''
     },
     buildAiGenerationDetails() {
+      const questTemplate = this.optionItem(this.aiQuestTypeOptions, this.aiFilters.questType)
       return {
         businessId: this.aiSubject && this.aiSubject.businessId
           ? this.aiSubject.businessId
@@ -2318,6 +2312,8 @@ export default {
         pointId: this.aiSelectedChapters().length === 1 ? this.aiSelectedChapters()[0].id : '',
         knowledgeId: this.aiSelectedKnowledge().id,
         questTemplateId: this.aiFilters.questType,
+        questType: questTemplate.questType || '',
+        questTemplateName: questTemplate.name || '',
         difficultyId: this.aiFilters.difficulty,
         difficultyName: this.optionName(this.aiOptions.difficulties, this.aiFilters.difficulty),
         bookName: this.aiStandardType === 1 ? this.optionName(this.aiOptions.books, this.aiFilters.bookId) : '',
@@ -2329,7 +2325,7 @@ export default {
     buildAiQuestionContext(question, details) {
       // 优先保留题目自身信息，缺失字段用生成时的条件补齐，避免后续切换科目影响编辑和发布。
       const result = { ...question }
-      const fallback = { businessId: details.businessId, subjectId: details.subjectId, subjectName: details.subjectName, stageName: details.stageName, bookId: details.bookId, bookName: details.bookName, typeId: details.typeId, typeName: details.gradeName, pointId: details.pointId, knowledge: details.knowledgeId, knowledgeId: details.knowledgeId, pointName: details.chapterName, knowledgeName: details.knowledgeName, questTemplateId: details.questTemplateId, difficulty: details.difficultyId, difficultyId: details.difficultyId, difficultyName: details.difficultyName }
+      const fallback = { businessId: details.businessId, subjectId: details.subjectId, subjectName: details.subjectName, stageName: details.stageName, bookId: details.bookId, bookName: details.bookName, typeId: details.typeId, typeName: details.gradeName, pointId: details.pointId, knowledge: details.knowledgeId, knowledgeId: details.knowledgeId, pointName: details.chapterName, knowledgeName: details.knowledgeName, questTemplateId: details.questTemplateId, questTemplateName: details.questTemplateName, questTypeName: details.questTemplateName, questType: details.questType, difficulty: details.difficultyId, difficultyId: details.difficultyId, difficultyName: details.difficultyName }
       Object.keys(fallback).forEach(key => { if (!result[key]) result[key] = fallback[key] })
       return result
     },
@@ -2724,103 +2720,41 @@ export default {
         ? filters[field].length > 0
         : String(filters[field] || '').trim().length > 0)
     },
-    buildAiQueryParams() {
-      const params = this.buildAfterQuizAiQueryParams()
-      return this.removeEmptyParams({
-        ...params, difficulty: params.difficultyId || '',
-        difficultyName: this.optionName(this.aiOptions.difficulties, this.aiFilters.difficulty),
-        questType: this.optionItem(this.aiQuestTypeOptions, this.aiFilters.questType).questType || ''
-      })
-    },
-    buildAfterQuizAiQueryParams() {
-      const authInfo = getAuthInfo() || {}
-      const chapters = this.aiSelectedChapters()
-      const knowledge = this.aiSelectedKnowledge()
-      const params = {
-        learningScope: AI_LEARNING_TRACKS[this.aiStandardType] || '',
-        useMinutesContent: this.useAiMinutesContent,
-        subjectId: this.aiSubject ? this.aiSubject.id : '',
-        subjectName: this.aiSubject ? this.aiSubject.label : '',
-        questTemplateId: this.aiFilters.questType,
-        questTemplateName: this.optionName(this.aiQuestTypeOptions, this.aiFilters.questType),
-        difficultyId: this.aiFilters.difficulty,
-        questionCount: Number(this.aiCount)
-      }
-      if (this.aiStandardType === 1) {
-        params.bookId = this.aiFilters.bookId
-        params.bookName = this.optionName(this.aiOptions.books, this.aiFilters.bookId)
-        params.typeId = this.aiFilters.level
-        params.typeName = this.optionName(this.aiOptions.levels, this.aiFilters.level)
-      }
-      const reference = item => {
-        if (item && item.id) return { id: item.id }
-        const name = String(item && item.name || '').trim()
-        return this.allowAiCustomNames && name ? { name } : null
-      }
-      if (this.useAiMinutesContent) {
-        params.t1Id = String(authInfo.t1Id || authInfo.liveId || '')
-        params.chapterIds = chapters.map(item => item.id).filter(Boolean)
-      } else {
-        const chapter = reference(chapters[0])
-        if (chapter) params.chapter = chapter
-      }
-      const knowledgePoint = reference(knowledge)
-      if (knowledgePoint) params.knowledgePoint = knowledgePoint
-      return this.removeEmptyParams(params)
-    },
-    buildLiveAfterQuizAiParams() {
+    buildAukitsAfterQuizAiParams() {
       const subject = this.aiSubject || {}
       const details = this.buildAiGenerationDetails()
-      const questTemplate = this.optionItem(this.aiQuestTypeOptions, this.aiFilters.questType)
-      const chapters = this.aiSelectedChapters()
-      const knowledge = this.aiSelectedKnowledge()
 
-      // 字段与直播端 AfterClassTest 的 generateAfterQuizQuest 请求保持一致；
-      // 同时保留 ID 字段，兼容服务端按 ID 或名称匹配题目的两种实现。
+      // 与 aukits 开播端 AfterClassTest 的 generateAfterQuizQuest 保持同一契约。
+      // 应用端仍使用自己的筛选字段，发起请求时统一转换成 aukits 所需的名称字段。
       return this.removeEmptyParams({
-        eduType: this.aiStandardType === 1 ? 'K9K12' : '专升本',
-        areaId: subject.areaId || '',
-        businessId: details.businessId,
-        typeId: details.typeId,
-        subjectId: details.subjectId,
-        pointId: details.pointId,
-        knowledge: details.knowledgeId,
-        questTemplateId: details.questTemplateId,
-        difficulty: details.difficultyId,
-        questCount: Number(this.aiCount),
-        bookId: details.bookId,
-        levelId: details.typeId,
         area: subject.areaName || subject.area || '',
         businessName: details.stageName,
         subject: details.subjectName,
-        pointName: details.chapterName || chapters.map(item => item.name).filter(Boolean).join('、'),
-        knowledgeName: details.knowledgeName || knowledge.name || '',
-        questTypeName: questTemplate.name || '',
+        pointName: details.chapterName,
+        knowledgeName: details.knowledgeName,
+        questTypeName: details.questTemplateName,
         difficultyName: details.difficultyName,
         num: Number(this.aiCount),
         institutionId: localStorage.getItem('teaching_cloud_institution_id') || '',
         liveId: this.currentLiveId()
       })
     },
-    validateAfterQuizAiParams(params) {
+    validateAukitsAfterQuizAiParams(params) {
       const requiredFields = [
-        ['subjectId', '科目'],
-        ...(this.aiStandardType === 1 ? [['bookId', '教材版本'], ['typeId', '年级']] : []),
-        ['questTemplateId', '题型'], ['difficultyId', '难度']
+        ['subject', '科目'],
+        ['questTypeName', '题型'],
+        ['difficultyName', '难度'],
+        ['pointName', '章节']
       ]
       const missing = requiredFields.filter(([key]) => !params[key]).map(([, label]) => label)
-      const hasReference = item => Boolean(item && (item.id || String(item.name || '').trim()))
-      const hasChapter = params.useMinutesContent
-        ? Array.isArray(params.chapterIds) && params.chapterIds.some(Boolean)
-        : hasReference(params.chapter)
-      if (!hasChapter) missing.push('章节')
-      if (params.useMinutesContent && !params.t1Id) missing.unshift('当前听记 ID')
-      if (!params.useMinutesContent && !hasReference(params.knowledgePoint)) missing.push('知识点')
+      if (this.aiStandardType === 1 && !this.aiFilters.bookId) missing.push('教材版本')
+      if (this.aiStandardType === 1 && !this.aiFilters.level) missing.push('年级')
+      if (!this.useAiMinutesContent && !params.knowledgeName) missing.push('知识点')
       if (missing.length) {
         this.$message.warning(`请选择${missing.join('、')}`)
         return false
       }
-      if (!params.learningScope || !this.aiSubject) return false
+      if (!this.aiSubject) return false
       const customChapters = this.aiSelectedChapters().filter(item => !item.id)
       const customKnowledge = !this.aiSelectedKnowledge().id && this.aiSelectedKnowledge().name
       if ((customChapters.length || customKnowledge) && !this.allowAiCustomNames) {
@@ -2831,7 +2765,7 @@ export default {
         this.$message.warning('不根据听记内容出题时只能选择一个章节')
         return false
       }
-      if (!Number.isInteger(params.questionCount) || params.questionCount < 1 || params.questionCount > this.aiCountMax) {
+      if (!Number.isInteger(params.num) || params.num < 1 || params.num > this.aiCountMax) {
         this.$message.warning(`出题数量须为 1～${this.aiCountMax} 的整数`)
         return false
       }
@@ -2895,32 +2829,27 @@ export default {
     },
     async generateQuestions() {
       if (this.loading || this.sourceSwitching || this.filterOptionsLoading > 0) return
-      const useNewAfterQuizApi = this.useAfterQuizAiApi
-      const params = useNewAfterQuizApi
-        ? this.buildAfterQuizAiQueryParams()
-        : this.buildAiQueryParams()
+      const params = this.buildAukitsAfterQuizAiParams()
       const generationDetails = this.buildAiGenerationDetails()
-      if (!this.validateAfterQuizAiParams(params)) return
+      if (!this.validateAukitsAfterQuizAiParams(params)) return
       const sequence = ++this.aiRequestSequence
       const requestSourceTab = this.sourceTab
       // 通用学段沿用非 K12 的题库字段格式，实际学段类型单独保留。
       const requestEduType = this.aiStandardType === 1 ? 'K9K12' : '专升本'
       const requestStandardType = this.aiStandardType
       const requestSubjectPath = JSON.stringify(this.aiFilters.subjectPath)
-      if (useNewAfterQuizApi) this.resetAiGenerationMeta()
+      this.resetAiGenerationMeta()
       this.loading = true
       try {
         const result = await this.generateAiQuestions(params)
-        const rows = useNewAfterQuizApi ? result.rows : result
+        const rows = result.rows
         if (sequence !== this.aiRequestSequence || requestSourceTab !== this.sourceTab || requestSubjectPath !== JSON.stringify(this.aiFilters.subjectPath)) return
-        if (useNewAfterQuizApi) {
-          this.aiGenerationMeta = {
-            matchedChapters: result.matchedChapters,
-            unavailableChapters: result.unavailableChapters
-          }
-          if (result.unavailableChapters.length) {
-            this.$message.warning(`部分章节未被课堂纪要覆盖：${this.chapterSummaryNames(result.unavailableChapters)}`)
-          }
+        this.aiGenerationMeta = {
+          matchedChapters: result.matchedChapters,
+          unavailableChapters: result.unavailableChapters
+        }
+        if (result.unavailableChapters.length) {
+          this.$message.warning(`部分章节未被课堂纪要覆盖：${this.chapterSummaryNames(result.unavailableChapters)}`)
         }
         this.aiQuestionRows = (Array.isArray(rows) ? rows : []).map((row, index) => {
           const { _aiExportSource, ...item } = row
@@ -2952,28 +2881,39 @@ export default {
       }
     },
     generateAiQuestions(params) {
-      if (this.useAfterQuizAiApi) {
-        return generateAfterQuizQuestions(this.buildLiveAfterQuizAiParams(params)).then(data => {
-          const generation = data && data.generation ? data.generation : {}
-          const isLiveQuestionList = Array.isArray(data)
-          const sourceQuestions = (isLiveQuestionList
-            ? data
-            : Array.isArray(data && data.questions) ? data.questions : [])
-            .filter(item => item && typeof item === 'object')
-          return {
-            rows: (isLiveQuestionList ? sourceQuestions : normalizeT1AiQuestions(sourceQuestions, generation)).map((question, index) => ({
+      return generateAfterQuizQuestions(params).then(data => {
+        const sourceQuestions = this.extractAukitsAiQuestions(data)
+        const normalizedQuestions = normalizeT1AiQuestions(sourceQuestions)
+        return {
+          rows: normalizedQuestions.map((question, index) => {
+            const source = sourceQuestions[index] || {}
+            const returnedQuestType = source.questType || source.questTypeCode || (source.type && source.type.id) || ''
+            return {
               ...question,
-              _aiExportSource: sourceQuestions[index],
+              id: question.id || source.questId || source.topicId || `generated-${index + 1}`,
+              name: question.name || source.questName || source.title || '',
+              questType: returnedQuestType ? String(returnedQuestType) : '',
+              questTypeName: question.questTypeName || question.questTemplateName || source.typeName || '',
+              questTemplateName: question.questTemplateName || question.questTypeName || source.typeName || '',
+              subjectName: question.subjectName || source.subject || '',
+              pointName: question.pointName || source.chapterName || '',
+              knowledgeName: question.knowledgeName || '',
+              difficultyName: question.difficultyName || '',
               difficulty: question.difficulty || question.difficultyId || '',
-              knowledge: question.knowledge || question.knowledgeId || ''
-            })),
-            matchedChapters: Array.isArray(data && data.matchedChapters) ? data.matchedChapters : [],
-            unavailableChapters: Array.isArray(data && data.unavailableChapters) ? data.unavailableChapters : [],
-            message:data.message
-          }
-        })
-      }
-      return generatePartQuest(params)
+              knowledge: question.knowledge || question.knowledgeId || '',
+              _aiExportSource: source
+            }
+          }),
+          matchedChapters: Array.isArray(data && data.matchedChapters) ? data.matchedChapters : [],
+          unavailableChapters: Array.isArray(data && data.unavailableChapters) ? data.unavailableChapters : []
+        }
+      })
+    },
+    extractAukitsAiQuestions(data) {
+      if (Array.isArray(data)) return data.filter(item => item && typeof item === 'object')
+      const candidates = [data && data.questions, data && data.rows, data && data.records, data && data.list]
+      const rows = candidates.find(Array.isArray) || []
+      return rows.filter(item => item && typeof item === 'object')
     },
     cloneAiSnapshotValue(value) {
       return JSON.parse(JSON.stringify(value))
