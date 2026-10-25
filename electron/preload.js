@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // ─── 防录屏/截图（仅受保护的课堂和回放期间启用） ─────────────
+  // ─── 课堂/回放防录屏（直播允许截图） ──────────────────────
   onScreenGuardChange: (callback) => {
     const handler = (_, data) => callback(data)
     ipcRenderer.on('screen-guard-change', handler)
@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // 开启/关闭防录屏守护（窗口内容保护 + 录屏/虚拟机进程告警）
   setScreenGuard: (enabled, options) => ipcRenderer.send('set-screen-guard', !!enabled, {
+    allowScreenshots: options?.allowScreenshots === true,
     allowTeacherScreenShare: options?.allowTeacherScreenShare === true
   }),
   // 课堂宿主验证教师身份后，同步本机共享状态；不影响学生窗口保护。

@@ -56,6 +56,7 @@ const SCREEN_GUARD_INTERVAL_ALERT = 500
 let screenGuardChecking = false
 let screenGuardAlerting = false
 let screenGuardEnabled = false
+let allowScreenshots = false
 let allowTeacherScreenShare = false
 let teacherScreenSharing = false
 
@@ -173,6 +174,14 @@ const KEYWORD_WHITELIST_MAC = [
   'audioses', 'coreservicesd',
 ]
 
+// 这些工具/系统进程也用于截图，仅凭进程存在无法区分截图和录屏。
+// 直播允许截图时排除它们；专用录屏软件和虚拟机仍按原策略检测。
+const SCREENSHOT_PROCESSES = new Set([
+  'snagit32.exe', 'snagit64.exe', 'sharex.exe', 'screenpresso.exe',
+  'hypersnap.exe', 'tinytake.exe', 'screenpresso',
+  'screencapture', 'screencaptureui', 'screencaptured',
+])
+
 // ─── 需要检测的虚拟机进程名 ───────────────────────────────────────────────
 const VM_PROCESSES_WIN = [
   'vmtoolsd.exe', 'vmwaretray.exe', 'vmwareuser.exe', 'vmnat.exe', // VMware
@@ -273,6 +282,7 @@ async function checkScreenGuard () {
 
     // 1. 精确匹配已知录屏进程（二进制名）
     for (const p of recorderList) {
+      if (allowScreenshots && SCREENSHOT_PROCESSES.has(p)) continue
       if (processes.includes(p.toLowerCase())) {
         detectedRecorder = p
         break
@@ -282,6 +292,7 @@ async function checkScreenGuard () {
     // 2. macOS：精确匹配 App 显示名（osascript 获取，无截断）
     if (!detectedRecorder && isMac) {
       for (const app of RECORDER_APPS_MAC) {
+        if (allowScreenshots && SCREENSHOT_PROCESSES.has(app)) continue
         if (macAppNames.includes(app.toLowerCase())) {
           detectedRecorder = app
           break
@@ -294,6 +305,7 @@ async function checkScreenGuard () {
       const allProcs = isMac ? [...new Set([...processes, ...macAppNames])] : processes
       for (const proc of allProcs) {
         if (keywordWhitelist.includes(proc)) continue
+        if (allowScreenshots && SCREENSHOT_PROCESSES.has(proc)) continue
         const matched = RECORDER_KEYWORDS.find(kw => proc.includes(kw))
         if (matched) {
           detectedRecorder = `[keyword:${matched}] ${proc}`
@@ -342,11 +354,11 @@ async function checkScreenGuard () {
   }
 }
 
-// ─── 启动防录屏守护（仅直播课堂期间启用） ────────────────────────────────
-// 内容保护负责阻止截图/录屏，进程检测作为录屏/虚拟机告警的补充。
+// ─── 课堂/回放防录屏守护 ──────────────────────────────────────────────
+// 内容保护同时限制截图和录屏；允许截图的直播仅使用进程检测拦截已知录屏软件。
 function updateWindowContentProtection () {
   if (!mainWindow || mainWindow.isDestroyed()) return
-  mainWindow.setContentProtection(screenGuardEnabled && !teacherScreenSharing)
+  mainWindow.setContentProtection(screenGuardEnabled && !allowScreenshots && !teacherScreenSharing)
 }
 
 function setTeacherScreenSharing (active) {
@@ -357,10 +369,10 @@ function setTeacherScreenSharing (active) {
 function startScreenGuard (options = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
-  // 进程轮询无法判断 Win11 剪辑工具、微信或钉钉是否正在采集。
-  // Electron 会调用系统级窗口捕获排除机制（支持的 Windows 版本上为
-  // WDA_EXCLUDEFROMCAPTURE），同时保护截图和录屏结果。
+  // Electron 的窗口内容保护无法单独放开截图，直播按参数关闭它。
+  // 此时进程检测仍运行，但无法拦截系统工具或截图/录屏一体工具的所有录屏行为。
   screenGuardEnabled = true
+  allowScreenshots = options?.allowScreenshots === true
   allowTeacherScreenShare = options?.allowTeacherScreenShare === true
   teacherScreenSharing = false
   updateWindowContentProtection()
@@ -378,6 +390,7 @@ function startScreenGuard (options = {}) {
 
 function stopScreenGuard () {
   screenGuardEnabled = false
+  allowScreenshots = false
   allowTeacherScreenShare = false
   teacherScreenSharing = false
   if (screenGuardInterval) {

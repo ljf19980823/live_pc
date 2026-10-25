@@ -132,6 +132,7 @@ export default {
     setScreenGuard(enabled) {
       if (window.electronAPI?.setScreenGuard) {
         window.electronAPI.setScreenGuard(enabled, {
+          allowScreenshots: enabled,
           allowTeacherScreenShare: enabled && getUserInfo()?.role === 'TEACHER'
         })
       }
