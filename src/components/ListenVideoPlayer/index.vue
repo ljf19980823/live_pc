@@ -142,6 +142,11 @@ const DRIFT_THRESHOLD = 1.5
 /** 快进、快退按钮和左右方向键共用的跳转秒数 */
 const SEEK_STEP = 10
 
+/** 全屏控制栏的底部唤出区域高度（px），覆盖控制栏和进度条。 */
+const FULLSCREEN_CONTROLS_TRIGGER_HEIGHT = 96
+/** 鼠标离开操作区域后的收起延迟（ms）。 */
+const FULLSCREEN_CONTROLS_HIDE_DELAY = 2000
+
 /** 单行字幕最多字数（中文按字计），保证画面上只出现一行 */
 const SUBTITLE_MAX_CHARS = 16
 
@@ -536,6 +541,10 @@ export default {
         videoEl.addEventListener('timeupdate', onTimeUpdate)
         videoEl.addEventListener('loadedmetadata', onDurationChange)
         videoEl.addEventListener('durationchange', onDurationChange)
+        // SDK 的 hover 模式只监听移入/移出，全屏内移动鼠标时需主动唤出。
+        // 捕获阶段监听，保证进度条等控件阻止冒泡时仍能保留控制栏。
+        container.addEventListener('mousemove', this.handleFullscreenMouseMove, true)
+        container.addEventListener('mouseleave', this.scheduleFullscreenControlsHide)
         if (!videoEl.paused && !videoEl.ended) {
           this.$emit('play')
           this.startSubtitleRaf()
@@ -549,6 +558,9 @@ export default {
           videoEl.removeEventListener('timeupdate', onTimeUpdate)
           videoEl.removeEventListener('loadedmetadata', onDurationChange)
           videoEl.removeEventListener('durationchange', onDurationChange)
+          // 与视频事件一并清理，避免播放器重建后重复监听鼠标移动。
+          container.removeEventListener('mousemove', this.handleFullscreenMouseMove, true)
+          container.removeEventListener('mouseleave', this.scheduleFullscreenControlsHide)
         }
         this.injectSeekButtons()
         this.injectCcButton()
@@ -595,6 +607,10 @@ export default {
     },
 
     exitFullscreen() {
+      // 销毁播放器时也会调用；取消待执行任务，避免之后误隐藏普通模式的控制栏。
+      clearTimeout(this._fullscreenControlsHideTimer)
+      this._fullscreenControlsHideTimer = null
+      this._fullscreenControlsShown = false
       const bodyEl = this.$refs.videoArea
       const pipEl = this.$refs.pip
       if (bodyEl && pipEl && pipEl.parentNode !== bodyEl) {
@@ -606,6 +622,42 @@ export default {
       }
       this.$refs.videoWatermark?.restoreTo(bodyEl)
       this.isFullscreen = false
+    },
+
+    /** 根据全屏内的鼠标位置唤出控制栏，保持当前播放状态。 */
+    handleFullscreenMouseMove(e) {
+      if (!this.isFullscreen || !this.mainPlayer || this.mainError) return
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement
+      const container = e.currentTarget
+      // 页面其他区域进入全屏时，不接管本播放器的控制栏。
+      if (!fsEl || !fsEl.contains(container)) return
+
+      const nearBottom = e.clientY >= container.getBoundingClientRect().bottom - FULLSCREEN_CONTROLS_TRIGGER_HEIGHT
+      // 设置、音量等弹出面板可能超出底部热区，操作面板时仍需保持显示。
+      const onControls = e.target.closest && e.target.closest(
+        '.prism-controlbar, .prism-setting-list, .prism-volume-control, .prism-selector'
+      )
+      if (nearBottom || onControls) {
+        clearTimeout(this._fullscreenControlsHideTimer)
+        this._fullscreenControlsHideTimer = null
+        // 此 API 同时取消 SDK 内部的隐藏计时，保证鼠标停留时控制栏不会自行收起。
+        this.mainPlayer.showControlBar()
+        this._fullscreenControlsShown = true
+      } else {
+        this.scheduleFullscreenControlsHide()
+      }
+    },
+
+    /** 仅收起鼠标主动唤出的控制栏；连续移动时复用同一个延迟任务。 */
+    scheduleFullscreenControlsHide() {
+      if (!this.isFullscreen || !this._fullscreenControlsShown || this._fullscreenControlsHideTimer) return
+      this._fullscreenControlsHideTimer = setTimeout(() => {
+        this._fullscreenControlsHideTimer = null
+        if (this.isFullscreen && this.mainPlayer) {
+          this.mainPlayer.hideControlBar()
+          this._fullscreenControlsShown = false
+        }
+      }, FULLSCREEN_CONTROLS_HIDE_DELAY)
     },
 
     safePlay(player) {
