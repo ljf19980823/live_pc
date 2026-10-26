@@ -236,9 +236,9 @@ export default {
         const authInfo = getAuthInfo() || {}
         const params = { isHome: 0, institutionId }
         const [k12Groups, zsbGroups] = await Promise.all([
-          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+          getTeachingCloudOptions('/home/getCompulsorySubjectList',  {...params,isHome: '1'}),
           String(authInfo.isInternalOrganization) !== '1'
-            ? getTeachingCloudUpgradeSubjectList(params)
+            ? getTeachingCloudUpgradeSubjectList( {...params,isHome: '1'})
             : Promise.resolve([])
         ])
         if (requestId !== this.subjectRequestId) return

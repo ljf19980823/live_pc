@@ -760,44 +760,6 @@
     </main>
 
     <el-dialog
-      title="加入自有题库"
-      class="question-import-wrapper"
-      :visible="bankAddVisible"
-      width="540px"
-      custom-class="question-import-dialog"
-      :show-close="!bankAddSaving"
-      :close-on-click-modal="false"
-      :close-on-press-escape="!bankAddSaving"
-      :before-close="closeCloudBankAdd"
-    >
-      <div class="import-form">
-        <div class="import-form-row">
-          <label>学段 / 科目</label>
-          <el-cascader
-            ref="bank-add-subject"
-            v-model="bankAddSubjectPath"
-            :options="bankAddSubjectOptions"
-            :props="{ expandTrigger: 'hover', checkStrictly: false }"
-            :disabled="bankAddSaving || bankAddSubjectsLoading"
-            clearable
-            filterable
-            :placeholder="bankAddSubjectsLoading ? '正在加载学段及科目' : '请选择学段及科目'"
-            popper-class="practice-filter-taxonomy-popper"
-            @visible-change="handleTaxonomyVisibleChange($event, 'bank-add-subject')"
-            @expand-change="updateTaxonomyPopper('bank-add-subject')"
-          />
-        </div>
-        <el-button v-if="bankAddSubjectsError" type="text" :disabled="bankAddSubjectsLoading" @click="loadBankAddSubjects">重新加载学段及科目</el-button>
-      </div>
-      <template slot="footer">
-        <el-button :disabled="bankAddSaving" @click="closeCloudBankAdd">取消</el-button>
-        <el-button type="primary" :disabled="!bankAddSubject" :loading="bankAddSaving" @click="confirmCloudBankAdd">
-          {{ bankAddSaving ? '加入中...' : '确定' }}
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
       title="导入题目"
       class="question-import-wrapper"
       :visible.sync="importVisible"
@@ -1226,14 +1188,7 @@ export default {
       bankEditingIndex: null,
       bankEditorQuestId: '',
       bankEditor: {},
-      bankAddVisible: false,
-      bankAddSubjectPath: [],
-      bankAddSubjectOptions: [],
-      bankAddSubjectsLoading: false,
-      bankAddSubjectsError: false,
-      bankAddSubjectsSequence: 0,
       bankAddQuestion: null,
-      bankAddDraft: null,
       bankAddSaving: false,
       paperTabSnapshots: {},
       paperGroups: [],
@@ -1292,17 +1247,6 @@ export default {
       return this.buildBankSubjectOptions(
         this.k12SubjectOptions, this.eduTypes.includes('专升本') ? this.zsbSubjectOptions : []
       )
-    },
-    bankAddSubject() {
-      if (this.bankAddSubjectsLoading || this.bankAddSubjectsError || this.bankAddSubjectPath.length < 2) return null
-      let nodes = this.bankAddSubjectOptions
-      let selected = null
-      for (const value of this.bankAddSubjectPath) {
-        selected = nodes.find(item => item.value === value)
-        if (!selected || selected.disabled) return null
-        nodes = selected.children || []
-      }
-      return selected && !nodes.length && selected.value ? selected : null
     },
     activeFilterEduType() {
       if (this.sourceTab === 'AI出题') return this.aiStandardType === 1 ? 'K9K12' : '专升本'
@@ -1551,7 +1495,6 @@ export default {
     }
   },
   beforeDestroy() {
-    this.bankAddSubjectsSequence += 1
     this.importRevision += 1
     this.filterStateSequence += 1
     this.requestSequence += 1
@@ -1685,9 +1628,9 @@ export default {
       const isCurrent = () => this.sourceTab === 'AI出题' && revision === this.filterStateSequence && sequence === this.filterRequestSequences['ai-base']
       const params = this.aiTeachingCloudParams()
       const [k12Groups, k12Subjects, upgradeGroups, difficulties] = await Promise.allSettled([
-        getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+        getTeachingCloudOptions('/home/getCompulsorySubjectList', {...params,isHome: '1'}),
         getTeachingCloudOptions('/home/getCompulsorySubjectAll', params),
-        this.eduTypes.includes('专升本') ? getTeachingCloudUpgradeSubjectList(params) : Promise.resolve([]),
+        this.eduTypes.includes('专升本') ? getTeachingCloudUpgradeSubjectList({...params,isHome: '1'}) : Promise.resolve([]),
         getTeachingCloudOptions('/dict/getAll', this.aiTeachingCloudParams({ id: TOPIC_DIFFICULTY_DICT_ID }))
       ])
       if (!isCurrent()) return
@@ -2145,7 +2088,7 @@ export default {
       const isCurrent = this.captureFilterRequest('zsbBase')
       const groups = this.usesZsbTopicOptions
         ? await getTopicUnCompulsorySubjectList()
-        : await getTeachingCloudUpgradeSubjectList(this.bankTeachingCloudParams())
+        : await getTeachingCloudUpgradeSubjectList({...this.bankTeachingCloudParams(), isHome: '1'})
       if (!isCurrent()) return
       this.zsbSubjectOptions = normalizeZsbSubjectOptions(groups)
       this.subjectOptions = this.zsbSubjectOptions.flatMap(group => group.children.map(subject => ({
@@ -2238,7 +2181,7 @@ export default {
       } else {
         const params = this.bankTeachingCloudParams()
         ;[groups, subjectRows] = await Promise.all([
-          getTeachingCloudOptions('/home/getCompulsorySubjectList', params),
+          getTeachingCloudOptions('/home/getCompulsorySubjectList',  {...params,isHome: '1'}),
           getTeachingCloudOptions('/home/getCompulsorySubjectAll', params)
         ])
       }
@@ -3367,13 +3310,12 @@ export default {
     },
     saveToSmartBank(question) {
       if (this.sourceTab === '自有题库') return
-      if (this.bankAddSaving || this.bankAddVisible || this.editVisible || question._bankLoading || question._banked) return
+      if (this.bankAddSaving || this.editVisible || question._bankLoading || question._banked) return
 
       if (this.sourceTab === '云端题库') {
         const templates = this.questionEduType(question) === this.activeFilterEduType ? this.activeQuestionTypeOptions() : []
         const template = templates.find(item => String(item.id) === String(question.questTemplateId)) || {}
         this.bankAddQuestion = question
-        this.bankAddDraft = null
         this.openQuestionEditor({
           ...question,
           questType: String(template.questType || this.resolveQuestionTypeCode(question))
@@ -3392,74 +3334,28 @@ export default {
       this.bankAddQuestion = question
       this.openQuestionEditor(payload, 'aiBank', -1)
     },
-    async loadBankAddSubjects() {
+    async confirmCloudBankAdd(editor) {
       const question = this.bankAddQuestion
-      if (!this.bankAddVisible || !question) return
-      // 接口的 compulsory 优先于列表筛选上下文，重试也始终按所选题目的类型加载。
-      const compulsory = String(question.compulsory)
-      const isK12 = ['0', '1'].includes(compulsory)
-        ? compulsory === '1'
-        : this.questionEduType(question) === 'K9K12'
-      const sequence = ++this.bankAddSubjectsSequence
-      const isCurrent = () => this.bankAddVisible && this.bankAddQuestion === question && sequence === this.bankAddSubjectsSequence
-      this.bankAddSubjectsLoading = true
-      this.bankAddSubjectsError = false
-      this.bankAddSubjectOptions = []
-      this.bankAddSubjectPath = []
-      try {
-        const authInfo = getAuthInfo() || {}
-        const institutionId = localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || ''
-        if (!institutionId) throw new Error('未获取到当前机构，请刷新页面后重试')
-        const params = { isHome: 0, institutionId }
-        const groups = isK12
-          ? await getTeachingCloudOptions('/home/getCompulsorySubjectList', params)
-          : await getTeachingCloudUpgradeSubjectList(params)
-        if (!isCurrent()) return
-        this.bankAddSubjectOptions = this.buildBankSubjectOptions(
-          isK12 ? this.normalizeK12SubjectOptions(groups) : [],
-          isK12 ? [] : normalizeZsbSubjectOptions(groups)
-        )
-      } catch (error) {
-        if (isCurrent()) {
-          this.bankAddSubjectsError = true
-          this.$message.warning(error.message || '学段科目加载失败，请重试')
-        }
-      } finally {
-        if (isCurrent()) this.bankAddSubjectsLoading = false
-      }
-    },
-    resetCloudBankAdd() {
-      this.bankAddSubjectsSequence += 1
-      this.bankAddVisible = false
-      this.bankAddDraft = null
-      this.bankAddSubjectPath = []
-      this.bankAddSubjectOptions = []
-      this.bankAddSubjectsLoading = false
-      this.bankAddSubjectsError = false
-    },
-    closeCloudBankAdd(done) {
-      if (this.bankAddSaving) return
-      this.resetCloudBankAdd()
-      if (this.bankAddQuestion && this.editingTarget.type === 'cloudBank') {
-        this.editZIndex = PopupManager.nextZIndex()
-        this.editVisible = true
-      }
-      if (typeof done === 'function') done()
-    },
-    async confirmCloudBankAdd() {
-      const question = this.bankAddQuestion
-      if (!this.bankAddVisible || !question || !this.bankAddDraft || this.bankAddSaving || question._banked) return
-      const subject = this.bankAddSubject
-      if (!subject) {
-        this.$message.warning('请选择学段及科目至最后一级')
+      if (!question || this.bankAddSaving || question._banked) return
+      // 使用列表题目的原始科目，不受编辑内容和当前筛选条件影响。
+      const subjectId = String(question.subjectId || '')
+      if (!subjectId) {
+        this.$message.warning('当前题目缺少科目信息，无法加入自有题库')
         return
       }
       const authInfo = getAuthInfo() || {}
       const payload = {
-        ...this.bankAddDraft,
+        name: editor.name || '',
+        answer: editor.answer || '',
+        analysis: editor.analysis || '',
         institutionId: localStorage.getItem('teaching_cloud_institution_id') || authInfo.institutionId || '',
-        subjectId: String(subject.value),
+        subjectId,
         id: question.id || question.questId || ''
+      }
+      if (['1', '2'].includes(this.editingQuestionTypeCode)) {
+        ;['optionA', 'optionB', 'optionC', 'optionD', 'optionE'].forEach(field => {
+          payload[field] = editor[field] || ''
+        })
       }
       this.bankAddSaving = true
       this.$set(question, '_bankLoading', true)
@@ -4076,14 +3972,13 @@ export default {
     },
     closeQuestionEditor() {
       if (this.bankAddSaving) return
-      this.resetCloudBankAdd()
       this.bankAddQuestion = null
       this.editVisible = false
       this.editingQuestion = {}
       this.editingTarget = { type: '', groupIndex: -1, childIndex: -1 }
     },
     saveEditedQuestion() {
-      if (this.bankAddSaving || this.bankAddVisible) return
+      if (this.bankAddSaving) return
       if (this.isBlankContent(this.editingQuestion.name)) {
         this.$message.warning('请输入题目')
         return
@@ -4100,17 +3995,7 @@ export default {
       }
       const { type, groupIndex, childIndex } = this.editingTarget
       if (type === 'cloudBank') {
-        if (!this.bankAddQuestion) return
-        const editor = this.editingQuestion
-        this.bankAddDraft = { name: editor.name || '', answer: editor.answer || '', analysis: editor.analysis || '' }
-        if (['1', '2'].includes(this.editingQuestionTypeCode)) {
-          ;['optionA', 'optionB', 'optionC', 'optionD', 'optionE'].forEach(field => {
-            this.bankAddDraft[field] = editor[field] || ''
-          })
-        }
-        this.editVisible = false
-        this.bankAddVisible = true
-        return this.loadBankAddSubjects()
+        return this.confirmCloudBankAdd(this.editingQuestion)
       }
       if (type === 'aiBank') {
         return this.submitBankAddEditor(this.editingQuestion)
