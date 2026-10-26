@@ -3102,6 +3102,9 @@ color: #0049FF;
 .cdi-card:hover{
   background: rgba(202, 217, 255, 0.20)!important;
 }
+.cdi-card:hover ::v-deep .el-progress-circle__track {
+  stroke: #CDD6E6;
+}
 .cdi-card-in-group {
   // background: rgba(202, 217, 255, 0.20);
   padding-left: 36px;

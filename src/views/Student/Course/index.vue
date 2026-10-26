@@ -1459,6 +1459,10 @@ border: 1px solid #DBEAFE;
   }
 }
 
+.cdi-card:hover ::v-deep .el-progress-circle__track {
+  stroke: #CDD6E6;
+}
+
 .cdi-card-in-group {
   padding-left: 36px;
 }
