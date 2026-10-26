@@ -15,7 +15,7 @@
             </svg>
             {{ isCollected ? '已收藏' : '收藏' }}
           </div>
-          <div v-if="!isStudent || allowDownload === '1'" class="file-preview-download-btn" @click="handleDownload">下载</div>
+          <!-- <div v-if="!isStudent || allowDownload === '1'" class="file-preview-download-btn" @click="handleDownload">下载</div> -->
           <img
             src="@/assets/images/login/close.png"
             class="file-preview-close"
@@ -27,7 +27,7 @@
       <div class="file-preview-body">
         <div v-if="loadError" class="file-preview-error">
           <div class="file-preview-error-text">该文件类型暂不支持在线预览</div>
-          <div class="file-preview-error-btn" @click="handleDownload">点击下载查看</div>
+          <!-- <div class="file-preview-error-btn" @click="handleDownload">点击下载查看</div> -->
         </div>
         <div
           v-else
