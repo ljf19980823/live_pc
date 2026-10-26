@@ -1,0 +1,83 @@
+// 题目富文本共用样式：题干、材料、选项、答案、解析和预览容器使用 rich-content。
+// rich-text-content 继续负责图片点击预览，课程介绍等普通富文本无需接入题目样式。
+.rich-content {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.rich-content p {
+  margin: 0;
+  text-align: left !important;
+}
+
+.rich-content img {
+  zoom: 0.6;
+  position: relative;
+  max-width: 100% !important;
+  height: auto;
+  vertical-align: baseline;
+  mix-blend-mode: multiply;
+}
+
+// 专升本云端题目图片。
+.rich-content.question-title > img {
+  zoom: 0.6;
+}
+
+// K9K12 云端题目的第二张图片。
+.rich-content.question-title > div > p:nth-of-type(2) > img {
+  zoom: 0.8;
+}
+
+.rich-content video,
+.rich-content iframe {
+  max-width: 100% !important;
+  height: auto;
+}
+
+// 对齐 T1 的 MathML、列表和导入图片规则。
+.rich-content math {
+  display: inline-block;
+  display: inline math;
+  math-style: compact;
+  vertical-align: baseline;
+  margin: 0;
+  font-size: 16px;
+}
+
+.rich-content ul,
+.rich-content ul > li,
+.ql-editor ul,
+.ql-editor ul > li {
+  list-style: none !important;
+}
+
+.rich-content ul,
+.ql-editor ul {
+  padding-left: 0 !important;
+}
+
+// Quill 通过伪元素绘制圆点，保留清单的勾选控件。
+.ql-editor ul:not([data-checked]) > li::before {
+  content: none !important;
+}
+
+// 仅重置带 float 行内样式的图片，避免导入图片挤乱文字。
+.rich-content img[style*="float" i],
+.ql-editor img[style*="float" i] {
+  float: none !important;
+  vertical-align: top !important;
+}
+
+// AI 出题的公式图片垂直居中展示。
+.rich-content .ai-formula-image {
+  vertical-align: middle;
+}
+
+// T1 行内公式以当前字号为基准，覆盖普通图片的缩放和浮动对齐规则。
+.rich-content img.t1-formula-image {
+  height: 1em !important;
+  margin: 0 0.08em;
+  vertical-align: -0.2em !important;
+  zoom: normal;
+}

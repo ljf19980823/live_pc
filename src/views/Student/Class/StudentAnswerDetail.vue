@@ -57,7 +57,7 @@
           <!-- 题目题干 -->
           <div class="sad__q-stem">
             <img v-if="q.stemIsImg" :src="q.stem" class="sad__rich-img" />
-            <span v-else v-html="q.stem"  class="wep__opt-text rich-text-content" ></span>
+            <span v-else v-html="q.stem"  class="wep__opt-text question-title rich-content rich-text-content" ></span>
           </div>
 
           <!-- 单选题 / 多选题 / 判断题 选项 -->
@@ -71,7 +71,7 @@
               <span class="sad__q-opt-key">{{ opt.key }}.</span>
               <span class="sad__q-opt-text">
                 <img v-if="opt.isImg" :src="opt.text" class="sad__rich-img" />
-                <span v-else v-html="opt.text"  class="wep__opt-text rich-text-content" ></span>
+                <span v-else v-html="opt.text"  class="wep__opt-text rich-content rich-text-content" ></span>
               </span>
               <span v-if="isStudentChose(q, opt) && isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--correct">✓</span>
               <span v-else-if="isStudentChose(q, opt) && !isCorrectOpt(q, opt)" class="sad__q-opt-icon sad__q-opt-icon--wrong">✗</span>
@@ -128,18 +128,18 @@
               <!-- 填空 -->
               <!-- <span v-else-if="q.type === 'fill' && q.blanks && q.blanks[0]" class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.blanks[0].correctAnswer" class="sad__rich-img" />
-                <span v-else class="rich-text-content" v-html="q.blanks[0].correctAnswer || '-'"></span>
+                <span v-else class="rich-content rich-text-content" v-html="q.blanks[0].correctAnswer || '-'"></span>
               </span> -->
               <!-- 简答/主观 -->
               <span  class="sad__analysis-correct-val">
                 <img v-if="q.answerIsImg" :src="q.answer" class="sad__rich-img" />
-                <span v-else v-html="q.answer || '-'"  class="wep__opt-text rich-text-content" ></span>
+                <span v-else v-html="q.answer || '-'"  class="wep__opt-text rich-content rich-text-content" ></span>
               </span>
             </div>
             <!-- 解析文字 -->
             <div v-if="q.analysis" class="sad__analysis-text">
               <img v-if="q.analysisIsImg" :src="q.analysis" class="sad__rich-img" />
-              <span v-else v-html="q.analysis"  class="wep__opt-text rich-text-content" ></span>
+              <span v-else v-html="q.analysis"  class="wep__opt-text rich-content rich-text-content" ></span>
             </div>
           </div>
         </div>
@@ -650,21 +650,6 @@ export default {
   margin: 4px 0;
 
 }
-/* 题干、选项内嵌 HTML 中的图片自动限宽 */
-.sad__q-stem img,
-.sad__q-opt-text img,
-.sad__analysis-correct-val img,
-
-::v-deep .wep__opt-text.rich-text-content p { margin: 0 }
-::v-deep .wep__opt-text.rich-text-content img {
-  max-width: 100%;border-radius: 4px;
-  object-fit: contain; vertical-align: middle;
-  mix-blend-mode: multiply !important;
-  float:none!important; 
-  zoom: 0.6;
-  display: inline-block;
-}
-
 /* ===== 空状态 ===== */
 .sad__empty {
   text-align: center;

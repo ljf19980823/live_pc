@@ -53,18 +53,20 @@
         <div class="student-heading">
           <div>
             <strong>选择班级</strong>
-            <span>课后测将发布给班级内全部学生</span>
+            <span>课后测将发布给所选班级内全部学生</span>
           </div>
         </div>
 
         <el-select
-          v-model="selectedClassId"
+          v-model="selectedClassIds"
           class="class-picker"
+          multiple
+          collapse-tags
           clearable
           filterable
           :loading="classLoading"
-          :disabled="classLoading"
-          placeholder="请选择班级"
+          :disabled="classLoading || submitting"
+          placeholder="请选择班级（可多选）"
           @change="handleClassChange"
         >
           <el-option
@@ -83,7 +85,7 @@
           <span>正在加载班级学生...</span>
         </div>
 
-        <div v-else-if="selectedClassId && selectedStudents.length" class="selected-summary">
+        <div v-else-if="selectedClassIds.length && selectedStudents.length" class="selected-summary">
           <span class="selected-class-name">{{ selectedClassName }}</span>
           <span>共 {{ selectedStudents.length }} 名学生</span>
         </div>
@@ -95,16 +97,16 @@
           </span>
         </div>
 
-        <div v-else-if="!pickerLoading && selectedClassId" class="empty-class-tip">该班级暂无学生</div>
+        <div v-else-if="!pickerLoading && selectedClassIds.length" class="empty-class-tip">所选班级暂无学生</div>
       </div>
 
       <footer class="publish-dialog-footer">
         <span>
-          已选 <strong>{{ selectedClassId ? 1 : 0 }}</strong> 个班级，
+          已选 <strong>{{ selectedClassIds.length }}</strong> 个班级，
           共 <strong>{{ selectedStudents.length }}</strong> 名学生
         </span>
         <button class="cancel-button" type="button" :disabled="submitting" @click="$emit('close')">取消</button>
-        <button class="confirm-button" type="button" :disabled="submitting || pickerLoading || subjectLoading" @click="confirm">
+        <button class="confirm-button" type="button" :disabled="submitting || classLoading || pickerLoading || subjectLoading" @click="confirm">
           {{ submitting ? '发布中...' : '确定' }}
         </button>
       </footer>
@@ -157,7 +159,7 @@ export default {
       classLoading: false,
       pickerLoading: false,
       classOptions: [],
-      selectedClassId: '',
+      selectedClassIds: [],
       selectedStudents: [],
       studentRequestId: 0,
       numberFields: [
@@ -188,9 +190,19 @@ export default {
       }
       return selected && !nodes.length && selected.value && !selected.isSubjectGroup ? selected : null
     },
+    selectedClasses() {
+      const savedClasses = Array.isArray(this.initialConfig.classs) ? this.initialConfig.classs : []
+      return this.selectedClassIds.map(classId => {
+        const selected = this.classOptions.find(item => item.id === classId)
+        const saved = savedClasses.find(item => String(item.classId) === classId)
+        return {
+          classId,
+          className: selected ? selected.name : String((saved && saved.className) || '')
+        }
+      })
+    },
     selectedClassName() {
-      const selected = this.classOptions.find(item => item.id === this.selectedClassId)
-      return selected ? selected.name : String(this.initialConfig.className || '')
+      return this.selectedClasses.map(item => item.className || item.classId).join('、')
     },
     visibleStudents() {
       return this.selectedStudents.slice(0, 12)
@@ -212,7 +224,10 @@ export default {
     if (process.env.NODE_ENV === 'development' && !this.form.name) {
       this.form.name = '测试' + new Date().toISOString().slice(0, 19).replace('T', '_')
     }
-    this.selectedClassId = String(config.classId || '')
+    const classIds = Array.isArray(config.classs)
+      ? config.classs.map(item => item.classId)
+      : String(config.classId || '').split(',')
+    this.selectedClassIds = [...new Set(classIds.map(id => String(id || '').trim()).filter(Boolean))]
     this.selectedStudents = (Array.isArray(config.students) ? config.students : [])
       .filter(Boolean)
       .map(this.normalizeStudent)
@@ -293,8 +308,8 @@ export default {
           studentCount: item.studentCount == null ? null : Number(item.studentCount)
         })).filter(item => item.id && item.name)
 
-        if (this.selectedClassId) {
-          await this.loadClassStudents(this.selectedClassId)
+        if (this.selectedClassIds.length) {
+          await this.loadClassStudents(this.selectedClassIds)
         }
       } catch (error) {
         console.error('加载班级列表失败', error)
@@ -303,24 +318,25 @@ export default {
         this.classLoading = false
       }
     },
-    handleClassChange(classId) {
+    handleClassChange(classIds) {
       this.selectedStudents = []
-      if (!classId) {
+      if (!classIds.length) {
         this.studentRequestId += 1
         this.pickerLoading = false
         return
       }
-      this.loadClassStudents(classId)
+      return this.loadClassStudents(classIds)
     },
-    async loadClassStudents(classId) {
+    async loadClassStudents(classIds) {
       const requestId = ++this.studentRequestId
       this.pickerLoading = true
       try {
-        const response = await getClassStudents(classId)
+        const responses = await Promise.all(classIds.map(classId => getClassStudents(classId)))
         if (requestId !== this.studentRequestId) return
-        this.selectedStudents = this.responseRows(response)
+        const students = responses.flatMap(response => this.responseRows(response))
           .map(this.normalizeStudent)
           .filter(student => student.id)
+        this.selectedStudents = [...new Map(students.map(student => [student.id, student])).values()]
       } catch (error) {
         if (requestId !== this.studentRequestId) return
         console.error('加载班级学生失败', error)
@@ -344,7 +360,7 @@ export default {
       }
     },
     confirm() {
-      if (this.submitting || this.pickerLoading || this.subjectLoading) return
+      if (this.submitting || this.classLoading || this.pickerLoading || this.subjectLoading) return
       if (this.showTitle && !this.form.name) {
         this.$message.warning('请输入标题')
         return
@@ -361,7 +377,7 @@ export default {
         this.$message.warning(`请输入${invalidField.label}`)
         return
       }
-      if (!this.selectedClassId) {
+      if (!this.selectedClassIds.length) {
         this.$message.warning('请选择班级')
         return
       }
@@ -376,8 +392,7 @@ export default {
         subjectId: String(this.selectedSubject.value),
         subjectName: this.selectedSubject.label,
         subjectPath: [...this.subjectPath],
-        classId: this.selectedClassId,
-        className: this.selectedClassName,
+        classs: this.selectedClasses.map(item => ({ ...item })),
         studentIds: this.selectedStudents.map(student => student.id),
         students: this.selectedStudents.map(student => ({ ...student })),
         entrySource: this.initialConfig.entrySource || 'teacher-home'

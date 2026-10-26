@@ -2258,7 +2258,7 @@ created() {
       this.quizLoading = true
       try {
         const params = { teacherId: userId }
-        if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
+        // if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
         if (this.quizSubjectId) params.subjectId = this.quizSubjectId
         if (this.quizDateRange && this.quizDateRange.length === 2) {
           params.quizStartTime = this.quizDateRange[0]

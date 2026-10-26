@@ -33,7 +33,7 @@
               class="exam-content-img"
               alt="材料图片"
             />
-            <div v-else class="exam-material-content rich-text-content" v-html="currentQuestion.material"></div>
+            <div v-else class="exam-material-content rich-content rich-text-content" v-html="currentQuestion.material"></div>
           </div>
 
           <!-- 题目内容 -->
@@ -44,7 +44,7 @@
               class="exam-content-img"
               alt="题目图片"
             />
-            <div v-else class="rich-text-content" v-html="currentQuestion.name"></div>
+            <div v-else class="question-title rich-content rich-text-content" v-html="currentQuestion.name"></div>
           </div>
 
           <!-- 判断题 questType=3 -->
@@ -79,7 +79,7 @@
               <span class="exam-option-label">{{ opt.label }}</span>
               <div class="exam-option-body">
                 <img v-if="opt.isImg" :src="opt.content" class="exam-option-img" alt="选项图片" />
-                <div v-else class="exam-option-text rich-text-content" v-html="opt.content"></div>
+                <div v-else class="exam-option-text rich-content rich-text-content" v-html="opt.content"></div>
               </div>
             </div>
           </div>
@@ -96,7 +96,7 @@
               <span class="exam-option-label">{{ opt.label }}</span>
               <div class="exam-option-body">
                 <img v-if="opt.isImg" :src="opt.content" class="exam-option-img" alt="选项图片" />
-                <div v-else class="exam-option-text rich-text-content" v-html="opt.content"></div>
+                <div v-else class="exam-option-text rich-content rich-text-content" v-html="opt.content"></div>
               </div>
             </div>
           </div>
@@ -415,6 +415,10 @@ export default {
     },
     selectSingleAnswer(questionId, optId) {
       this.$set(this.answers, questionId, optId)
+      const question = this.currentQuestion
+      if (question && ['1', '3'].includes(question.type) && this.currentIndex < this.questions.length - 1) {
+        this.nextQuestion()
+      }
     },
     toggleMultiAnswer(questionId, optId) {
       const current = [...(this.multiAnswers[questionId] || [])]
@@ -659,17 +663,7 @@ export default {
 }
 ::v-deep .exam-question-content .rich-text-content p,
 ::v-deep .exam-material-content.rich-text-content p {
-  margin: 0 0 4px;
   line-height: 1.8;
-}
-::v-deep .exam-question-content .rich-text-content img,
-::v-deep .exam-material-content.rich-text-content img {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 6px;
-  object-fit: contain;
-  display: block;
-  margin: 6px 0;
 }
 ::v-deep .exam-question-content .rich-text-content table,
 ::v-deep .exam-material-content.rich-text-content table {
@@ -703,11 +697,6 @@ export default {
   gap: 12px;
  
 }
-::v-deep .exam-options  img{
-    mix-blend-mode: multiply!important;
-    float:none!important; 
-    zoom: 0.6;
-  }
 .exam-option {
   display: flex;
   align-items: center;
@@ -754,15 +743,7 @@ export default {
   color: #333;
 }
 ::v-deep .exam-option-text.rich-text-content p {
-  margin: 0;
   line-height: 1.7;
-}
-::v-deep .exam-option-text.rich-text-content img {
-  max-width: 100%;
-  max-height: 160px;
-  border-radius: 4px;
-  object-fit: contain;
-  vertical-align: middle;
 }
 ::v-deep .exam-option-text.rich-text-content table {
   border-collapse: collapse;
@@ -787,6 +768,9 @@ export default {
   border-radius: 4px;
   object-fit: contain;
   display: block;
+  mix-blend-mode: multiply !important;
+  float: none !important;
+  zoom: 0.6;
 }
 .exam-content-img {
   max-width: 100%;

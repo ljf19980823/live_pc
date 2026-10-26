@@ -1290,66 +1290,6 @@ button {
   opacity: 0.65;
 }
 
-.rich-content {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-
-
-.rich-content ::v-deep p {
-  /* display: inline; */
-  margin: 0;
-  text-align: left!important;
-}
-
-.rich-content ::v-deep img{ 
-  zoom: 0.6;
-  position: relative;
-
-      max-width: 100% !important;
-  height: auto;
-}
-/* AI出题的题目中涉及到的公式垂直居中展示 */
-.rich-content ::v-deep .ai-formula-image{
-  vertical-align: middle;
-}
-
-/* 专升本云端-题目图片 */
-.rich-content.question-title ::v-deep>img {
-  zoom: 0.6;
-}
-/* K9K12云端-题目的第二张图片 */
-.question-title.rich-content ::v-deep > div > p:nth-of-type(2) > img { 
-  zoom: 0.8;
-}
-
-.rich-content ::v-deep .t1-formula-image{
-  /*
-   * 公式由服务端以图片形式返回，原始像素尺寸并不稳定。不要再用 zoom、
-   * min-height 或 relative/top 来“凑”尺寸：它们会让可见公式和文本行高脱节。
-   * 以当前文字字号为基准，所有行内公式便能在题干、选项和解析里保持一致。
-   */
-  height: 1em !important;
-  margin: 0 0.08em;
-  vertical-align: -0.2em !important;
-  zoom: normal;
-}
-
-/* .rich-content ::v-deep img{
-  zoom: 0.8;
-  position: relative;
-    top: 8px;
-      max-width: 100% !important;
-  height: auto;
-} */
-
-.rich-content ::v-deep video,
-.rich-content ::v-deep iframe {
-  max-width: 100% !important;
-  height: auto;
-}
-
 .preview-mask {
   position: fixed;
   inset: 0;

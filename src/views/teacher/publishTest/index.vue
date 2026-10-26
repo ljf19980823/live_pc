@@ -4204,11 +4204,10 @@ export default {
             .map(child => this.buildPublishTopic(child, serialNumber++))
           return topic
         })
-      const classId = String(publishConfig.classId || '')
-      const classs = classId ? [{
-        classId,
-        className: String(publishConfig.className || '')
-      }] : []
+      const classs = (Array.isArray(publishConfig.classs) ? publishConfig.classs : []).map(item => ({
+        classId: String(item.classId),
+        className: String(item.className || '')
+      }))
       const liveId = this.currentLiveId()
 
       return {

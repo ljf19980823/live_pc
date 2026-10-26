@@ -51,7 +51,7 @@
               class="wep__content-img"
               alt="材料图片"
             />
-            <div v-else class="rich-text-content wep__opt-text rich-text-content" v-html="currentQuestion.material"></div>
+            <div v-else class="wep__opt-text rich-content rich-text-content" v-html="currentQuestion.material"></div>
           </div>
 
           <!-- 题干 -->
@@ -62,7 +62,7 @@
               class="wep__content-img"
               alt="题目图片"
             />
-            <div v-else class="rich-text-content wep__opt-text rich-text-content" v-html="currentQuestion.name"></div>
+            <div v-else class="wep__opt-text question-title rich-content rich-text-content" v-html="currentQuestion.name"></div>
           </div>
 
           <!-- 判断题 questType=3 -->
@@ -94,7 +94,7 @@
               <span class="wep__opt-label" :class="getOptLabelClass(currentQuestion, opt.id)">{{ opt.label }}</span>
               <div class="wep__opt-body">
                 <img v-if="opt.isImg" :src="opt.content" class="wep__opt-img" alt="选项图片" />
-                <span v-else class="wep__opt-text rich-text-content" v-html="opt.content"></span>
+                <span v-else class="wep__opt-text rich-content rich-text-content" v-html="opt.content"></span>
               </div>
               <span v-if="showOptIcon(currentQuestion, opt.id) === 'correct'" class="wep__opt-icon wep__opt-icon--correct">✓</span>
               <span v-else-if="showOptIcon(currentQuestion, opt.id) === 'wrong'" class="wep__opt-icon wep__opt-icon--wrong">✗</span>
@@ -114,7 +114,7 @@
               <span class="wep__opt-label" :class="getOptLabelClass(currentQuestion, opt.id)">{{ opt.label }}</span>
               <div class="wep__opt-body">
                 <img v-if="opt.isImg" :src="opt.content" class="wep__opt-img" alt="选项图片" />
-                <span v-else class="wep__opt-text rich-text-content" v-html="opt.content"></span>
+                <span v-else class="wep__opt-text rich-content rich-text-content" v-html="opt.content"></span>
               </div>
               <span v-if="showOptIcon(currentQuestion, opt.id) === 'correct'" class="wep__opt-icon wep__opt-icon--correct">✓</span>
               <span v-else-if="showOptIcon(currentQuestion, opt.id) === 'wrong'" class="wep__opt-icon wep__opt-icon--wrong">✗</span>
@@ -185,7 +185,7 @@
               <span v-if="currentQuestion.answerIsImg === '1'" class="wep__analysis-correct-val">
                 <img :src="currentQuestion.answer" class="wep__content-img" alt="答案图片" />
               </span>
-              <span v-else class="wep__analysis-correct-val wep__opt-text rich-text-content" v-html="currentQuestion.answer || '-'"></span>
+              <span v-else class="wep__analysis-correct-val wep__opt-text rich-content rich-text-content" v-html="currentQuestion.answer || '-'"></span>
             </div>
             <div v-if="currentQuestion.analysis" class="wep__analysis-text">
               <img
@@ -194,7 +194,7 @@
                 class="wep__content-img"
                 alt="解析图片"
               />
-              <span v-else v-html="currentQuestion.analysis" class="wep__opt-text rich-text-content"></span>
+              <span v-else v-html="currentQuestion.analysis" class="wep__opt-text rich-content rich-text-content"></span>
             </div>
           </div>
         </div>
@@ -660,11 +660,7 @@ export default {
   line-height: 1.8;
   margin-bottom: 20px;
 }
-::v-deep .wep__q-stem .rich-text-content p { margin: 0 0 4px; line-height: 1.8; }
-::v-deep .wep__q-stem .rich-text-content img {
-  max-width: 100%; max-height: 300px; border-radius: 6px;
-  object-fit: contain; display: block; margin: 6px 0;
-}
+::v-deep .wep__q-stem .rich-text-content p { line-height: 1.8; }
 
 /* 选项 */
 .wep__options {
@@ -672,7 +668,6 @@ export default {
   flex-direction: column;
   gap: 12px;
 }
-::v-deep .wep__options img { mix-blend-mode: multiply !important; float:none!important;zoom: 0.6; }
 
 .wep__option {
   display: flex;
@@ -727,14 +722,7 @@ export default {
 
 .wep__opt-body { flex: 1; min-width: 0; }
 .wep__opt-text { font-size: 14px; color: #333; }
-::v-deep .wep__opt-text.rich-text-content p { margin: 0; line-height: 1.7; }
-::v-deep .wep__opt-text.rich-text-content img {
-  max-width: 100%; zoom: 0.6;border-radius: 4px;
-  object-fit: contain; vertical-align: middle;
-  mix-blend-mode: multiply !important;
-  float:none!important; 
-    display: inline-block;
-}
+::v-deep .wep__opt-text.rich-text-content p { line-height: 1.7; }
 
 .wep__opt-icon {
   font-size: 16px;
@@ -856,13 +844,6 @@ export default {
   color: #555;
   font-size: 14px;
   line-height: 1.7;
-}
-::v-deep .wep__analysis-text img {
-  max-width: 100%; 
-  object-fit: contain; 
-  zoom: 0.6;
-  mix-blend-mode: multiply !important;
-  float:none!important; 
 }
 
 /* 空状态 */
