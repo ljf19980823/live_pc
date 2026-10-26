@@ -663,7 +663,7 @@ export default {
 ::v-deep .wep__q-stem .rich-text-content p { margin: 0 0 4px; line-height: 1.8; }
 ::v-deep .wep__q-stem .rich-text-content img {
   max-width: 100%; max-height: 300px; border-radius: 6px;
-  object-fit: contain; display: block; margin: 6px 0;
+  object-fit: contain; margin: 6px 0;
 }
 
 /* 选项 */

@@ -656,13 +656,43 @@ export default {
 .sad__analysis-correct-val img,
 
 ::v-deep .wep__opt-text.rich-text-content p { margin: 0 }
-::v-deep .wep__opt-text.rich-text-content img {
+/* ::v-deep .wep__opt-text.rich-text-content img {
   max-width: 100%;border-radius: 4px;
   object-fit: contain; vertical-align: middle;
   mix-blend-mode: multiply !important;
   float:none!important; 
   zoom: 0.6;
   display: inline-block;
+} */
+
+.rich-text-content ::v-deep img{
+  max-width: 100%;
+  /* zoom: 0.3; */
+  /* height: auto; */
+  vertical-align: middle;
+  mix-blend-mode: multiply !important;
+}
+/* 专升本云端-题目图片 */
+.rich-text-content ::v-deep>img {
+  zoom: 0.6;
+}
+/* K9K12云端-题目的第二张图片 */
+.rich-text-content ::v-deep > div > p:nth-of-type(2) > img { 
+  zoom: 0.8;
+}
+.rich-text-content ::v-deep .t1-formula-image{
+  /*
+   * 公式由服务端以图片形式返回，原始像素尺寸并不稳定。不要再用 zoom、
+   * min-height 或 relative/top 来“凑”尺寸：它们会让可见公式和文本行高脱节。
+   * 以当前文字字号为基准，所有行内公式便能在题干、选项和解析里保持一致。
+   */
+  /* height: 1em !important; */
+  margin: 0 0.08em;
+  /* vertical-align: -0.2em !important; */
+  zoom: 0.2;
+}
+.rich-text-content ::v-deep .ai-formula-image{
+  zoom: 0.7;
 }
 
 /* ===== 空状态 ===== */
