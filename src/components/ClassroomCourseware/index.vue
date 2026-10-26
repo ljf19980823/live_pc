@@ -138,7 +138,7 @@
       :source="previewFile ? previewFile.path : ''"
       :title="previewFile ? previewFile.name : ''"
       :allow-download="isTeacher ? '1' : '2'"
-      @close="closePreview"
+      @close="closeVideoPreview"
     />
     <el-dialog
       :title="previewFile ? previewFile.name : ''"
@@ -161,6 +161,16 @@ import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import { getUserInfo } from '@/utils/auth'
 import { getFileExtension, getResourceExtension, getResourceTypeIcon, getResourceAssociation, normalizeResourceProgress } from '@/utils/resource'
 import { getSharedResourceList, uploadSharedResource, updateSharedResource, deleteSharedResource } from '@/api/modules/resource'
+import { updateCourseProgress } from '@/api/modules/teacher'
+
+// 课件类型转换为进度接口类型：文档/其他→7，视频→4，音频→6，图片→5，链接→8。
+const PROGRESS_TYPES = { '1': '7', '2': '4', '3': '6', '4': '5', '5': '7', '6': '8' }
+
+// 进度限制在 0–100，并保留两位小数，避免丢失视频播放进度的小数部分。
+function progressValue(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? Math.round(Math.max(0, Math.min(100, number)) * 100) / 100 : 0
+}
 
 export default {
   name: 'ClassroomCourseware',
@@ -193,7 +203,9 @@ export default {
       deleting: false,
       downloadingIds: [],
       previewKind: '',
-      previewFile: null
+      previewFile: null,
+      previewResource: null,
+      progressReports: new Map()
     }
   },
   computed: {
@@ -214,6 +226,7 @@ export default {
       handler(value) { if (value) this.fetchResources(1) }
     },
     contextKey() {
+      // 切换课堂或身份时使旧请求失效，并清理旧课堂的列表、弹窗状态。
       this.contextVersion++
       this.requestId++
       this.resources = []
@@ -254,7 +267,13 @@ export default {
         const res = await getSharedResourceList({ ...this.association, pageNum: page, pageSize: this.pageSize })
         if (!this.isCurrentContext(version) || requestId !== this.requestId) return
         const data = res.data || {}
-        this.resources = data.list || []
+        // 列表可能暂未同步刚保存的进度，合并本地已确认值，避免显示回退。
+        this.resources = (data.list || []).map(item => {
+          const report = this.isStudent && this.progressReports.get(this.getProgressKey(item.id))
+          return report && report.saved > progressValue(item.progressPercent)
+            ? { ...item, progressPercent: report.saved }
+            : item
+        })
         this.total = Number(data.total) || 0
         const lastPage = Math.max(1, Math.ceil(this.total / this.pageSize))
         if (page > lastPage) return this.fetchResources(lastPage)
@@ -398,6 +417,52 @@ export default {
       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
     },
+    getProgressKey(resourceId) {
+      const user = this.$store.state.user.userInfo || {}
+      const cached = getUserInfo() || {}
+      const userId = user.userId || user.id || cached.userId || cached.id || ''
+      return `${userId}:${resourceId}`
+    },
+    async reportResourceProgress(item, percent, version = this.contextVersion, contextKey = this.contextKey) {
+      const id = String(item.id || '')
+      const type = PROGRESS_TYPES[String(item.type || '')]
+      if (!this.isStudent || !this.association || !id || !type || !(item.fileUrl || item.resourceUrl)) return
+      const key = this.getProgressKey(id)
+      // 同时核对课堂、身份和用户，旧预览的异步结果不能更新切换后的列表。
+      const isCurrent = () => this.isCurrentContext(version) && this.contextKey === contextKey &&
+        this.isStudent && this.getProgressKey(id) === key
+      if (!isCurrent()) return
+      let report = this.progressReports.get(key)
+      if (!report) {
+        report = { saved: progressValue(item.progressPercent), pending: Promise.resolve() }
+        this.progressReports.set(key, report)
+      }
+      const requested = progressValue(percent)
+      // 同一学生、同一资源共用串行队列，切换课堂也保留，避免低进度覆盖高进度。
+      report.pending = report.pending.then(async () => {
+        if (!isCurrent()) return
+        const currentItem = this.resources.find(row => String(row.id) === id)
+        report.saved = Math.max(report.saved, progressValue(item.progressPercent), progressValue(currentItem && currentItem.progressPercent))
+        // 只提交新增进度，已完成或重复查看的课件不重复上报。
+        if (requested <= report.saved) return
+        try {
+          // 独立课件以资源 ID 作为 lessonId，不提交课程、班级或直播关联 ID。
+          const res = await updateCourseProgress({ lessonId: id, type, percent: String(requested) })
+          // 业务错误由请求拦截器拒绝；成功响应可能仅有 code/message，无需 data 为 true。
+          if (res.data === false) {
+            if (isCurrent()) this.$message.error('学习进度更新失败，请重试')
+            return
+          }
+          report.saved = requested
+          if (!isCurrent()) return
+          this.resources = this.resources.map(row => String(row.id) === id ? { ...row, progressPercent: requested } : row)
+          await this.fetchResources(this.pageNum)
+        } catch (_) {
+          // 请求失败由拦截器提示，不标记完成、不阻断预览，下次查看时可重试。
+        }
+      })
+      return report.pending
+    },
     async openResource(item) {
       const path = item.fileUrl || item.resourceUrl || ''
       if (!path) {
@@ -406,6 +471,8 @@ export default {
       }
       const extension = this.resourceExtension(item)
       const type = String(item.type || '')
+      const version = this.contextVersion
+      const contextKey = this.contextKey
       if (type === '6') {
         if (!/^https?:\/\//i.test(path)) {
           this.$message.warning('链接地址无效')
@@ -414,9 +481,16 @@ export default {
         try {
           if (window.electronAPI && window.electronAPI.openInAppUrl) {
             const opened = await window.electronAPI.openInAppUrl(path)
-            if (!opened) this.$message.warning('链接地址无效')
+            if (!opened) {
+              this.$message.warning('链接地址无效')
+              return
+            }
           } else window.open(path, '_blank', 'noopener,noreferrer')
-        } catch (_) { this.$message.error('链接打开失败') }
+        } catch (_) {
+          this.$message.error('链接打开失败')
+          return
+        }
+        await this.reportResourceProgress(item, 100, version, contextKey)
         return
       }
       this.previewFile = { name: this.resourceFilename(item), path, extension }
@@ -424,10 +498,19 @@ export default {
       else if (type === '3' || ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(extension)) this.previewKind = 'audio'
       else if (type === '4' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) this.previewKind = 'image'
       else this.previewKind = 'document'
+      // 非视频进入预览即记为完成；视频保留本次预览上下文，关闭时按播放比例上报。
+      this.previewResource = this.previewKind === 'video' ? { item: { ...item }, version, contextKey } : null
+      if (this.previewKind !== 'video') await this.reportResourceProgress(item, 100, version, contextKey)
+    },
+    async closeVideoPreview(percent = 0) {
+      const preview = this.previewResource
+      this.closePreview()
+      if (preview) await this.reportResourceProgress(preview.item, percent, preview.version, preview.contextKey)
     },
     closePreview() {
       this.previewKind = ''
       this.previewFile = null
+      this.previewResource = null
     },
     preventReadOnlyContextMenu(event) { if (!this.isTeacher) event.preventDefault() },
     async downloadResource(item) {

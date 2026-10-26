@@ -58,7 +58,7 @@ function harness({ role = 'TEACHER', props = {}, implementations = {}, globals =
   const calls = []
   const messages = []
   const api = {}
-  for (const name of ['getSharedResourceList', 'uploadSharedResource', 'updateSharedResource', 'deleteSharedResource']) {
+  for (const name of ['getSharedResourceList', 'uploadSharedResource', 'updateSharedResource', 'deleteSharedResource', 'updateCourseProgress']) {
     api[name] = async (...args) => {
       calls.push({ name, args })
       if (implementations[name]) return implementations[name](...args)
@@ -68,7 +68,8 @@ function harness({ role = 'TEACHER', props = {}, implementations = {}, globals =
   const definition = loadModule(coursewarePath, {
     '@/utils/auth': { getUserInfo: () => ({ role }) },
     '@/utils/resource': resource,
-    '@/api/modules/resource': api
+    '@/api/modules/resource': api,
+    '@/api/modules/teacher': { updateCourseProgress: api.updateCourseProgress }
   }, { fetch() { throw new Error('Unexpected download') }, window: {}, ...globals }).default
   const instance = componentInstance(definition, { historyLessonId: 'history-1', active: true, ...props }, {
     $store: { state: { user: { userInfo: { role } } } },
@@ -318,6 +319,276 @@ test('preview uses fileUrl and routes documents, images, videos, audio, and unsu
     assert.equal(page.previewFile.name, '课件.' + extension)
     page.closePreview()
     assert.equal(page.previewFile, null)
+  }
+})
+
+test('student non-video previews report completion with independent resource IDs and mapped lesson types', async () => {
+  for (const [type, mappedType, extension] of [['1', '7', 'pdf'], ['3', '6', 'mp3'], ['4', '5', 'png'], ['5', '7', 'zip'], ['6', '8', 'html']]) {
+    const { instance: page, calls } = harness({ role: 'STUDENT', globals: {
+      window: { electronAPI: { openInAppUrl: async () => true } }
+    } })
+    const item = { id: 'resource-' + type, type, name: '课件', fileUrl: 'https://files.test/file.' + extension, progressPercent: 0 }
+    page.resources = [item]
+    await page.openResource(item)
+    const reports = calls.filter(call => call.name === 'updateCourseProgress')
+    assert.equal(reports.length, 1)
+    assert.deepEqual(plain(reports[0].args[0]), { lessonId: item.id, type: mappedType, percent: '100' })
+    assert.equal(calls[1].name, 'getSharedResourceList')
+    assert.deepEqual(plain(calls[1].args[0]), { historyLessonId: 'history-1', pageNum: 1, pageSize: 20 })
+  }
+})
+
+test('preview opens without waiting for progress persistence and a stale list cannot undo confirmed progress', async () => {
+  const request = deferred()
+  const item = { id: 'r1', type: '1', name: '课件', fileUrl: 'https://files.test/file.pdf', progressPercent: 20 }
+  const { instance: page } = harness({ role: 'STUDENT', implementations: {
+    updateCourseProgress: () => request.promise,
+    getSharedResourceList: () => ({ data: { list: [item], total: 1 } })
+  } })
+  page.resources = [item]
+  const opening = page.openResource(item)
+  assert.equal(page.previewKind, 'document')
+  assert.equal(page.resources[0].progressPercent, 20)
+  request.resolve({ data: true })
+  await opening
+  assert.equal(page.resources[0].progressPercent, 100)
+})
+
+test('PDF progress success with an empty data payload refreshes the list and marks completion', async () => {
+  for (const response of [{ code: 200, message: '更新成功', data: null }, { code: 200, message: '更新成功' }]) {
+    const request = deferred()
+    const item = { id: 'pdf-1', type: '1', name: '普通PDF.pdf', fileUrl: 'https://files.test/file.pdf', progressPercent: 0 }
+    const { instance: page, calls, messages } = harness({ role: 'STUDENT', implementations: {
+      updateCourseProgress: () => request.promise,
+      getSharedResourceList: () => ({ data: { list: [{ ...item, name: '刷新后的PDF.pdf' }], total: 21 } })
+    } })
+    page.resources = [item]
+    page.pageNum = 2
+    const opening = page.openResource(item)
+    assert.equal(page.previewKind, 'document')
+    request.resolve(response)
+    await opening
+    assert.deepEqual(calls.map(call => call.name), ['updateCourseProgress', 'getSharedResourceList'])
+    assert.deepEqual(plain(calls[0].args[0]), { lessonId: 'pdf-1', type: '7', percent: '100' })
+    assert.equal(calls[1].args[0].pageNum, 2)
+    assert.equal(page.resources[0].name, '刷新后的PDF.pdf')
+    assert.equal(page.resources[0].progressPercent, 100)
+    assert.equal(messages.length, 0)
+    page.closePreview()
+    await page.openResource(page.resources[0])
+    assert.equal(calls.length, 2)
+  }
+})
+
+test('videos report only on close, keep fractional saved progress, and never lower it', async () => {
+  const item = { id: 'video-1', type: '2', name: '视频', fileUrl: 'https://files.test/file.mp4', progressPercent: 70.75 }
+  const { instance: page, calls } = harness({ role: 'STUDENT', implementations: {
+    getSharedResourceList: () => ({ data: { list: [item], total: 1 } })
+  } })
+  page.resources = [item]
+  await page.openResource(item)
+  assert.equal(calls.length, 0)
+  await page.closeVideoPreview(70.6, 10)
+  assert.equal(calls.length, 0)
+  await page.openResource(item)
+  await page.closeVideoPreview(80.555, 20)
+  assert.deepEqual(plain(calls[0].args[0]), { lessonId: 'video-1', type: '4', percent: '80.56' })
+  assert.equal(page.resources[0].progressPercent, 80.56)
+  assert.equal(page.previewFile, null)
+  await page.closeVideoPreview(90)
+  assert.equal(calls.filter(call => call.name === 'updateCourseProgress').length, 1)
+})
+
+test('unplayed videos do not report and video percentages stay in the documented range', async () => {
+  const item = { id: 'video', type: '2', fileUrl: 'https://files.test/file.mp4', progressPercent: 0 }
+  const { instance: page, calls } = harness({ role: 'STUDENT' })
+  for (const percent of [undefined, -5, NaN, Infinity]) {
+    await page.openResource(item)
+    await page.closeVideoPreview(percent)
+  }
+  assert.equal(calls.length, 0)
+  await page.openResource(item)
+  await page.closeVideoPreview(120)
+  assert.equal(calls[0].args[0].percent, '100')
+})
+
+test('teachers and visitors can preview every type without sending progress requests', async () => {
+  for (const role of ['TEACHER', 'VISITOR']) {
+    const { instance: page, calls } = harness({ role, globals: { window: { open() {} } } })
+    for (const type of ['1', '2', '3', '4', '5', '6']) {
+      await page.openResource({ id: 'r' + type, type, fileUrl: 'https://files.test/file', progressPercent: 0 })
+      await page.closeVideoPreview(60)
+    }
+    assert.equal(calls.length, 0)
+  }
+})
+
+test('missing IDs/addresses, unknown resource types, and completed resources do not report progress', async () => {
+  const { instance: page, calls } = harness({ role: 'STUDENT' })
+  for (const item of [
+    { type: '1', fileUrl: 'https://files.test/file.pdf' },
+    { id: 'r1', type: '1' },
+    { id: 'r2', type: 'unknown', fileUrl: 'https://files.test/file.pdf' },
+    { id: 'r3', type: '1', fileUrl: 'https://files.test/file.pdf', progressPercent: 100 }
+  ]) await page.openResource(item)
+  assert.equal(calls.length, 0)
+})
+
+test('links report only after valid opening; rejected, failed, and obsolete opens do not report', async () => {
+  const item = { id: 'link-1', type: '6', fileUrl: 'https://files.test/link', progressPercent: 0 }
+  for (const openInAppUrl of [async () => false, async () => { throw new Error('failed') }]) {
+    const { instance: page, calls } = harness({ role: 'STUDENT', globals: { window: { electronAPI: { openInAppUrl } } } })
+    await page.openResource(item)
+    await page.openResource({ ...item, fileUrl: 'javascript:invalid' })
+    assert.equal(calls.length, 0)
+  }
+  const opening = deferred()
+  const { instance: page, definition, calls } = harness({ role: 'STUDENT', props: { active: false }, globals: {
+    window: { electronAPI: { openInAppUrl: () => opening.promise } }
+  } })
+  const viewing = page.openResource(item)
+  page.historyLessonId = 'history-2'
+  definition.watch.contextKey.call(page)
+  opening.resolve(true)
+  await viewing
+  assert.equal(calls.length, 0)
+})
+
+test('duplicate previews share a serial queue and persist a completed resource only once', async () => {
+  const request = deferred()
+  const item = { id: 'r1', type: '1', fileUrl: 'https://files.test/file.pdf', progressPercent: 0 }
+  const { instance: page, calls } = harness({ role: 'STUDENT', implementations: { updateCourseProgress: () => request.promise } })
+  const first = page.openResource(item)
+  const second = page.openResource(item)
+  await tick()
+  assert.equal(calls.length, 1)
+  request.resolve({ data: true })
+  await Promise.all([first, second])
+  assert.equal(calls.filter(call => call.name === 'updateCourseProgress').length, 1)
+})
+
+test('increasing video updates serialize and a queued lower progress cannot overwrite them', async () => {
+  const pending = []
+  const item = { id: 'r1', type: '2', fileUrl: 'https://files.test/file.mp4', progressPercent: 0 }
+  const { instance: page, calls } = harness({ role: 'STUDENT', implementations: {
+    updateCourseProgress: () => { const request = deferred(); pending.push(request); return request.promise }
+  } })
+  const first = page.reportResourceProgress(item, 30)
+  const second = page.reportResourceProgress(item, 50)
+  const third = page.reportResourceProgress(item, 40)
+  await tick()
+  assert.equal(pending.length, 1)
+  pending[0].resolve({ data: true })
+  await first
+  await tick()
+  assert.equal(pending.length, 2)
+  pending[1].resolve({ data: true })
+  await Promise.all([second, third])
+  assert.deepEqual(calls.filter(call => call.name === 'updateCourseProgress').map(call => call.args[0].percent), ['30', '50'])
+})
+
+test('failed progress saves leave preview usable and can be retried on the next view', async () => {
+  for (const failure of [false, new Error('offline')]) {
+    let fail = true
+    const item = { id: 'r1', type: '1', fileUrl: 'https://files.test/file.pdf', progressPercent: 20 }
+    const { instance: page, calls } = harness({ role: 'STUDENT', implementations: {
+      updateCourseProgress: () => {
+        if (fail && failure instanceof Error) throw failure
+        return { data: fail ? failure : true }
+      },
+      getSharedResourceList: () => ({ data: { list: [item], total: 1 } })
+    } })
+    page.resources = [item]
+    await page.openResource(item)
+    assert.equal(page.previewKind, 'document')
+    assert.equal(page.resources[0].progressPercent, 20)
+    assert.equal(calls.length, 1)
+    fail = false
+    await page.openResource(item)
+    assert.equal(page.resources[0].progressPercent, 100)
+    assert.equal(calls.filter(call => call.name === 'updateCourseProgress').length, 2)
+  }
+})
+
+test('successful progress saves refresh the current page and keep pagination intact', async () => {
+  const item = { id: 'r21', type: '4', fileUrl: 'https://files.test/file.png', progressPercent: 0 }
+  const { instance: page, calls } = harness({ role: 'STUDENT', implementations: {
+    getSharedResourceList: () => ({ data: { list: [item], total: 21 } })
+  } })
+  page.pageNum = 2
+  page.resources = [item]
+  await page.openResource(item)
+  assert.equal(calls[1].args[0].pageNum, 2)
+  assert.equal(page.pageNum, 2)
+  assert.equal(page.resources[0].progressPercent, 100)
+})
+
+test('classroom changes discard pending preview state and queued old progress requests', async () => {
+  const request = deferred()
+  const old = { id: 'old', type: '1', fileUrl: 'https://files.test/old.pdf', progressPercent: 0 }
+  const current = { id: 'new', type: '1', fileUrl: 'https://files.test/new.pdf', progressPercent: 5 }
+  const { instance: page, definition, calls } = harness({ role: 'STUDENT', implementations: {
+    updateCourseProgress: () => request.promise,
+    getSharedResourceList: () => ({ data: { list: [current], total: 1 } })
+  } })
+  const first = page.openResource(old)
+  const second = page.openResource(old)
+  await tick()
+  page.historyLessonId = 'history-2'
+  definition.watch.contextKey.call(page)
+  await tick()
+  request.resolve({ data: true })
+  await Promise.all([first, second])
+  assert.equal(page.resources[0].id, 'new')
+  assert.equal(page.resources[0].progressPercent, 5)
+  assert.equal(calls.filter(call => call.name === 'getSharedResourceList').length, 1)
+  assert.equal(calls.filter(call => call.name === 'updateCourseProgress').length, 1)
+  await page.openResource({ id: 'video', type: '2', fileUrl: 'https://files.test/file.mp4' })
+  page.historyLessonId = 'history-3'
+  definition.watch.contextKey.call(page)
+  await page.closeVideoPreview(80)
+  assert.equal(calls.filter(call => call.name === 'updateCourseProgress').length, 1)
+})
+
+test('progress requests for a shared resource remain serialized across classroom changes', async () => {
+  const pending = []
+  const item = { id: 'shared', type: '2', fileUrl: 'https://files.test/file.mp4', progressPercent: 0 }
+  const { instance: page, definition, calls } = harness({ role: 'STUDENT', props: { active: false }, implementations: {
+    updateCourseProgress: () => { const request = deferred(); pending.push(request); return request.promise }
+  } })
+  const first = page.reportResourceProgress(item, 30)
+  await tick()
+  page.historyLessonId = 'history-2'
+  definition.watch.contextKey.call(page)
+  const second = page.reportResourceProgress(item, 60)
+  await tick()
+  assert.equal(pending.length, 1)
+  pending[0].resolve({ data: true })
+  await first
+  await tick()
+  assert.equal(pending.length, 2)
+  pending[1].resolve({ data: true })
+  await second
+  assert.deepEqual(calls.filter(call => call.name === 'updateCourseProgress').map(call => call.args[0].percent), ['30', '60'])
+})
+
+test('role changes and component destruction cancel queued reporting and subsequent list updates', async () => {
+  for (const stop of ['role', 'destroy']) {
+    const request = deferred()
+    const item = { id: 'r1', type: '1', fileUrl: 'https://files.test/file.pdf', progressPercent: 0 }
+    const { instance: page, definition, calls } = harness({ role: 'STUDENT', implementations: {
+      updateCourseProgress: () => request.promise
+    } })
+    page.resources = [item]
+    const first = page.openResource(item)
+    const second = page.openResource(item)
+    await tick()
+    if (stop === 'role') page.$store.state.user.userInfo.role = 'TEACHER'
+    else definition.beforeDestroy.call(page)
+    request.resolve({ data: true })
+    await Promise.all([first, second])
+    assert.equal(calls.length, 1)
+    assert.equal(page.resources[0].progressPercent, 0)
   }
 })
 
