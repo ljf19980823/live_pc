@@ -1402,7 +1402,19 @@ button {
 }
 
 .preview-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
   margin: 4px 0;
+}
+
+.preview-option-label {
+  flex: 0 0 auto;
+}
+
+.preview-option-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .preview-answer {
@@ -1430,6 +1442,7 @@ button {
   color: #455264;
 }
 
+.preview-dialog-title,
 .edit-dialog-title {
   display: flex;
   align-items: center;

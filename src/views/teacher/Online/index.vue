@@ -1217,6 +1217,14 @@ created() {
     window.addEventListener('message', this._onWindowMessage)
 
   },
+  beforeRouteEnter(to, from, next) {
+    next(vm => {
+      // 页面被 keep-alive 缓存，从发布页返回时刷新课后测列表及筛选选项。
+      if (from.name === 'create-practice' && vm.activeTab === 'quiz') {
+        vm.initQuizTab()
+      }
+    })
+  },
   beforeDestroy() {
     // 确保 iframe 及其 WebRTC 资源在组件销毁时被完全释放
     this.liveUrl = ''

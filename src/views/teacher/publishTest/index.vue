@@ -868,13 +868,17 @@
     <div v-if="previewVisible" class="preview-mask" :style="{ zIndex: previewZIndex }" @click.self="previewVisible = false">
       <section class="preview-dialog">
         <header>
-          <strong>题目预览</strong>
+          <div class="preview-dialog-title">
+            <strong>题目预览</strong>
+            <span class="tag type-tag">题型：{{ previewQuestionTypeName }}</span>
+          </div>
           <button type="button" @click="previewVisible = false">×</button>
         </header>
         <div class="preview-body">
           <div class="preview-title rich-content" v-rich-html="previewQuestionData.name"></div>
           <div v-for="option in getOptions(previewQuestionData)" :key="option.key" class="preview-option">
-            {{ option.key }}. <span class="rich-content" v-rich-html="option.value"></span>
+            <span class="preview-option-label">{{ option.key }}.</span>
+            <div class="preview-option-content rich-content" v-rich-html="option.value"></div>
           </div>
           <div class="preview-answer">
             <strong>答案：</strong>
@@ -1514,6 +1518,10 @@ export default {
     },
     hasSelectedQuestions() {
       return this.motherCount > 0 || this.childCount > 0
+    },
+    previewQuestionTypeName() {
+      const typeCode = this.resolveQuestionTypeCode(this.previewQuestionData)
+      return this.resolveQuestionTypeName(this.previewQuestionData, typeCode)
     },
     editingQuestionTypeCode() {
       return this.resolveQuestionTypeCode(this.editingQuestion)
@@ -3858,6 +3866,13 @@ export default {
         this.importResultVisible = true
       }
     },
+    showImportMessage(type, message) {
+      this.$message({
+        type,
+        message: String(message || '').replace(/<br\s*\/?>/gi, '\n'),
+        customClass: 'practice-import-message'
+      })
+    },
     validateImportConditions() {
       if (!this.importSubject) {
         this.$message.warning('请选择学段及科目至最后一级')
@@ -3904,7 +3919,7 @@ export default {
         const importResult = this.normalizeImportResult(result)
         this.importLoading = false
         this.importVisible = false
-        this.$message.success(`${result.msg}`)
+        this.showImportMessage('success', result.msg || '导入完成')
         this.showImportFailures(importResult)
         if (this.sourceTab === '自有题库') {
           this.page = 1
@@ -3914,7 +3929,7 @@ export default {
         if (!isCurrent()) return
         const result = error && (error.data || (error.response && error.response.data && error.response.data.data))
         if (result) this.showImportFailures(result)
-        this.$message.error(error.message || '导入失败，请检查文件后重试')
+        this.showImportMessage('error', error.message || '导入失败，请检查文件后重试')
       } finally {
         if (isCurrent()) this.importLoading = false
       }
