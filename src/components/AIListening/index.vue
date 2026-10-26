@@ -68,10 +68,21 @@
             :class="{ active: activeTab === 'summary' }"
             @click="activeTab = 'summary'"
           >AI纪要</div>
+          <div
+            class="al-tab"
+            :class="{ active: activeTab === 'courseware' }"
+            @click="activeTab = 'courseware'"
+          >课件</div>
         </div>
 
         <!-- 内容区 -->
         <div class="al-content-area" ref="transcriptArea" @scroll="onTranscriptScroll">
+          <ClassroomCourseware
+            v-show="activeTab === 'courseware'"
+            :active="activeTab === 'courseware'"
+            :history-lesson-id="historyLessonId"
+            :live-id="$route.query.liveId || ''"
+          />
           <!-- 图文纪要按钮 -->
           <!-- <div class="al-pictxt-row">
             <button class="al-pictxt-btn" @click="handlePicTxt">
@@ -472,9 +483,10 @@ import texmath from 'markdown-it-texmath'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import EmptyState from '@/components/EmptyState/index.vue'
+import ClassroomCourseware from '@/components/ClassroomCourseware/index.vue'
 /**
  * AIListening — AI 听记组件
- * 包含：视频播放器、转写/AI纪要标签页、右侧 AI 问答对话面板
+ * 包含：视频播放器、转写/AI纪要/课件标签页、右侧 AI 问答对话面板
  */
 
 const markdownRenderer = new MarkdownIt({
@@ -500,7 +512,7 @@ function sanitizeFileName(name) {
 
 export default {
   name: 'AIListening',
-  components: { ListenVideoPlayer,EmptyState },
+  components: { ListenVideoPlayer,EmptyState, ClassroomCourseware },
   data() {
     return {
       // ===== 转写同步状态 =====

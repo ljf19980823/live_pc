@@ -142,7 +142,7 @@
       </div>
       <div class="ls_last" v-loading="historyLoading">
         <template v-if="!historyLoading">
-          <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item)">
+          <div class="ls_last_detail" v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item, true)">
             <div class="ls_last_detail_options" @click.stop v-if="isTeacher">
               <el-popover
                 placement="bottom-end"
@@ -886,6 +886,8 @@ export default {
           endTime: live.endTime ? live.endTime.substring(11, 16) : '',
           fullStartTime: live.startTime || '',
           liveLessonId: live.liveLessonId || '',
+          liveId: live.liveId || live.id || '',
+          historyLessonId: live.historyLessonId || '',
           fileList: live.fileList || [],
           status: live.status,
           isStart: live.isStart,
@@ -1016,7 +1018,7 @@ export default {
       }
     },
 
-    openVideoPlayer(item) {
+    openVideoPlayer(item, fromHistory = false) {
       console.log(item, 'item')
       //  const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       //   const lessonId = String(item.id || '')
@@ -1036,7 +1038,8 @@ export default {
             meetingTitle: item.name || '',
             scopeText: item.taskUuid,
             liveLessonId: item.liveLessonId || '',
-            historyLessonId: item.historyLessonId || '',
+            historyLessonId: item.historyLessonId || (fromHistory ? item.id || '' : ''),
+            liveId: item.liveId || (!fromHistory ? item.id || '' : ''),
             teacherId: userId || ''
           }
         })

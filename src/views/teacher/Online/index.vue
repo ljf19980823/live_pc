@@ -169,7 +169,7 @@
       <div class="replay-grid" v-loading="historyLoading">
         <template v-if="!historyLoading">
         <div
-         v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item)"
+         v-for="(item, index) in historyCourses" :key="item.id || index" @click="openVideoPlayer(item, true)"
           class="replay-card"
         >
           <div class="replay-card__cover" >
@@ -1286,6 +1286,8 @@ created() {
           endTime: live.endTime ? live.endTime.substring(11, 16) : '',
           fullStartTime: live.startTime || '',
           liveLessonId: live.liveLessonId || '',
+          liveId: live.liveId || live.id || '',
+          historyLessonId: live.historyLessonId || '',
           fileList: live.fileList || [],
           status: live.status,
           isStart: live.isStart,
@@ -1442,7 +1444,7 @@ created() {
       }
     },
 
-    openVideoPlayer(item) {
+    openVideoPlayer(item, fromHistory = false) {
       console.log(item, 'item')
       //  const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       //   const lessonId = String(item.id || '')
@@ -1462,7 +1464,8 @@ created() {
             meetingTitle: item.name || '',
             scopeText: item.taskUuid,
             liveLessonId: item.liveLessonId || '',
-            historyLessonId: item.historyLessonId || '',
+            historyLessonId: item.historyLessonId || (fromHistory ? item.id || '' : ''),
+            liveId: item.liveId || (!fromHistory ? item.id || '' : ''),
             teacherId: userId || ''
           }
         })

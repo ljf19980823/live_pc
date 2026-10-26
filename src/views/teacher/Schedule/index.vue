@@ -719,6 +719,7 @@ export default {
             scopeText: course.taskUuid,
             liveLessonId: course.liveLessonId || '',
             historyLessonId: course.historyLessonId || '',
+            liveId: course.liveId || course.id || '',
             teacherId: userId || ''
           }
         })
