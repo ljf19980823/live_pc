@@ -390,10 +390,10 @@
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'course' }">课程</div>
             <img v-if="rightTab === 'course'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
           </div>
-          <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'afterTest'">
+          <!-- <div class="app_container_box_right_top_choose_detail" @click="rightTab = 'afterTest'">
             <div class="app_container_box_right_top_choose_detail_text" :class="{ 'app_container_box_right_top_choose_detail_text_active': rightTab === 'afterTest' }">课后测</div>
             <img v-if="rightTab === 'afterTest'" src="@/assets/images/class/tab_active.png" class="app_container_box_right_top_choose_detail_hx" alt="">
-          </div>
+          </div> -->
         </div>
       </div>
       <!-- 学生tab列表 -->
@@ -476,6 +476,39 @@
         <!-- 筛选条件 -->
         <div class="filter-bar">
           <div class="filter-bar__left">
+            <div class="filter-item">
+              <div class="filter-item__control filter-item__control--select">
+                <div class="ls_class_select_wrap">
+                  <el-select
+                    v-model="afterTestFilter.classIds"
+                    multiple
+                    collapse-tags
+                    placeholder="全部班级"
+                    size="mini"
+                    :clearable="false"
+                    filterable
+                    class="ls_class_select ls_class_select--multiple"
+                    @change="handleAfterTestSearch"
+                  >
+                    <el-option
+                      v-for="item in classList"
+                      :key="item.classId"
+                      :label="item.alias || item.name"
+                      :value="item.classId"
+                    />
+                  </el-select>
+                  <i
+                    v-if="afterTestFilter.classIds.length"
+                    class="el-icon-circle-close ls_class_select_clear"
+                    @click.stop="clearAfterTestField('classIds')"
+                  />
+                  <i
+                    v-else
+                    class="el-icon-arrow-down ls_class_select_arrow"
+                  />
+                </div>
+              </div>
+            </div>
             <div class="filter-item">
               <div class="filter-item__control filter-item__control--picker filter-item__control--datetime">
                 <el-date-picker
@@ -973,6 +1006,7 @@ export default {
       afterTestLoading: false,
       // 课后测筛选条件
       afterTestFilter: {
+        classIds: [],
         subjectId: '',
         quizStartTime: '',
         quizEndTime: '',
@@ -1099,7 +1133,13 @@ export default {
     rightTab(val) {
       if (val === 'student') this.fetchStudentList(this.rightStudentSearch)
       else if (val === 'course') this.fetchCourseList()
-      else if (val === 'afterTest') { this.fetchAfterTestFilterOptions(); this.fetchAfterTestList() }
+      else if (val === 'afterTest') {
+        if (!this.afterTestFilter.classIds.length && this.selectedClassId) {
+          this.afterTestFilter.classIds = [this.selectedClassId]
+        }
+        this.fetchAfterTestFilterOptions()
+        this.fetchAfterTestList()
+      }
     },
     rightStudentSearch(val) {
       clearTimeout(this._studentSearchTimer)
@@ -1213,15 +1253,15 @@ export default {
       }
     },
     openAfterTestDetail(item) {
-      this.currentAfterTestCourse = { ...item, classId: this.selectedClassId }
+      this.currentAfterTestCourse = { ...item, classId: item.classId || this.selectedClassId }
       this.showAfterTestDetail = true
     },
     async fetchAfterTestList() {
-      if (!this.selectedClassId) return
       const { userId } = getUserInfo()
       this.afterTestLoading = true
       try {
-        const params = { classId: this.selectedClassId, teacherId: userId }
+        const params = { teacherId: userId }
+        if (this.afterTestFilter.classIds.length) params.classId = this.afterTestFilter.classIds.join(',')
         if (this.afterTestFilter.subjectId) params.subjectId = this.afterTestFilter.subjectId
         if (this.afterTestFilter.quizStartTime) params.quizStartTime = this.afterTestFilter.quizStartTime
         if (this.afterTestFilter.quizEndTime) params.quizEndTime = this.afterTestFilter.quizEndTime
@@ -1266,11 +1306,11 @@ export default {
       this.handleAfterTestSearch()
     },
     clearAfterTestField(field) {
-      this.afterTestFilter[field] = ''
+      this.afterTestFilter[field] = field === 'classIds' ? [] : ''
       this.handleAfterTestSearch()
     },
     handleAfterTestReset() {
-      this.afterTestFilter = { subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' }
+      this.afterTestFilter = { classIds: [], subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' }
       this.afterTestTimeRange = []
       this.fetchAfterTestList()
     },
@@ -3409,6 +3449,13 @@ color: #333333;
   }
   ::v-deep .el-select__input {
     margin-left: 0 !important;
+  }
+}
+.ls_class_select--multiple {
+  width: 180px;
+
+  ::v-deep .el-select__tags {
+    max-width: calc(100% - 24px) !important;
   }
 }
 .filter-item__clear {

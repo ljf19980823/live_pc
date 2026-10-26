@@ -238,7 +238,7 @@
 </template>
 
 <script>
-import { getExamDetail, gradeExam } from '@/api'
+import { getExamQuestionsByConfig, gradeExam } from '@/api'
 
 // questType: 1单选 2多选 3判断 4填空 5简答 6计算 7论述
 const TYPE_MAP = {
@@ -300,7 +300,7 @@ export default {
     }
   },
   created() {
-    this.fetchExamDetail()
+    this.fetchExamQuestions()
   },
   beforeDestroy() {
     this.clearTimer()
@@ -308,7 +308,7 @@ export default {
   methods: {
     getTypeName(q) {
       // questName 为自定义题型名称（如"完形填空"），优先展示
-      return q.questName || q.typeName || TYPE_MAP[q.type] || '未知题型'
+      return q.questName  || TYPE_MAP[q.questType] || '未知题型'
     },
     isTextType(type) {
       return TEXT_TYPES.has(type)
@@ -316,16 +316,23 @@ export default {
     isUrl(str) {
       return typeof str === 'string' && /^https?:\/\//.test(str)
     },
-    async fetchExamDetail() {
-      if (!this.examInfo || !this.examInfo.id) return
+    async fetchExamQuestions() {
+      const configId = this.examInfo && (this.examInfo.examConfigId || this.examInfo.configId)
+      if (!configId) {
+        this.$message.error('缺少考试配置ID，无法获取题目')
+        return
+      }
       this.loading = true
       try {
-        const res = await getExamDetail(this.examInfo.id)
+        const res = await getExamQuestionsByConfig(configId)
         const data = res.data || {}
-        this.liveId = data.liveId
-        this.examConfigId = data.examConfigId
-        this.questions = this._mapQuestions(data.topics || [])
-        const duration = data.examDuration || this.examInfo.duration || 60
+        const topics = Array.isArray(data)
+          ? data
+          : (data.topics || data.quests || data.questList || [])
+        this.liveId = data.liveId || this.examInfo.liveId || ''
+        this.examConfigId = data.examConfigId || configId
+        this.questions = this._mapQuestions(topics)
+        const duration = data.examDuration || data.duration || this.examInfo.duration || 60
         this.remainTime = duration * 60
         this.examTotalSeconds = duration * 60
         this.startTimer()
@@ -476,13 +483,15 @@ export default {
           }
         })
         const elapsed = this.examTotalSeconds - this.remainTime
-        await gradeExam({
+        const payload = {
           liveId: this.liveId || '',
-          examId: this.examInfo.id || '',
           examConfigId: this.examConfigId || '',
           examDuration: String(elapsed > 0 ? elapsed : 0),
           answers
-        })
+        }
+        const examId = this.examInfo && (this.examInfo.examId || this.examInfo.id)
+        if (examId) payload.examId = examId
+        await gradeExam(payload)
         this.$message.success('提交成功')
         this.$emit('submitted')
       } catch (e) {

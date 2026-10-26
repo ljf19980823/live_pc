@@ -250,17 +250,19 @@
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
           </div>
-          <div class="filter-item">
+          <div v-if="false" class="filter-item">
             <!-- <span class="filter-item__label">班级</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
-                  v-model="quizClassId"
+                  v-model="quizClassIds"
+                  multiple
+                  collapse-tags
                   placeholder="全部班级"
                   size="mini"
                   filterable
                   clearable
-                  class="ls_class_select"
+                  class="ls_class_select ls_class_select--multiple"
                   @change="handleQuizClassChange"
                 >
                   <el-option
@@ -362,7 +364,7 @@
         <template v-if="!quizLoading">
           <div
             v-for="item in filteredQuizList"
-            :key="item.examConfigId || item.id"
+            :key="`${item.classId || ''}-${item.examConfigId || item.id}`"
             class="quiz-card"
           >
             <div class="quiz-card__header">
@@ -385,6 +387,22 @@
                 <span class="quiz-card__meta-label">发布时间</span>
                 <span class="quiz-card__meta-value">{{ formatQuizTime(item.createTime) }}</span>
               </div>
+              <template v-if="isQuizFinished(item)">
+                <div class="quiz-card__meta-row">
+                  <span class="quiz-card__meta-label">提交时间</span>
+                  <span class="quiz-card__meta-value">{{ formatQuizTime(item.submitTime) }}</span>
+                </div>
+                <div class="quiz-card__result">
+                  <div class="quiz-card__result-item">
+                    <span class="quiz-card__result-label">得分</span>
+                    <span class="quiz-card__result-score">{{ getQuizScore(item) }} 分</span>
+                  </div>
+                  <div class="quiz-card__result-item">
+                    <span class="quiz-card__result-label">正确数量</span>
+                    <span class="quiz-card__result-value">{{ item.correctNum || 0 }} / {{ item.topicNum || 0 }} 题</span>
+                  </div>
+                </div>
+              </template>
             </div>
             <div class="quiz-card__actions">
               <template v-if="isQuizFinished(item)">
@@ -394,8 +412,21 @@
                   @click.stop="openVideoPlayer(item)"
                 >查看回放</button>
                 <button class="quiz-card__btn quiz-card__btn--outline" @click.stop="openRanking(item)">排行榜</button>
-                <button class="quiz-card__btn quiz-card__btn--record" @click.stop="openExamRecord(item)">考试记录</button>
-                <button class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
+                <button
+                  v-if="item.reportUrl"
+                  class="quiz-card__btn quiz-card__btn--outline"
+                  @click.stop="openQuizReport(item)"
+                >查看报告</button>
+                <button
+                  v-if="item.bestRecordId"
+                  class="quiz-card__btn quiz-card__btn--record"
+                  @click.stop="openAnswerDetail(item)"
+                >查看详情</button>
+                <button
+                  v-if="hasQuizErrorExercises(item) && item.bestRecordId"
+                  class="quiz-card__btn quiz-card__btn--primary"
+                  @click.stop="openWrongExercise(item)"
+                >错题提升</button>
               </template>
               <template v-else>
                 <button
@@ -403,7 +434,7 @@
                   class="quiz-card__btn quiz-card__btn--outline"
                   @click.stop="openVideoPlayer(item)"
                 >查看回放</button>
-                <button class="quiz-card__btn quiz-card__btn--primary " @click.stop="startExam(item)">去考试</button>
+                <button v-if="isQuizIncomplete(item)" class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
               </template>
             </div>
           </div>
@@ -416,24 +447,40 @@
     <ExamPage
       v-if="showExam"
       :examInfo="currentExamItem"
-      :classId="quizClassId || (currentExamItem && currentExamItem.classId) || ''"
+      :classId="(currentExamItem && currentExamItem.classId) || quizClassIds[0] || ''"
       @back="onExamBack"
       @submitted="onExamSubmitted"
     />
 
-    <!-- 考试记录页面 -->
-    <ExamRecordPage
-      v-if="showExamRecord"
-      :examInfo="currentExamRecordItem"
-      :classId="quizClassId || (currentExamRecordItem && currentExamRecordItem.classId) || ''"
-      @back="showExamRecord = false"
+    <!-- 做题详情 -->
+    <StudentAnswerDetail
+      :visible="showAnswerDetail"
+      :record-id="selectedRecordId"
+      :attempt-index="1"
+      @close="showAnswerDetail = false"
+    />
+
+    <!-- 错题提升 -->
+    <WrongExercisePage
+      :visible="showWrongExercise"
+      :record-id="wrongRecordId"
+      @close="showWrongExercise = false"
+    />
+
+    <!-- 课后测诊断报告 -->
+    <AfterClassReport
+      :visible="showReport"
+      :class-id="reportClassId"
+      :record-id="reportRecordId"
+      :report-url="reportUrl"
+      @close="showReport = false"
     />
 
     <!-- 排行榜页面 -->
     <RankingPage
       :visible="showRanking"
       :examConfigId="rankingExamConfigId"
-      :classId="quizClassId || rankingClassId || ''"
+      :classId="rankingClassId || quizClassIds[0] || ''"
       @back="showRanking = false"
     />
 
@@ -898,13 +945,15 @@ import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import ExamPage from '@/views/Student/Class/ExamPage.vue'
-import ExamRecordPage from '@/views/Student/Class/ExamRecordPage.vue'
+import StudentAnswerDetail from '@/views/Student/Class/StudentAnswerDetail.vue'
+import WrongExercisePage from '@/views/Student/Class/WrongExercisePage.vue'
 import RankingPage from '@/views/Student/Class/RankingPage.vue'
+import AfterClassReport from '@/views/teacher/Class/AfterClassReport.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'StudentOnline',
-  components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, ExamRecordPage, RankingPage },
+  components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, StudentAnswerDetail, WrongExercisePage, RankingPage, AfterClassReport },
   directives: { Clickoutside },
   data() {
     return {
@@ -918,7 +967,7 @@ export default {
       quizKeyword: '',
       quizList: [],
       quizLoading: false,
-      quizClassId: '',
+      quizClassIds: [],
       quizSubjectId: '',
       quizFinishStatus: '',
       quizDateRange: [],
@@ -931,8 +980,14 @@ export default {
       quizFilterTeacherId: '',
       showExam: false,
       currentExamItem: null,
-      showExamRecord: false,
-      currentExamRecordItem: null,
+      showAnswerDetail: false,
+      selectedRecordId: '',
+      showWrongExercise: false,
+      wrongRecordId: '',
+      showReport: false,
+      reportClassId: '',
+      reportRecordId: '',
+      reportUrl: '',
       showRanking: false,
       rankingExamConfigId: '',
       rankingClassId: '',
@@ -1262,14 +1317,10 @@ created() {
   computed: {
     ...mapGetters('user', ['userInfo']),
     ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
-    quizClassName() {
-      const cls = this.classList.find(c => c.value === this.quizClassId)
-      return cls ? cls.label : ''
-    },
     filteredQuizList() {
       let list = this.quizList || []
       if (this.quizFinishStatus === '1' || this.quizFinishStatus === '0') {
-        list = list.filter(item => this.isQuizFinished(item) === (this.quizFinishStatus === '1'))
+        list = list.filter(item => String(item && item.finishStatus) === this.quizFinishStatus)
       }
       console.log(list,'哈哈哈')
       return list
@@ -2047,8 +2098,8 @@ created() {
     async initQuizTab() {
       this.quizLoading = true
       await this.fetchClassList()
-      if (!this.quizClassId && this.classList.length) {
-        this.quizClassId = this.classList[0].value
+      if (!this.quizClassIds.length && this.classList.length) {
+        this.quizClassIds = [this.classList[0].value]
       }
       await Promise.all([
         this.fetchQuizSubjectOptions(),
@@ -2149,7 +2200,7 @@ created() {
     async fetchQuizSubjectOptions() {
       try {
         const params = {}
-        if (this.quizClassId) params.classId = this.quizClassId
+        if (this.quizClassIds.length) params.classId = this.quizClassIds[0]
         const res = await getSubjectOptions(params)
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
@@ -2159,15 +2210,16 @@ created() {
       }
     },
     async fetchQuizFilterOptions() {
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.afterQuizOptions = []
         this.teacherOptions = []
         return
       }
       try {
+        const classId = this.quizClassIds[0]
         const [quizRes, teacherRes] = await Promise.all([
-          getAfterQuizOptions({ classId: this.quizClassId }),
-          getTeacherOptions({ classId: this.quizClassId })
+          getAfterQuizOptions({ classId }),
+          getTeacherOptions({ classId })
         ])
         this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
         this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
@@ -2223,7 +2275,7 @@ created() {
       this.quizLoading = true
       try {
         const params = { studentId }
-        if (this.quizClassId) params.classId = this.quizClassId
+        if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
         if (this.quizSubjectId) params.subjectId = this.quizSubjectId
         if (this.quizDateRange && this.quizDateRange.length === 2) {
           params.quizStartTime = this.quizDateRange[0]
@@ -2248,9 +2300,24 @@ created() {
     isQuizFinished(item) {
       return String(item && item.finishStatus) === '1'
     },
+    isQuizIncomplete(item) {
+      return String(item && item.finishStatus) === '0'
+    },
+    hasQuizErrorExercises(item) {
+      return String(item && item.hasErrorExercises) === '1'
+    },
+    getQuizScore(item) {
+      if (item && item.finishScore !== undefined && item.finishScore !== null && item.finishScore !== '') {
+        return item.finishScore
+      }
+      if (item && item.score !== undefined && item.score !== null && item.score !== '') {
+        return item.score
+      }
+      return 0
+    },
     openRanking(item) {
       this.rankingExamConfigId = item.examConfigId || item.configId || String(item.id || '')
-      this.rankingClassId = item.classId || this.quizClassId || ''
+      this.rankingClassId = item.classId || this.quizClassIds[0] || ''
       this.showRanking = true
     },
     startExam(item) {
@@ -2260,18 +2327,26 @@ created() {
         duration: item.duration || 60,
         examConfigId: item.examConfigId || item.configId || '',
         liveId: item.liveId || '',
-        classId: item.classId || this.quizClassId || ''
+        classId: item.classId || this.quizClassIds[0] || ''
       }
       this.showExam = true
     },
-    openExamRecord(item) {
-      this.currentExamRecordItem = {
-        id: item.id || item.quizId || item.examId,
-        name: item.name || item.examName || '',
-        className: this.quizClassName || item.className || '',
-        classId: item.classId || this.quizClassId || ''
-      }
-      this.showExamRecord = true
+    openAnswerDetail(item) {
+      this.selectedRecordId = String(item.bestRecordId || '')
+      if (!this.selectedRecordId) return
+      this.showAnswerDetail = true
+    },
+    openWrongExercise(item) {
+      this.wrongRecordId = String(item.bestRecordId || '')
+      if (!this.wrongRecordId) return
+      this.showWrongExercise = true
+    },
+    openQuizReport(item) {
+      const classId = item.classId || this.quizClassIds[0] || ''
+      this.reportClassId = classId
+      this.reportRecordId = item.bestRecordId || ''
+      this.reportUrl = item.reportUrl || ''
+      this.showReport = true
     },
     onExamBack() {
       this.showExam = false
@@ -3115,6 +3190,38 @@ border-radius: 10px 10px 10px 10px;
     font-size: 12px;
     color: #314158;
     font-weight: 600;
+  }
+
+  &__result {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  &__result-item {
+    min-width: 0;
+    padding: 10px 12px;
+    background: rgba(239, 246, 255, 0.7);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__result-label {
+    font-size: 11px;
+    color: #90A1B9;
+  }
+
+  &__result-score,
+  &__result-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1F7CFF;
+  }
+
+  &__result-score {
+    color: #22B877;
   }
 
   &__actions {
@@ -4160,6 +4267,13 @@ margin-bottom: 12px;
   }
   ::v-deep .el-select__input {
     margin-left: 0 !important;
+  }
+}
+.ls_class_select--multiple {
+  width: 180px;
+
+  ::v-deep .el-select__tags {
+    max-width: calc(100% - 24px) !important;
   }
 }
 

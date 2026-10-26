@@ -1,0 +1,180 @@
+.practice-config-page .el-input__inner,
+.question-import-dialog .el-input__inner,
+.quiz-formula-dialog .el-input__inner {
+  /* PC 全局 input 重置使用了 !important，这里恢复原组卷页的字段外观。 */
+  border: 1px solid #dcdfe6 !important;
+  background: #fff !important;
+}
+
+.practice-config-page .el-input__inner::placeholder,
+.question-import-dialog .el-input__inner::placeholder,
+.quiz-formula-dialog .el-input__inner::placeholder {
+  color: #c0c4cc !important;
+  font-size: inherit !important;
+}
+
+.practice-config-page .el-input__inner:hover,
+.question-import-dialog .el-input__inner:hover,
+.quiz-formula-dialog .el-input__inner:hover {
+  border-color: #c0c4cc !important;
+}
+
+.practice-config-page .el-input__inner:focus,
+.practice-config-page .el-select .el-input.is-focus .el-input__inner,
+.practice-config-page .el-cascader .el-input.is-focus .el-input__inner,
+.question-import-dialog .el-input__inner:focus,
+.question-import-dialog .el-select .el-input.is-focus .el-input__inner,
+.question-import-dialog .el-cascader .el-input.is-focus .el-input__inner,
+.quiz-formula-dialog .el-input__inner:focus {
+  border-color: #1F7CFF !important;
+}
+
+.practice-config-page .el-input.is-disabled .el-input__inner,
+.question-import-dialog .el-input.is-disabled .el-input__inner,
+.quiz-formula-dialog .el-input.is-disabled .el-input__inner {
+  border-color: #e4e7ed !important;
+  background: #f5f7fa !important;
+}
+
+.practice-config-page .el-input__inner {
+  height: 40px;
+  line-height: 40px;
+}
+
+.practice-config-page .el-input__icon {
+  line-height: 40px;
+}
+
+/* 对齐 T1 common.css 的富文本规则，覆盖题干、选项、答案、解析和预览。 */
+.practice-config-page .rich-content math {
+  display: inline-block;
+  display: inline math;
+  math-style: compact;
+  vertical-align: baseline;
+  margin: 0;
+  font-size: 16px;
+}
+
+.practice-config-page .rich-content ul,
+.practice-config-page .rich-content ul > li,
+.practice-config-page .ql-editor ul,
+.practice-config-page .ql-editor ul > li {
+  list-style: none !important;
+}
+
+.practice-config-page .rich-content ul,
+.practice-config-page .ql-editor ul {
+  padding-left: 0 !important;
+}
+
+/* Quill 通过伪元素绘制圆点，保留清单的勾选控件。 */
+.practice-config-page .ql-editor ul:not([data-checked]) > li::before {
+  content: none !important;
+}
+
+.practice-config-page .rich-content img {
+  /* 恢复 T1 的普通图片基线；公式图片继续使用页面内的专用对齐规则。 */
+  vertical-align: baseline;
+  mix-blend-mode: multiply;
+}
+
+/* 导入图片的 float 会挤乱文字，仅对带 float 行内样式的图片按 T1 处理。 */
+:where(.practice-config-page) .rich-content img[style*="float" i],
+:where(.practice-config-page) .ql-editor img[style*="float" i] {
+  float: none !important;
+  vertical-align: top !important;
+}
+
+/* Message 挂载在 body 下，导入结果的换行样式需通过专用类全局生效。 */
+.practice-import-message {
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+}
+
+.practice-import-message .el-message__content {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.practice-import-knowledge-popper {
+  width: min(420px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+  box-sizing: border-box;
+}
+
+.practice-import-select-popper {
+  max-width: calc(100vw - 24px);
+}
+
+.practice-import-select-popper .el-select-dropdown__item,
+.practice-import-select-popper .el-select-group__title {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.practice-import-select-popper .el-select-dropdown__wrap {
+  overflow-x: hidden;
+}
+
+.practice-filter-taxonomy-popper {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-panel {
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-menu {
+  width: max-content;
+  min-width: 150px;
+  max-width: min(320px, calc(100vw - 34px));
+  flex: none;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-node {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  box-sizing: border-box;
+  line-height: 20px;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-node__label {
+  min-width: 0;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.practice-filter-taxonomy-popper .practice-taxonomy-label {
+  display: block;
+}
+
+.practice-filter-taxonomy-popper .el-cascader-menu__wrap {
+  overflow-x: hidden;
+  height: 340px;
+  max-height: calc(100vh - 180px);
+}
+
+/* 单列文本已换行，横向滚动只由容纳多列的 panel 处理。 */
+.practice-filter-taxonomy-popper .el-cascader-menu .el-scrollbar__bar.is-horizontal {
+  display: none;
+}
+
+.practice-filter-taxonomy-popper .el-cascader__suggestion-list {
+  height: 340px;
+  max-height: calc(100vh - 180px);
+}

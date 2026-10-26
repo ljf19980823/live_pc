@@ -18,6 +18,10 @@
           <img src="@/assets/images/online/add_btn.png" class="btn-create__icon" alt="" />
           <span>新建课堂</span>
         </div>
+        <div class="btn-after-test" v-if="isTeacher" @click="publishStandaloneAfterClassTest">
+          <i class="el-icon-document-add btn-after-test__icon"></i>
+          <span>发布课后测</span>
+        </div>
         <div class="btn-schedule" @click="openSchedule">
           <img src="@/assets/images/online/kb_btn.png" class="btn-schedule__icon" alt="" />
           <span>查看课表</span>
@@ -256,16 +260,19 @@
               <img src="@/assets/images/class/rl_icon.png" class="filter-item__icon" alt="" />
             </div>
           </div>
-          <div class="filter-item">
+          <div v-if="false" class="filter-item">
             <!-- <span class="filter-item__label">班级</span> -->
             <div class="filter-item__control filter-item__control--select">
               <div class="ls_class_select_wrap">
                 <el-select
-                  v-model="quizClassId"
-                  placeholder="请选择班级"
+                  v-model="quizClassIds"
+                  multiple
+                  collapse-tags
+                  placeholder="全部班级"
                   size="mini"
                   filterable
-                  class="ls_class_select"
+                  clearable
+                  class="ls_class_select ls_class_select--multiple"
                   @change="handleQuizClassChange"
                 >
                   <el-option
@@ -347,7 +354,7 @@
         <template v-if="!quizLoading">
           <div
             v-for="item in filteredQuizList"
-            :key="item.examConfigId || item.id"
+            :key="`${item.classId || ''}-${item.examConfigId || item.id}`"
             class="quiz-card"
             @click="openQuizDetail(item)"
           >
@@ -831,6 +838,12 @@
       @close="playerVisible = false"
     />
 
+    <publish-after-quiz-dialog
+      v-if="publishDialogVisible"
+      @close="closePublishDialog"
+      @confirm="confirmAfterQuiz"
+    />
+
   </div>
 </template>
 
@@ -844,14 +857,17 @@ import EmptyState from '@/components/EmptyState/index.vue'
 import DialogCustome from '@/components/DialogCustome/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import AfterClassTestDetail from '@/views/teacher/Class/AfterClassTestDetail.vue'
+import PublishAfterQuizDialog from '@/views/teacher/publishTest/components/PublishAfterQuizDialog.vue'
+import { savePracticeRouteConfig } from '@/utils/practiceRoute'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 export default {
   name: 'Online',
-  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail },
+  components: { EmptyState, DialogCustome, VideoPlayer, AfterClassTestDetail, PublishAfterQuizDialog },
   directives: { Clickoutside },
   data() {
     return {
+      publishDialogVisible: false,
       activeTab: 'live',
       tabs: [
         { key: 'live', label: '待启课堂' },
@@ -862,7 +878,7 @@ export default {
       quizKeyword: '',
       quizList: [],
       quizLoading: false,
-      quizClassId: '',
+      quizClassIds: [],
       quizSubjectId: '',
       quizDateRange: [],
       quizSubjectOptions: [],
@@ -1201,6 +1217,14 @@ created() {
     window.addEventListener('message', this._onWindowMessage)
 
   },
+  beforeRouteEnter(to, from, next) {
+    next(vm => {
+      // 页面被 keep-alive 缓存，从发布页返回时刷新课后测列表及筛选选项。
+      if (from.name === 'create-practice' && vm.activeTab === 'quiz') {
+        vm.initQuizTab()
+      }
+    })
+  },
   beforeDestroy() {
     // 确保 iframe 及其 WebRTC 资源在组件销毁时被完全释放
     this.liveUrl = ''
@@ -1221,8 +1245,9 @@ created() {
     ...mapGetters('user', ['userInfo']),
     ...mapGetters('app', ['hasUpdate', 'isForceUpdate', 'updateInfo']),
     quizClassName() {
-      const cls = this.classList.find(c => c.value === this.quizClassId)
-      return cls ? cls.label : ''
+      const classId = (this.currentQuizCourse && this.currentQuizCourse.classId) || this.quizClassIds[0]
+      const cls = this.classList.find(c => String(c.value) === String(classId))
+      return (this.currentQuizCourse && this.currentQuizCourse.className) || (cls ? cls.label : '')
     },
     filteredQuizList() {
       return this.quizList
@@ -1738,13 +1763,32 @@ created() {
      this.activeTab = 'liveui'
     },
 
-    async publishAfterClassTest(item) {
+    publishStandaloneAfterClassTest() {
+      this.publishDialogVisible = true
+    },
+
+    closePublishDialog() {
+      this.publishDialogVisible = false
+    },
+
+    confirmAfterQuiz(config) {
+      const practiceConfig = { ...config, entrySource: 'teacher-home' }
+      savePracticeRouteConfig(practiceConfig)
+      this.publishDialogVisible = false
+      this.$router.push({
+        name: 'create-practice',
+        query: { entrySource: 'teacher-home' }
+      })
+    },
+
+    async publishAfterClassTest(item = {}) {
       this.prepareElectronMediaPermissions()
 
       const token =  getToken()
       console.log(token,'token值')
       const { userId, realName } = getUserInfo()
-      const liveId = item.liveId
+      const liveId = item.liveId || ''
+      const classroomId = item.liveLessonId || ''
 
       // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
       let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
@@ -1752,7 +1796,7 @@ created() {
         liveBaseUrl = 'http://localhost:8000'
       }
 
-      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`
+      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${classroomId}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${classroomId}`
       console.log(this.liveUrl, '发布课后测直播地址')
       this.activeTab = 'liveui'
     },
@@ -2010,10 +2054,10 @@ created() {
       this.quizList = []
       this.quizLoading = true
       await this.fetchClassList()
-      if (!this.quizClassId && this.classList.length) {
-        this.quizClassId = this.classList[0].value
+      if (!this.quizClassIds.length && this.classList.length) {
+        this.quizClassIds = [this.classList[0].value]
       }
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.quizList = []
         this.quizSubjectOptions = []
         this.afterQuizOptions = []
@@ -2135,12 +2179,12 @@ created() {
       this.$nextTick(() => apply())
     },
     async fetchQuizSubjectOptions() {
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.quizSubjectOptions = []
         return
       }
       try {
-        const res = await getSubjectOptions({ classId: this.quizClassId })
+        const res = await getSubjectOptions({ classId: this.quizClassIds[0] })
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
       } catch (e) {
@@ -2149,15 +2193,16 @@ created() {
       }
     },
     async fetchQuizFilterOptions() {
-      if (!this.quizClassId) {
+      if (!this.quizClassIds.length) {
         this.afterQuizOptions = []
         this.teacherOptions = []
         return
       }
       try {
+        const classId = this.quizClassIds[0]
         const [quizRes, teacherRes] = await Promise.all([
-          getAfterQuizOptions({ classId: this.quizClassId }),
-          getTeacherOptions({ classId: this.quizClassId })
+          getAfterQuizOptions({ classId }),
+          getTeacherOptions({ classId })
         ])
         this.afterQuizOptions = (quizRes && quizRes.data) ? quizRes.data : []
         this.teacherOptions = (teacherRes && teacherRes.data) ? teacherRes.data : []
@@ -2209,11 +2254,11 @@ created() {
       this.quizSuggestVisible = false
     },
     async fetchQuizList() {
-      if (!this.quizClassId) return
       const { userId } = getUserInfo()
       this.quizLoading = true
       try {
-        const params = { classId: this.quizClassId, teacherId: userId }
+        const params = { teacherId: userId }
+        if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
         if (this.quizSubjectId) params.subjectId = this.quizSubjectId
         if (this.quizDateRange && this.quizDateRange.length === 2) {
           params.quizStartTime = this.quizDateRange[0]
@@ -2231,7 +2276,7 @@ created() {
       }
     },
     openQuizDetail(item) {
-      this.currentQuizCourse = { ...item, classId: this.quizClassId }
+      this.currentQuizCourse = { ...item, classId: item.classId || this.quizClassIds[0] || '' }
       this.showQuizDetail = true
     },
 
@@ -2461,6 +2506,34 @@ created() {
     width: 14px;
     height: 14px;
     object-fit: contain;
+  }
+}
+
+.btn-after-test {
+  width: 126px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1px solid #1F7CFF;
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: #1F7CFF;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: #EFF6FF;
+    border-color: #1768D9;
+  }
+
+  &__icon {
+    font-size: 16px;
   }
 }
 
@@ -4367,6 +4440,13 @@ margin-bottom: 12px;
   }
   ::v-deep .el-select__input {
     margin-left: 0 !important;
+  }
+}
+.ls_class_select--multiple {
+  width: 180px;
+
+  ::v-deep .el-select__tags {
+    max-width: calc(100% - 24px) !important;
   }
 }
 

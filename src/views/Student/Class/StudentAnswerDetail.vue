@@ -6,7 +6,8 @@
         <img src="@/assets/images/class/back_icon.png" class="sad__back-arrow" alt="返回" />
         <span class="sad__back-text">返回</span>
       </div>
-      <div class="sad__title">第{{ attemptIndex }}次 - 做题详情</div>
+      <!-- <div class="sad__title">第{{ attemptIndex }}次 - 做题详情</div> -->
+      <div class="sad__title">做题详情</div>
       <div class="sad__header-right"></div>
     </div>
 
@@ -661,6 +662,7 @@ export default {
   mix-blend-mode: multiply !important;
   float:none!important; 
   zoom: 0.6;
+  display: inline-block;
 }
 
 /* ===== 空状态 ===== */

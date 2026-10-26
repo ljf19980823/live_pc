@@ -4,6 +4,7 @@ import store from '@/store'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { getToken } from '@/utils/auth'
+import { getPracticeRouteConfig } from '@/utils/practiceRoute'
 
 Vue.use(VueRouter)
 
@@ -206,6 +207,19 @@ const routes = [
       },
 
     ]
+  },
+  {
+    path: '/create-practice',
+    name: 'create-practice',
+    component: () => import('@/views/teacher/publishTest/index.vue'),
+    props: route => {
+      const practiceConfig = getPracticeRouteConfig()
+      return {
+        practiceConfig,
+        entrySource: route.query.entrySource || practiceConfig.entrySource || 'homework'
+      }
+    },
+    meta: { title: '发布课后测', roles: ['teacher'], hidden: true }
   },
   {
     path: '/404',

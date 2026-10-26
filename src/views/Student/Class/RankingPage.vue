@@ -14,7 +14,7 @@
 
     <!-- 统计栏 -->
     <div class="ranking-stats">
-      <span class="ranking-stats-total">总人数: <strong>{{ totalCount }}</strong></span>
+      <!-- <span class="ranking-stats-total">总人数: <strong>{{ totalCount }}</strong></span> -->
       <span class="ranking-stats-beat">你已超越: <strong class="ranking-stats-percent">{{surpassPercentage}}%</strong> 的同学</span>
     </div>
 

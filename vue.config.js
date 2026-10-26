@@ -21,10 +21,15 @@ module.exports = defineConfig({
     proxy: {
       '/api': {
         // target: 'http://47.92.30.163:8085',
-        target: 'https://test.live.fjlsjy123.com/portal/api',//测试服务器
+        target: 'https://live.fjlsjy123.com/portal/api',//测试服务器
         // target: 'https://live.fjlsjy123.com/portal/api',//正式服务器
         changeOrigin: true,
         pathRewrite: { '^/api': '' }
+      },
+      '/t1-api': {
+        target: 'https://dingtalk.fjlsjy123.com/ding-talk-t1',
+        changeOrigin: true,
+        pathRewrite: { '^/t1-api': '/api' }
       }
     }
   },

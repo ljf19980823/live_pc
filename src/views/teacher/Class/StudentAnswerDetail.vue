@@ -788,5 +788,6 @@ zoom: 0.6;
   zoom: 0.6;
   mix-blend-mode: multiply !important;
   float:none!important; 
+    display: inline-block;
 }
 </style>

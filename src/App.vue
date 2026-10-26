@@ -112,6 +112,9 @@ import {
   dismissScreenShareDialog,
   openScreenPreferences
 } from '@/utils/screenPermission'
+import { addSoftwareCheck } from '@/api/modules/student'
+import { getUserInfo } from '@/utils/auth'
+import { formatDate } from '@/utils'
 
 export default {
   name: 'App',
@@ -152,6 +155,26 @@ export default {
   methods: {
     dismissScreenShareDialog,
     openScreenPreferences,
+    async reportSoftwareCheck (software) {
+      if (!software) return
+
+      const userInfo = getUserInfo() || {}
+      const payload = {
+        checkTime: formatDate(new Date()),
+        software
+      }
+      const userId = userInfo.userId || userInfo.id
+      const userName = userInfo.realName || userInfo.userName
+      if (userId) payload.userId = String(userId)
+      if (userName) payload.userName = userName
+
+      try {
+        const res = await addSoftwareCheck(payload)
+        console.log('[ScreenGuard] 软件检测保存接口返回:', res)
+      } catch (error) {
+        console.error('[ScreenGuard] 软件检测保存失败:', error)
+      }
+    },
     initScreenGuard () {
       if (!window.electronAPI) return
 
@@ -159,10 +182,16 @@ export default {
         this.screenGuard.detected = data.detected
         this.screenGuard.isRecording = data.isRecording
         this.screenGuard.isVM = data.isVM
+        if (!data.isRecording) this._lastReportedRecorder = null
 
         if (data.isRecording) {
           this.screenGuard.message = '监测到您正在录制屏幕，关闭录屏后继续观看'
-          console.warn('[ScreenGuard] 检测到录屏软件:', data.detectedRecorder || '未知')
+          const detectedRecorder = data.detectedRecorder || '未知录屏软件'
+          console.warn('[ScreenGuard] 检测到录屏软件:', detectedRecorder)
+          if (this._lastReportedRecorder !== detectedRecorder) {
+            this._lastReportedRecorder = detectedRecorder
+            this.reportSoftwareCheck(detectedRecorder)
+          }
         } else if (data.isVM) {
           this.screenGuard.message = '监测到您正在使用虚拟机，请在真实设备上使用本软件'
           console.warn('[ScreenGuard] 检测到虚拟机:', data.detectedVM || '未知')
