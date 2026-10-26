@@ -104,7 +104,7 @@ function harness(role = 'TEACHER', { platform = 'win32', realDetection = false }
   })
   const component = module.exports.default
   const frame = {
-    ...component.data(), src: 'https://live.fjlsjy123.com/auikits/?role=1',
+    ...component.data(), src: 'https://test.live.fjlsjy123.com/auikits/?role=1',
     $refs: { frame: { contentWindow: iframeWindow } }, $emit() {}
   }
   for (const [name, method] of Object.entries(component.methods)) frame[name] = method.bind(frame)
@@ -116,7 +116,7 @@ function harness(role = 'TEACHER', { platform = 'win32', realDetection = false }
     isSharing: () => vm.runInContext('teacherScreenSharing', native),
     guardEnabled: () => vm.runInContext('screenGuardEnabled', native),
     message: (data, options = {}) => frame.handleMessage({
-      data, source: iframeWindow, origin: 'https://live.fjlsjy123.com', ...options
+      data, source: iframeWindow, origin: 'https://test.live.fjlsjy123.com', ...options
     }),
     unmount: () => component.beforeDestroy.call(frame)
   }
