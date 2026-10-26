@@ -908,6 +908,7 @@
 </template>
 
 <script>
+import { getResourceTypeIcon } from '@/utils/resource'
 import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
@@ -1197,43 +1198,7 @@ export default {
     }
   },
   methods: {
-    getResourceTypeIcon(item) {
-      const iconMap = {
-        doc: require('@/assets/images/icon/Doc.png'),
-        docx: require('@/assets/images/icon/Doc.png'),
-        xls: require('@/assets/images/icon/Excel.png'),
-        xlsx: require('@/assets/images/icon/Excel.png'),
-        csv: require('@/assets/images/icon/Excel.png'),
-        ppt: require('@/assets/images/icon/PPT.png'),
-        pptx: require('@/assets/images/icon/PPT.png'),
-        pdf: require('@/assets/images/icon/PDF.png'),
-        mp4: require('@/assets/images/icon/Mp4.png'),
-        mov: require('@/assets/images/icon/Mov.png'),
-        mp3: require('@/assets/images/icon/Mp3.png'),
-        wav: require('@/assets/images/icon/Wav.png'),
-        zip: require('@/assets/images/icon/Zip.png'),
-        rar: require('@/assets/images/icon/Zip.png'),
-        '7z': require('@/assets/images/icon/Zip.png'),
-        jpg: require('@/assets/images/icon/img.png'),
-        jpeg: require('@/assets/images/icon/img.png'),
-        png: require('@/assets/images/icon/img.png'),
-        gif: require('@/assets/images/icon/img.png'),
-        webp: require('@/assets/images/icon/img.png'),
-        bmp: require('@/assets/images/icon/img.png'),
-      }
-      const iconOther = require('@/assets/images/icon/other.png')
-      if (!item) return iconOther
-      const fromList = item.fileList && item.fileList[0]
-        ? (item.fileList[0].fileName || item.fileList[0].name || item.fileList[0].filePath || '')
-        : ''
-      const candidates = [item.title, item.filePath, item.resourceUrl, fromList].filter(Boolean)
-      for (const source of candidates) {
-        const clean = String(source).split('?')[0].split('#')[0]
-        const ext = (clean.includes('.') ? clean.split('.').pop() : '').toLowerCase()
-        if (ext && iconMap[ext]) return iconMap[ext]
-      }
-      return iconOther
-    },
+    getResourceTypeIcon,
      async fetchAgreementTeacher() {
       try {
         const res = await getAgreement('teacher_live_join_times')
