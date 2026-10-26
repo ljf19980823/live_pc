@@ -2947,13 +2947,13 @@ color: #0049FF;
 .cdi-main {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
   width: 0;
 }
 .cdi-type-icon {
-  width: 18px;
-  height: 18px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
 }
 .cdi-info {
