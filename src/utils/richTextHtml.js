@@ -1,4 +1,5 @@
 import katex from 'katex'
+import renderMathInElement from 'katex/contrib/auto-render'
 
 // 只修复 width 的无单位数字，保留其他属性、已有单位和 !important。
 export function normalizeInlineWidths(style) {
@@ -48,6 +49,20 @@ function renderRichText(el, { value }) {
     if (normalized !== style) node.setAttribute('style', normalized)
     // 表格展示时移除行内宽度，避免固定宽度影响布局。
     if (node.tagName === 'TABLE' || node.tagName === 'TD') node.style.removeProperty('width')
+  })
+  // 只处理文本节点中的 LaTeX，保留富文本结构和已有的公式节点。
+  renderMathInElement(el, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\[', right: '\\]', display: true },
+      { left: '\\(', right: '\\)', display: false },
+      { left: '$', right: '$', display: false }
+    ],
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option', 'math'],
+    ignoredClasses: ['katex', 'katex-display', 'ql-formula'],
+    throwOnError: false,
+    trust: false,
+    strict: 'ignore'
   })
 }
 

@@ -33,7 +33,7 @@
               class="exam-content-img"
               alt="材料图片"
             />
-            <div v-else class="exam-material-content rich-content rich-text-content" v-html="currentQuestion.material"></div>
+            <div v-else class="exam-material-content rich-content rich-text-content" v-rich-html="currentQuestion.material"></div>
           </div>
 
           <!-- 题目内容 -->
@@ -44,7 +44,7 @@
               class="exam-content-img"
               alt="题目图片"
             />
-            <div v-else class="question-title rich-content rich-text-content" v-html="currentQuestion.name"></div>
+            <div v-else class="question-title rich-content rich-text-content" v-rich-html="currentQuestion.name"></div>
           </div>
 
           <!-- 判断题 questType=3 -->
@@ -79,7 +79,7 @@
               <span class="exam-option-label">{{ opt.label }}</span>
               <div class="exam-option-body">
                 <img v-if="opt.isImg" :src="opt.content" class="exam-option-img" alt="选项图片" />
-                <div v-else class="exam-option-text rich-content rich-text-content" v-html="opt.content"></div>
+                <div v-else class="exam-option-text rich-content rich-text-content" v-rich-html="opt.content"></div>
               </div>
             </div>
           </div>
@@ -96,7 +96,7 @@
               <span class="exam-option-label">{{ opt.label }}</span>
               <div class="exam-option-body">
                 <img v-if="opt.isImg" :src="opt.content" class="exam-option-img" alt="选项图片" />
-                <div v-else class="exam-option-text rich-content rich-text-content" v-html="opt.content"></div>
+                <div v-else class="exam-option-text rich-content rich-text-content" v-rich-html="opt.content"></div>
               </div>
             </div>
           </div>

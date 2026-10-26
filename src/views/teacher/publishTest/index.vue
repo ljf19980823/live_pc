@@ -995,7 +995,6 @@ import { normalizeT1AiQuestions } from '@/utils/smartQuiz'
 import { normalizeZsbSubjectOptions, getZsbSubject } from '@/utils/zsbSubjects'
 import { buildBankSubjectOptions, normalizeK12SubjectOptions } from '@/utils/quizSubjects'
 import adaptiveQuestionOptions from '@/utils/adaptiveQuestionOptions'
-import richHtml from '@/utils/richTextHtml'
 import { normalizeImportCatalog, flattenImportCatalog, expandImportSelection } from '@/utils/topicImportCatalog'
 
 const TOPIC_DIFFICULTY_DICT_ID = '2'
@@ -1057,8 +1056,7 @@ const createPaperGroup = id => ({
 export default {
   name: 'CreatePrectice',
   directives: {
-    adaptiveQuestionOptions,
-    'rich-html': richHtml
+    adaptiveQuestionOptions
   },
   components: {
     Editor,

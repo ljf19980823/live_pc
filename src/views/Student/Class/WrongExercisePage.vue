@@ -51,7 +51,7 @@
               class="wep__content-img"
               alt="材料图片"
             />
-            <div v-else class="wep__opt-text rich-content rich-text-content" v-html="currentQuestion.material"></div>
+            <div v-else class="wep__opt-text rich-content rich-text-content" v-rich-html="currentQuestion.material"></div>
           </div>
 
           <!-- 题干 -->
@@ -62,7 +62,7 @@
               class="wep__content-img"
               alt="题目图片"
             />
-            <div v-else class="wep__opt-text question-title rich-content rich-text-content" v-html="currentQuestion.name"></div>
+            <div v-else class="wep__opt-text question-title rich-content rich-text-content" v-rich-html="currentQuestion.name"></div>
           </div>
 
           <!-- 判断题 questType=3 -->
@@ -94,7 +94,7 @@
               <span class="wep__opt-label" :class="getOptLabelClass(currentQuestion, opt.id)">{{ opt.label }}</span>
               <div class="wep__opt-body">
                 <img v-if="opt.isImg" :src="opt.content" class="wep__opt-img" alt="选项图片" />
-                <span v-else class="wep__opt-text rich-content rich-text-content" v-html="opt.content"></span>
+                <span v-else class="wep__opt-text rich-content rich-text-content" v-rich-html="opt.content"></span>
               </div>
               <span v-if="showOptIcon(currentQuestion, opt.id) === 'correct'" class="wep__opt-icon wep__opt-icon--correct">✓</span>
               <span v-else-if="showOptIcon(currentQuestion, opt.id) === 'wrong'" class="wep__opt-icon wep__opt-icon--wrong">✗</span>
@@ -114,7 +114,7 @@
               <span class="wep__opt-label" :class="getOptLabelClass(currentQuestion, opt.id)">{{ opt.label }}</span>
               <div class="wep__opt-body">
                 <img v-if="opt.isImg" :src="opt.content" class="wep__opt-img" alt="选项图片" />
-                <span v-else class="wep__opt-text rich-content rich-text-content" v-html="opt.content"></span>
+                <span v-else class="wep__opt-text rich-content rich-text-content" v-rich-html="opt.content"></span>
               </div>
               <span v-if="showOptIcon(currentQuestion, opt.id) === 'correct'" class="wep__opt-icon wep__opt-icon--correct">✓</span>
               <span v-else-if="showOptIcon(currentQuestion, opt.id) === 'wrong'" class="wep__opt-icon wep__opt-icon--wrong">✗</span>
@@ -185,7 +185,7 @@
               <span v-if="currentQuestion.answerIsImg === '1'" class="wep__analysis-correct-val">
                 <img :src="currentQuestion.answer" class="wep__content-img" alt="答案图片" />
               </span>
-              <span v-else class="wep__analysis-correct-val wep__opt-text rich-content rich-text-content" v-html="currentQuestion.answer || '-'"></span>
+              <span v-else class="wep__analysis-correct-val wep__opt-text rich-content rich-text-content" v-rich-html="currentQuestion.answer || '-'"></span>
             </div>
             <div v-if="currentQuestion.analysis" class="wep__analysis-text">
               <img
@@ -194,7 +194,7 @@
                 class="wep__content-img"
                 alt="解析图片"
               />
-              <span v-else v-html="currentQuestion.analysis" class="wep__opt-text rich-content rich-text-content"></span>
+              <span v-else v-rich-html="currentQuestion.analysis" class="wep__opt-text rich-content rich-text-content"></span>
             </div>
           </div>
         </div>

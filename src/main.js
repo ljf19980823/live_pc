@@ -18,6 +18,10 @@ import '@/assets/styles/index.scss'
 // ─── 全局组件 ─────────────────────────────────────────────────
 import '@/components/index.js'
 
+// ─── 题目富文本与数学公式渲染 ─────────────────────────────────
+import richHtml from '@/utils/richTextHtml'
+Vue.directive('rich-html', richHtml)
+
 // ─── 富文本图片点击预览 ───────────────────────────────────────
 import { setupRichTextImagePreview } from '@/utils/richTextImagePreview'
 setupRichTextImagePreview()
