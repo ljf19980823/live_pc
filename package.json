@@ -74,7 +74,7 @@
     },
     "nsis": {
       "oneClick": true,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Learn InClass",
       "installerIcon": "build/icon.ico",
