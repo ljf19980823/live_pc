@@ -3187,14 +3187,14 @@ color: #333333;
   flex-shrink: 0;
 }
 .cdi-courseware-toggle {
-  padding: 3px 9px;
+  padding: 5px 12px;
   border: 1px solid #71A0FF;
-  border-radius: 12px;
+  border-radius: 15px;
   background: #71A0FF;
   color: #FFFFFF;
   font: inherit;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 13px;
+  line-height: 18px;
   white-space: nowrap;
   cursor: pointer;
 }
