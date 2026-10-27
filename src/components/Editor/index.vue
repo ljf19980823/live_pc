@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ 'quiz-formula-enabled': enableFormula }">
+  <div :class="{ 'quiz-formula-enabled': enableFormula }" @focusout="handleEditorFocusout">
     <input
       ref="imageInput"
       class="quill-img"
@@ -19,6 +19,7 @@
     </div>
     <div class="editor" ref="editor" :style="styles"></div>
     <p v-if="hasTable && !readOnly" class="quiz-formula-hint">直接点击单元格编辑，Tab 切换单元格；上方可插入、删除行列。</p>
+    <p v-if="enableMarkdown && !trueFalseOnly && !readOnly" class="quiz-formula-hint">支持 Markdown 和 LaTeX（$...$、$$...$$、\(...\)、\[...\]），粘贴或离开编辑区后自动渲染。</p>
     <p v-if="enableFormula && !trueFalseOnly && !readOnly" class="quiz-formula-hint">点击工具栏“公式”插入，点击正文中的公式可再次编辑。</p>
     <formula-dialog
       v-if="formulaDialogMounted"
@@ -42,6 +43,8 @@ import { registerQuizFormula } from './formula'
 import { getTrueFalseAnswer } from '@/utils/trueFalseAnswer'
 import { registerPreservedTable, addTableMatcher, serializeEditorHtml } from './table'
 import InlineTables from './inlineTables'
+import { normalizeEditorMarkdown } from './markdown'
+import { renderEditorMarkdown } from '@/utils/mathText'
 
 export default {
   name: "Editor",
@@ -56,6 +59,10 @@ export default {
     enableFormula: {
       type: Boolean,
       default: true,
+    },
+    enableMarkdown: {
+      type: Boolean,
+      default: false,
     },
     /* 编辑器的内容 */
     value: {
@@ -102,6 +109,7 @@ export default {
       formulaDialogMounted: false,
       formulaValue: '',
       formulaEditing: false,
+      formulaDisplayMode: false,
       formulaRange: null,
       tableSelection: null,
       defaultOptions: {
@@ -185,12 +193,13 @@ export default {
           this._skipWatch = false
           return
         }
-        const nextValue = this.trueFalseOnly ? this.normalizeTrueFalseHtml(val) : this.normalizeHtml(val)
+        const nextValue = this.normalizeValue(val)
         if (nextValue !== this.currentValue) {
           this._inlineTables?.activate(null)
           this.currentValue = nextValue
           if (this.Quill) {
             this.setEditorHtml(this.currentValue)
+            this.syncEditorValue()
           }
         }
       },
@@ -206,7 +215,7 @@ export default {
     if (this.Quill) {
       this.Quill.root.removeEventListener('click', this.handleFormulaClick, true)
     }
-    if (this.Quill && (this.type === 'url' || this.trueFalseOnly)) {
+    if (this.Quill && (this.type === 'url' || this.trueFalseOnly || this.enableMarkdown)) {
       this.Quill.root.removeEventListener('paste', this.handlePasteCapture, true)
     }
     this.Quill = null
@@ -242,6 +251,8 @@ export default {
           onFormula: this.openTableFormula,
           onImage: this.selectTableImage,
           onLink: this.insertTableLink,
+          normalizePaste: this.enableMarkdown ? normalizeEditorMarkdown : null,
+          renderPlainPaste: this.enableMarkdown ? renderEditorMarkdown : null,
         })
       }
       if (this.enableFormula && !this.trueFalseOnly) {
@@ -270,13 +281,11 @@ export default {
           })
         }
       }
-      if (this.type === 'url' || this.trueFalseOnly) {
+      if (this.type === 'url' || this.trueFalseOnly || this.enableMarkdown) {
         this.Quill.root.addEventListener('paste', this.handlePasteCapture, true)
       }
       this.setEditorHtml(this.currentValue)
-      if (this.trueFalseOnly && this.value !== this.currentValue) {
-        this.$emit('input', this.currentValue)
-      }
+      this.syncEditorValue()
       this.Quill.on("text-change", (delta, oldDelta, source) => {
         if (this.trueFalseOnly) {
           const text = this.Quill.getText()
@@ -325,6 +334,37 @@ export default {
       const answer = getTrueFalseAnswer(value)
       return answer ? `<p>${answer}</p>` : ''
     },
+    normalizeValue(value) {
+      if (this.trueFalseOnly) return this.normalizeTrueFalseHtml(value)
+      return this.normalizeHtml(this.enableMarkdown ? normalizeEditorMarkdown(value) : value)
+    },
+    syncEditorValue() {
+      if (!this.trueFalseOnly && !this.enableMarkdown) return
+      this.currentValue = this.normalizeHtml(serializeEditorHtml(this.Quill.root))
+      if (this.value !== this.currentValue) {
+        this._skipWatch = true
+        this.$emit('input', this.currentValue)
+      }
+    },
+    handleEditorFocusout(event) {
+      if (this.$el.contains(event.relatedTarget) || this.formulaDialogVisible) return
+      this.renderMarkdownContent()
+    },
+    renderMarkdownContent() {
+      if (!this.enableMarkdown || this.trueFalseOnly || this.readOnly || !this.Quill) return
+      this.Quill.update()
+      const html = serializeEditorHtml(this.Quill.root)
+      const nextHtml = normalizeEditorMarkdown(html)
+      if (nextHtml === html) return
+      const next = this.Quill.clipboard.convert(nextHtml)
+      const diff = this.Quill.getContents().diff(next)
+      if (!diff.ops.length) return
+      const history = this.Quill.getModule('history')
+      history?.cutoff()
+      this._inlineTables?.activate(null)
+      this.Quill.updateContents(diff, Quill.sources.USER)
+      history?.cutoff()
+    },
     normalizeHtml(value) {
       const html = value === null || value === undefined ? "" : String(value)
       const text = html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, "").trim()
@@ -341,6 +381,7 @@ export default {
         : { index: Math.max(0, this.Quill.getLength() - 1), length: 0 }
       this.formulaValue = ''
       this.formulaEditing = false
+      this.formulaDisplayMode = false
       this.formulaDialogMounted = true
       this.formulaDialogVisible = true
     },
@@ -354,6 +395,7 @@ export default {
       this.formulaRange = { index: this.Quill.getIndex(blot), length: 1 }
       this.formulaValue = node.getAttribute('data-value') || ''
       this.formulaEditing = true
+      this.formulaDisplayMode = node.getAttribute('data-display') === 'block'
       this.formulaDialogMounted = true
       this.formulaDialogVisible = true
     },
@@ -380,8 +422,9 @@ export default {
       })
     },
     insertFormula(latex) {
+      const value = this.formulaDisplayMode ? { latex, displayMode: true } : latex
       if (this._formulaTableBookmark && !this.readOnly) {
-        const node = Quill.import('formats/formula').create(latex)
+        const node = Quill.import('formats/formula').create(value)
         node.setAttribute('contenteditable', 'false')
         this._inlineTables.insertNode(node, this._formulaTableBookmark)
         this._formulaTableBookmark = this._inlineTables.bookmark()
@@ -394,7 +437,7 @@ export default {
       const history = this.Quill.getModule('history')
       if (history) history.cutoff()
       // 一次 Delta 完成替换，使撤销可以完整恢复原选区或旧公式。
-      this.Quill.updateContents(new Delta().retain(index).delete(length).insert({ formula: latex }), Quill.sources.USER)
+      this.Quill.updateContents(new Delta().retain(index).delete(length).insert({ formula: value }), Quill.sources.USER)
       if (history) history.cutoff()
       this.formulaRange = { index: index + 1, length: 0 }
       this.closeFormulaDialog()
@@ -418,6 +461,7 @@ export default {
       this.formulaRange = null
       this.formulaValue = node ? node.getAttribute('data-value') || '' : ''
       this.formulaEditing = !!node
+      this.formulaDisplayMode = node?.getAttribute('data-display') === 'block'
       this.formulaDialogMounted = true
       this.formulaDialogVisible = true
     },
@@ -506,6 +550,27 @@ export default {
         return
       }
       const clipboard = e.clipboardData || window.clipboardData
+      if (this.readOnly) return
+      if (this.enableMarkdown && clipboard && !Array.from(clipboard.items || []).some(item => item.type.startsWith('image/'))) {
+        // 单元格的粘贴由 InlineTables 使用原生选区处理。
+        if (this._inlineTables?.findCell(e.target)) return
+        const html = clipboard.getData('text/html')
+        const text = clipboard.getData('text/plain')
+        if (html || text) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          const range = this.Quill.getSelection(true)
+          if (!range) return
+          const content = this.Quill.clipboard.convert(html ? normalizeEditorMarkdown(html) : renderEditorMarkdown(text))
+          const Delta = Quill.import('delta')
+          const history = this.Quill.getModule('history')
+          history?.cutoff()
+          this.Quill.updateContents(new Delta().retain(range.index).delete(range.length).concat(content), Quill.sources.USER)
+          this.Quill.setSelection(Math.min(range.index + content.length(), this.Quill.getLength() - 1), 0, Quill.sources.SILENT)
+          history?.cutoff()
+          return
+        }
+      }
       if (clipboard && clipboard.items) {
         for (let i = 0; i < clipboard.items.length; i++) {
           const item = clipboard.items[i]
@@ -560,10 +625,10 @@ export default {
 .ql-editor[contenteditable="true"] .ql-preserved-table th {
   cursor: text;
 }
-.ql-editor .ql-preserved-table [data-editor-table-active] { outline: 2px solid #1F7CFF; outline-offset: -2px; }
+.ql-editor .ql-preserved-table [data-editor-table-active] { outline: 2px solid #409eff; outline-offset: -2px; }
 .ql-editor[contenteditable="true"] .ql-preserved-table td:hover,
 .ql-editor[contenteditable="true"] .ql-preserved-table th:hover {
-  outline: 1px solid #1F7CFF;
+  outline: 1px solid #409eff;
   outline-offset: -1px;
 }
 .quiz-formula-enabled .ql-toolbar button.ql-formula {
@@ -573,6 +638,7 @@ export default {
 }
 .quiz-formula-enabled .ql-editor .ql-formula { cursor: pointer; }
 .quiz-formula-enabled .ql-editor .ql-formula:hover { background: #ecf5ff; }
+.ql-editor .ql-formula[data-display="block"] { display: block; height: auto; overflow-x: auto; text-align: center; }
 .quiz-formula-hint { margin: 6px 0 0; color: #909399; font-size: 12px; line-height: 20px; }
 .editor, .ql-toolbar {
   white-space: pre-wrap !important;
