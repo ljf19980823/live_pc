@@ -2,6 +2,7 @@ import axios from 'axios'
 import { Message, MessageBox } from 'element-ui'
 import { getToken, clearAuth } from './auth'
 import router from '@/router'
+import pkg from '../../package.json'
 
 // ─── 创建 axios 实例 ──────────────────────────────────────────
 const service = axios.create({
@@ -60,6 +61,8 @@ function setDeviceHeaders(headers, deviceInfo) {
 // ─── 请求拦截器 ───────────────────────────────────────────────
 service.interceptors.request.use(
   async config => {
+    config.headers.appVersion = pkg.version
+
     const deviceInfo = await getDeviceInfo()
     setDeviceHeaders(config.headers, deviceInfo)
 
