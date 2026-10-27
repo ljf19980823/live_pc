@@ -91,31 +91,31 @@
       <div class="form-block">
         <h3>题目内容</h3>
         <el-form-item label="题目" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.name" />
+          <editor enable-markdown ref="nameEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.name" />
         </el-form-item>
         <template v-if="showOptionEditors">
           <el-form-item label="选项A" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
+            <editor enable-markdown ref="optionAEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项B" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
+            <editor enable-markdown ref="optionBEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项C">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
+            <editor enable-markdown ref="optionCEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项D">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
+            <editor enable-markdown ref="optionDEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项E">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
+            <editor enable-markdown ref="optionEEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
           </el-form-item>
         </template>
         <el-form-item label="答案" required>
           <p v-if="selectedQuestType === '3'" class="answer-tip">提示：请填写 A 或 B，A 代表对，B 代表错。</p>
-          <editor :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
+          <editor enable-markdown ref="answerEditor" :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
         </el-form-item>
         <el-form-item label="解析" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
+          <editor enable-markdown ref="analysisEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
         </el-form-item>
       </div>
     </el-form>
@@ -201,31 +201,31 @@
       <div class="form-block">
         <h3>题目内容</h3>
         <el-form-item label="题目" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.name"/>
+          <editor enable-markdown ref="nameEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.name"/>
         </el-form-item>
         <template v-if="showOptionEditors">
           <el-form-item label="选项A" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
+            <editor enable-markdown ref="optionAEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项B" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
+            <editor enable-markdown ref="optionBEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项C">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
+            <editor enable-markdown ref="optionCEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项D">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
+            <editor enable-markdown ref="optionDEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项E">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
+            <editor enable-markdown ref="optionEEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
           </el-form-item>
         </template>
         <el-form-item label="答案" required>
           <p v-if="selectedQuestType === '3'" class="answer-tip">提示：请填写 A 或 B，A 代表对，B 代表错。</p>
-          <editor :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
+          <editor enable-markdown ref="answerEditor" :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
         </el-form-item>
         <el-form-item label="解析" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
+          <editor enable-markdown ref="analysisEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
         </el-form-item>
       </div>
     </el-form>
@@ -292,31 +292,31 @@
       <div class="form-block">
         <h3>题目内容</h3>
         <el-form-item label="题目" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.name" />
+          <editor enable-markdown ref="nameEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.name" />
         </el-form-item>
         <template v-if="showOptionEditors">
           <el-form-item label="选项A" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
+            <editor enable-markdown ref="optionAEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionA" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项B" required>
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
+            <editor enable-markdown ref="optionBEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionB" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项C">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
+            <editor enable-markdown ref="optionCEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionC" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项D">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
+            <editor enable-markdown ref="optionDEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionD" :minHeight="120" />
           </el-form-item>
           <el-form-item label="选项E">
-            <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
+            <editor enable-markdown ref="optionEEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.optionE" :minHeight="120" />
           </el-form-item>
         </template>
         <el-form-item label="答案" required>
           <p v-if="selectedQuestType === '3'" class="answer-tip">提示：请填写 A 或 B，A 代表对，B 代表错。</p>
-          <editor :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
+          <editor enable-markdown ref="answerEditor" :key="selectedQuestType === '3'" :true-false-only="selectedQuestType === '3'" :enable-formula="formulaEditingEnabled" v-model="localEditor.answer" />
         </el-form-item>
         <el-form-item label="解析" required>
-          <editor :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
+          <editor enable-markdown ref="analysisEditor" :enable-formula="formulaEditingEnabled" v-model="localEditor.analysis" />
         </el-form-item>
       </div>
     </el-form>
@@ -1738,6 +1738,9 @@ export default {
     },
     async handleSave() {
       if (this.saving) return
+      Object.values(this.$refs).forEach(editor => {
+        if (editor && editor.renderMarkdownContent) editor.renderMarkdownContent()
+      })
       if (this.businessMode) return this.saveBusinessEditor()
       if (this.selectedQuestType === '3' && !getTrueFalseAnswer(this.localEditor.answer)) {
         this.$message.warning('判断题答案只能输入 A 或 B')

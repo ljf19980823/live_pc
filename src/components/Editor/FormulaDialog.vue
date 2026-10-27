@@ -33,6 +33,7 @@
 import { MathfieldElement, initVirtualKeyboardInCurrentBrowsingContext } from 'mathlive'
 import 'mathlive/fonts.css'
 import katex from 'katex'
+import { normalizeFormulaInput, getFormulaEditorMacros } from '@/utils/formulaInput'
 
 // 字体由 webpack 随项目打包，不依赖外部 CDN。
 MathfieldElement.fontsDirectory = null
@@ -52,7 +53,7 @@ export default {
     return {
       latex: '',
       error: '',
-      showLatex: false,
+      showLatex: true,  // 默认展开LaTeX输入框，方便用户直接粘贴公式
       templates: [
         { label: '分数', latex: '\\frac{#?}{#?}' },
         { label: '平方', latex: '#@^{2}' },
@@ -77,15 +78,17 @@ export default {
     mountMathfield() {
       this.$nextTick(() => {
         if (!this.visible || !this.$refs.mathfieldHost || this.mathfield) return
-        this.latex = this.value
+        this.latex = normalizeFormulaInput(this.value)
         this.error = ''
         const field = new MathfieldElement()
         field.setAttribute('aria-label', '数学公式编辑区')
         field.mathVirtualKeyboardPolicy = 'manual'
-        field.value = this.value
         field.addEventListener('input', this.handleInput)
         this.mathfield = field
         this.$refs.mathfieldHost.appendChild(field)
+        // MathLive 的默认宏只能在挂载后读取；先保留默认宏，再设置公式。
+        field.macros = getFormulaEditorMacros(field.macros)
+        field.value = this.latex
         const keyboard = window.mathVirtualKeyboard
         this.previousKeyboardContainer = keyboard.container
         this.previousKeyboardLayouts = keyboard.layouts
@@ -123,7 +126,7 @@ export default {
       }
     },
     handleInput() {
-      this.latex = this.mathfield.value
+      this.latex = normalizeFormulaInput(this.mathfield.value)
       this.error = ''
     },
     insertTemplate(latex) {
@@ -133,12 +136,12 @@ export default {
       this.handleInput()
     },
     updateLatex(value) {
-      this.latex = value
+      this.latex = normalizeFormulaInput(value)
       this.error = ''
-      if (this.mathfield) this.mathfield.value = value
+      if (this.mathfield) this.mathfield.value = this.latex
     },
     confirm() {
-      const latex = this.latex.trim()
+      const latex = normalizeFormulaInput(this.latex).trim()
       if (!latex) {
         this.error = '请先输入公式'
         return
@@ -164,9 +167,9 @@ export default {
 .quiz-formula-dialog .el-dialog__body { padding: 16px 24px; max-height: 68vh; overflow-y: auto; }
 .quiz-formula-dialog .formula-templates { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .quiz-formula-dialog .formula-templates button { padding: 7px 12px; border: 1px solid #dbe2ec; border-radius: 5px; background: #f7f9fc; color: #394354; cursor: pointer; }
-.quiz-formula-dialog .formula-templates button:hover { border-color: #1F7CFF; color: #1F7CFF; }
-.quiz-formula-dialog math-field { display: block; width: 100%; min-height: 84px; padding: 14px; box-sizing: border-box; border: 1px solid #dbe2ec; border-radius: 6px; font-size: 26px; --primary: #1F7CFF; }
-.quiz-formula-dialog math-field:focus-within { outline: 2px solid #d9ecff; border-color: #1F7CFF; }
+.quiz-formula-dialog .formula-templates button:hover { border-color: #409eff; color: #409eff; }
+.quiz-formula-dialog math-field { display: block; width: 100%; min-height: 84px; padding: 14px; box-sizing: border-box; border: 1px solid #dbe2ec; border-radius: 6px; font-size: 26px; --primary: #409eff; }
+.quiz-formula-dialog math-field:focus-within { outline: 2px solid #d9ecff; border-color: #409eff; }
 .quiz-formula-dialog .formula-tip { margin: 10px 0 0; color: #909399; font-size: 12px; line-height: 20px; }
 .quiz-formula-dialog .formula-error { color: #f56c6c; margin: 8px 0; }
 .quiz-formula-dialog .formula-keyboard-host { position: relative; margin-top: 12px; }

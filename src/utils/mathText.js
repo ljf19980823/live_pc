@@ -1,9 +1,10 @@
 import MarkdownIt from 'markdown-it'
-import katex from 'katex'
+import { renderFormulaHtml } from './formulaLayout'
+import { spreadsheetDollarPositions } from './spreadsheetReferences'
 
 function renderFormula(formula, displayMode, source, escapeHtml) {
   try {
-    return katex.renderToString(formula, {
+    return renderFormulaHtml(formula, {
       displayMode,
       throwOnError: false,
       strict: 'ignore',
@@ -15,12 +16,12 @@ function renderFormula(formula, displayMode, source, escapeHtml) {
   }
 }
 
-function findUnescaped(text, marker, fromIndex) {
+function findUnescaped(text, marker, fromIndex, ignoredPositions) {
   let index = text.indexOf(marker, fromIndex)
   while (index >= 0) {
     let slashCount = 0
     for (let cursor = index - 1; cursor >= 0 && text[cursor] === '\\'; cursor -= 1) slashCount += 1
-    if (slashCount % 2 === 0) return index
+    if (slashCount % 2 === 0 && !ignoredPositions?.has(index)) return index
     index = text.indexOf(marker, index + marker.length)
   }
   return -1
@@ -67,8 +68,10 @@ function mathPlugin(md) {
       const start = state.pos
       if (!state.src.startsWith(open, start)) return false
       if (open === '$' && state.src.startsWith('$$', start)) return false
+      const literalDollars = open === '$' ? spreadsheetDollarPositions(state.src) : null
+      if (literalDollars?.has(start)) return false
       const contentStart = start + open.length
-      const end = findUnescaped(state.src, close, contentStart)
+      const end = findUnescaped(state.src, close, contentStart, literalDollars)
       if (end < 0 || end === contentStart) {
         // 流式响应尚未闭合时保留分隔符，不交给 Markdown 的反斜杠转义规则。
         if (!silent) state.push('text', '', 0).content = open
@@ -137,4 +140,26 @@ export function renderExportRichText(value) {
  */
 export function renderInlineMathText(value) {
   return markdown.renderInline(String(value == null ? '' : value))
+}
+
+// 编辑器使用公式嵌入节点，保留 LaTeX 源码，避免 Quill 将 KaTeX 拆成普通文本。
+const editorMarkdown = new MarkdownIt({ html: false, breaks: true, linkify: true }).use(mathPlugin)
+const renderEditorFormula = (tokens, index, displayMode) => {
+  const token = tokens[index]
+  const value = editorMarkdown.utils.escapeHtml(token.content)
+  return `<span class="ql-formula" data-value="${value}"${displayMode ? ' data-display="block"' : ''}>${renderFormula(token.content, displayMode, token.meta.source, editorMarkdown.utils.escapeHtml)}</span>`
+}
+editorMarkdown.renderer.rules.math_inline = (tokens, index) => renderEditorFormula(tokens, index, false)
+editorMarkdown.renderer.rules.math_display = (tokens, index) => renderEditorFormula(tokens, index, true)
+editorMarkdown.renderer.rules.math_block = (tokens, index) => `<p>${renderEditorFormula(tokens, index, true)}</p>\n`
+
+export function renderEditorMarkdown(value, inline = false) {
+  const source = String(value == null ? '' : value)
+  return inline ? editorMarkdown.renderInline(source) : editorMarkdown.render(source)
+}
+
+export function hasEditorMarkdown(value, inline = false) {
+  const tokens = inline ? editorMarkdown.parseInline(value, {}) : editorMarkdown.parse(value, {})
+  return tokens.some(token => !['paragraph_open', 'paragraph_close', 'inline'].includes(token.type) ||
+    (token.children || []).some(child => !['text', 'softbreak', 'hardbreak'].includes(child.type)))
 }

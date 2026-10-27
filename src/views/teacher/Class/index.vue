@@ -177,6 +177,9 @@
                 </div>
               </div>
               <div class="cdi-actions">
+                <button v-if="item.hasCourseware" type="button" class="cdi-courseware-toggle" :class="{ 'is-expanded': item.coursewareExpanded }" :aria-expanded="item.coursewareExpanded ? 'true' : 'false'" @click.stop="toggleCourseware(item)">
+                  {{ item.coursewareExpanded ? '取消查看' : '查看课件' }}
+                </button>
                 <el-progress type="circle" :percentage="item.progress" :width="36" :stroke-width="2" :color="item.progress >= 100 ? '' : '#71A0FF'" :status="item.progress >= 100 ? 'success' : ''"></el-progress>
                 <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, item)">
                   <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
@@ -237,6 +240,23 @@
               </div>
             </div>
 
+            <template v-if="item.type === 'live' && item.coursewareExpanded">
+              <div v-for="file in item.coursewareFiles" :key="`courseware-${idx}-${file.id}`" class="cdi-card cdi-courseware-card" role="button" tabindex="0"
+                @click.stop="handleResourceClick(file)" @keydown.enter.self.prevent="handleResourceClick(file)" @keydown.space.self.prevent="handleResourceClick(file)">
+                <div class="cdi-main">
+                  <img :src="getResourceTypeIcon(file)" class="cdi-type-icon" alt="" />
+                  <div class="cdi-info">
+                    <div class="cdi-name" :title="file.title">{{ file.title }}</div>
+                    <div v-if="file.size || file.isRecent" class="cdi-file-row">
+                      <span v-if="file.size" class="cdi-file-meta">{{ file.size }}</span>
+                      <img v-if="file.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="最近学习" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="!item.coursewareFiles.length" :key="`courseware-empty-${idx}`" class="cdi-card cdi-courseware-card cdi-courseware-empty">暂无课件</div>
+            </template>
+
             <!-- 分组子项 -->
             <template v-if="item.type === 'group' && item.expanded">
               <template v-for="(child, ci) in item.children">
@@ -264,48 +284,69 @@
                 </div>
                 <!-- 二级分组展开后的三级内容 -->
                 <template v-if="child.type === 'group' && child.expanded">
-                  <div v-for="(grandchild, gi) in child.children" :key="`grandchild-${idx}-${ci}-${gi}`"
-                    class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
-                    @click="handleCardClickWithLoading(`grandchild-${idx}-${ci}-${gi}`, () => grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined)"
-                    v-loading="activeLoadingKey === `grandchild-${idx}-${ci}-${gi}`" element-loading-background="rgba(255,255,255,0.7)">
-                    <div class="cdi-main">
-                      <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
-                      <img v-else :src="getResourceTypeIcon(grandchild)" class="cdi-type-icon" alt="" />
-                      <div class="cdi-info">
-                        <div class="cdi-name">{{ grandchild.title }}</div>
-                        <div v-if="grandchild.type === 'live'" class="cdi-status-row">
-                          <template v-if="grandchild.isFinish == 1">
-                            <div class="cdi-status-text">{{ grandchild.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
-                          </template>
-                          <template v-else-if="grandchild.liveStatus == '直播中'">
-                            <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.liveMin }}</span> </div>
-                            <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
-                          </template>
-                          <template v-else>
-                            <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.liveMin }}</span> </div>
-                            <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
-                          </template>
-                          <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }}{{ grandchild.timeEnd ? ' - ' + grandchild.timeEnd : '' }}</span>
-                        </div>
-                        <div v-else class="cdi-file-row">
-                          <span class="cdi-file-meta">{{ grandchild.size }}</span>
-                          <span class="cdi-file-meta">{{ grandchild.date }}</span>
-                          <img v-if="grandchild.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                  <template v-for="(grandchild, gi) in child.children">
+                    <div :key="`grandchild-${idx}-${ci}-${gi}`"
+                      class="cdi-card cdi-card-in-group cdi-card-in-subgroup"
+                      @click="handleCardClickWithLoading(`grandchild-${idx}-${ci}-${gi}`, () => grandchild.type === 'resource' ? handleResourceClick(grandchild) : grandchild.type === 'live' ? enterLiveRoom(grandchild) : undefined)"
+                      v-loading="activeLoadingKey === `grandchild-${idx}-${ci}-${gi}`" element-loading-background="rgba(255,255,255,0.7)">
+                      <div class="cdi-main">
+                        <img v-if="grandchild.type === 'live'" src="@/assets/images/class/liveIcon.png" class="cdi-type-icon" alt="" />
+                        <img v-else :src="getResourceTypeIcon(grandchild)" class="cdi-type-icon" alt="" />
+                        <div class="cdi-info">
+                          <div class="cdi-name">{{ grandchild.title }}</div>
+                          <div v-if="grandchild.type === 'live'" class="cdi-status-row">
+                            <template v-if="grandchild.isFinish == 1">
+                              <div class="cdi-status-text">{{ grandchild.liveStatus === '未开播' ? '未开播' : '已结束' }}</div>
+                            </template>
+                            <template v-else-if="grandchild.liveStatus == '直播中'">
+                              <div class="cdi-status-text">已直播 <span class="yzb_text">{{ grandchild.liveMin }}</span> </div>
+                              <img src="@/assets/images/class/zbz.png" class="zbzClass" alt="">
+                            </template>
+                            <template v-else>
+                              <div class="cdi-status-text">距离直播还有 <span class="jlzb_text">{{ grandchild.liveMin }}</span> </div>
+                              <img src="@/assets/images/class/zbwks.png" class="zbwksClass" alt="">
+                            </template>
+                            <span class="cdi-date-row">{{ grandchild.date }}&nbsp;&nbsp;{{ grandchild.timeStart }}{{ grandchild.timeEnd ? ' - ' + grandchild.timeEnd : '' }}</span>
+                          </div>
+                          <div v-else class="cdi-file-row">
+                            <span class="cdi-file-meta">{{ grandchild.size }}</span>
+                            <span class="cdi-file-meta">{{ grandchild.date }}</span>
+                            <img v-if="grandchild.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="">
+                          </div>
                         </div>
                       </div>
+                      <div class="cdi-actions" @click.stop>
+                        <button v-if="grandchild.hasCourseware" type="button" class="cdi-courseware-toggle" :class="{ 'is-expanded': grandchild.coursewareExpanded }" :aria-expanded="grandchild.coursewareExpanded ? 'true' : 'false'" @click.stop="toggleCourseware(grandchild)">
+                          {{ grandchild.coursewareExpanded ? '取消查看' : '查看课件' }}
+                        </button>
+                        <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" :color="grandchild.progress >= 100 ? '' : '#71A0FF'" :status="grandchild.progress >= 100 ? 'success' : ''"></el-progress>
+                        <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, grandchild)">
+                          <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
+                          <template #dropdown>
+                            <el-dropdown-menu>
+                              <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
+                            </el-dropdown-menu>
+                          </template>
+                        </el-dropdown>
+                      </div>
                     </div>
-                    <div class="cdi-actions" @click.stop>
-                      <el-progress type="circle" :percentage="grandchild.progress" :width="36" :stroke-width="2" :color="grandchild.progress >= 100 ? '' : '#71A0FF'" :status="grandchild.progress >= 100 ? 'success' : ''"></el-progress>
-                      <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, grandchild)">
-                        <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
-                        <template #dropdown>
-                          <el-dropdown-menu>
-                            <el-dropdown-item command="learningProgress">学习进度</el-dropdown-item>
-                          </el-dropdown-menu>
-                        </template>
-                      </el-dropdown>
-                    </div>
-                  </div>
+                    <template v-if="grandchild.type === 'live' && grandchild.coursewareExpanded">
+                      <div v-for="file in grandchild.coursewareFiles" :key="`courseware-${idx}-${ci}-${gi}-${file.id}`" class="cdi-card cdi-card-in-group cdi-card-in-subgroup cdi-courseware-card" role="button" tabindex="0"
+                        @click.stop="handleResourceClick(file)" @keydown.enter.self.prevent="handleResourceClick(file)" @keydown.space.self.prevent="handleResourceClick(file)">
+                        <div class="cdi-main">
+                          <img :src="getResourceTypeIcon(file)" class="cdi-type-icon" alt="" />
+                          <div class="cdi-info">
+                            <div class="cdi-name" :title="file.title">{{ file.title }}</div>
+                            <div v-if="file.size || file.isRecent" class="cdi-file-row">
+                              <span v-if="file.size" class="cdi-file-meta">{{ file.size }}</span>
+                              <img v-if="file.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="最近学习" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="!grandchild.coursewareFiles.length" :key="`courseware-empty-${idx}-${ci}-${gi}`" class="cdi-card cdi-card-in-group cdi-card-in-subgroup cdi-courseware-card cdi-courseware-empty">暂无课件</div>
+                    </template>
+                  </template>
                 </template>
                 <!-- 一级分组下的普通内容（resource / live） -->
                 <div v-if="child.type !== 'group'" :key="`child-${idx}-${ci}`" class="cdi-card cdi-card-in-group"
@@ -338,6 +379,9 @@
                     </div>
                   </div>
                   <div class="cdi-actions" @click.stop>
+                    <button v-if="child.hasCourseware" type="button" class="cdi-courseware-toggle" :class="{ 'is-expanded': child.coursewareExpanded }" :aria-expanded="child.coursewareExpanded ? 'true' : 'false'" @click.stop="toggleCourseware(child)">
+                      {{ child.coursewareExpanded ? '取消查看' : '查看课件' }}
+                    </button>
                     <el-progress type="circle" :percentage="child.progress" :width="36" :stroke-width="2" :color="child.progress >= 100 ? '' : '#71A0FF'" :status="child.progress >= 100 ? 'success' : ''"></el-progress>
                     <el-dropdown trigger="click" @command="(cmd) => handleContentOptionsCommand(cmd, child)">
                       <img @click.stop src="@/assets/images/class/options2.png" class="cdi-options-dot" alt="">
@@ -349,6 +393,22 @@
                     </el-dropdown>
                   </div>
                 </div>
+                <template v-if="child.type === 'live' && child.coursewareExpanded">
+                  <div v-for="file in child.coursewareFiles" :key="`courseware-${idx}-${ci}-${file.id}`" class="cdi-card cdi-card-in-group cdi-courseware-card" role="button" tabindex="0"
+                    @click.stop="handleResourceClick(file)" @keydown.enter.self.prevent="handleResourceClick(file)" @keydown.space.self.prevent="handleResourceClick(file)">
+                    <div class="cdi-main">
+                      <img :src="getResourceTypeIcon(file)" class="cdi-type-icon" alt="" />
+                      <div class="cdi-info">
+                        <div class="cdi-name" :title="file.title">{{ file.title }}</div>
+                        <div v-if="file.size || file.isRecent" class="cdi-file-row">
+                          <span v-if="file.size" class="cdi-file-meta">{{ file.size }}</span>
+                          <img v-if="file.isRecent" src="@/assets/images/class/zjxx.png" class="zjxxIcon" alt="最近学习" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="!child.coursewareFiles.length" :key="`courseware-empty-${idx}-${ci}`" class="cdi-card cdi-card-in-group cdi-courseware-card cdi-courseware-empty">暂无课件</div>
+                </template>
               </template>
             </template>
           </template>
@@ -1963,8 +2023,38 @@ export default {
       this.rightView = 'courseDetail'
       this.fetchCourseDetail(item.id)
     },
+    _mapLiveCourseware(children) {
+      return children.flatMap((child, childIndex) => {
+        const resource = child.resource || {}
+        const files = Array.isArray(resource.fileList) ? resource.fileList : []
+        return files.filter(file => file && typeof file === 'object').map((file, fileIndex) => ({
+          id: `${child.id || childIndex}-${fileIndex}`,
+          nodeType: String(child.type || ''),
+          title: file.fileName || child.name || resource.name || '未命名课件',
+          filePath: file.filePath || '',
+          size: file.fileSize != null && file.fileSize !== ''
+            ? this._formatCoursewareSize(file.fileSize)
+            : (resource.size || ''),
+          isRecent: String(resource.isRecentStudy) === '1',
+          allowDownload: child.allowDownload,
+          fileList: [file]
+        }))
+      })
+    },
+    _formatCoursewareSize(value) {
+      const bytes = Number(value)
+      if (!Number.isFinite(bytes) || bytes < 0) return ''
+      if (bytes === 0) return '0 B'
+      const units = ['B', 'KB', 'MB', 'GB', 'TB']
+      const index = Math.min(Math.max(Math.floor(Math.log(bytes) / Math.log(1024)), 0), units.length - 1)
+      return `${Number((bytes / Math.pow(1024, index)).toFixed(2))} ${units[index]}`
+    },
+    toggleCourseware(item) {
+      item.coursewareExpanded = !item.coursewareExpanded
+    },
     _mapDetailNode(node) {
-      if (node.type === '1') {
+      const nodeType = String(node.type)
+      if (nodeType === '1') {
         return {
           id: node.id || node.lessonId || '',
           type: 'group',
@@ -1974,8 +2064,9 @@ export default {
           expanded: false,
           children: (node.children || []).map(child => this._mapDetailNode(child))
         }
-      } else if (node.type === '2') {
+      } else if (nodeType === '2') {
         const live = node.liveInfo || {}
+        const children = Array.isArray(node.children) ? node.children : []
         const startTime = live.startTime || ''
         let date = '', timeStart = ''
         if (startTime) {
@@ -1996,6 +2087,9 @@ export default {
           liveLessonId: live.liveLessonId || '',
           liveId: live.id || '',
           fileList: live.fileList || '',
+          hasCourseware: children.length > 0,
+          coursewareExpanded: false,
+          coursewareFiles: this._mapLiveCourseware(children),
           date,
           timeStart,
           timeEnd: '',
@@ -3079,7 +3173,7 @@ color: #0049FF;
   flex: 1;
   height: 0;
   overflow-y: auto;
-  background: #F0F3F6;
+  background: #F7FBFF;
   padding: 16px;
   box-sizing: border-box;
   display: flex;
@@ -3099,14 +3193,7 @@ color: #0049FF;
   align-items:center;
   gap: 8px;
 }
-.cdi-card:hover{
-  background: rgba(202, 217, 255, 0.20)!important;
-}
-.cdi-card:hover ::v-deep .el-progress-circle__track {
-  stroke: #CDD6E6;
-}
 .cdi-card-in-group {
-  // background: rgba(202, 217, 255, 0.20);
   padding-left: 36px;
 }
 .cdi-sub-group-header {
@@ -3207,6 +3294,46 @@ color: #333333;
   gap: 10px;
   flex-shrink: 0;
 }
+.cdi-courseware-toggle {
+  padding: 5px 12px;
+  border: 1px solid #71A0FF;
+  border-radius: 15px;
+  background: #71A0FF;
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cdi-courseware-toggle.is-expanded {
+  background: #FFFFFF;
+  color: #71A0FF;
+}
+.cdi-courseware-card {
+  background: #F5F5F5;
+  cursor: pointer;
+}
+.cdi-courseware-empty {
+  color: #999999;
+  font-size: 13px;
+  cursor: default;
+}
+// 展开课件的课件样式
+// .cdi-courseware-card {
+//   background: #E8F0FF;
+//   border: 1px solid #C6D8FF;
+//   box-shadow: inset 3px 0 0 #71A0FF;
+//   cursor: pointer;
+// }
+// .cdi-courseware-card .cdi-file-meta {
+//   color: #66758C;
+// }
+// .cdi-courseware-empty {
+//   color: #66758C;
+//   font-size: 13px;
+//   cursor: default;
+// }
 .cdi-actions ::v-deep .el-progress__text {
   font-size: 10px !important;
 }

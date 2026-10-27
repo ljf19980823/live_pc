@@ -262,12 +262,16 @@ export default class InlineTables {
     const clipboard = event.clipboardData
     const image = Array.from(clipboard?.items || []).find(item => item.type.startsWith('image/'))
     if (image) { this.options.onImage(image.getAsFile()); return }
-    const html = clipboard?.getData('text/html')
+    const sourceHtml = clipboard?.getData('text/html')
+    const text = clipboard?.getData('text/plain') || ''
+    const html = sourceHtml
+      ? (this.options.normalizePaste?.(sourceHtml) || sourceHtml)
+      : this.options.renderPlainPaste?.(text)
     if (html) {
       const safe = normalizeTableHtml(`<table><tbody><tr><td>${html}</td></tr></tbody></table>`)
       const doc = new DOMParser().parseFromString(safe, 'text/html')
       this.command('insertHTML', doc.querySelector('td')?.innerHTML || '')
-    } else this.command('insertText', clipboard?.getData('text/plain') || '')
+    } else this.command('insertText', text)
   }
 
   handleToolbar(event) {
