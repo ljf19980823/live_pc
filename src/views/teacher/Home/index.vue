@@ -874,7 +874,7 @@ border-radius: 0px 0px 0px 0px;
 }
 .app_container_last_left_header_nav_list_icon{
   width:44px;
-  height:36px;
+  height:44px;
 }
 .app_container_last_left_header_nav_list_text{
   font-weight: normal;
