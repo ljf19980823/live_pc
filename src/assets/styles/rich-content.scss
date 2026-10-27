@@ -75,9 +75,9 @@
 }
 
 // T1 行内公式以当前字号为基准，覆盖普通图片的缩放和浮动对齐规则。
-.rich-content img.t1-formula-image {
-  height: 1em !important;
-  margin: 0 0.08em;
-  vertical-align: -0.2em !important;
-  zoom: normal;
-}
+// .rich-content img.t1-formula-image {
+//   height: 1em !important;
+//   margin: 0 0.08em;
+//   vertical-align: -0.2em !important;
+//   zoom: normal;
+// }
