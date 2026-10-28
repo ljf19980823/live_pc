@@ -52,6 +52,7 @@
         <div
          v-for="(item, index) in liveCourses" :key="index" @click="enterLiveRoom(item)"
           class="pending-card"
+          :class="{ 'pending-card--living': item.status === 'living' }"
         >
           <div class="pending-card__top">
             <div
@@ -90,7 +91,19 @@
           <el-tooltip :content="item.title" placement="top" :enterable="false">
             <div class="pending-card__title">{{ item.title }}</div>
           </el-tooltip>
-          <div class="pending-card__time">{{ item.time }}</div>
+          <div
+            class="pending-card__time"
+            :class="{ 'pending-card__time--waiting': item.status !== 'living' }"
+          >
+            <span>{{ item.time }}</span>
+            <img
+              v-if="item.status !== 'living'"
+              class="pending-card__waiting-image"
+              src="@/assets/images/online/such.png"
+              alt=""
+              aria-hidden="true"
+            />
+          </div>
           <div
             class="pending-card__btn"
             :class="{ active: item.status === 'living'||item.isWithin30Min==true }"
@@ -2774,7 +2787,9 @@ border: 1px solid #E2E8F0;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
-
+.pending-card--living{
+  border: 2px solid #8DBCFF!important;
+}
 .pending-card {
   background: #FFFFFF;
  box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
@@ -2857,9 +2872,28 @@ border: 1px solid #DBEAFE;
   }
 
   &__time {
+    position: relative;
     font-size: 14px;
-    color: #62748E;
+    color: #1F7CFF;
     margin-bottom: 20px;
+
+    &--waiting {
+      padding-right: 100px;
+    }
+  }
+
+  &__waiting-image {
+    position: absolute;
+    top: -18px;
+    right: 4px;
+    width: 84px;
+    height: 78px;
+    object-fit: contain;
+    pointer-events: none;
+
+    &[src=""] {
+      visibility: hidden;
+    }
   }
 
   &__btn {
@@ -2877,7 +2911,7 @@ border: 1px solid #DBEAFE;
     transition: all 0.2s ease;
 
     &.active {
-     background: linear-gradient( 90deg, #155DFC 0%, #00BCFF 100%);
+    background: linear-gradient( 270deg, #155DFC 0%, #00BCFF 100%);
       color: #FFFFFF;
      box-shadow: 0px 2px 4px -2px #DBEAFE, 0px 4px 6px -1px #DBEAFE;
 
