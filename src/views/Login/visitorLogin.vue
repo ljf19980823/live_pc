@@ -67,6 +67,7 @@
 </template>
 
 <script>
+import { withClassroomAppVersion } from '@/utils/classroomUrl'
 import { visitorSendCode, visitorLogin } from '@/api'
 import LiveClassroomFrame from '@/components/LiveClassroomFrame/index.vue'
 import { setToken, setUserInfo } from '@/utils/auth'
@@ -249,7 +250,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=3&userid=${data.userId}&username=${data.realName || data.userName || this.form.userName.trim()}&liveid=${this.liveId}&classroomId=${this.classroomId || ''}&_t=${Date.now()}&token=${data.token}`
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=3&userid=${data.userId}&username=${data.realName || data.userName || this.form.userName.trim()}&liveid=${this.liveId}&classroomId=${this.classroomId || ''}&_t=${Date.now()}&token=${data.token}`)
       console.log(this.liveUrl,'地址')
       this.showLiveIframe = true
     }
