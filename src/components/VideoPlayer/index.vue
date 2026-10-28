@@ -69,6 +69,7 @@
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
+import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
@@ -252,6 +253,7 @@ export default {
         }
 
         this.playerInstance = new Aliplayer(config)
+        this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.source)
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
         this.initError = true
@@ -263,6 +265,10 @@ export default {
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
+      if (this._playbackMemory) {
+        this._playbackMemory.destroy()
+        this._playbackMemory = null
+      }
       if (this.playerInstance) {
         try {
           this.playerInstance.dispose()
@@ -320,6 +326,7 @@ export default {
 
     /** 关闭播放器，向父组件抛出 close 事件：进度百分比（0-100）、观看时长（秒） */
     handleClose() {
+      if (this._playbackMemory) this._playbackMemory.save()
       let percent = 0
       let viewTime = 0
       if (this.playerInstance) {

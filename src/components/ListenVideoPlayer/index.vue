@@ -123,6 +123,7 @@
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
+import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import seekBackwardIcon from '@/assets/icons/player/seek-backward-10.svg'
@@ -411,6 +412,7 @@ export default {
               }
             }
           )
+          this._playbackMemory = rememberVideoPlayback(this.mainPlayer, this.mainSource)
           this.mainPlayer.on('error', () => {
             this.mainError = true
             this.mainLoading = false
@@ -1029,6 +1031,10 @@ export default {
     // ─────────────── 销毁 ───────────────
 
     destroyPlayers() {
+      if (this._playbackMemory) {
+        this._playbackMemory.destroy()
+        this._playbackMemory = null
+      }
       document.removeEventListener('keydown', this.handlePlayerKeydown)
       clearInterval(this.syncTimer)
       this.syncTimer = null
@@ -1110,6 +1116,7 @@ export default {
     },
 
     handleClose() {
+      if (this._playbackMemory) this._playbackMemory.save()
       let percent = 0
       try {
         const videoEl = this._mainVideoEl
