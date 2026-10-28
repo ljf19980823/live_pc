@@ -259,6 +259,7 @@
 </template>
 
 <script>
+import { withClassroomAppVersion } from '@/utils/classroomUrl'
 import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -702,7 +703,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${course.liveLessonId || ''}&_t=${Date.now()}&token=${token}`)
       console.log(this.liveUrl,'地址')
       this.showLiveIframe = true
     },

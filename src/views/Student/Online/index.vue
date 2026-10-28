@@ -947,6 +947,7 @@
 </template>
 
 <script>
+import { withClassroomAppVersion } from '@/utils/classroomUrl'
 import { getAgreement } from '@/api/modules/teacher'
 import { getLiveList, getHistoryList, getClassList, createLiveClass, createAliyunClass, getScheduleList, deleteLiveClass, getLiveDetail, getLiveShare, updateLive, getAfterQuizList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api/modules/teacher'
 import Clickoutside from 'element-ui/lib/utils/clickoutside'
@@ -1705,7 +1706,7 @@ created() {
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`;
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId}&_t=${Date.now()}&token=${token}`);
       console.log(this.liveUrl,'直播地址')
     this.activeTab = 'liveui'
     },
@@ -1833,7 +1834,7 @@ created() {
       if(process.env.NODE_ENV === 'development'){
         liveBaseUrl = "http://localhost:8000";  //本地开发环境
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`;
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${userName}&liveid=${courseid}&token=${token}&classroomId=${this.selectedCourseItem.liveLessonId || ''}&_t=${Date.now()}`);
       console.log(this.liveUrl,'直播地址')
      this.activeTab = 'liveui'
     },
@@ -1852,7 +1853,7 @@ created() {
         liveBaseUrl = 'http://localhost:8000'
       }
 
-      this.liveUrl = `${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=1&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId|| ''}&afterClassTest=1&_t=${Date.now()}&token=${token}#/classroom?id=${item.liveLessonId|| ''}`)
       console.log(this.liveUrl, '发布课后测直播地址')
       this.activeTab = 'liveui'
     },

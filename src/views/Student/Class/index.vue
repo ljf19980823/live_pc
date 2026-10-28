@@ -980,6 +980,7 @@
 </template>
 
 <script>
+import { withClassroomAppVersion } from '@/utils/classroomUrl'
 import { getResourceTypeIcon } from '@/utils/resource'
 import { getAgreement } from '@/api/modules/teacher'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
@@ -2212,7 +2213,7 @@ export default {
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
-      this.liveUrl = `${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`
+      this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${liveId}&classroomId=${item.liveLessonId || ''}&_t=${Date.now()}&token=${token}`)
       console.log(this.liveUrl,'直播地址')
       this.showLiveIframe = true
     }
