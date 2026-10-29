@@ -183,6 +183,7 @@ export default {
         this.screenGuard.isRecording = data.isRecording
         this.screenGuard.isVM = data.isVM
         if (!data.isRecording) this._lastReportedRecorder = null
+        if (!data.isVM) this._lastReportedVM = null
 
         if (data.isRecording) {
           this.screenGuard.message = '监测到您正在录制屏幕，关闭录屏后继续观看'
@@ -194,7 +195,12 @@ export default {
           }
         } else if (data.isVM) {
           this.screenGuard.message = '监测到您正在使用虚拟机，请在真实设备上使用本软件'
-          console.warn('[ScreenGuard] 检测到虚拟机:', data.detectedVM || '未知')
+          const detectedVM = data.detectedVM || '未知虚拟机'
+          console.warn('[ScreenGuard] 检测到虚拟机:', detectedVM)
+          if (this._lastReportedVM !== detectedVM) {
+            this._lastReportedVM = detectedVM
+            this.reportSoftwareCheck(detectedVM)
+          }
         } else {
           this.screenGuard.message = ''
         }
