@@ -1126,9 +1126,6 @@ export default {
         const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
         this.name = userName ? `${userName}的课堂${dateStr}` : ''
         await this.fetchClassList()
-        if (this.classList.length) {
-          this.createClassId = this.classList.map(c => c.value)
-        }
       } else {
         this.name = ''
         this.instr = ''
