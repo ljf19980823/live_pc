@@ -126,8 +126,7 @@ import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
-import seekBackwardIcon from '@/assets/icons/player/seek-backward-10.svg'
-import seekForwardIcon from '@/assets/icons/player/seek-forward-10.svg'
+import { attachAliplayerControls } from '@/utils/aliplayerControls'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -139,14 +138,6 @@ let idCounter = 0
 
 /** 进度漂移修正阈值（秒）：双流时间差超过该值时强制同步 */
 const DRIFT_THRESHOLD = 1.5
-
-/** 快进、快退按钮和左右方向键共用的跳转秒数 */
-const SEEK_STEP = 10
-
-/** 全屏控制栏的底部唤出区域高度（px），覆盖控制栏和进度条。 */
-const FULLSCREEN_CONTROLS_TRIGGER_HEIGHT = 96
-/** 鼠标离开操作区域后的收起延迟（ms）。 */
-const FULLSCREEN_CONTROLS_HIDE_DELAY = 2000
 
 /** 单行字幕最多字数（中文按字计），保证画面上只出现一行 */
 const SUBTITLE_MAX_CHARS = 16
@@ -259,8 +250,8 @@ export default {
       isStudent: userInfo.role === 'STUDENT',
       isTeacher: userRole === 'TEACHER',
       currentUserInfo: userInfo,
-      mainPlayerId: `hrp-main-${uid}`,
-      teacherPlayerId: `hrp-teacher-${uid}`,
+      mainPlayerId: `hrp-listen-main-${uid}`,
+      teacherPlayerId: `hrp-listen-teacher-${uid}`,
       mainPlayer: null,
       teacherPlayer: null,
       mainError: false,
@@ -402,11 +393,13 @@ export default {
               this.mainPlayer = mainPlayer
               this.mainLoading = false
               this.setupSync(mainPlayer)
-              document.addEventListener('keydown', this.handlePlayerKeydown)
-              this.$nextTick(() => {
-                this.injectSeekButtons()
-                this.injectCcButton()
+              this._playerControls = attachAliplayerControls(mainPlayer, {
+                container: document.getElementById(this.mainPlayerId),
+                isActive: () => (this.inline || this.visible) && !this.mainError,
+                modal: !this.inline,
+                seekTo: seconds => this.seekTo(seconds)
               })
+              this.$nextTick(() => this.injectCcButton())
               if (this.teacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
@@ -416,7 +409,6 @@ export default {
           this.mainPlayer.on('error', () => {
             this.mainError = true
             this.mainLoading = false
-            this.syncSeekButtonsState()
           })
         } catch (e) {
           console.error('[HRP] 主视频初始化失败:', e)
@@ -511,7 +503,6 @@ export default {
         }
         const onSeeked = () => {
           this.updateSubtitle(videoEl.currentTime)
-          this.syncSeekButtonsState()
           if (!this.teacherPlayer || this.isSyncing) return
           this.isSyncing = true
           try { this.teacherPlayer.seek(videoEl.currentTime) } catch (e) {}
@@ -530,10 +521,8 @@ export default {
         }
         const onTimeUpdate = () => {
           this.updateSubtitle(videoEl.currentTime)
-          this.syncSeekButtonsState()
           this.$emit('timeupdate', videoEl.currentTime)
         }
-        const onDurationChange = () => this.syncSeekButtonsState()
 
         videoEl.addEventListener('play', onPlay)
         videoEl.addEventListener('pause', onPause)
@@ -541,12 +530,6 @@ export default {
         videoEl.addEventListener('ended', onEnded)
         videoEl.addEventListener('ratechange', onRateChange)
         videoEl.addEventListener('timeupdate', onTimeUpdate)
-        videoEl.addEventListener('loadedmetadata', onDurationChange)
-        videoEl.addEventListener('durationchange', onDurationChange)
-        // SDK 的 hover 模式只监听移入/移出，全屏内移动鼠标时需主动唤出。
-        // 捕获阶段监听，保证进度条等控件阻止冒泡时仍能保留控制栏。
-        container.addEventListener('mousemove', this.handleFullscreenMouseMove, true)
-        container.addEventListener('mouseleave', this.scheduleFullscreenControlsHide)
         if (!videoEl.paused && !videoEl.ended) {
           this.$emit('play')
           this.startSubtitleRaf()
@@ -558,13 +541,7 @@ export default {
           videoEl.removeEventListener('ended', onEnded)
           videoEl.removeEventListener('ratechange', onRateChange)
           videoEl.removeEventListener('timeupdate', onTimeUpdate)
-          videoEl.removeEventListener('loadedmetadata', onDurationChange)
-          videoEl.removeEventListener('durationchange', onDurationChange)
-          // 与视频事件一并清理，避免播放器重建后重复监听鼠标移动。
-          container.removeEventListener('mousemove', this.handleFullscreenMouseMove, true)
-          container.removeEventListener('mouseleave', this.scheduleFullscreenControlsHide)
         }
-        this.injectSeekButtons()
         this.injectCcButton()
       }
       attachVideoEvents(0)
@@ -572,7 +549,8 @@ export default {
       // ── 全屏 ──
       this._onFsChange = () => {
         const fsEl = document.fullscreenElement || document.webkitFullscreenElement
-        if (fsEl) this.enterFullscreen(fsEl)
+        const container = document.getElementById(this.mainPlayerId)
+        if (fsEl && container && fsEl.contains(container)) this.enterFullscreen(fsEl)
         else this.exitFullscreen()
       }
       document.addEventListener('fullscreenchange', this._onFsChange)
@@ -609,10 +587,6 @@ export default {
     },
 
     exitFullscreen() {
-      // 销毁播放器时也会调用；取消待执行任务，避免之后误隐藏普通模式的控制栏。
-      clearTimeout(this._fullscreenControlsHideTimer)
-      this._fullscreenControlsHideTimer = null
-      this._fullscreenControlsShown = false
       const bodyEl = this.$refs.videoArea
       const pipEl = this.$refs.pip
       if (bodyEl && pipEl && pipEl.parentNode !== bodyEl) {
@@ -626,156 +600,9 @@ export default {
       this.isFullscreen = false
     },
 
-    /** 根据全屏内的鼠标位置唤出控制栏，保持当前播放状态。 */
-    handleFullscreenMouseMove(e) {
-      if (!this.isFullscreen || !this.mainPlayer || this.mainError) return
-      const fsEl = document.fullscreenElement || document.webkitFullscreenElement
-      const container = e.currentTarget
-      // 页面其他区域进入全屏时，不接管本播放器的控制栏。
-      if (!fsEl || !fsEl.contains(container)) return
-
-      const nearBottom = e.clientY >= container.getBoundingClientRect().bottom - FULLSCREEN_CONTROLS_TRIGGER_HEIGHT
-      // 设置、音量等弹出面板可能超出底部热区，操作面板时仍需保持显示。
-      const onControls = e.target.closest && e.target.closest(
-        '.prism-controlbar, .prism-setting-list, .prism-volume-control, .prism-selector'
-      )
-      if (nearBottom || onControls) {
-        clearTimeout(this._fullscreenControlsHideTimer)
-        this._fullscreenControlsHideTimer = null
-        // 此 API 同时取消 SDK 内部的隐藏计时，保证鼠标停留时控制栏不会自行收起。
-        this.mainPlayer.showControlBar()
-        this._fullscreenControlsShown = true
-      } else {
-        this.scheduleFullscreenControlsHide()
-      }
-    },
-
-    /** 仅收起鼠标主动唤出的控制栏；连续移动时复用同一个延迟任务。 */
-    scheduleFullscreenControlsHide() {
-      if (!this.isFullscreen || !this._fullscreenControlsShown || this._fullscreenControlsHideTimer) return
-      this._fullscreenControlsHideTimer = setTimeout(() => {
-        this._fullscreenControlsHideTimer = null
-        if (this.isFullscreen && this.mainPlayer) {
-          this.mainPlayer.hideControlBar()
-          this._fullscreenControlsShown = false
-        }
-      }, FULLSCREEN_CONTROLS_HIDE_DELAY)
-    },
-
     safePlay(player) {
       if (!player) return
       try { player.play() } catch (e) {}
-    },
-
-    handlePlayerKeydown(e) {
-      const player = this.mainPlayer
-      const videoEl = this._mainVideoEl
-      if (!player || !videoEl || this.mainError || !(this.inline || this.visible)) return
-      if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
-
-      const target = e.target
-      if (target && (target.isContentEditable || (target.closest && target.closest(
-        'input, textarea, select, button, a, [role="button"], [role="textbox"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
-      )))) return
-
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const offset = e.key === 'ArrowLeft' ? -SEEK_STEP : SEEK_STEP
-        if (this.seekBy(offset)) e.preventDefault()
-      } else if (e.key === ' ') {
-        e.preventDefault()
-        // 长按空格时只切换一次，避免连续暂停、播放。
-        if (!e.repeat) {
-          if (videoEl.paused || videoEl.ended) this.safePlay(player)
-          else player.pause()
-        }
-      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        const volume = Number(player.getVolume())
-        if (!Number.isFinite(volume)) return
-        e.preventDefault()
-        const offset = e.key === 'ArrowUp' ? 0.1 : -0.1
-        player.setVolume(Math.max(0, Math.min(1, Number((volume + offset).toFixed(1)))))
-      }
-    },
-
-    /** 按钮和快捷键共用跳转逻辑，始终限制在视频时间范围内。 */
-    seekBy(offset) {
-      if (!this.mainPlayer || this.mainError) return false
-      const current = Number(this.mainPlayer.getCurrentTime())
-      const duration = Number(this.mainPlayer.getDuration())
-      if (!Number.isFinite(current) || !Number.isFinite(duration) || duration <= 0) return false
-      this.seekTo(Math.max(0, Math.min(duration, current + offset)))
-      return true
-    },
-
-    /** 将快退、快进按钮放在底部控制栏的时间显示后，随播放器一起全屏。 */
-    injectSeekButtons() {
-      clearTimeout(this._seekInjectTimer)
-      this._seekInjectTimer = null
-      if (!this.mainPlayer || !(this.inline || this.visible)) return
-      const container = document.getElementById(this.mainPlayerId)
-      const controlBar = container && container.querySelector('.prism-controlbar')
-      if (!controlBar) {
-        if ((this._seekInjectRetry || 0) < 30) {
-          this._seekInjectRetry = (this._seekInjectRetry || 0) + 1
-          this._seekInjectTimer = setTimeout(() => this.injectSeekButtons(), 120)
-        }
-        return
-      }
-      this._seekInjectRetry = 0
-
-      let controls = controlBar.querySelector('.hrp-seek-controls')
-      if (!controls) {
-        controls = document.createElement('div')
-        controls.className = 'hrp-seek-controls'
-        controls.setAttribute('role', 'group')
-        controls.setAttribute('aria-label', '播放进度快捷操作')
-        controls.addEventListener('dblclick', (e) => e.stopPropagation())
-
-        const offsets = [-SEEK_STEP, SEEK_STEP]
-        offsets.forEach((offset) => {
-          const backward = offset < 0
-          const btn = document.createElement('button')
-          btn.type = 'button'
-          btn.className = `hrp-seek-btn hrp-seek-btn--${backward ? 'backward' : 'forward'}`
-          btn.title = backward ? '后退 10 秒（←）' : '前进 10 秒（→）'
-          btn.setAttribute('aria-label', backward ? '后退 10 秒' : '前进 10 秒')
-          const icon = document.createElement('img')
-          icon.className = 'hrp-seek-btn__icon'
-          icon.src = backward ? seekBackwardIcon : seekForwardIcon
-          icon.alt = ''
-          icon.draggable = false
-          icon.setAttribute('aria-hidden', 'true')
-          btn.appendChild(icon)
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation()
-            this.seekBy(offset)
-          })
-          controls.appendChild(btn)
-        })
-
-        const anchor = controlBar.querySelector('.prism-time-display') || controlBar.querySelector('.prism-play-btn')
-        if (anchor && anchor.parentNode === controlBar) controlBar.insertBefore(controls, anchor.nextSibling)
-        else controlBar.appendChild(controls)
-      }
-      this._seekControlsEl = controls
-      this.syncSeekButtonsState()
-    },
-
-    syncSeekButtonsState() {
-      if (!this._seekControlsEl) return
-      const duration = this.mainPlayer ? Number(this.mainPlayer.getDuration()) : 0
-      const disabled = this.mainError || !Number.isFinite(duration) || duration <= 0
-      this._seekControlsEl.querySelectorAll('button').forEach((btn) => { btn.disabled = disabled })
-    },
-
-    removeSeekButtons() {
-      clearTimeout(this._seekInjectTimer)
-      this._seekInjectTimer = null
-      this._seekInjectRetry = 0
-      if (this._seekControlsEl && this._seekControlsEl.parentNode) {
-        this._seekControlsEl.parentNode.removeChild(this._seekControlsEl)
-      }
-      this._seekControlsEl = null
     },
 
     /** 播放中用 rAF 刷新字幕，保证逐字渐显更跟手 */
@@ -1035,14 +862,16 @@ export default {
         this._playbackMemory.destroy()
         this._playbackMemory = null
       }
-      document.removeEventListener('keydown', this.handlePlayerKeydown)
+      if (this._playerControls) {
+        this._playerControls.destroy()
+        this._playerControls = null
+      }
       clearInterval(this.syncTimer)
       this.syncTimer = null
       this.mainLoading = false
       this.currentSubtitle = ''
       this._subtitleCues = null
       this.stopSubtitleRaf()
-      this.removeSeekButtons()
       this.removeCcButton()
 
       if (this._removeVideoListeners) {
@@ -1442,88 +1271,6 @@ export default {
 /* 控制栏需高于字幕层，保证 CC 可点 */
 ::v-deep .prism-controlbar {
   z-index: 100001 !important;
-}
-
-/* 固定预留小时级时间的宽度，避免数字变化或跨小时后推动跳转按钮。 */
-::v-deep .prism-controlbar .prism-time-display {
-  // min-width: 78px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 快退、快进按钮与 Aliplayer 的播放、时间控件保持同一行。 */
-::v-deep .hrp-seek-controls {
-  position: relative;
-  float: left;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  margin: 7px 0 0 8px;
-}
-
-::v-deep .hrp-seek-btn {
-  --hrp-seek-angle: 45deg;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  padding: 3px;
-  border: 0;
-  border-radius: 4px;
-  box-sizing: border-box;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-
-  .hrp-seek-btn__icon {
-    display: block;
-    width: 26px;
-    height: 26px;
-    pointer-events: none;
-    transform-origin: center;
-  }
-
-  &--backward {
-    --hrp-seek-angle: -45deg;
-  }
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.15);
-
-    .hrp-seek-btn__icon {
-      animation: hrp-seek-hover 1s ease-in-out 1;
-    }
-  }
-
-  &:active:not(:disabled) {
-    background: rgba(255, 255, 255, 0.25);
-  }
-
-  &:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-}
-
-@keyframes hrp-seek-hover {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(var(--hrp-seek-angle)); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::v-deep .hrp-seek-btn:hover:not(:disabled) .hrp-seek-btn__icon {
-    animation: none;
-  }
 }
 
 /* 注入到控制栏的 CC 按钮 */

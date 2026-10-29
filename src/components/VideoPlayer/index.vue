@@ -70,6 +70,7 @@ import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
+import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
@@ -248,11 +249,19 @@ export default {
           preload: true,
           controlBarVisibility: 'hover',
           useH5Prism: true,
+          keyShortCuts: false,
           disableSeek: this.isStudent && this.allowFastForward === '2',
           license: ALIPLAYER_LICENSE
         }
 
-        this.playerInstance = new Aliplayer(config)
+        this.playerInstance = new Aliplayer(config, player => {
+          this._playerControls = attachAliplayerControls(player, {
+            container: document.getElementById(this.playerId),
+            isActive: () => this.visible && !this.initError,
+            // 按钮和快捷键遵循与原进度条一致的学生权限。
+            canSeek: () => !(this.isStudent && this.allowFastForward === '2')
+          })
+        })
         this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.source)
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
@@ -265,6 +274,10 @@ export default {
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
+      if (this._playerControls) {
+        this._playerControls.destroy()
+        this._playerControls = null
+      }
       if (this._playbackMemory) {
         this._playbackMemory.destroy()
         this._playbackMemory = null

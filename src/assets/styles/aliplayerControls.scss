@@ -1,0 +1,81 @@
+/* 由总时长预留时间宽度，数字及小时位变化时不推动跳转按钮。 */
+.aliplayer-enhanced .prism-controlbar .prism-time-display {
+  width: var(--aliplayer-time-width, 13ch);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 快退、快进按钮与 Aliplayer 的播放、时间控件保持同一行。 */
+.aliplayer-enhanced .hrp-seek-controls {
+  position: relative;
+  float: left;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  margin: 7px 0 0 8px;
+}
+
+.aliplayer-enhanced .hrp-seek-btn {
+  --hrp-seek-angle: 45deg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  box-sizing: border-box;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+
+  .hrp-seek-btn__icon {
+    display: block;
+    width: 26px;
+    height: 26px;
+    pointer-events: none;
+    transform-origin: center;
+  }
+
+  &--backward {
+    --hrp-seek-angle: -45deg;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+
+    .hrp-seek-btn__icon {
+      animation: hrp-seek-hover 1s ease-in-out 1;
+    }
+  }
+
+  &:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+@keyframes hrp-seek-hover {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(var(--hrp-seek-angle)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aliplayer-enhanced .hrp-seek-btn:hover:not(:disabled) .hrp-seek-btn__icon {
+    animation: none;
+  }
+}

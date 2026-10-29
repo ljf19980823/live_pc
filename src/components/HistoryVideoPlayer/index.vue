@@ -103,6 +103,7 @@ import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
+import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { collectToggle, batchLiveStatisticsLog } from '@/api'
 
 const ALIPLAYER_LICENSE = {
@@ -186,8 +187,8 @@ export default {
     const userInfo = getUserInfo() || {}
     return {
       isStudent: userInfo.role === 'STUDENT',
-      mainPlayerId: `hrp-main-${uid}`,
-      teacherPlayerId: `hrp-teacher-${uid}`,
+      mainPlayerId: `hrp-history-main-${uid}`,
+      teacherPlayerId: `hrp-history-teacher-${uid}`,
       mainPlayer: null,
       teacherPlayer: null,
       mainError: false,
@@ -348,6 +349,7 @@ export default {
           playsinline: true,
           preload: true,
           useH5Prism: true,
+          keyShortCuts: false,
           license: ALIPLAYER_LICENSE
         }
 
@@ -358,6 +360,11 @@ export default {
               this.mainPlayer = mainPlayer
               this.mainLoading = false
               this.setupSync(mainPlayer)
+              // 只增强主视频；讲师画中画沿用现有播放、进度和倍速同步。
+              this._playerControls = attachAliplayerControls(mainPlayer, {
+                container: document.getElementById(this.mainPlayerId),
+                isActive: () => this.visible && !this.mainError
+              })
               if (this.teacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
@@ -495,7 +502,8 @@ export default {
       // ── 全屏 ──
       this._onFsChange = () => {
         const fsEl = document.fullscreenElement || document.webkitFullscreenElement
-        if (fsEl) this.enterFullscreen(fsEl)
+        const container = document.getElementById(this.mainPlayerId)
+        if (fsEl && container && fsEl.contains(container)) this.enterFullscreen(fsEl)
         else this.exitFullscreen()
       }
       document.addEventListener('fullscreenchange', this._onFsChange)
@@ -540,6 +548,10 @@ export default {
     // ─────────────── 销毁 ───────────────
 
     destroyPlayers() {
+      if (this._playerControls) {
+        this._playerControls.destroy()
+        this._playerControls = null
+      }
       if (this._playbackMemory) {
         this._playbackMemory.destroy()
         this._playbackMemory = null
