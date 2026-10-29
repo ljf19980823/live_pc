@@ -447,7 +447,7 @@ export default {
     mapRecentViewItem (item) {
       const type = String(item.type || '')
       const fileList = item.fileList || []
-      const filePath = fileList.length ? (fileList[0].filePath || '') : (item.filePath || '')
+      const filePath = item.filePath || (fileList.length ? fileList[0].filePath || '' : '')
       const status = item.status || item.liveStatus || ''
       const isFinish = item.isFinish != null
         ? item.isFinish
@@ -509,6 +509,7 @@ export default {
       const historyVideoTypes = ['3']
       const imageTypes = ['5']
       const audioTypes = ['6']
+      const linkTypes = ['1', '8']
 
       try {
         const apiCalls = [updateRecentStudy({ courseId, lessonId, type: '4' })]
@@ -563,6 +564,8 @@ export default {
         this.currentCollectParams = collectBase
         this.isCollected = initCollected
         this.showAudioDialog = true
+      } else if (linkTypes.includes(item.nodeType)) {
+        await this.openLinkPreview(url)
       } else {
         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         this.filePreviewData = { name: item.title || '', path: url }
@@ -571,6 +574,18 @@ export default {
         this.isCollected = initCollected
         this.filePreviewVisible = true
       }
+    },
+    async openLinkPreview (url) {
+      if (window.electronAPI && window.electronAPI.openInAppUrl) {
+        try {
+          const opened = await window.electronAPI.openInAppUrl(url)
+          if (!opened) this.$message.warning('链接地址无效')
+        } catch (_) {
+          this.$message.error('链接打开失败')
+        }
+        return
+      }
+      window.open(url, '_blank', 'noopener,noreferrer')
     },
     async openVideoPlayer (item, updateRecent = false) {
       if (updateRecent) {
