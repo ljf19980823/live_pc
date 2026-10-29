@@ -20,7 +20,7 @@
           />
         </div>
 
-        <div class="filter-item">
+        <!-- <div class="filter-item">
           <span class="filter-item__label">科目</span>
           <div class="filter-item__control filter-item__control--select">
             <div class="ls_class_select_wrap">
@@ -42,7 +42,7 @@
               <i class="el-icon-arrow-down ls_class_select_arrow" />
             </div>
           </div>
-        </div>
+        </div> -->
 
         <div class="filter-item">
           <span class="filter-item__label">时间</span>

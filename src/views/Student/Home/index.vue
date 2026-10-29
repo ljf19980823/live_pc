@@ -467,6 +467,7 @@ export default {
         collectCount: item.collectCount,
         historyLessonId: item.historyLessonId || '',
         taskUuid: item.taskUuid || '',
+        teacherId: item.teacherId || '',
         startTime: item.startTime || '',
         liveMin: item.liveMin,
         liveStatus: status,
@@ -480,9 +481,13 @@ export default {
       if (!item) return
       const mapped = this.mapRecentViewItem(item)
       const type = String(mapped.nodeType || '')
-      // 2=直播；3/4/5/6/7=资源类（与班级任务点击一致）
+      // 2=直播；3=回放课堂；其余类型沿用资源预览。
       if (type === '2') {
         await this.enterLiveRoom(mapped)
+        return
+      }
+      if (type === '3') {
+        await this.openVideoPlayer(mapped, true)
         return
       }
       await this.handleResourceClick(mapped)
@@ -541,7 +546,7 @@ export default {
         this.isCollected = initCollected
         this.showVideoDialog = true
       } else if (historyVideoTypes.includes(item.nodeType)) {
-        this.openVideoPlayer(item, false, true)
+        this.openVideoPlayer(item)
       } else if (imageTypes.includes(item.nodeType)) {
         this.currentResourceTitle = item.title || '图片预览'
         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
@@ -567,7 +572,7 @@ export default {
         this.filePreviewVisible = true
       }
     },
-    async openVideoPlayer (item, updateRecent = false, fromTask = false, skipProgress = false) {
+    async openVideoPlayer (item, updateRecent = false) {
       if (updateRecent) {
         try {
           const courseId = String(item.courseId || '')
@@ -578,29 +583,20 @@ export default {
       const fileList = item.fileList || []
       const mainFile = fileList.find(f => f.videoType == '1')
       const teacherFile = fileList.find(f => f.videoType == '2')
-      this.playerSource = mainFile ? mainFile.filePath || '' : ''
-      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
-      this.playerTitle = item.name || item.title || '视频回放'
-      this.playerHistoryLessonId = String(item.historyLessonId || '')
-      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
-      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
-      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
-      this.currentPlayingItem = item
-      this.fromLearningTask = fromTask
-      this.isCollected = fromTask ? String(item.collectCount || 0) == 1 : false
-      if (fromTask) {
-        this.currentCollectParams = {
-          courseId: String(item.courseId || ''),
-          lessonId: String(item.id || ''),
-          historyLessonId: String(item.historyLessonId || ''),
-          type: '3',
-          collectCount: String(item.collectCount || 0)
+      return this.$router.push({
+        name: 'AIListening',
+        query: {
+          videoUrl: mainFile ? mainFile.filePath || '' : (!fileList.length ? item.filePath || '' : ''),
+          teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+          meetingId: item.taskUuid || '',
+          meetingTitle: item.name || item.title || '视频回放',
+          scopeText: item.taskUuid || '',
+          liveLessonId: item.liveLessonId || '',
+          historyLessonId: item.historyLessonId || '',
+          liveId: item.liveId || '',
+          teacherId: item.teacherId || ''
         }
-      } else {
-        this.currentCollectParams = {}
-      }
-      this.skipProgressOnClose = skipProgress
-      this.playerVisible = true
+      })
     },
     async closeVideoDialog (percent = 0, viewTime = 0) {
       this.showVideoDialog = false
@@ -728,16 +724,6 @@ export default {
       }
     },
     async enterLiveRoom (item) {
-      // 已结束且有回放 → 打开历史回放（与班级任务一致）
-      if (item.isFinish == 1 && item.liveStatus == '已结束已开播') {
-        this.openVideoPlayer(item, true, true)
-        return
-      }
-      if (item.isFinish == 1 && item.liveStatus == '已结束未开播') {
-        this.$message.warning('该课程暂无回放地址')
-        return
-      }
-
       const now = Date.now()
       const startTime = item.startTime ? new Date(item.startTime.replace(/-/g, '/')).getTime() : null
 
