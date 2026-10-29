@@ -224,6 +224,7 @@
 </template>
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
+import { getReplayInfo, getAIListeningRoute, resolveReplayInfo } from '@/utils/replayRoute'
 import { getAgreement, updateRecentStudy, updateCourseProgress, collectToggle } from '@/api/modules/teacher'
 import { mapGetters } from 'vuex'
 import { getTeacherNoticeList, getCarouselList, getLatestLive } from '@/api'
@@ -446,7 +447,8 @@ export default {
     /** 将最近观看数据映射为班级任务点击所需结构 */
     mapRecentViewItem (item) {
       const type = String(item.type || '')
-      const fileList = item.fileList || []
+      const replay = getReplayInfo(item)
+      const fileList = replay.fileList
       const filePath = item.filePath || (fileList.length ? fileList[0].filePath || '' : '')
       const status = item.status || item.liveStatus || ''
       const isFinish = item.isFinish != null
@@ -455,8 +457,8 @@ export default {
       return {
         id: item.lessonId || item.id || '',
         courseId: item.courseId || '',
-        title: item.name || item.title || '',
-        name: item.name || item.title || '',
+        title: replay.name,
+        name: replay.name,
         nodeType: type,
         filePath,
         fileList,
@@ -465,15 +467,15 @@ export default {
         allowFastForward: item.allowFastForward != null ? String(item.allowFastForward) : '2',
         allowDownload: item.allowDownload != null ? String(item.allowDownload) : '2',
         collectCount: item.collectCount,
-        historyLessonId: item.historyLessonId || '',
-        taskUuid: item.taskUuid || '',
-        teacherId: item.teacherId || '',
+        historyLessonId: replay.historyLessonId,
+        taskUuid: replay.taskUuid,
+        teacherId: replay.teacherId,
         startTime: item.startTime || '',
         liveMin: item.liveMin,
         liveStatus: status,
         isFinish,
-        liveId: item.contentId || item.liveId || item.id || '',
-        liveLessonId: item.liveLessonId || item.lessonId || '',
+        liveId: type === '2' ? item.contentId || item.liveId || item.id || '' : replay.liveId,
+        liveLessonId: replay.liveLessonId || (type === '2' ? item.lessonId || '' : ''),
         duration: item.duration
       }
     },
@@ -595,23 +597,37 @@ export default {
           await updateRecentStudy({ courseId, lessonId, type: '3' })
         } catch (_) {}
       }
+      item = await resolveReplayInfo(item)
+      const aiRoute = getAIListeningRoute(item)
+      if (aiRoute) return this.$router.push(aiRoute)
+
+      // 参数仍不完整时先播放回放，避免因缺少听记参数而一直显示笔记生成中。
       const fileList = item.fileList || []
       const mainFile = fileList.find(f => f.videoType == '1')
       const teacherFile = fileList.find(f => f.videoType == '2')
-      return this.$router.push({
-        name: 'AIListening',
-        query: {
-          videoUrl: mainFile ? mainFile.filePath || '' : (!fileList.length ? item.filePath || '' : ''),
-          teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
-          meetingId: item.taskUuid || '',
-          meetingTitle: item.name || item.title || '视频回放',
-          scopeText: item.taskUuid || '',
-          liveLessonId: item.liveLessonId || '',
-          historyLessonId: item.historyLessonId || '',
-          liveId: item.liveId || '',
-          teacherId: item.teacherId || ''
-        }
-      })
+      this.playerSource = mainFile ? mainFile.filePath || '' : (!fileList.length ? item.filePath || '' : '')
+      this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      if (!this.playerSource && !this.playerTeacherSource) {
+        this.$message.warning('暂无回放视频')
+        return
+      }
+      this.playerTitle = item.name || item.title || '视频回放'
+      this.playerHistoryLessonId = String(item.historyLessonId || '')
+      this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
+      this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
+      this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
+      this.currentPlayingItem = item
+      this.fromLearningTask = true
+      this.currentCollectParams = {
+        courseId: String(item.courseId || ''),
+        lessonId: String(item.id || ''),
+        historyLessonId: String(item.historyLessonId || ''),
+        type: '3',
+        collectCount: String(item.collectCount || 0)
+      }
+      this.isCollected = String(item.collectCount || 0) === '1'
+      this.skipProgressOnClose = false
+      this.playerVisible = true
     },
     async closeVideoDialog (percent = 0, viewTime = 0) {
       this.showVideoDialog = false

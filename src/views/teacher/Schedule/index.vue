@@ -258,6 +258,7 @@
 
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
+import { getReplayInfo, getAIListeningRoute, resolveReplayInfo } from '@/utils/replayRoute'
 import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
@@ -316,7 +317,8 @@ export default {
       ;(this.scheduleApiData || []).forEach(item => {
         const dateStr = item.date
         if (!dateStr) return
-        map[dateStr] = (item.lives || []).map(live => {
+        map[dateStr] = (item.lives || []).map(rawLive => {
+          const live = getReplayInfo(rawLive)
           const startTime = live.startTime ? live.startTime.substring(11, 16) : ''
           const endTime = live.endTime ? live.endTime.substring(11, 16) : ''
           const realStartTime = live.realStartTime ? live.realStartTime.substring(11, 16) : ''
@@ -700,30 +702,16 @@ export default {
       this.liveUrl = withClassroomAppVersion(`${liveBaseUrl}?role=${roleNumber}&liverole=${roleNumber}&userid=${userId}&username=${realName}&liveid=${course.id}&classroomId=${course.liveLessonId}&_t=${Date.now()}&token=${token}`)
       this.showLiveIframe = true
     },
-    openVideo(course) {
-      if (!course.fileList || course.fileList.length === 0 || course.status === '已结束未开播') {
+    async openVideo(course) {
+      if (course.status === '已结束未开播') {
         this.$message.warning('暂无回放视频')
         return
       }
-      if (course.taskUuid) {
-        const fileList = course.fileList || []
-        const mainFile = fileList.find(f => f.videoType == '1')
-        const teacherFile = fileList.find(f => f.videoType == '2')
-        const { userId } = getUserInfo()
-        this.$router.push({
-          name: 'AIListening',
-          query: {
-            videoUrl: mainFile ? mainFile.filePath || '' : '',
-            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
-            meetingId: course.taskUuid,
-            meetingTitle: course.name || '',
-            scopeText: course.taskUuid,
-            liveLessonId: course.liveLessonId || '',
-            historyLessonId: course.historyLessonId || '',
-            liveId: course.liveId || course.id || '',
-            teacherId: userId || ''
-          }
-        })
+      course = await resolveReplayInfo({ ...course, liveId: course.liveId || course.id || '' })
+      const aiRoute = getAIListeningRoute(course)
+      if (aiRoute) return this.$router.push(aiRoute)
+      if (!course.fileList.length) {
+        this.$message.warning('暂无回放视频')
         return
       }
       const fileList = course.fileList || []

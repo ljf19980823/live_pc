@@ -260,6 +260,7 @@
 
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
+import { getReplayInfo, getAIListeningRoute, resolveReplayInfo } from '@/utils/replayRoute'
 import { getAgreement } from '@/api/modules/teacher'
 import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
@@ -320,29 +321,32 @@ export default {
       ;(this.scheduleApiData || []).forEach(item => {
         const dateStr = item.date
         if (!dateStr) return
-        map[dateStr] = (item.lives || []).map(live => ({
-           ...live,
-          id: live.id,
-          name: live.name || '',
-          startTime: live.startTime ? live.startTime.substring(11, 16) : '',
-          endTime: live.endTime ? live.endTime.substring(11, 16) : '',
-          realStartTime: live.realStartTime ? live.realStartTime.substring(11, 16) : '',
-          realEndTime: live.realEndTime ? live.realEndTime.substring(11, 16) : '',
-          fullStartTime: live.startTime || '',
-          liveId: live.liveId || live.id,
-          liveLessonId: live.liveLessonId || '',
-          fileList: live.fileList || [],
-          allowMultiple: live.allowMultiple,
-          allowFastForward: live.allowFastForward,
-          allowDownload: live.allowDownload,
-          status: live.status,
-          isStart: live.isStart,
-          isFinish: live.isFinish,
-          historyLessonId: live.historyLessonId || '',
-           cover: live.coverThumb || live.cover || live.imgUrl || live.image || '',
+        map[dateStr] = (item.lives || []).map(rawLive => {
+          const live = getReplayInfo(rawLive)
+          return {
+            ...live,
+            id: live.id,
+            name: live.name || '',
+            startTime: live.startTime ? live.startTime.substring(11, 16) : '',
+            endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+            realStartTime: live.realStartTime ? live.realStartTime.substring(11, 16) : '',
+            realEndTime: live.realEndTime ? live.realEndTime.substring(11, 16) : '',
+            fullStartTime: live.startTime || '',
+            liveId: live.liveId || live.id,
+            liveLessonId: live.liveLessonId || '',
+            fileList: live.fileList || [],
+            allowMultiple: live.allowMultiple,
+            allowFastForward: live.allowFastForward,
+            allowDownload: live.allowDownload,
+            status: live.status,
+            isStart: live.isStart,
+            isFinish: live.isFinish,
+            historyLessonId: live.historyLessonId || '',
+            cover: live.coverThumb || live.cover || live.imgUrl || live.image || '',
             teacherName: live.teacherName2 || live.teacherName || this.realName || '',
             taskUuid: live.taskUuid || '',
-        }))
+          }
+        })
       })
       return map
     },
@@ -707,30 +711,16 @@ export default {
       console.log(this.liveUrl,'地址')
       this.showLiveIframe = true
     },
-    openVideo(course) {
-      if (!course.fileList || course.fileList.length === 0 || course.status === '已结束未开播') {
+    async openVideo(course) {
+      if (course.status === '已结束未开播') {
         this.$message.warning('暂无回放视频')
         return
       }
-      if (course.taskUuid) {
-        const fileList = course.fileList || []
-        const mainFile = fileList.find(f => f.videoType == '1')
-        const teacherFile = fileList.find(f => f.videoType == '2')
-        const { userId } = getUserInfo()
-        this.$router.push({
-          name: 'AIListening',
-          query: {
-            videoUrl: mainFile ? mainFile.filePath || '' : '',
-            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
-            meetingId: course.taskUuid,
-            meetingTitle: course.name || '',
-            scopeText: course.taskUuid,
-            liveLessonId: course.liveLessonId || '',
-            historyLessonId: course.historyLessonId || '',
-            liveId: course.liveId || course.id || '',
-            teacherId: userId || ''
-          }
-        })
+      course = await resolveReplayInfo({ ...course, liveId: course.liveId || course.id || '' })
+      const aiRoute = getAIListeningRoute(course)
+      if (aiRoute) return this.$router.push(aiRoute)
+      if (!course.fileList.length) {
+        this.$message.warning('暂无回放视频')
         return
       }
       const fileList = course.fileList
