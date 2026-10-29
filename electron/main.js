@@ -355,7 +355,7 @@ async function checkScreenGuard () {
 }
 
 // ─── 课堂/回放防录屏守护 ──────────────────────────────────────────────
-// 内容保护同时限制截图和录屏；允许截图的直播仅使用进程检测拦截已知录屏软件。
+// 内容保护同时限制截图和录屏；允许截图的直播和视频播放使用进程检测拦截已知录屏软件。
 function updateWindowContentProtection () {
   if (!mainWindow || mainWindow.isDestroyed()) return
   mainWindow.setContentProtection(screenGuardEnabled && !allowScreenshots && !teacherScreenSharing)
@@ -369,7 +369,7 @@ function setTeacherScreenSharing (active) {
 function startScreenGuard (options = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
-  // Electron 的窗口内容保护无法单独放开截图，直播按参数关闭它。
+  // Electron 的窗口内容保护无法单独放开截图，直播和视频播放按参数关闭它。
   // 此时进程检测仍运行，但无法拦截系统工具或截图/录屏一体工具的所有录屏行为。
   screenGuardEnabled = true
   allowScreenshots = options?.allowScreenshots === true

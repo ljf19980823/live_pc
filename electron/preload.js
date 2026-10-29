@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // ─── 课堂/回放防录屏（直播允许截图） ──────────────────────
+  // ─── 课堂/视频防录屏（允许截图） ──────────────────────
   onScreenGuardChange: (callback) => {
     const handler = (_, data) => callback(data)
     ipcRenderer.on('screen-guard-change', handler)

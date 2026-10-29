@@ -355,7 +355,7 @@ export default {
   methods: {
     setScreenGuard(enabled) {
       if (window.electronAPI?.setScreenGuard) {
-        window.electronAPI.setScreenGuard(enabled)
+        window.electronAPI.setScreenGuard(enabled, { allowScreenshots: enabled })
       }
     },
 
