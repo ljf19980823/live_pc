@@ -2198,7 +2198,7 @@ created() {
         return
       }
       try {
-        const res = await getSubjectOptions({ classId: this.quizClassIds[0] })
+        const res = await getSubjectOptions({ classId: this.quizClassIds[0],type :'1' })
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
       } catch (e) {

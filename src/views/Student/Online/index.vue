@@ -2212,7 +2212,7 @@ created() {
       try {
         const params = {}
         if (this.quizClassIds.length) params.classId = this.quizClassIds[0]
-        const res = await getSubjectOptions(params)
+        const res = await getSubjectOptions({...params,type:'1'})
         const list = (res && res.data) ? res.data : []
         this.quizSubjectOptions = [{ id: '', name: '全部科目' }, ...list]
       } catch (e) {

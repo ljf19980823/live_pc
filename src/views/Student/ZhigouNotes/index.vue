@@ -165,7 +165,7 @@ export default {
   methods: {
     async fetchSubjectOptions() {
       try {
-        const res = await getSubjectOptions()
+        const res = await getSubjectOptions({type:'2'})
         this.subjectOptions = (res && res.data) ? res.data : []
       } catch (e) {
         console.log(e, 'fetchSubjectOptions error')
