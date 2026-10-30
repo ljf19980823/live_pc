@@ -452,6 +452,7 @@ function showExitConfirmDialog () {
     show: false,
     transparent: true,
     webPreferences: {
+      devTools: !app.isPackaged,
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'confirm-dialog-preload.js')
@@ -524,6 +525,7 @@ function createWindow () {
     title: 'Learn InClass',
     icon: iconPath,
     webPreferences: {
+      devTools: !app.isPackaged,
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false,
@@ -536,15 +538,6 @@ function createWindow () {
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
-    mainWindow.webContents.on('before-input-event', (event, input) => {
-      if (input.key === 'F12' && input.type === 'keyDown') {
-        if (mainWindow.webContents.isDevToolsOpened()) {
-          mainWindow.webContents.closeDevTools()
-        } else {
-          mainWindow.webContents.openDevTools()
-        }
-      }
-    })
   }
 
   mainWindow.once('ready-to-show', () => {
@@ -749,6 +742,7 @@ function openLinkPreviewWindow (rawUrl) {
     title: '链接内容',
     icon: iconPath,
     webPreferences: {
+      devTools: !app.isPackaged,
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,

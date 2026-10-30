@@ -457,6 +457,7 @@ export default {
       return {
         id: item.lessonId || item.id || '',
         courseId: item.courseId || '',
+        contentId: item.contentId,
         title: replay.name,
         name: replay.name,
         nodeType: type,
@@ -531,6 +532,7 @@ export default {
       const collectBase = {
         courseId,
         lessonId,
+        contentId: String(item.contentId ?? ''),
         type: String(item.nodeType || ''),
         collectCount: String(item.collectCount || 0),
         historyLessonId: String(item.historyLessonId || ''),
@@ -621,6 +623,7 @@ export default {
       this.currentCollectParams = {
         courseId: String(item.courseId || ''),
         lessonId: String(item.id || ''),
+        contentId: String(item.contentId ?? ''),
         historyLessonId: String(item.historyLessonId || ''),
         type: '3',
         collectCount: String(item.collectCount || 0)
@@ -656,7 +659,7 @@ export default {
         await addBusinessView({
           type: '3',
           lessonId: String(item.id || ''),
-          contentId: String(item.courseId || ''),
+          contentId: String(item.contentId ?? item.courseId ?? ''),
           viewTime: String(Math.max(0, Math.round(Number(viewTime) || 0)))
         })
       } catch (_) {}
