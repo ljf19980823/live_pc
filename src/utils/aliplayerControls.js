@@ -3,7 +3,6 @@ import seekForwardIcon from '@/assets/icons/player/seek-forward-10.svg'
 import '@/assets/styles/aliplayerControls.scss'
 
 const SEEK_STEP = 10
-const FULLSCREEN_TRIGGER_HEIGHT = 96
 const HIDE_DELAY = 2000
 const controllers = []
 let lastActive = null
@@ -162,15 +161,14 @@ export function attachAliplayerControls(player, {
   function onMouseMove(event) {
     lastActive = controller
     if (!controller.available() || !controller.isFullscreen()) return
-    const nearBottom = event.clientY >= container.getBoundingClientRect().bottom - FULLSCREEN_TRIGGER_HEIGHT
-    // 设置及音量面板可能高于底部区域，操作面板时仍保持控制栏显示。
-    const onControls = event.target.closest && event.target.closest('.prism-controlbar, .prism-setting-list, .prism-volume-control, .prism-selector')
-    if (nearBottom || onControls) {
-      clearHide()
-      // SDK 的此 API 同时清除内部隐藏计时，不需要通过点击视频唤出。
-      player.showControlBar()
-      shownByPointer = true
-    } else scheduleHide()
+    clearHide()
+    // 全屏区域内任意位置移动鼠标都显示操作栏，并重置隐藏计时。
+    // SDK 的此 API 同时清除内部隐藏计时，不需要通过点击视频唤出。
+    player.showControlBar()
+    shownByPointer = true
+    // 操作进度条、倍速和音量面板时保持显示；其他区域静止 2 秒后隐藏。
+    const onControls = event.target.closest && event.target.closest('.prism-controlbar, .prism-setting-list, .prism-setting-selector, .prism-volume-control, .prism-selector')
+    if (!onControls) scheduleHide()
   }
 
   function onFullscreenChange() {
