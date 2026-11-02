@@ -9,9 +9,9 @@
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1.  Windows：运行 `.exe` 安装包，按照安装向导操作，在安装目录页面点击“浏览”选择目标文件夹后继续安装。
+2.  macOS：打开 `.dmg`，将 `Learn InClass.app` 拖到“应用程序”或其他有写入权限的目标文件夹，再从目标文件夹启动应用。DMG 窗口中的 `Applications` 是默认安装位置的快捷方式，DMG 本身不提供目录选择向导。
+3.  修改打包配置后，需要重新运行 GitHub Actions 的 `Build Electron App` 工作流并下载新安装包；已有安装包不会改变。本地打包可使用 `npm run electron:build`（Windows）或 `npm run electron:build:mac`（macOS）。
 
 #### 使用说明
 
