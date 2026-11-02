@@ -26,18 +26,26 @@
       </div>
       <div class="file-preview-body">
         <div v-if="loadError" class="file-preview-error">
-          <div class="file-preview-error-text">该文件类型暂不支持在线预览</div>
+          <div class="file-preview-error-text">{{ loadErrorMessage }}</div>
           <!-- <div class="file-preview-error-btn" @click="handleDownload">点击下载查看</div> -->
         </div>
         <div
           v-else
           class="file-preview-editor-wrap"
-          :class="{ 'file-preview-editor-wrap--presentation': isPreviewPresentation }"
+          v-loading="loading"
+          element-loading-text="文件加载中..."
         >
-          <div :id="editorContainerId" class="file-preview-editor"></div>
-          <div v-if="isPreviewPresentation" class="presentation-top-mask"></div>
-          <div v-if="isPreviewPresentation" class="presentation-left-menu-mask"></div>
-          <div class="toolbar-right-mask"></div>
+          <iframe
+            v-if="previewUrl"
+            :key="previewUrl"
+            :src="previewUrl"
+            :title="file && file.name ? file.name : '文件预览'"
+            class="file-preview-editor"
+            frameborder="0"
+            allowfullscreen
+            @load="handlePreviewLoad"
+            @error="handlePreviewError"
+          ></iframe>
         </div>
       </div>
     </div>
@@ -48,8 +56,8 @@
 /**
  * FilePreview — 通用文件在线预览组件
  *
- * 基于 ONLYOFFICE Document Server 实现，以只读模式渲染文档，
- * 禁用下载、打印、复制等操作，适合在各业务模块中复用。
+ * 调用永中在线预览接口获取地址，在弹窗内通过 iframe 展示。
+ * 预览页的下载、打印、复制权限由服务端生成的预览链接控制。
  *
  * 使用示例：
  *   <FilePreview
@@ -66,75 +74,9 @@
  *   close    关闭弹窗时触发，父组件需将 visible 置为 false
  */
 
-/** ONLYOFFICE 文档服务器 API 地址 */
-const ONLYOFFICE_API_URL = 'http://120.26.253.133:18106/web-apps/apps/api/documents/api.js'
-
-/**
- * 支持预览的文件类型映射表
- * key   — 文件扩展名（小写）
- * value — ONLYOFFICE 所需的 documentType 与 fileType
- *   documentType: 'word'  文字类文档（pdf / doc / docx / txt）
- *   documentType: 'cell'  表格类文档（xls / xlsx / csv）
- *   documentType: 'slide' 演示文稿（ppt / pptx）
- */
-const SUPPORTED_TYPES = {
-  pdf:  { documentType: 'word',  fileType: 'pdf'  },
-  doc:  { documentType: 'word',  fileType: 'doc'  },
-  docx: { documentType: 'word',  fileType: 'docx' },
-  txt:  { documentType: 'word',  fileType: 'txt'  },
-  xls:  { documentType: 'cell',  fileType: 'xls'  },
-  xlsx: { documentType: 'cell',  fileType: 'xlsx' },
-  csv:  { documentType: 'cell',  fileType: 'csv'  },
-  ppt:  { documentType: 'slide', fileType: 'ppt'  },
-  pptx: { documentType: 'slide', fileType: 'pptx' }
-}
-
-/**
- * 以下三个变量用于确保 ONLYOFFICE API 脚本在整个应用生命周期内只加载一次。
- * scriptLoaded   — 脚本是否已加载完毕
- * scriptLoading  — 脚本是否正在加载中（防止并发重复插入 <script>）
- * scriptCallbacks — 脚本加载期间等待的 Promise 回调队列
- */
-let scriptLoaded = false
-let scriptLoading = false
-const scriptCallbacks = []
-
-/**
- * 动态加载 ONLYOFFICE API 脚本。
- * 首次调用时插入 <script> 标签，后续调用直接 resolve 或进入等待队列。
- * @returns {Promise<void>}
- */
-function loadOnlyOfficeScript() {
-  return new Promise((resolve, reject) => {
-    if (scriptLoaded && window.DocsAPI) {
-      resolve()
-      return
-    }
-    scriptCallbacks.push({ resolve, reject })
-    if (scriptLoading) return
-    scriptLoading = true
-    const script = document.createElement('script')
-    script.src = ONLYOFFICE_API_URL
-    script.onload = () => {
-      scriptLoaded = true
-      scriptLoading = false
-      scriptCallbacks.forEach(cb => cb.resolve())
-      scriptCallbacks.length = 0
-    }
-    script.onerror = () => {
-      scriptLoading = false
-      scriptCallbacks.forEach(cb => cb.reject(new Error('OnlyOffice API 加载失败')))
-      scriptCallbacks.length = 0
-    }
-    document.head.appendChild(script)
-  })
-}
-
 import { getUserInfo } from '@/utils/auth'
 import { collectToggle } from '@/api'
-
-/** 用于生成唯一的编辑器容器 id，避免同页面多实例冲突 */
-let editorIdCounter = 0
+import { getFilePreviewUrl } from '@/api/filePreview'
 
 export default {
   name: 'FilePreview',
@@ -153,8 +95,8 @@ export default {
     /**
      * 需要预览的文件对象
      * @type {Object|null}
-     * @property {string} name - 文件名（含扩展名），用于识别文件类型及展示标题，例如 'report.pdf'
-     * @property {string} path - 文件的完整可访问 URL，ONLYOFFICE 服务器将通过此地址拉取文件内容
+     * @property {string} name - 文件名，用于弹窗及预览页标题，例如 'report.pdf'
+     * @property {string} path - 文件的完整可访问 URL，预览服务将通过此地址拉取文件内容
      * @example { name: 'report.pdf', path: 'https://example.com/report.pdf' }
      */
     file: {
@@ -163,7 +105,7 @@ export default {
     },
 
     /**
-     * 是否允许下载：1 允许，2 不允许
+     * 原有下载开关：1 允许，2 不允许；预览页内部权限由服务端链接控制
      * @type {String}
      * @default '2'
      */
@@ -198,12 +140,14 @@ export default {
     return {
       /** 当前用户是否为学生角色，权限限制仅对学生生效 */
       isStudent: userInfo.role === 'STUDENT',
-      /** 是否加载/预览失败（不支持的类型或脚本加载异常时为 true，显示兜底提示） */
+      /** 是否加载/预览失败 */
       loadError: false,
-      /** ONLYOFFICE DocEditor 实例，用于在关闭时主动销毁释放资源 */
-      editorInstance: null,
-      /** 编辑器挂载的 DOM 容器 id，每个组件实例唯一 */
-      editorContainerId: `onlyoffice-editor-${++editorIdCounter}`,
+      loadErrorMessage: '',
+      loading: false,
+      previewUrl: '',
+      /** 关闭或切换文件时取消请求，并忽略已经过期的响应 */
+      previewController: null,
+      previewRequestId: 0,
       /** 是否已收藏 */
       isCollected: false,
       /** 收藏请求进行中 */
@@ -211,202 +155,79 @@ export default {
     }
   },
 
-  computed: {
-    isPreviewPresentation() {
-      if (!this.file || !this.file.path) return false
-      const ext = this.file.path.split('.').pop().toLowerCase()
-      return ext === 'ppt' || ext === 'pptx'
-    }
-  },
-
   watch: {
-    /**
-     * 监听 visible 变化：
-     *   true  → 等待 DOM 更新后初始化编辑器
-     *   false → 立即销毁编辑器，释放 iframe 资源
-     */
-    visible(val) {
-      if (val) {
-        this.isCollected = Number(this.collectParams.collectCount || 0) === 1
-        this.$nextTick(() => {
-          this.initEditor()
-        })
-      } else {
-        this.destroyEditor()
+    visible: {
+      immediate: true,
+      handler(val) {
+        if (val) {
+          this.isCollected = Number(this.collectParams.collectCount || 0) === 1
+          this.initPreview()
+        } else {
+          this.destroyPreview()
+        }
+      }
+    },
+    file: {
+      deep: true,
+      handler() {
+        if (this.visible) this.initPreview()
       }
     }
   },
 
   methods: {
-    /**
-     * 根据 file prop 解析文件类型信息。
-     * @returns {{ documentType, fileType, title, url } | null} 不支持的类型返回 null
-     */
-    getFileInfo() {
-      if (!this.file || !this.file.path) return null
-      const name = this.file.name || ''
-      const ext = this.file.path.split('.').pop().toLowerCase()
-      const typeInfo = SUPPORTED_TYPES[ext]
-      console.log(typeInfo,'文件类型')
-      if (!typeInfo) return null
-      const titleWithExt = name.toLowerCase().endsWith(`.${ext}`) ? name : `${name}.${ext}`
-      return { ...typeInfo, title: titleWithExt, url: this.file.path }
-    },
-
-    /**
-     * 初始化 ONLYOFFICE 编辑器：
-     * 1. 校验文件类型是否支持
-     * 2. 动态加载 API 脚本（已加载则跳过）
-     * 3. 以只读模式创建 DocEditor 实例
-     */
-    async initEditor() {
+    /** 获取预览链接；收藏、下载等业务操作仍由原组件处理。 */
+    async initPreview() {
+      this.destroyPreview()
+      if (!this.visible) return
       this.loadError = false
-      const fileInfo = this.getFileInfo()
-      if (!fileInfo) {
+      this.loadErrorMessage = ''
+      if (!this.file || !this.file.path) {
         this.loadError = true
+        this.loadErrorMessage = '该文件类型暂不支持在线预览'
         return
       }
+
+      const requestId = this.previewRequestId
+      const controller = new AbortController()
+      this.previewController = controller
+      this.loading = true
       try {
-        await loadOnlyOfficeScript()
-      } catch (e) {
+        const previewUrl = await getFilePreviewUrl({
+          downloadUrl: this.file.path,
+          fileName: this.file.name || '立升教育'
+        }, { signal: controller.signal })
+        if (requestId !== this.previewRequestId || !this.visible) return
+        this.previewUrl = previewUrl
+      } catch (error) {
+        if (requestId !== this.previewRequestId || !this.visible) return
+        this.loading = false
         this.loadError = true
-        return
-      }
-      if (!window.DocsAPI) {
-        this.loadError = true
-        return
-      }
-      this.destroyEditor()
-      const isPresentation = fileInfo.documentType === 'slide'
-      const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-      const customization = {
-        loaderName: ' ',
-        loaderLogo: emptyImage,
-        customer: {
-          name: '',
-          address: '',
-          mail: '',
-          www: '',
-          info: '',
-          logo: emptyImage
-        },
-        logo: {
-          // 用 1×1 透明 gif 替换 logo 图片，并清空跳转链接，达到隐藏效果
-          image: emptyImage,
-          imageDark: emptyImage,
-          imageEmbedded: emptyImage,
-          url: ''
-        }
-      }
-      if (isPresentation) {
-        Object.assign(customization, {
-          compactHeader: true,
-          compactToolbar: true,
-          toolbarNoTabs: true,
-          toolbarHideFileName: true,
-          hideRightMenu: true,
-          hideRulers: true,
-          plugins: false,
-          help: false,
-          feedback: false,
-          goback: false,
-          review: false,
-          layout: {
-            header: {
-              editMode: false,
-              save: false,
-              users: false
-            },
-            leftMenu: {
-              mode: false,
-              navigation: true,
-              search: false,
-              comments: false,
-              chat: false,
-              spellcheck: false
-            },
-            rightMenu: {
-              mode: false
-            },
-            statusBar: {
-              actionStatus: false,
-              docLang: false,
-              textLang: false
-            },
-            toolbar: {
-              collaboration: false,
-              draw: false,
-              file: false,
-              home: false,
-              layout: false,
-              plugins: false,
-              protect: false,
-              references: false,
-              save: false,
-              view: false
-            }
-          }
-        })
-      } else {
-        customization.embedded = {
-          toolbarDocked: 'hidden',  // 嵌入模式下隐藏浮动工具栏
-          saveUrl: '',              // 隐藏右侧"保存"按钮
-          shareUrl: '',             // 隐藏右侧"分享"按钮
-          embedUrl: ''              // 隐藏右侧"嵌入"按钮
-        }
-      }
-      const config = {
-        /**
-         * PPT 使用 desktop 模式保留左侧幻灯片目录，其他文件继续使用 embedded 模式
-         * 仅渲染文档内容区，完全去掉顶部工具栏、左侧面板、标题栏等所有操作 UI
-         */
-        type: isPresentation ? 'desktop' : 'embedded',
-        documentType: fileInfo.documentType,
-        width: '100%',
-        height: '100%',
-        document: {
-          fileType: fileInfo.fileType,
-          title: fileInfo.title,
-          url: fileInfo.url,
-          permissions: {
-            edit: false,
-            download: !this.isStudent || this.allowDownload === '1',
-            print: !this.isStudent || this.allowDownload === '1',
-            copy: false,
-            search: false,
-            comment: false,
-            chat: false
-          }
-        },
-        editorConfig: {
-          mode: 'view',
-          lang: 'zh-CN',
-          customization
-        }
-      }
-      console.log(config,'对象')
-      try {
-        this.editorInstance = new window.DocsAPI.DocEditor(this.editorContainerId, config)
-      } catch (e) {
-        this.loadError = true
+        this.loadErrorMessage = error.isAxiosError
+          ? '文件预览服务暂不可用，请稍后重试'
+          : error.message || '文件预览失败，请稍后重试'
+      } finally {
+        if (requestId === this.previewRequestId) this.previewController = null
       }
     },
 
-    /**
-     * 销毁编辑器实例并清空容器 innerHTML，
-     * 防止下次打开时出现多个 iframe 重叠的问题。
-     */
-    destroyEditor() {
-      if (this.editorInstance && typeof this.editorInstance.destroyEditor === 'function') {
-        try {
-          this.editorInstance.destroyEditor()
-        } catch (e) {
-          // 销毁失败时静默处理，不影响后续流程
-        }
-      }
-      this.editorInstance = null
-      const el = document.getElementById(this.editorContainerId)
-      if (el) el.innerHTML = ''
+    handlePreviewLoad() {
+      this.loading = false
+    },
+
+    handlePreviewError() {
+      this.loading = false
+      this.loadError = true
+      this.loadErrorMessage = '文件预览加载失败，请稍后重试'
+    },
+
+    /** 清空 iframe，并阻止已关闭弹窗或旧文件的请求结果覆盖当前预览。 */
+    destroyPreview() {
+      this.previewRequestId += 1
+      if (this.previewController) this.previewController.abort()
+      this.previewController = null
+      this.previewUrl = ''
+      this.loading = false
     },
 
     /** 收藏/取消收藏 */
@@ -428,6 +249,7 @@ export default {
 
     /** 关闭预览，向父组件抛出 close 事件 */
     handleClose() {
+      this.destroyPreview()
       this.$emit('close')
     },
 
@@ -453,9 +275,9 @@ export default {
     }
   },
 
-  /** 组件销毁前主动释放编辑器资源 */
+  /** 组件销毁前主动释放预览资源 */
   beforeDestroy() {
-    this.destroyEditor()
+    this.destroyPreview()
   }
 }
 </script>
@@ -571,46 +393,11 @@ export default {
   height: 100%;
 }
 
-.file-preview-editor-wrap--presentation {
-  background: #F7F7F7;
-}
-
 .file-preview-editor {
+  display: block;
   width: 100%;
   height: 100%;
-}
-
-.presentation-top-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 42px;
-  background: #F7F7F7;
-  z-index: 10;
-  pointer-events: auto;
-}
-
-.presentation-left-menu-mask {
-  position: absolute;
-  top: 42px;
-  left: 0;
-  bottom: 0;
-  width: 48px;
-  background: #F7F7F7;
-  z-index: 10;
-  pointer-events: auto;
-}
-
-.toolbar-right-mask {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 120px;
-  height: 42px;
-  background: #F7F7F7;
-  z-index: 10;
-  pointer-events: none;
+  border: 0;
 }
 
 .file-preview-error {
