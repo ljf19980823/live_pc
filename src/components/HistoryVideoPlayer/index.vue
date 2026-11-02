@@ -104,6 +104,7 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 import { collectToggle, batchLiveStatisticsLog } from '@/api'
 
 const ALIPLAYER_LICENSE = {
@@ -350,6 +351,7 @@ export default {
           preload: true,
           useH5Prism: true,
           keyShortCuts: false,
+          speedLevels: ALIPLAYER_SPEED_LEVELS,
           license: ALIPLAYER_LICENSE
         }
 

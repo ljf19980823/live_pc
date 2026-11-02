@@ -71,6 +71,7 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
@@ -250,6 +251,7 @@ export default {
           controlBarVisibility: 'hover',
           useH5Prism: true,
           keyShortCuts: false,
+          speedLevels: ALIPLAYER_SPEED_LEVELS,
           disableSeek: this.isStudent && this.allowFastForward === '2',
           license: ALIPLAYER_LICENSE
         }

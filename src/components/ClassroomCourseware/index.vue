@@ -128,12 +128,14 @@
     </el-dialog>
 
     <FilePreview
+      class="courseware-preview-overlay"
       :visible="previewKind === 'document'"
       :file="previewFile"
       :preview-only="!isTeacher"
       @close="closePreview"
     />
     <VideoPlayer
+      class="courseware-preview-overlay"
       :visible="previewKind === 'video'"
       :source="previewFile ? previewFile.path : ''"
       :title="previewFile ? previewFile.name : ''"
@@ -144,6 +146,7 @@
       :title="previewFile ? previewFile.name : ''"
       :visible="previewKind === 'image' || previewKind === 'audio'"
       :width="previewKind === 'audio' ? '480px' : '800px'"
+      :z-index="100010"
       append-to-body
       @close="closePreview"
     >
@@ -586,6 +589,12 @@ export default {
 .courseware-upload-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .courseware-preview-image { display: block; width: 100%; max-height: 65vh; object-fit: contain; }
 .courseware-preview-audio { width: 100%; display: block; margin: 16px 0; }
+
+/* 课件预览高于回放字幕和控制栏（100000 / 100001），覆盖播放器原有弹层样式。 */
+.courseware-preview-overlay.file-preview-mask,
+.courseware-preview-overlay.video-player-mask {
+  z-index: 100010 !important;
+}
 </style>
 
 <style lang="scss">

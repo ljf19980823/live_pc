@@ -127,6 +127,7 @@ import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -383,6 +384,7 @@ export default {
           useH5Prism: true,
           // SDK 快捷键会拦截输入框，统一由组件处理，并只操作主视频。
           keyShortCuts: false,
+          speedLevels: ALIPLAYER_SPEED_LEVELS,
           license: ALIPLAYER_LICENSE
         }
 
