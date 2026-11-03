@@ -7,6 +7,7 @@ export async function getFilePreviewUrl({ downloadUrl, fileName }, { signal } = 
   const formData = new FormData()
   formData.append('downloadUrl', downloadUrl)
   formData.append('fileName', fileName || '立升教育')
+  formData.append('viewType', '1')
 
   // 第三方接口使用独立请求，不携带直播端 Token 或套用直播端响应拦截器。
   const { data } = await axios.post(FILE_PREVIEW_API_URL, formData, {

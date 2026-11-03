@@ -2208,8 +2208,8 @@ export default {
         } catch (_) {}
       }
 
-      // let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
-      let liveBaseUrl = 'https://live.fjlsjy123.com/auikits/'
+      // let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
+      let liveBaseUrl = 'https://test.live.fjlsjy123.com/auikits/'
       if (process.env.NODE_ENV === 'development') {
         liveBaseUrl = 'http://localhost:8000'
       }
@@ -2413,6 +2413,7 @@ cursor: pointer;
 display: flex;
 flex-direction: column;
 justify-content: center;
+flex-shrink: 0;
 }
 
 .app_container_box_left_list_detail2{
