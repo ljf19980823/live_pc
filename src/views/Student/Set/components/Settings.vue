@@ -21,7 +21,7 @@
     </div>
 
     <!-- ── 右侧内容区 ── -->
-    <div class="st-content">
+    <div class="st-content" :class="{ 'st-content-feedback': currentSub === 'feedback' }">
       <!-- 修改密码 -->
       <ChangePassword v-if="currentSub === 'password'" />
 
@@ -30,6 +30,9 @@
 
       <!-- 用户协议 -->
       <UserAgreement v-else-if="currentSub === 'agreement'" />
+
+      <!-- 意见反馈 -->
+      <Feedback v-else-if="currentSub === 'feedback'" @back="handleFeedbackBack" />
 
       <!-- 账号注销 -->
       <CancelAccount v-else-if="currentSub === 'cancel'" />
@@ -50,15 +53,17 @@
 import ChangePassword from './ChangePassword.vue'
 import PrivacyPolicy from './PrivacyPolicy.vue'
 import UserAgreement from './UserAgreement.vue'
+import Feedback from './Feedback.vue'
 import CancelAccount from './CancelAccount.vue'
 import About from './About.vue'
 
 export default {
   name: 'Settings',
-  components: { ChangePassword, PrivacyPolicy, UserAgreement, CancelAccount, About },
+  components: { ChangePassword, PrivacyPolicy, UserAgreement, Feedback, CancelAccount, About },
   data() {
     return {
       currentSub: 'password',
+      feedbackPreviousSub: 'password',
       subMenus: [
         // {
         //   key: 'client',
@@ -100,6 +105,14 @@ export default {
           </svg>`
         },
         {
+          key: 'feedback',
+          label: '意见反馈',
+          icon: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 3h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M6 7h8M6 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>`
+        },
+        {
           key: 'cancel',
           label: '账号注销',
           icon: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -132,7 +145,13 @@ export default {
         this.$message.success('缓存清理成功')
         return
       }
+      if (item.key === 'feedback' && this.currentSub !== 'feedback') {
+        this.feedbackPreviousSub = this.currentSub
+      }
       this.currentSub = item.key
+    },
+    handleFeedbackBack() {
+      this.currentSub = this.feedbackPreviousSub
     }
   }
 }
@@ -270,6 +289,10 @@ export default {
   flex-direction: column;
   border-radius: 14px;
   align-self: start;
+
+  &.st-content-feedback {
+    background: #F6FBFF;
+  }
 }
 
 // 占位
