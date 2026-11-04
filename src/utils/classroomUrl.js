@@ -6,5 +6,13 @@ export function withClassroomAppVersion(url) {
 
   const classroomUrl = new URL(url, window.location.href)
   classroomUrl.searchParams.set('appVersion', pkg.version)
+  // Opt in desktop teachers only. Publishing after-class tests uses a teacher
+  // URL too, but must not open capture or block on a microphone.
+  const hashParams = new URLSearchParams(classroomUrl.hash.split('?')[1] || '')
+  if (classroomUrl.searchParams.get('role') === '1' &&
+      !classroomUrl.searchParams.get('afterClassTest') &&
+      !hashParams.get('afterClassTest')) {
+    classroomUrl.searchParams.set('precheck', '1')
+  }
   return classroomUrl.toString()
 }

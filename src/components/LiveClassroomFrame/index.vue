@@ -12,8 +12,15 @@
       @load="handleFrameLoad"
     />
 
-    <div v-if="status !== 'ready'" class="live-classroom-frame__mask">
-      <template v-if="status === 'loading'">
+    <div v-if="status === 'loading' || status === 'error'" class="live-classroom-frame__mask">
+      <div v-if="status === 'loading' && microphonePrecheck" class="live-classroom-frame__precheck">
+        <span class="live-classroom-frame__precheck-label">进入课堂前</span>
+        <h2>麦克风检测</h2>
+        <p>正在准备麦克风检测，课堂资源同步加载中…</p>
+        <div class="live-classroom-frame__precheck-placeholder"><span class="live-classroom-frame__spinner" /></div>
+        <el-button @click="$emit('exit')">返回课程</el-button>
+      </div>
+      <template v-else-if="status === 'loading'">
         <span class="live-classroom-frame__spinner" />
         <h2>{{ loadingTitle }}</h2>
         <p>{{ loadingDescription }}</p>
@@ -74,6 +81,14 @@ export default {
     }
   },
   computed: {
+    microphonePrecheck() {
+      try {
+        const params = new URL(this.currentSrc || this.src).searchParams
+        return params.get('precheck') === '1' && params.get('role') === '1' && !params.get('afterClassTest')
+      } catch (_) {
+        return false
+      }
+    },
     loadingTitle() {
       return this.bootstrapped ? '正在连接课堂服务…' : '正在进入直播课堂…'
     },
@@ -183,9 +198,25 @@ export default {
       const data = event.data
       if (!data || typeof data !== 'object') return
 
-      if (data.type === 'CLASSROOM_BOOTSTRAP') {
+      if (data.type === 'CLASSROOM_PRECHECK_READY' && this.microphonePrecheck) {
+        if (this.status === 'ready') return
+        this.clearLoadTimer()
+        this.bootstrapped = true
+        this.status = 'precheck'
+      } else if (data.type === 'CLASSROOM_ENTERING' && this.microphonePrecheck) {
+        if (this.status !== 'precheck') return
+        this.status = 'loading'
+        this.clearLoadTimer()
+        this.loadTimer = window.setTimeout(
+          () => this.fail('课堂服务连接超时，请检查网络后重试。'),
+          ClassroomReadyTimeout
+        )
+      } else if (data.type === 'CLASSROOM_BOOTSTRAP') {
         this.setScreenSharing(false)
         this.bootstrapped = true
+        // The inline precheck can run before the main React application.
+        // Waiting for a person to test/authorize is not a connection timeout.
+        if (this.status === 'precheck') return
         this.clearLoadTimer()
         this.loadTimer = window.setTimeout(
           () => this.fail('课堂服务连接超时，请检查网络后重试。'),
@@ -289,6 +320,29 @@ export default {
   border-top-color: #1677FF;
   border-radius: 50%;
   animation: classroom-frame-spin 0.8s linear infinite;
+}
+
+.live-classroom-frame__precheck {
+  width: 460px;
+  max-width: 100%;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 18px;
+  background: #292c33;
+  text-align: left;
+
+  h2 { margin-top: 13px; }
+  p { margin-bottom: 20px; }
+}
+.live-classroom-frame__precheck-label { color: #a1b1c9; font-size: 12px; }
+.live-classroom-frame__precheck-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 140px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  background: #22252c;
 }
 
 .live-classroom-frame__warning {

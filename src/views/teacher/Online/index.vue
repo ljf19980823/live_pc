@@ -1454,6 +1454,10 @@ created() {
     prepareElectronMediaPermissions() {
       if (!window.electronAPI) return
 
+      // Microphone precheck requests only its input. Camera permission remains
+      // part of normal classroom startup after the teacher confirms entry.
+      if (this.isTeacher && this.activeTab !== 'liveui') return
+
       Promise.all([
         window.electronAPI.getMediaAccessStatus('camera'),
         window.electronAPI.getMediaAccessStatus('microphone')
