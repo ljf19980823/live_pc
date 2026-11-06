@@ -1,188 +1,194 @@
 <template>
   <div class="app_container">
-    <div class="app_container_box">
-      <img src="@/assets/images/login/logo.png" class="app_container_logo" alt="">
-      <div class="app_container_mess" v-if="loginType=='1'">
-        <div class="app_container_mess_top">
-          <div class="app_container_mess_top_input">
-            <div class="app_container_mess_top_input_input">
-              <input
-                v-model="form.userName"
-                type="text"
-                placeholder="请输入账号名/账号ID"
-                @keyup.enter="handleLogin"
-              >
+    <template v-if="loginAllowed">
+      <div class="app_container_box">
+        <img src="@/assets/images/login/logo.png" class="app_container_logo" alt="">
+        <div class="app_container_mess" v-if="loginType=='1'">
+          <div class="app_container_mess_top">
+            <div class="app_container_mess_top_input">
+              <div class="app_container_mess_top_input_input">
+                <input
+                  v-model="form.userName"
+                  type="text"
+                  placeholder="请输入账号名/账号ID"
+                  @keyup.enter="handleLogin"
+                >
+              </div>
+              <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
             </div>
-            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
-          </div>
-          <div class="app_container_mess_top_input">
-            <div class="app_container_mess_top_input_input">
-              <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="请输入登录密码"
-                @keyup.enter="handleLogin"
-              >
-            </div>
-            <img
-              class="app_container_mess_top_input_input_icon pwd-toggle"
-              :src="showPassword ? require('@/assets/images/login/password_no.png') : require('@/assets/images/login/password_yes.png')"
-              @click="showPassword = !showPassword"
-              alt=""
-            >
-          </div>
-        </div>
-        <div class="app_container_mess_tips">
-          <div class="app_container_mess_tips_left" @click="toggleRemember">
-            <img
-              :src="rememberPwd ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
-              class="app_container_mess_tips_left_icon"
-              alt=""
-            >
-            <div class="app_container_mess_tips_left_text">记住密码</div>
-          </div>
-          <div class="app_container_mess_tips_right" @click="handleForget">忘记密码？</div>
-        </div>
-        <div
-          class="app_container_mess_btn"
-          :class="{ 'btn-disabled': loading }"
-          @click="handleLogin"
-        >
-          {{ loading ? '登录中...' : '登 录' }}
-        </div>
-        <div class="app_container_mess_last">
-          <!-- <div class="app_container_mess_last_left" @click="showInviteMask=true">邀请码加入课堂</div> -->
-          <div class="app_container_mess_last_right">
-            <!-- <div style="cursor:pointer"  @click="handleCodeLoginPath()">扫码登录</div>
-            <div class="app_container_mess_last_right_sx"></div> -->
-            <div style="cursor:pointer" @click="handlePhoneLogin()">手机号登录</div>
-          </div>
-        </div>
-      </div>
-      <div class="app_container_mess" v-if="loginType=='2'">
-        <div class="app_container_mess_top" style="gap:28px">
-          <div class="app_container_mess_top_input">
-            <div class="app_container_mess_top_input_input">
-              <input
-                v-model="phoneForm.phone"
-                type="text"
-                placeholder="请输入手机号"
-                @keyup.enter="handleCodeLogin"
-              >
-            </div>
-            <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
-          </div>
-          <div class="app_container_mess_top_input">
-            <div class="app_container_mess_top_input_input">
-              <input
-                v-model="phoneForm.code"
-                type="text"
-                placeholder="请输入验证码"
-                @keyup.enter="handleCodeLogin"
-              >
-            </div>
-            <div
-              class="code_box"
-              :class="{ 'code_box_active': countdown === 0 && !sendCodeLoading && isPhoneValid }"
-              @click="handleSendCode"
-            >
-              {{ sendCodeLoading ? '发送中...' : countdown > 0 ? `${countdown}s后重发` : '获取验证码' }}
-            </div>
-          </div>
-        </div>
-        <div class="app_container_mess_tips">
-          <div class="app_container_mess_tips_left" @click="toggleRememberPhone">
-            <img
-              :src="rememberPhone ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
-              class="app_container_mess_tips_left_icon"
-              alt=""
-            >
-            <div class="app_container_mess_tips_left_text">记住手机号</div>
-          </div>
-        </div>
-        <div
-          class="app_container_mess_btn"
-          :class="{ 'btn-disabled': codeLoginLoading }"
-          @click="handleCodeLogin"
-        >
-          {{ codeLoginLoading ? '登录中...' : '登 录' }}
-        </div>
-        <div class="app_container_mess_last" style="justify-content: flex-end;">
-          <div class="app_container_mess_last_right">
-            <div style="cursor:pointer" @click="handleUserLogin()">用户名登录</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 多用户选择弹窗 -->
-    <div class="mask" v-if="showMask">
-      <div class="mask_con">
-        <div class="mask_con_con">
-          <img
-            src="@/assets/images/login/close.png"
-            class="mask_con_con_top_close"
-            @click="showMask = false"
-            alt=""
-          >
-          <div class="mask_con_con_top">请选择登录身份</div>
-          <div class="mask_con_con_list">
-            <div
-              v-for="(item, index) in eduUserList"
-              :key="index"
-              class="mask_con_con_list_detail"
-              :class="{ 'item-loading': chooseLoading && currentChooseIndex === index }"
-              @click="handleChooseLogin(item, index)"
-            >
+            <div class="app_container_mess_top_input">
+              <div class="app_container_mess_top_input_input">
+                <input
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="请输入登录密码"
+                  @keyup.enter="handleLogin"
+                >
+              </div>
               <img
-                :src="item.profilePicture || require('@/assets/images/class/such.png')"
-                class="mask_con_con_list_detail_img"
+                class="app_container_mess_top_input_input_icon pwd-toggle"
+                :src="showPassword ? require('@/assets/images/login/password_no.png') : require('@/assets/images/login/password_yes.png')"
+                @click="showPassword = !showPassword"
                 alt=""
-                @error="onAvatarError"
               >
-              <div class="mask_con_con_list_detail_mess">
-                <div class="mask_con_con_list_detail_mess_name">
-                  {{ item.institutionName || item.school || '立升教育' }}
-                </div>
-                <div class="mask_con_con_list_detail_mess_last">
-                  <div :class="getRoleTagClass(item.role)">{{ getRoleLabel(item.role) }}</div>
-                  <div class="mask_con_con_list_detail_mess_last_name">
-                    {{ item.realName || item.userName }}
+            </div>
+          </div>
+          <div class="app_container_mess_tips">
+            <div class="app_container_mess_tips_left" @click="toggleRemember">
+              <img
+                :src="rememberPwd ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
+                class="app_container_mess_tips_left_icon"
+                alt=""
+              >
+              <div class="app_container_mess_tips_left_text">记住密码</div>
+            </div>
+            <div class="app_container_mess_tips_right" @click="handleForget">忘记密码？</div>
+          </div>
+          <div
+            class="app_container_mess_btn"
+            :class="{ 'btn-disabled': loading }"
+            @click="handleLogin"
+          >
+            {{ loading ? '登录中...' : '登 录' }}
+          </div>
+          <div class="app_container_mess_last">
+            <!-- <div class="app_container_mess_last_left" @click="showInviteMask=true">邀请码加入课堂</div> -->
+            <div class="app_container_mess_last_right">
+              <!-- <div style="cursor:pointer"  @click="handleCodeLoginPath()">扫码登录</div>
+              <div class="app_container_mess_last_right_sx"></div> -->
+              <div style="cursor:pointer" @click="handlePhoneLogin()">手机号登录</div>
+            </div>
+          </div>
+        </div>
+        <div class="app_container_mess" v-if="loginType=='2'">
+          <div class="app_container_mess_top" style="gap:28px">
+            <div class="app_container_mess_top_input">
+              <div class="app_container_mess_top_input_input">
+                <input
+                  v-model="phoneForm.phone"
+                  type="text"
+                  placeholder="请输入手机号"
+                  @keyup.enter="handleCodeLogin"
+                >
+              </div>
+              <img class="app_container_mess_top_input_input_icon2" src="@/assets/images/login/user.png" alt="">
+            </div>
+            <div class="app_container_mess_top_input">
+              <div class="app_container_mess_top_input_input">
+                <input
+                  v-model="phoneForm.code"
+                  type="text"
+                  placeholder="请输入验证码"
+                  @keyup.enter="handleCodeLogin"
+                >
+              </div>
+              <div
+                class="code_box"
+                :class="{ 'code_box_active': countdown === 0 && !sendCodeLoading && isPhoneValid }"
+                @click="handleSendCode"
+              >
+                {{ sendCodeLoading ? '发送中...' : countdown > 0 ? `${countdown}s后重发` : '获取验证码' }}
+              </div>
+            </div>
+          </div>
+          <div class="app_container_mess_tips">
+            <div class="app_container_mess_tips_left" @click="toggleRememberPhone">
+              <img
+                :src="rememberPhone ? require('@/assets/images/login/check_yes.png') : require('@/assets/images/login/check_no.png')"
+                class="app_container_mess_tips_left_icon"
+                alt=""
+              >
+              <div class="app_container_mess_tips_left_text">记住手机号</div>
+            </div>
+          </div>
+          <div
+            class="app_container_mess_btn"
+            :class="{ 'btn-disabled': codeLoginLoading }"
+            @click="handleCodeLogin"
+          >
+            {{ codeLoginLoading ? '登录中...' : '登 录' }}
+          </div>
+          <div class="app_container_mess_last" style="justify-content: flex-end;">
+            <div class="app_container_mess_last_right">
+              <div style="cursor:pointer" @click="handleUserLogin()">用户名登录</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 多用户选择弹窗 -->
+      <div class="mask" v-if="showMask">
+        <div class="mask_con">
+          <div class="mask_con_con">
+            <img
+              src="@/assets/images/login/close.png"
+              class="mask_con_con_top_close"
+              @click="showMask = false"
+              alt=""
+            >
+            <div class="mask_con_con_top">请选择登录身份</div>
+            <div class="mask_con_con_list">
+              <div
+                v-for="(item, index) in eduUserList"
+                :key="index"
+                class="mask_con_con_list_detail"
+                :class="{ 'item-loading': chooseLoading && currentChooseIndex === index }"
+                @click="handleChooseLogin(item, index)"
+              >
+                <img
+                  :src="item.profilePicture || require('@/assets/images/class/such.png')"
+                  class="mask_con_con_list_detail_img"
+                  alt=""
+                  @error="onAvatarError"
+                >
+                <div class="mask_con_con_list_detail_mess">
+                  <div class="mask_con_con_list_detail_mess_name">
+                    {{ item.institutionName || item.school || '立升教育' }}
+                  </div>
+                  <div class="mask_con_con_list_detail_mess_last">
+                    <div :class="getRoleTagClass(item.role)">{{ getRoleLabel(item.role) }}</div>
+                    <div class="mask_con_con_list_detail_mess_last_name">
+                      {{ item.realName || item.userName }}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="mask_con_con_list_detail_btn">
-                <span v-if="chooseLoading && currentChooseIndex === index">登录中...</span>
-                <span v-else>进入</span>
+                <div class="mask_con_con_list_detail_btn">
+                  <span v-if="chooseLoading && currentChooseIndex === index">登录中...</span>
+                  <span v-else>进入</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 邀请码加入弹窗 -->
-    <div class="mask" v-if="showInviteMask">
-       <div class="mask_con">
-          <div class="inviteCode_box">
-             <img
-            src="@/assets/images/login/close.png"
-            class="mask_con_con_top_close"
-            @click="showInviteMask = false"
-            alt=""
-          >
-            <div class="inviteCode_box_title">邀请码加入课堂</div>
-            <div class="inviteCode_box_con">
-              <div class="inviteCode_box_con_input">
-                <input type="text" placeholder="请输入邀请码">
+      <!-- 邀请码加入弹窗 -->
+      <div class="mask" v-if="showInviteMask">
+         <div class="mask_con">
+            <div class="inviteCode_box">
+               <img
+              src="@/assets/images/login/close.png"
+              class="mask_con_con_top_close"
+              @click="showInviteMask = false"
+              alt=""
+            >
+              <div class="inviteCode_box_title">邀请码加入课堂</div>
+              <div class="inviteCode_box_con">
+                <div class="inviteCode_box_con_input">
+                  <input type="text" placeholder="请输入邀请码">
+                </div>
+                <div class="inviteCode_box_con_input">
+                  <input type="text" placeholder="请输入昵称">
+                </div>
               </div>
-              <div class="inviteCode_box_con_input">
-                <input type="text" placeholder="请输入昵称">
-              </div>
+              <div class="inviteCode_box_btn">加入课堂</div>
             </div>
-            <div class="inviteCode_box_btn">加入课堂</div>
-          </div>
-       </div>
+         </div>
+      </div>
+    </template>
+    <div v-else class="app_container_box">
+      <img src="@/assets/images/login/logo.png" class="app_container_logo" alt="">
+      <div class="app_container_login_notice" role="status">请使用桌面客户端登录</div>
     </div>
   </div>
 </template>
@@ -190,6 +196,7 @@
 <script>
 import { ssoLogin, chooseLogin, sendCode, codeLogin } from '@/api'
 import { setToken, setUserInfo } from '@/utils/auth'
+import { isAccountLoginAllowed } from '@/utils/loginAccess'
 
 const REMEMBER_KEY = 'lisheng_remember_pwd'
 const REMEMBER_PHONE_KEY = 'lisheng_remember_phone'
@@ -198,6 +205,7 @@ export default {
   name: 'Login',
   data() {
     return {
+      loginAllowed: false,
       loading: false,
       codeLoginLoading: false,
       sendCodeLoading: false,
@@ -223,6 +231,7 @@ export default {
     }
   },
   created() {
+    this.refreshLoginAccess()
     this.loadRemembered()
     this.loadRememberedPhone()
   },
@@ -231,12 +240,27 @@ export default {
       return /^1[3-9]\d{9}$/.test(this.phoneForm.phone.trim())
     }
   },
+  watch: {
+    '$route.fullPath'() {
+      this.refreshLoginAccess()
+    }
+  },
   beforeDestroy() {
     if (this.countdownTimer) {
       clearInterval(this.countdownTimer)
     }
   },
   methods: {
+    refreshLoginAccess() {
+      this.loginAllowed = isAccountLoginAllowed()
+      if (!this.loginAllowed) {
+        this.showMask = false
+        this.showInviteMask = false
+        this.eduUserList = []
+      }
+      return this.loginAllowed
+    },
+
     loadRemembered() {
       try {
         const saved = localStorage.getItem(REMEMBER_KEY)
@@ -280,6 +304,7 @@ export default {
     },
 
     async handleLogin() {
+      if (!this.refreshLoginAccess()) return
       if (this.loading) return
       if (!this.form.userName.trim()) {
         this.$message.warning('请输入账号名/账号ID')
@@ -330,6 +355,7 @@ export default {
     },
 
     async handleChooseLogin(item, index) {
+      if (!this.refreshLoginAccess()) return
       if (this.chooseLoading) return
       this.chooseLoading = true
       this.currentChooseIndex = index
@@ -415,6 +441,7 @@ export default {
     },
 
     async handleSendCode() {
+      if (!this.refreshLoginAccess()) return
       if (this.countdown > 0 || this.sendCodeLoading) return
       if (!this.phoneForm.phone.trim()) {
         this.$message.warning('请输入手机号')
@@ -444,6 +471,7 @@ export default {
     },
 
     async handleCodeLogin() {
+      if (!this.refreshLoginAccess()) return
       if (this.codeLoginLoading) return
       if (!this.phoneForm.phone.trim()) {
         this.$message.warning('请输入手机号')
@@ -535,6 +563,13 @@ export default {
 .app_container_mess{
   width: 300px;
   margin-top: 42px;
+}
+.app_container_login_notice{
+  margin-top: 42px;
+  font-size: 16px;
+  line-height: 24px;
+  color: #333333;
+  text-align: center;
 }
 .app_container_mess_top{
   width: 100%;
