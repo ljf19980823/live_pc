@@ -13,6 +13,7 @@
     "test:screen-permission": "node scripts/test-screen-permission.cjs",
     "test:app-exit": "node scripts/test-app-exit.cjs",
     "test:courseware": "node scripts/test-courseware.cjs",
+    "test:visitor-access": "node scripts/test-visitor-access.cjs",
     "electron:serve": "cross-env NODE_ENV=development electron .",
     "electron:build": "vue-cli-service build --mode production && electron-builder build --win",
     "electron:build:mac": "vue-cli-service build --mode production && electron-builder build --mac",

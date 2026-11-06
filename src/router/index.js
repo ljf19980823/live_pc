@@ -5,6 +5,7 @@ import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { getToken } from '@/utils/auth'
 import { getPracticeRouteConfig } from '@/utils/practiceRoute'
+import { getVisitorEntryLocation } from '@/utils/visitorAccess'
 
 Vue.use(VueRouter)
 
@@ -61,10 +62,12 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    // 根据角色动态决定首页：学生 → /student/home，其他 → /home
-    redirect: () => {
+    // 访客只能进入独立直播入口，不能落入教师端首页。
+    redirect: to => {
       const role = store.getters['user/role']
-      console.log('[Router redirect] user/role =', role)
+      if (role === 'VISITOR') {
+        return getVisitorEntryLocation(store.getters['user/userInfo'], to.query)
+      }
       return role === 'STUDENT' ? '/student/home' : '/home'
     },
     children: [
@@ -254,29 +257,44 @@ router.beforeEach(async (to, from, next) => {
 
   document.title = 'Learn InClass'
 
-  if (to.path === '/visitorLogin') {
+  // 访客也可打开账号登录页切换身份；白名单外的页面一律在身份确认后判断。
+  if (WHITE_LIST.includes(to.path)) {
+    const role = store.getters['user/role']
+    if (to.path === '/login' && token && role && role !== 'VISITOR') {
+      next('/')
+      return
+    }
     next()
     return
   }
 
   if (token) {
-    if (to.path === '/login') {
-      // 已登录，回到根路由，由 redirect 函数按角色分流
-      next('/')
-    } else {
-      // 已登录但 store 中没有用户信息，尝试拉取（接口未就绪时用本地缓存兜底）
-      if (!store.getters['user/userId']) {
-        try {
-          await store.dispatch('user/fetchUserInfo')
-        } catch {
-          // TODO: 联调时改为强制退出：resetToken + redirect to login
-          console.warn('[Router] fetchUserInfo 失败，使用本地缓存继续（开发模式）')
-        }
+    if (!store.getters['user/userId'] || !store.getters['user/role']) {
+      try {
+        await store.dispatch('user/fetchUserInfo')
+      } catch {
+        // 无法确认身份时禁止继续加载业务页面。
+        await store.dispatch('user/resetToken')
+        next({ path: '/login', replace: true })
+        return
       }
-      next()
     }
+
+    if (!store.getters['user/role']) {
+      await store.dispatch('user/resetToken')
+      next({ path: '/login', replace: true })
+      return
+    }
+
+    if (store.getters['user/role'] === 'VISITOR') {
+      const query = from.path === '/visitorLogin' ? from.query : to.query
+      next(getVisitorEntryLocation(store.getters['user/userInfo'], query))
+      return
+    }
+
+    next()
   } else {
-    if (WHITE_LIST.includes(to.path) || !requireAuth) {
+    if (!requireAuth) {
       next()
     } else {
       next(`/login?redirect=${to.path}`)

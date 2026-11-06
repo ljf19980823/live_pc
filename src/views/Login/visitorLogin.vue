@@ -219,6 +219,8 @@ export default {
         token: data.token,
         tokenHead: data.tokenHead,
         role: data.role,
+        liveId: data.liveId || this.liveId,
+        classroomId: data.classroomId || this.classroomId,
         userId: data.userId,
         userName: data.userName,
         realName: data.realName || data.userName || this.form.userName.trim(),
