@@ -1,12 +1,10 @@
 import { login, logout, getUserInfo } from '@/api'
 import { getToken, setToken, clearAuth, setUserInfo, getUserInfo as getStoredUserInfo } from '@/utils/auth'
 
-const storedUserInfo = getStoredUserInfo() || {}
-
 const state = {
   token: getToken(),
-  userInfo: storedUserInfo,
-  role: storedUserInfo.role || ''
+  userInfo: getStoredUserInfo() || {},
+  role: ''
 }
 
 const mutations = {
@@ -69,7 +67,7 @@ const actions = {
 const getters = {
   token: state => state.token,
   userInfo: state => state.userInfo,
-  userId: state => state.userInfo?.userId || state.userInfo?.id,
+  userId: state => state.userInfo?.id,
   userName: state => state.userInfo?.userName,
   realName: state => state.userInfo?.realName,
   avatar: state => state.userInfo?.profilePicture,
