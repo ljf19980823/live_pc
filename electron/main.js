@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences, desktopCapturer, clipboard, nativeImage } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, session, systemPreferences, desktopCapturer, clipboard, nativeImage, dialog } = require('electron')
 const { exec } = require('child_process')
 const path = require('path')
 const https = require('https')
@@ -8,6 +8,7 @@ const os = require('os')
 const crypto = require('crypto')
 const { fileURLToPath } = require('url')
 const { registerScreenPermissionHandlers } = require('./screen-permissions')
+const { prepareMacInstallation } = require('./mac-installation')
 const {
   appendCrashLog,
   getCrashDumpsDirectory,
@@ -38,8 +39,8 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 //   "description": "更快、更稳定的2.0客户端"
 // }
 // const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
-// const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
-const VERSION_CHECK_URL = 'https://live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
+// const VERSION_CHECK_URL = 'https://test.live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
+const VERSION_CHECK_URL = 'https://test.live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
 
 let mainWindow
 let exitConfirmWindow = null
@@ -1093,6 +1094,10 @@ async function clearDataOnReinstall () {
 }
 
 app.whenReady().then(async () => {
+  if (!await prepareMacInstallation({ app, dialog })) {
+    quitApplication()
+    return
+  }
   Menu.setApplicationMenu(null)
   await clearDataOnReinstall()
   startRunStateDiagnostics()
@@ -1220,8 +1225,8 @@ app.whenReady().then(async () => {
   // Electron 与 Chrome 缓存隔离，iframe 首次冷启动尤其依赖这里减少重复下载。
   registerLiveResourceDiagnostics()
   session.defaultSession.webRequest.onHeadersReceived(
-    // { urls: ['https://live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
-    { urls: ['https://live.fjlsjy123.com/*', 'http://test.live.fjlsjy123.com/*'] },
+    // { urls: ['https://test.live.fjlsjy123.com/*', 'http://live.fjlsjy123.com/*'] },
+    { urls: ['https://test.live.fjlsjy123.com/*', 'http://test.live.fjlsjy123.com/*'] },
     (details, callback) => {
       const headers = Object.assign({}, details.responseHeaders)
       Object.keys(headers).forEach(key => {
@@ -1268,8 +1273,8 @@ app.whenReady().then(async () => {
   // 提前建立直播站点和 SDK CDN 的连接，减少用户点击进入课堂后的 DNS/TCP/TLS 等待。
   // preconnect 只做连接预热，不请求业务数据，失败时静默降级为正常加载。
   if (typeof session.defaultSession.preconnect === 'function') {
-    // ;['https://live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
-    ;['https://live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
+    // ;['https://test.live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
+    ;['https://test.live.fjlsjy123.com', 'https://g.alicdn.com'].forEach(url => {
       try {
         session.defaultSession.preconnect({ url, numSockets: 6 })
       } catch (_) {}

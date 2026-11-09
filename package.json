@@ -12,6 +12,7 @@
     "lint": "vue-cli-service lint",
     "test:screen-permission": "node scripts/test-screen-permission.cjs",
     "test:app-exit": "node scripts/test-app-exit.cjs",
+    "test:installation": "node --test scripts/test-installation.cjs",
     "test:courseware": "node scripts/test-courseware.cjs",
     "test:visitor-access": "node scripts/test-visitor-access.cjs",
     "electron:serve": "cross-env NODE_ENV=development electron .",
@@ -74,6 +75,8 @@
       ]
     },
     "nsis": {
+      "guid": "becb71fb-6415-571f-a3b1-9bb1d4dd7f73",
+      "include": "build/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
