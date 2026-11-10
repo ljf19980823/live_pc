@@ -626,6 +626,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
@@ -702,6 +704,8 @@ export default {
       playerVisible: false,
       playerSource: '',
       playerTeacherSource: '',
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       playerTitle: '',
       playerHistoryLessonId: '',
       playerAllowDownload: '2',
@@ -1019,7 +1023,7 @@ export default {
       }
     },
 
-    openVideoPlayer(item, fromHistory = false) {
+    openVideoPlayer(item, fromHistory = false, contextType = fromHistory ? 'historyList' : 'scheduleMonth') {
       console.log(item, 'item')
       //  const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       //   const lessonId = String(item.id || '')
@@ -1030,11 +1034,13 @@ export default {
         const mainFile = fileList.find(f => f.videoType == '1')
         const teacherFile = fileList.find(f => f.videoType == '2')
         const { userId } = getUserInfo()
+        const refreshContext = this.getPlaybackRefreshContext(item, fromHistory, contextType)
         this.$router.push({
           name: 'AIListening',
           query: {
-            videoUrl: mainFile ? mainFile.filePath || '' : '',
-            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+            videoId: mainFile ? mainFile.videoId || '' : '',
+            teacherVideoId: teacherFile ? teacherFile.videoId || '' : '',
+            playbackContext: JSON.stringify(refreshContext),
             meetingId: item.taskUuid,
             meetingTitle: item.name || '',
             scopeText: item.taskUuid,
@@ -1054,10 +1060,26 @@ export default {
 
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = this.getPlaybackRefreshContext(item, fromHistory, contextType)
       this.playerTitle = item.name || '视频回放'
       this.playerHistoryLessonId = String(item.historyLessonId || item.liveLessonId || '')
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
+    },
+    getPlaybackRefreshContext(item, fromHistory, contextType) {
+      if (fromHistory || contextType === 'historyList') {
+        return { type: 'historyList', params: this.buildHistoryPlaybackParams() }
+      }
+      const date = String(item.fullStartTime || item.startTime || '').split(/[ T]/)[0]
+      const parts = date.match(/^(\d{4})-(\d{1,2})/)
+      return {
+        type: 'scheduleMonth',
+        params: {
+          year: parts ? parts[1] : String(this.scheduleYear),
+          month: parts ? parts[2] : String(this.scheduleMonth + 1)
+        }
+      }
     },
 
     // ── 分享链接开关 ────────────────────────────────────────────────────
@@ -1393,7 +1415,7 @@ export default {
     },
 
     // ── 历史课堂接口 ────────────────────────────────────────────────────
-    async fetchHistoryList() {
+    buildHistoryPlaybackParams() {
       const params = {
         pageNum: this.historyPageNum,
         pageSize: this.historyPageSize,
@@ -1404,6 +1426,10 @@ export default {
       }
       if (this.selectedClass) params.classId = this.selectedClass
       if (this.searchKeyword) params.keyword = this.searchKeyword
+      return params
+    },
+    async fetchHistoryList() {
+      const params = this.buildHistoryPlaybackParams()
       this.historyLoading = true
       try {
         const res = await getHistoryList(params)
@@ -1539,7 +1565,7 @@ export default {
         this.$message.warning('暂无回放视频')
         return
       }
-      this.openVideoPlayer(course)
+      this.openVideoPlayer(course, false, 'scheduleMonth')
     },
     prevScheduleMonth() {
       if (this.scheduleMonth === 0) {

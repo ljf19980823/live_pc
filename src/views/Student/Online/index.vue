@@ -419,7 +419,7 @@
                 <button
                   v-if="item.fileList && item.fileList.length != 0"
                   class="quiz-card__btn quiz-card__btn--outline"
-                  @click.stop="openVideoPlayer(item)"
+                  @click.stop="openVideoPlayer(item, false, 'studentQuiz')"
                 >查看回放</button>
                 <button class="quiz-card__btn quiz-card__btn--outline" @click.stop="openRanking(item)">排行榜</button>
                 <button
@@ -442,7 +442,7 @@
                 <button
                   v-if="item.fileList && item.fileList.length != 0"
                   class="quiz-card__btn quiz-card__btn--outline"
-                  @click.stop="openVideoPlayer(item)"
+                  @click.stop="openVideoPlayer(item, false, 'studentQuiz')"
                 >查看回放</button>
                 <button v-if="isQuizIncomplete(item)" class="quiz-card__btn quiz-card__btn--primary" @click.stop="startExam(item)">去考试</button>
               </template>
@@ -937,6 +937,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
@@ -1166,6 +1168,8 @@ export default {
       playerVisible: false,
       playerSource: '',
       playerTeacherSource: '',
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       playerTitle: '',
       playerHistoryLessonId: '',
       playerAllowDownload: '2',
@@ -1553,7 +1557,7 @@ created() {
       }
     },
 
-    openVideoPlayer(item, fromHistory = false) {
+    openVideoPlayer(item, fromHistory = false, contextType = fromHistory ? 'historyList' : 'studentQuiz') {
       console.log(item, 'item')
       //  const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       //   const lessonId = String(item.id || '')
@@ -1564,18 +1568,20 @@ created() {
         const mainFile = fileList.find(f => f.videoType == '1')
         const teacherFile = fileList.find(f => f.videoType == '2')
         const { userId } = getUserInfo()
+        const refreshContext = this.getPlaybackRefreshContext(item, fromHistory, contextType)
         this.$router.push({
           name: 'AIListening',
           query: {
-            videoUrl: mainFile ? mainFile.filePath || '' : '',
-            teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+            videoId: mainFile ? mainFile.videoId || '' : '',
+            teacherVideoId: teacherFile ? teacherFile.videoId || '' : '',
             meetingId: item.taskUuid,
             meetingTitle: item.name || '',
             scopeText: item.taskUuid,
             liveLessonId: item.liveLessonId || '',
             historyLessonId: item.historyLessonId || (fromHistory ? item.id || '' : ''),
             liveId: item.liveId || (!fromHistory ? item.id || '' : ''),
-            teacherId: item.teacherId || ''
+            teacherId: item.teacherId || '',
+            playbackContext: JSON.stringify(refreshContext)
           }
         })
         return
@@ -1588,10 +1594,29 @@ created() {
 
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = this.getPlaybackRefreshContext(item, fromHistory, contextType)
       this.playerTitle = item.name || '视频回放'
       this.playerHistoryLessonId = String(item.historyLessonId || item.liveLessonId || '')
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
       this.playerVisible = true
+    },
+
+    getPlaybackRefreshContext(item, fromHistory, contextType) {
+      if (fromHistory || contextType === 'historyList') {
+        return { type: 'historyList', params: this.buildHistoryPlaybackParams() }
+      }
+      if (contextType === 'studentQuiz') {
+        return { type: 'studentQuiz', params: this.buildQuizPlaybackParams() }
+      }
+      if (contextType === 'scheduleMonth') {
+        const date = String(item.fullStartTime || item.startTime || '').split(/[ T]/)[0]
+        const parts = date.match(/^(\d{4})-(\d{1,2})/)
+        const year = parts ? parts[1] : String(this.scheduleYear)
+        const month = parts ? parts[2] : String(this.scheduleMonth + 1)
+        return { type: 'scheduleMonth', params: { year, month } }
+      }
+      return { type: 'liveList', params: {} }
     },
 
     // ── 分享链接开关 ────────────────────────────────────────────────────
@@ -1926,7 +1951,7 @@ created() {
     },
 
     // ── 历史课堂接口 ────────────────────────────────────────────────────
-    async fetchHistoryList() {
+    buildHistoryPlaybackParams() {
       const params = {
         pageNum: this.historyPageNum,
         pageSize: this.historyPageSize,
@@ -1937,6 +1962,10 @@ created() {
       }
       if (this.selectedClass) params.classId = this.selectedClass
       if (this.searchKeyword) params.keyword = this.searchKeyword
+      return params
+    },
+    async fetchHistoryList() {
+      const params = this.buildHistoryPlaybackParams()
       this.historyLoading = true
       try {
         const res = await getHistoryList(params)
@@ -2073,7 +2102,7 @@ created() {
         this.$message.warning('暂无回放视频')
         return
       }
-      this.openVideoPlayer(course)
+      this.openVideoPlayer(course, false, 'scheduleMonth')
     },
     prevScheduleMonth() {
       if (this.scheduleMonth === 0) {
@@ -2281,20 +2310,9 @@ created() {
       this.quizSuggestVisible = false
     },
     async fetchQuizList() {
-      const userInfo = getUserInfo() || {}
-      const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
       this.quizLoading = true
       try {
-        const params = { studentId }
-        // if (this.quizClassIds.length) params.classId = this.quizClassIds.join(',')
-        if (this.quizSubjectId) params.subjectId = this.quizSubjectId
-        if (this.quizDateRange && this.quizDateRange.length === 2) {
-          params.quizStartTime = this.quizDateRange[0]
-          params.quizEndTime = this.quizDateRange[1]
-        }
-        if (this.quizFilterExamConfigId) params.examConfigId = this.quizFilterExamConfigId
-        if (this.quizFilterTeacherId) params.quizTeacherId = this.quizFilterTeacherId
-        const res = await getAfterQuizList(params)
+        const res = await getAfterQuizList(this.buildQuizPlaybackParams())
         this.quizList = (res && res.data) ? res.data : []
       } catch (e) {
         console.log(e, 'fetchQuizList error')
@@ -2302,6 +2320,18 @@ created() {
       } finally {
         this.quizLoading = false
       }
+    },
+    buildQuizPlaybackParams() {
+      const userInfo = getUserInfo() || {}
+      const params = { studentId: userInfo.userId || userInfo.id || userInfo.studentId || '' }
+      if (this.quizSubjectId) params.subjectId = this.quizSubjectId
+      if (this.quizDateRange && this.quizDateRange.length === 2) {
+        params.quizStartTime = this.quizDateRange[0]
+        params.quizEndTime = this.quizDateRange[1]
+      }
+      if (this.quizFilterExamConfigId) params.examConfigId = this.quizFilterExamConfigId
+      if (this.quizFilterTeacherId) params.quizTeacherId = this.quizFilterTeacherId
+      return params
     },
     formatQuizTime(time) {
       if (!time) return '-'

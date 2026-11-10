@@ -5,17 +5,22 @@ const SAVE_INTERVAL = 5000
 // 保留决定视频身份的查询参数，只排除会随播放授权更新的签名参数。
 const AUTH_PARAMS = /^(auth_key|token|access_token|sign|signature|expires|expiration|security-token|ossaccesskeyid|x-oss-.*|x-amz-.*)$/i
 
-function getStorageKey(source) {
+function getStorageKey(source, videoId) {
   let videoKey = source
-  try {
-    const url = new URL(source, window.location.href)
-    Array.from(url.searchParams.keys()).forEach(key => {
-      if (AUTH_PARAMS.test(key)) url.searchParams.delete(key)
-    })
-    url.searchParams.sort()
-    url.hash = ''
-    videoKey = url.href
-  } catch (e) {}
+  if (videoId !== undefined && videoId !== null && videoId !== '') {
+    // Stable business identity keeps resume progress across signed URL renewals.
+    videoKey = `video:${String(videoId)}`
+  } else {
+    try {
+      const url = new URL(source, window.location.href)
+      Array.from(url.searchParams.keys()).forEach(key => {
+        if (AUTH_PARAMS.test(key)) url.searchParams.delete(key)
+      })
+      url.searchParams.sort()
+      url.hash = ''
+      videoKey = url.href
+    } catch (e) {}
+  }
 
   let user = {}
   try { user = getUserInfo() || {} } catch (e) {}
@@ -27,13 +32,22 @@ function getStorageKey(source) {
 }
 
 /** 点播播放器共用的本机续播记录；绑定时固定账号和视频，避免切换时串写进度。 */
-export function rememberVideoPlayback(player, source) {
+export function rememberVideoPlayback(player, source, videoId) {
   if (!player || !source) return { save() {}, destroy() {} }
 
-  const key = getStorageKey(source)
+  const key = getStorageKey(source, videoId)
   let restoreTime = 0
   try {
-    const record = JSON.parse(localStorage.getItem(key))
+    let rawRecord = localStorage.getItem(key)
+    if (!rawRecord && videoId !== undefined && videoId !== null && videoId !== '') {
+      const legacyKey = getStorageKey(source)
+      rawRecord = localStorage.getItem(legacyKey)
+      if (rawRecord) {
+        localStorage.setItem(key, rawRecord)
+        localStorage.removeItem(legacyKey)
+      }
+    }
+    const record = JSON.parse(rawRecord)
     const time = Number(record && record.time)
     if (Number.isFinite(time) && time > 0) restoreTime = time
   } catch (e) {}

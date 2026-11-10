@@ -166,7 +166,7 @@ export default {
       return this.userInfo?.isAdd === '1'
     },
     teacherDisplayName () {
-      return this.userInfo?.realName || this.userInfo?.userName || '升升老师'
+      return this.userInfo?.realName || this.userInfo?.userName || '未登录'
     },
    
   },

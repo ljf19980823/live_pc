@@ -124,6 +124,7 @@ import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
+import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
@@ -165,6 +166,14 @@ export default {
     teacherSource: {
       type: String,
       default: ''
+    },
+    playbackFiles: {
+      type: Array,
+      default: () => []
+    },
+    refreshContext: {
+      type: Object,
+      default: null
     },
     /** 弹窗标题 */
     title: {
@@ -258,6 +267,17 @@ export default {
       mainError: false,
       mainLoading: false,
       teacherError: false,
+      runtimeMainSource: '',
+      runtimeTeacherSource: '',
+      runtimePlaybackFiles: [],
+      recoveryUsed: false,
+      recoveryPromise: null,
+      recoveryToken: 0,
+      pendingPlaybackState: null,
+      restoringPlayback: false,
+      prepareScheduled: false,
+      isMainPlaying: false,
+      stablePlaybackTimer: null,
       syncTimer: null,
       isSyncing: false,
       isFullscreen: false,
@@ -286,15 +306,21 @@ export default {
       if (val) {
         this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
-        this.$nextTick(() => this.initPlayers())
+        this.resetRuntimePlayback()
+        this.schedulePrepareAndInitPlayers()
       } else {
+        this.recoveryToken += 1
+        this.recoveryPromise = null
+        clearTimeout(this.stablePlaybackTimer)
+        this.stablePlaybackTimer = null
         if (!this.inline) this.setScreenGuard(false)
         this.destroyPlayers()
       }
     },
     mainSource(val) {
       if ((this.visible || this.inline) && val) {
-        this.$nextTick(() => this.initPlayers())
+        this.resetRuntimePlayback()
+        this.schedulePrepareAndInitPlayers()
       }
     },
     subtitleDefaultOn: {
@@ -341,7 +367,8 @@ export default {
       this.setScreenGuard(true)
     }
     if (this.inline && this.mainSource) {
-      this.$nextTick(() => this.initPlayers())
+      this.resetRuntimePlayback()
+      this.schedulePrepareAndInitPlayers()
     }
   },
   methods: {
@@ -353,12 +380,165 @@ export default {
 
     // ─────────────── 播放器初始化 ───────────────
 
-    initPlayers() {
+    schedulePrepareAndInitPlayers() {
+      if (this.prepareScheduled) return
+      this.prepareScheduled = true
+      this.$nextTick(() => {
+        this.prepareScheduled = false
+        if (this.visible || this.inline) this.prepareAndInitPlayers()
+      })
+    },
+
+    resetRuntimePlayback() {
+      this.recoveryToken += 1
+      this.recoveryPromise = null
+      this.recoveryUsed = false
+      this.pendingPlaybackState = null
+      this.runtimePlaybackFiles = this.playbackFiles.slice()
+      this.runtimeMainSource = this.mainSource
+      this.runtimeTeacherSource = this.teacherSource
+    },
+
+    async prepareAndInitPlayers() {
+      const token = this.recoveryToken
+      let teacherUnavailable = false
+      try {
+        const expiring = this.runtimePlaybackFiles.filter(file => file && fileIsExpiring(file))
+        if (expiring.length) {
+          let refreshedFiles = []
+          try {
+            refreshedFiles = await refreshClassroomVideos(this.refreshContext, expiring.map(file => file.videoId))
+            if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+          } catch (error) {
+            if (expiring.some(file => String(file.videoType) !== '2')) throw error
+            teacherUnavailable = true
+          }
+          for (const file of expiring) {
+            const next = refreshedFiles.find(current => String(current.videoId) === String(file.videoId))
+            if (!next) {
+              if (String(file.videoType) !== '2') throw new Error('视频已不在当前结果中，请重新进入页面')
+              teacherUnavailable = true
+              continue
+            }
+            this.replaceRuntimeFile(next)
+          }
+        }
+        if (!this.runtimeMainSource) {
+          this.mainError = true
+          this.mainLoading = false
+          return
+        }
+        if (teacherUnavailable) this.runtimeTeacherSource = ''
+        this.initPlayers()
+        if (teacherUnavailable) this.teacherError = true
+      } catch (error) {
+        if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+        this.mainError = true
+        this.mainLoading = false
+        this.$message.error('刷新回放地址失败，请重新进入页面')
+      }
+    },
+
+    replaceRuntimeFile(file) {
+      const id = String(file.videoId)
+      const index = this.runtimePlaybackFiles.findIndex(current => String(current && current.videoId) === id)
+      if (index >= 0) this.$set(this.runtimePlaybackFiles, index, file)
+      else this.runtimePlaybackFiles.push(file)
+      const mainFile = getPlaybackFile(this.runtimePlaybackFiles, '1')
+      const teacherFile = getPlaybackFile(this.runtimePlaybackFiles, '2')
+      if (mainFile) this.runtimeMainSource = mainFile.filePath || ''
+      if (teacherFile) this.runtimeTeacherSource = teacherFile.filePath || ''
+    },
+
+    getRuntimeFile(videoType) {
+      return getPlaybackFile(this.runtimePlaybackFiles, videoType)
+    },
+
+    captureMainPlaybackState() {
+      const state = readPlaybackState(this.mainPlayer, this._mainVideoEl)
+      if (this.isMainPlaying) state.paused = false
+      return state
+    },
+
+    startStablePlaybackTimer() {
+      clearTimeout(this.stablePlaybackTimer)
+      const startTime = Number(this.mainPlayer && this.mainPlayer.getCurrentTime()) || 0
+      this.stablePlaybackTimer = setTimeout(() => {
+        const currentTime = Number(this.mainPlayer && this.mainPlayer.getCurrentTime()) || 0
+        if ((this.visible || this.inline) && this.isMainPlaying && currentTime > startTime + 5) this.recoveryUsed = false
+      }, 30000)
+    },
+
+    async handleResume() {
+      if (this.pendingPlaybackState || this.restoringPlayback || this.recoveryPromise) return
+      if (!fileIsExpiring(this.getRuntimeFile('1'))) return
+      const state = this.captureMainPlaybackState()
+      try { if (this.mainPlayer) this.mainPlayer.pause() } catch (e) {}
+      await this.refreshForPlayback('1', state, false)
+    },
+
+    async handleMediaError(error, videoType) {
+      if (!(this.visible || this.inline)) return
+      if (isNotFoundMediaError(error)) {
+        const file = this.getRuntimeFile(videoType)
+        console.warn('[Playback 404]', { videoId: file && file.videoId, time: Date.now(), status: 404, requestId: getMediaRequestId(error) })
+        if (videoType === '1') this.mainError = true
+        else this.teacherError = true
+        this.mainLoading = false
+        this.$message.warning('回放文件不存在，请联系管理员')
+        return
+      }
+      const file = this.getRuntimeFile(videoType)
+      if (!file || file.urlExpireAt == null || this.recoveryUsed) {
+        if (videoType === '1') this.mainError = true
+        else this.teacherError = true
+        this.mainLoading = false
+        return
+      }
+      await this.refreshForPlayback(videoType, this.captureMainPlaybackState(), true)
+    },
+
+    async refreshForPlayback(videoType, state, isMediaError) {
+      if (this.recoveryPromise) return this.recoveryPromise
+      const file = this.getRuntimeFile(videoType)
+      if (!file || !file.videoId || !this.refreshContext) {
+        if (videoType === '1') this.mainError = true
+        else this.teacherError = true
+        this.mainLoading = false
+        if (isMediaError) this.$message.error('视频暂时无法播放，请重新进入页面')
+        return
+      }
+      if (isMediaError) this.recoveryUsed = true
+      const token = this.recoveryToken
+      const recoveryPromise = (async () => {
+        try {
+          const next = await refreshClassroomVideo(this.refreshContext, file.videoId)
+          if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+          this.replaceRuntimeFile(next)
+          this.pendingPlaybackState = state
+          this.mainError = false
+          this.teacherError = false
+          this.initPlayers(state)
+        } catch (error) {
+          if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+          if (videoType === '1') this.mainError = true
+          else this.teacherError = true
+          this.mainLoading = false
+          this.$message.error('刷新回放地址失败，请重新进入页面')
+        } finally {
+          if (this.recoveryPromise === recoveryPromise) this.recoveryPromise = null
+        }
+      })()
+      this.recoveryPromise = recoveryPromise
+      return recoveryPromise
+    },
+
+    initPlayers(restoreState = null) {
       this.mainError = false
       this.mainLoading = true
       this.teacherError = false
 
-      if (!this.mainSource) {
+      if (!this.runtimeMainSource) {
         this.mainError = true
         this.mainLoading = false
         return
@@ -377,7 +557,7 @@ export default {
         const baseConfig = {
           width: '100%',
           height: '100%',
-          autoplay: true,
+          autoplay: !restoreState || !restoreState.paused,
           rePlay: false,
           playsinline: true,
           preload: true,
@@ -390,7 +570,7 @@ export default {
 
         try {
           this.mainPlayer = new Aliplayer(
-            { ...baseConfig, id: this.mainPlayerId, source: this.mainSource, controlBarVisibility: 'hover' },
+            { ...baseConfig, id: this.mainPlayerId, source: this.runtimeMainSource, controlBarVisibility: 'hover' },
             (mainPlayer) => {
               this.mainPlayer = mainPlayer
               this.mainLoading = false
@@ -402,16 +582,34 @@ export default {
                 seekTo: seconds => this.seekTo(seconds)
               })
               this.$nextTick(() => this.injectCcButton())
-              if (this.teacherSource) {
+              if (this.runtimeTeacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
             }
           )
-          this._playbackMemory = rememberVideoPlayback(this.mainPlayer, this.mainSource)
-          this.mainPlayer.on('error', () => {
-            this.mainError = true
-            this.mainLoading = false
+          const mainFile = this.getRuntimeFile('1')
+          this._playbackMemory = rememberVideoPlayback(this.mainPlayer, this.runtimeMainSource, mainFile && mainFile.videoId)
+          this.mainPlayer.on('loadedmetadata', () => {
+            const pending = this.pendingPlaybackState
+            if (!pending) return
+            this.pendingPlaybackState = null
+            this.restoringPlayback = true
+            this.$nextTick(() => {
+              restorePlaybackState(this.mainPlayer, this._mainVideoEl, pending)
+              setTimeout(() => { this.restoringPlayback = false }, 0)
+            })
           })
+          this.mainPlayer.on('play', () => {
+            this.isMainPlaying = true
+            this.startStablePlaybackTimer()
+            this.handleResume()
+          })
+          this.mainPlayer.on('pause', () => {
+            this.isMainPlaying = false
+            clearTimeout(this.stablePlaybackTimer)
+            this.stablePlaybackTimer = null
+          })
+          this.mainPlayer.on('error', error => this.handleMediaError(error, '1'))
         } catch (e) {
           console.error('[HRP] 主视频初始化失败:', e)
           this.mainError = true
@@ -429,15 +627,13 @@ export default {
 
       try {
         this.teacherPlayer = new Aliplayer(
-          { ...baseConfig, id: this.teacherPlayerId, source: this.teacherSource, controlBarVisibility: 'never', muted: true },
+          { ...baseConfig, id: this.teacherPlayerId, source: this.runtimeTeacherSource, controlBarVisibility: 'never', muted: true },
           (tp) => {
             this.teacherPlayer = tp
             try { tp.setVolume(0) } catch (e) {}
           }
         )
-        this.teacherPlayer.on('error', () => {
-          this.teacherError = true
-        })
+        this.teacherPlayer.on('error', error => this.handleMediaError(error, '2'))
       } catch (e) {
         console.error('[HRP] 讲师视频初始化失败:', e)
         this.teacherError = true
@@ -860,6 +1056,8 @@ export default {
     // ─────────────── 销毁 ───────────────
 
     destroyPlayers() {
+      clearTimeout(this.stablePlaybackTimer)
+      this.stablePlaybackTimer = null
       if (this._playbackMemory) {
         this._playbackMemory.destroy()
         this._playbackMemory = null
@@ -902,6 +1100,7 @@ export default {
       destroy(this.teacherPlayer, this.teacherPlayerId)
       this.mainPlayer = null
       this.teacherPlayer = null
+      this.isMainPlaying = false
     },
 
     /** 收藏/取消收藏 */
@@ -923,7 +1122,7 @@ export default {
 
     /** 下载主视频 */
     async handleDownload() {
-      const url = this.mainSource
+      const url = this.runtimeMainSource || this.mainSource
       if (!url) return
       try {
         const res = await fetch(url)
@@ -966,6 +1165,8 @@ export default {
   },
 
   beforeDestroy() {
+    this.recoveryToken += 1
+    this.recoveryPromise = null
     this.setScreenGuard(false)
     this.destroyPlayers()
   }

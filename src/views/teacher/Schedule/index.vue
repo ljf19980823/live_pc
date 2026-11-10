@@ -248,6 +248,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
@@ -296,6 +298,8 @@ export default {
       playerVisible: false,
       playerSource: '',
       playerTeacherSource: '',
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       playerTitle: '',
       playerHistoryLessonId: '',
       playerAllowDownload: '2',
@@ -708,7 +712,8 @@ export default {
         return
       }
       course = await resolveReplayInfo({ ...course, liveId: course.liveId || course.id || '' })
-      const aiRoute = getAIListeningRoute(course)
+      const refreshContext = this.getSchedulePlaybackContext(course)
+      const aiRoute = getAIListeningRoute(course, refreshContext)
       if (aiRoute) return this.$router.push(aiRoute)
       if (!course.fileList.length) {
         this.$message.warning('暂无回放视频')
@@ -719,10 +724,26 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = refreshContext
       this.playerTitle = course.name || '视频回放'
       this.playerHistoryLessonId = String(course.historyLessonId || course.liveLessonId || '')
       this.playerAllowDownload = course.allowDownload != null ? String(course.allowDownload) : '2'
       this.playerVisible = true
+    },
+    getSchedulePlaybackContext(course) {
+      if (this.viewMode === 'list' && this.listDateRange && this.listDateRange.length === 2) {
+        return { type: 'scheduleRange', params: { startDate: this.listDateRange[0], endDate: this.listDateRange[1] } }
+      }
+      const date = String(course.fullStartTime || course.startTime || '').split(/[ T]/)[0]
+      const parts = date.match(/^(\d{4})-(\d{1,2})/)
+      return {
+        type: 'scheduleMonth',
+        params: {
+          year: parts ? parts[1] : String(this.scheduleYear),
+          month: parts ? parts[2] : String(this.scheduleMonth + 1)
+        }
+      }
     }
   }
 }

@@ -714,7 +714,7 @@
               <button
                 v-if="item.fileList && item.fileList.length != 0"
                 class="after-test-item__btn after-test-item__btn--replay"
-                @click.stop="openVideoPlayer(item)"
+                @click.stop="openVideoPlayer(item, 'teacherQuiz')"
               >查看回放</button>
               <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
             </div>
@@ -829,6 +829,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="playerAllowDownload"
@@ -1141,6 +1143,8 @@ export default {
         items: []
       },
       playerVisible: false,
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
@@ -1317,18 +1321,21 @@ export default {
       this.currentAfterTestCourse = { ...item, classId: item.classId || this.selectedClassId }
       this.showAfterTestDetail = true
     },
-    async fetchAfterTestList() {
+    getAfterTestPlaybackParams() {
       const { userId } = getUserInfo()
+      const params = { teacherId: userId }
+      if (this.afterTestFilter.classIds.length) params.classId = this.afterTestFilter.classIds.join(',')
+      if (this.afterTestFilter.subjectId) params.subjectId = this.afterTestFilter.subjectId
+      if (this.afterTestFilter.quizStartTime) params.quizStartTime = this.afterTestFilter.quizStartTime
+      if (this.afterTestFilter.quizEndTime) params.quizEndTime = this.afterTestFilter.quizEndTime
+      if (this.afterTestFilter.examConfigId) params.examConfigId = this.afterTestFilter.examConfigId
+      if (this.afterTestFilter.teacherId) params.teacherId = this.afterTestFilter.teacherId
+      return params
+    },
+    async fetchAfterTestList() {
       this.afterTestLoading = true
       try {
-        const params = { teacherId: userId }
-        if (this.afterTestFilter.classIds.length) params.classId = this.afterTestFilter.classIds.join(',')
-        if (this.afterTestFilter.subjectId) params.subjectId = this.afterTestFilter.subjectId
-        if (this.afterTestFilter.quizStartTime) params.quizStartTime = this.afterTestFilter.quizStartTime
-        if (this.afterTestFilter.quizEndTime) params.quizEndTime = this.afterTestFilter.quizEndTime
-        if (this.afterTestFilter.examConfigId) params.examConfigId = this.afterTestFilter.examConfigId
-        if (this.afterTestFilter.teacherId) params.teacherId = this.afterTestFilter.teacherId
-        const res = await getAfterQuizTeacherList(params)
+        const res = await getAfterQuizTeacherList(this.getAfterTestPlaybackParams())
         this.afterTestList = (res && res.data) ? res.data : []
       } catch (e) {
         console.log(e,'呼呼')
@@ -2144,12 +2151,20 @@ export default {
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
     },
-    openVideoPlayer(item) {
+    openVideoPlayer(item, contextType = 'courseDetail') {
       const fileList = item.fileList || []
       const mainFile = fileList.find(f => f.videoType == '1')
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      if (contextType === 'teacherQuiz') {
+        this.currentPlaybackContext = { type: 'teacherQuiz', params: this.getAfterTestPlaybackParams() }
+      } else {
+        const params = { courseId: String(this.selectedCourse ? this.selectedCourse.id || '' : '') }
+        if (this.selectedClassId) params.classId = this.selectedClassId
+        this.currentPlaybackContext = { type: 'courseDetail', params }
+      }
       this.playerTitle = item.name || item.title || '视频回放'
       this.playerHistoryLessonId = String(item.historyLessonId || '')
       this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'

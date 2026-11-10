@@ -140,6 +140,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="currentAllowDownload"
@@ -260,6 +262,8 @@ export default {
       showVideoDialog: false,
       currentVideoUrl: '',
       currentPlayingItem: null,
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       showAudioDialog: false,
       currentAudioUrl: '',
       showImageDialog: false,
@@ -600,7 +604,7 @@ export default {
         } catch (_) {}
       }
       item = await resolveReplayInfo(item)
-      const aiRoute = getAIListeningRoute(item)
+      const aiRoute = getAIListeningRoute(item, { type: 'recentView', params: {} })
       if (aiRoute) return this.$router.push(aiRoute)
 
       // 参数仍不完整时先播放回放，避免因缺少听记参数而一直显示笔记生成中。
@@ -609,6 +613,8 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : (!fileList.length ? item.filePath || '' : '')
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = { type: 'recentView', params: {} }
       if (!this.playerSource && !this.playerTeacherSource) {
         this.$message.warning('暂无回放视频')
         return

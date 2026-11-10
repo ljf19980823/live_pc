@@ -598,6 +598,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="currentAllowDownload"
@@ -699,6 +701,8 @@ export default {
       showLiveIframe: false,
       liveUrl: '',
       playerVisible: false,
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       playerSource: '',
       playerTeacherSource: '',
       playerTitle: '',
@@ -1192,6 +1196,11 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = {
+        type: 'scheduleMonth',
+        params: { year: String(this.scheduleYear), month: String(this.scheduleMonth + 1) }
+      }
       this.playerTitle = course.name || '视频回放'
       this.playerHistoryLessonId = String(course.historyLessonId || '')
       this.currentAllowMultiple = course.allowMultiple != null ? String(course.allowMultiple) : '2'

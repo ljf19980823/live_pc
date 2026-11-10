@@ -365,6 +365,8 @@
     :visible="playerVisible"
     :main-source="playerSource"
     :teacher-source="playerTeacherSource"
+    :playback-files="currentPlaybackFiles"
+    :refresh-context="currentPlaybackContext"
     :title="playerTitle"
     :history-lesson-id="playerHistoryLessonId"
     :allow-multiple="currentAllowMultiple"
@@ -467,6 +469,8 @@ export default {
       currentAllowFastForward: '1',
       currentAllowDownload: '2',
       currentPlayingItem: null,
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
 
       // 历史回放
       playerVisible: false,
@@ -931,6 +935,11 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      this.currentPlaybackContext = {
+        type: 'courseDetail',
+        params: { courseId: String(this.selectedCourse ? this.selectedCourse.id || '' : '') }
+      }
       this.playerTitle = item.name || item.title || '视频回放'
       this.playerHistoryLessonId = String(item.historyLessonId || '')
       this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'

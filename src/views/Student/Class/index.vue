@@ -665,7 +665,7 @@
                 <button
                   v-if="item.fileList && item.fileList.length != 0"
                   class="quiz-card__btn quiz-card__btn--outline"
-                  @click.stop="openVideoPlayer(item, false, false, true)"
+                  @click.stop="openVideoPlayer(item, false, false, true, 'studentQuiz')"
                 >查看回放</button>
                
                   <button class="quiz-card__btn quiz-card__btn--outline"  @click.stop="openRanking(item)">排行榜</button>
@@ -751,6 +751,8 @@
       :visible="playerVisible"
       :main-source="playerSource"
       :teacher-source="playerTeacherSource"
+      :playback-files="currentPlaybackFiles"
+      :refresh-context="currentPlaybackContext"
       :title="playerTitle"
       :history-lesson-id="playerHistoryLessonId"
       :allow-download="currentAllowDownload"
@@ -1045,6 +1047,8 @@ export default {
       showVideoDialog: false,
       currentVideoUrl: '',
       currentPlayingItem: null,
+      currentPlaybackFiles: [],
+      currentPlaybackContext: null,
       showAudioDialog: false,
       currentAudioUrl: '',
       showImageDialog: false,
@@ -1343,19 +1347,22 @@ export default {
         this.courseListLoading = false
       }
     },
-    async fetchAfterQuizList() {
+    getAfterQuizPlaybackParams() {
       const userInfo = getUserInfo() || {}
       const studentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
+      const params = { studentId }
+      if (this.afterQuizFilter.classIds.length) params.classId = this.afterQuizFilter.classIds.join(',')
+      if (this.afterQuizFilter.subjectId) params.subjectId = this.afterQuizFilter.subjectId
+      if (this.afterQuizFilter.quizStartTime) params.quizStartTime = this.afterQuizFilter.quizStartTime
+      if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
+      if (this.afterQuizFilter.examConfigId) params.examConfigId = this.afterQuizFilter.examConfigId
+      if (this.afterQuizFilter.teacherId) params.quizTeacherId = this.afterQuizFilter.teacherId
+      return params
+    },
+    async fetchAfterQuizList() {
       this.afterQuizLoading = true
       try {
-        const params = { studentId }
-        if (this.afterQuizFilter.classIds.length) params.classId = this.afterQuizFilter.classIds.join(',')
-        if (this.afterQuizFilter.subjectId) params.subjectId = this.afterQuizFilter.subjectId
-        if (this.afterQuizFilter.quizStartTime) params.quizStartTime = this.afterQuizFilter.quizStartTime
-        if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
-        if (this.afterQuizFilter.examConfigId) params.examConfigId = this.afterQuizFilter.examConfigId
-        if (this.afterQuizFilter.teacherId) params.quizTeacherId = this.afterQuizFilter.teacherId
-        const res = await getAfterQuizList(params)
+        const res = await getAfterQuizList(this.getAfterQuizPlaybackParams())
         this.afterQuizList = res.data || []
       } catch (e) {
         console.error(e)
@@ -2114,7 +2121,7 @@ export default {
     toggleGroup(item) {
       this.$set(item, 'expanded', !item.expanded)
     },
-    async openVideoPlayer(item, updateRecent = false, fromTask = false, skipProgress = false) {
+    async openVideoPlayer(item, updateRecent = false, fromTask = false, skipProgress = false, contextType = 'courseDetail') {
       if (updateRecent) {
         try {
           const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
@@ -2130,6 +2137,15 @@ export default {
       const teacherFile = fileList.find(f => f.videoType == '2')
       this.playerSource = mainFile ? mainFile.filePath || '' : ''
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
+      this.currentPlaybackFiles = fileList
+      if (contextType === 'studentQuiz') {
+        this.currentPlaybackContext = { type: 'studentQuiz', params: this.getAfterQuizPlaybackParams() }
+      } else {
+        const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+        const params = { courseId }
+        if (this.selectedClassId) params.classId = this.selectedClassId
+        this.currentPlaybackContext = { type: 'courseDetail', params }
+      }
       this.playerTitle = item.name || item.title || '视频回放'
       this.playerHistoryLessonId = String(item.historyLessonId || '')
       this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'

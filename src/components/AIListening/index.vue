@@ -43,6 +43,8 @@
             :inline="true"
             :main-source="videoUrl"
             :teacher-source="teacherVideoUrl"
+            :playback-files="playbackFiles"
+            :refresh-context="playbackContext"
             :title="meetingTitle"
             :subtitles="transcriptList"
             :subtitle-text="activeSubtitleText"
@@ -484,6 +486,7 @@ import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import EmptyState from '@/components/EmptyState/index.vue'
 import ClassroomCourseware from '@/components/ClassroomCourseware/index.vue'
+import { refreshClassroomVideos } from '@/utils/classroomVideoPlayback'
 /**
  * AIListening — AI 听记组件
  * 包含：视频播放器、转写/AI纪要/课件标签页、右侧 AI 问答对话面板
@@ -517,6 +520,9 @@ export default {
     return {
       // ===== 转写同步状态 =====
       currentTime: 0,
+      playbackFiles: [],
+      playbackLoadError: false,
+      playbackLoadVersion: 0,
       activeParagraphIndex: -1,
       userScrolling: false,
 
@@ -566,10 +572,20 @@ export default {
   },
   computed: {
     videoUrl() {
-      return this.$route.query.videoUrl || ''
+      const mainFile = this.playbackFiles.find(file => String(file.videoType) === '1')
+      return (mainFile && mainFile.filePath) || this.$route.query.videoUrl || ''
     },
     teacherVideoUrl() {
-      return this.$route.query.teacherVideoUrl || ''
+      const teacherFile = this.playbackFiles.find(file => String(file.videoType) === '2')
+      return (teacherFile && teacherFile.filePath) || this.$route.query.teacherVideoUrl || ''
+    },
+    playbackContext() {
+      try {
+        const value = this.$route.query.playbackContext
+        return value ? JSON.parse(value) : null
+      } catch (e) {
+        return null
+      }
     },
     meetingId() {
       return this.$route.query.meetingId || ''
@@ -617,10 +633,49 @@ export default {
     }
   },
   mounted() {
+    this.loadPlaybackFiles()
     this.startReplayLogSession()
     this.loadData()
   },
+  watch: {
+    '$route.query': {
+      deep: true,
+      handler() {
+        this.playbackFiles = []
+        this.loadPlaybackFiles()
+      }
+    }
+  },
   methods: {
+    async loadPlaybackFiles() {
+      const version = ++this.playbackLoadVersion
+      const context = this.playbackContext
+      const mainVideoId = this.$route.query.videoId
+      const teacherVideoId = this.$route.query.teacherVideoId
+      if (!context || !mainVideoId) return
+      try {
+        const videoIds = teacherVideoId ? [mainVideoId, teacherVideoId] : [mainVideoId]
+        const refreshedFiles = await refreshClassroomVideos(context, videoIds)
+        if (version !== this.playbackLoadVersion) return
+        const mainFile = refreshedFiles.find(file => String(file.videoId) === String(mainVideoId))
+        if (!mainFile) throw new Error('视频已不在当前结果中，请重新进入页面')
+        const files = [mainFile]
+        if (teacherVideoId) {
+          const teacherFile = refreshedFiles.find(file => String(file.videoId) === String(teacherVideoId))
+          if (teacherFile) {
+            files.push(teacherFile)
+          } else {
+            console.warn('[Playback refresh failed]', { videoId: teacherVideoId, time: Date.now() })
+          }
+        }
+        this.playbackFiles = files
+        this.playbackLoadError = false
+      } catch (error) {
+        if (version !== this.playbackLoadVersion) return
+        this.playbackLoadError = true
+        this.$message.error('获取回放地址失败，请重新进入页面')
+      }
+    },
     // ===== 历史课堂回放埋点 =====
     getReplayRole(role) {
       const roleMap = {
@@ -1433,6 +1488,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.playbackLoadVersion += 1
     this.unbindSummaryFsZoomEvents()
     this.stopReplayLogSession()
     clearTimeout(this._scrollTimer)

@@ -173,25 +173,25 @@ export default {
       }
     },
 
+    buildNotePlaybackParams() {
+      const params = {
+        pageNum: this.pageNum,
+        pageSize: this.pageSize
+      }
+      const keyword = (this.searchKeyword || '').trim()
+      if (keyword) params.keyword = keyword
+      if (this.subjectId) params.subjectId = this.subjectId
+      if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0]) {
+        params.startDate = this.dateRange[0]
+        params.endDate = this.dateRange[1]
+      }
+      if (this.noteMode === 'important') params.isPoint = '1'
+      return params
+    },
     async fetchNoteList() {
       this.loading = true
       try {
-        const params = {
-          pageNum: this.pageNum,
-          pageSize: this.pageSize
-        }
-        const keyword = (this.searchKeyword || '').trim()
-        if (keyword) params.keyword = keyword
-        if (this.subjectId) params.subjectId = this.subjectId
-        if (this.dateRange && this.dateRange.length === 2 && this.dateRange[0]) {
-          params.startDate = this.dateRange[0]
-          params.endDate = this.dateRange[1]
-        }
-        if (this.noteMode === 'important') {
-          params.isPoint = '1'
-        }
-
-        const res = await getNoteList(params)
+        const res = await getNoteList(this.buildNotePlaybackParams())
         const data = (res && res.data) ? res.data : {}
         this.noteList = data.list || []
         this.total = data.total || 0
@@ -260,8 +260,9 @@ export default {
       this.$router.push({
         name: 'AIListening',
         query: {
-          videoUrl: mainFile ? mainFile.filePath || '' : '',
-          teacherVideoUrl: teacherFile ? teacherFile.filePath || '' : '',
+          videoId: mainFile ? mainFile.videoId || '' : '',
+          teacherVideoId: teacherFile ? teacherFile.videoId || '' : '',
+          playbackContext: JSON.stringify({ type: 'noteList', params: this.buildNotePlaybackParams() }),
           meetingId: item.taskUuid,
           meetingTitle: item.name || '',
           scopeText: item.taskUuid,
