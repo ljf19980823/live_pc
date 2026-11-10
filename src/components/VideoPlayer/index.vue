@@ -71,6 +71,7 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 import { collectToggle } from '@/api'
 
@@ -263,6 +264,10 @@ export default {
             // 按钮和快捷键遵循与原进度条一致的学生权限。
             canSeek: () => !(this.isStudent && this.allowFastForward === '2')
           })
+          this._playerControlSkin = attachVideoPlayerControlSkin(player, {
+            container: document.getElementById(this.playerId),
+            onDanmuChange: enabled => this.$emit('danmu-change', enabled)
+          })
         })
         this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.source)
       } catch (e) {
@@ -276,6 +281,10 @@ export default {
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
+      if (this._playerControlSkin) {
+        this._playerControlSkin.destroy()
+        this._playerControlSkin = null
+      }
       if (this._playerControls) {
         this._playerControls.destroy()
         this._playerControls = null
@@ -518,6 +527,7 @@ export default {
 
 /* allowMultiple === 2 时隐藏倍速控件 */
 .video-player-mask.vp-no-speed {
+  ::v-deep .vp-control-speed,
   ::v-deep .prism-setting-speed,
   ::v-deep .prism-speed-selector {
     display: none !important;

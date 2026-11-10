@@ -105,6 +105,7 @@ import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 import { collectToggle, batchLiveStatisticsLog } from '@/api'
 
@@ -552,6 +553,9 @@ export default {
                 container: document.getElementById(this.mainPlayerId),
                 isActive: () => this.visible && !this.mainError
               })
+              this._playerControlSkin = attachVideoPlayerControlSkin(mainPlayer, {
+                container: document.getElementById(this.mainPlayerId)
+              })
               if (this.runtimeTeacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
@@ -753,6 +757,10 @@ export default {
     destroyPlayers() {
       clearTimeout(this.stablePlaybackTimer)
       this.stablePlaybackTimer = null
+      if (this._playerControlSkin) {
+        this._playerControlSkin.destroy()
+        this._playerControlSkin = null
+      }
       if (this._playerControls) {
         this._playerControls.destroy()
         this._playerControls = null

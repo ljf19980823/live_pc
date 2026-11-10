@@ -128,6 +128,7 @@ import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaErro
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
+import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 
 const ALIPLAYER_LICENSE = {
@@ -332,11 +333,7 @@ export default {
     subtitleOn(val) {
       if (!val) this.currentSubtitle = ''
       else if (this._mainVideoEl) this.updateSubtitle(this._mainVideoEl.currentTime)
-      this.syncCcButtonState()
-    },
-    hasSubtitleSource(val) {
-      if (val) this.$nextTick(() => this.injectCcButton())
-      else this.removeCcButton()
+      if (this._playerControlSkin) this._playerControlSkin.setSubtitleEnabled(val)
     },
     subtitles: {
       deep: true,
@@ -348,7 +345,6 @@ export default {
             ? this.mainPlayer.getCurrentTime()
             : 0)
         this.updateSubtitle(t || 0)
-        this.$nextTick(() => this.injectCcButton())
         // 转写异步到达时若已全屏，把字幕层挂到全屏节点
         if (this.isFullscreen) {
           this.$nextTick(() => {
@@ -581,7 +577,12 @@ export default {
                 modal: !this.inline,
                 seekTo: seconds => this.seekTo(seconds)
               })
-              this.$nextTick(() => this.injectCcButton())
+              this._playerControlSkin = attachVideoPlayerControlSkin(mainPlayer, {
+                container: document.getElementById(this.mainPlayerId),
+                subtitleEnabled: this.subtitleOn,
+                useNativeSubtitles: false,
+                onSubtitleChange: enabled => { this.subtitleOn = enabled }
+              })
               if (this.runtimeTeacherSource) {
                 this.initTeacherPlayer(baseConfig, mainPlayer)
               }
@@ -740,7 +741,6 @@ export default {
           videoEl.removeEventListener('ratechange', onRateChange)
           videoEl.removeEventListener('timeupdate', onTimeUpdate)
         }
-        this.injectCcButton()
       }
       attachVideoEvents(0)
 
@@ -820,82 +820,6 @@ export default {
         cancelAnimationFrame(this._subtitleRaf)
         this._subtitleRaf = null
       }
-    },
-
-    /**
-     * 将 CC 按钮注入到 Aliplayer 底部控制栏右侧（设置/全屏按钮前）
-     */
-    injectCcButton() {
-      if (!this.hasSubtitleSource) {
-        this.removeCcButton()
-        return
-      }
-      const container = document.getElementById(this.mainPlayerId)
-      if (!container) return
-      const controlBar = container.querySelector('.prism-controlbar')
-      if (!controlBar) {
-        // 控制栏尚未渲染完，稍后重试
-        if (!this._ccInjectRetry || this._ccInjectRetry < 30) {
-          this._ccInjectRetry = (this._ccInjectRetry || 0) + 1
-          setTimeout(() => this.injectCcButton(), 120)
-        }
-        return
-      }
-      this._ccInjectRetry = 0
-
-      let btn = controlBar.querySelector('.hrp-cc-btn')
-      if (!btn) {
-        btn = document.createElement('div')
-        btn.className = 'hrp-cc-btn'
-        btn.setAttribute('role', 'button')
-        btn.setAttribute('tabindex', '0')
-        btn.innerHTML = '<span class="hrp-cc-btn__label">CC</span>'
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation()
-          this.subtitleOn = !this.subtitleOn
-        })
-        btn.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            this.subtitleOn = !this.subtitleOn
-          }
-        })
-
-        const insertBefore =
-          controlBar.querySelector('.prism-setting-btn') ||
-          controlBar.querySelector('.prism-fullscreen-btn') ||
-          controlBar.querySelector('.prism-volume')
-        if (insertBefore && insertBefore.parentNode === controlBar) {
-          controlBar.insertBefore(btn, insertBefore)
-        } else if (insertBefore && insertBefore.parentNode) {
-          insertBefore.parentNode.insertBefore(btn, insertBefore)
-        } else {
-          controlBar.appendChild(btn)
-        }
-      }
-      this._ccBtnEl = btn
-      this.syncCcButtonState()
-    },
-
-    removeCcButton() {
-      if (this._ccBtnEl && this._ccBtnEl.parentNode) {
-        this._ccBtnEl.parentNode.removeChild(this._ccBtnEl)
-      }
-      this._ccBtnEl = null
-      const container = document.getElementById(this.mainPlayerId)
-      const leftover = container && container.querySelector('.hrp-cc-btn')
-      if (leftover && leftover.parentNode) leftover.parentNode.removeChild(leftover)
-    },
-
-    syncCcButtonState() {
-      const btn = this._ccBtnEl || (
-        document.getElementById(this.mainPlayerId) &&
-        document.getElementById(this.mainPlayerId).querySelector('.hrp-cc-btn')
-      )
-      if (!btn) return
-      btn.classList.toggle('hrp-cc-btn--off', !this.subtitleOn)
-      btn.title = this.subtitleOn ? '关闭字幕' : '打开字幕'
-      btn.setAttribute('aria-pressed', this.subtitleOn ? 'true' : 'false')
     },
 
     getSubtitleRange(item, index) {
@@ -1062,6 +986,10 @@ export default {
         this._playbackMemory.destroy()
         this._playbackMemory = null
       }
+      if (this._playerControlSkin) {
+        this._playerControlSkin.destroy()
+        this._playerControlSkin = null
+      }
       if (this._playerControls) {
         this._playerControls.destroy()
         this._playerControls = null
@@ -1072,8 +1000,6 @@ export default {
       this.currentSubtitle = ''
       this._subtitleCues = null
       this.stopSubtitleRaf()
-      this.removeCcButton()
-
       if (this._removeVideoListeners) {
         this._removeVideoListeners()
         this._removeVideoListeners = null
@@ -1474,46 +1400,6 @@ export default {
 /* 控制栏需高于字幕层，保证 CC 可点 */
 ::v-deep .prism-controlbar {
   z-index: 100001 !important;
-}
-
-/* 注入到控制栏的 CC 按钮 */
-::v-deep .hrp-cc-btn {
-  position: relative;
-  float: right;
-  width: 32px;
-  height: 32px;
-  margin: 7px 8px 0 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  user-select: none;
-  border-radius: 3px;
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  background: transparent;
-  color: #fff;
-  transition: opacity 0.2s, background 0.2s, border-color 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  .hrp-cc-btn__label {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    line-height: 1;
-  }
-
-  &.hrp-cc-btn--off {
-    opacity: 0.45;
-    border-color: rgba(255, 255, 255, 0.35);
-
-    .hrp-cc-btn__label {
-      text-decoration: line-through;
-    }
-  }
 }
 
 /* 设置面板只保留倍速，隐藏字幕/音轨/画质 */
