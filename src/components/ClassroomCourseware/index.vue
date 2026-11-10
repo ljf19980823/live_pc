@@ -168,6 +168,7 @@ import { updateCourseProgress } from '@/api/modules/teacher'
 
 // 课件类型转换为进度接口类型：文档/其他→7，视频→4，音频→6，图片→5，链接→8。
 const PROGRESS_TYPES = { '1': '7', '2': '4', '3': '6', '4': '5', '5': '7', '6': '8' }
+const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'm4v', 'avi', 'mkv', 'flv', 'wmv', 'mpeg', 'mpg', '3gp', 'ts', 'm2ts', 'mts', 'ogv', 'vob']
 
 // 进度限制在 0–100，并保留两位小数，避免丢失视频播放进度的小数部分。
 function progressValue(value) {
@@ -288,8 +289,10 @@ export default {
     },
     beforeUpload(file) {
       if (!this.canManage()) return false
-      if (file.size > 600 * 1024 * 1024) {
-        this.$message.warning('上传文件大小不能超过600M')
+      const isVideo = (file.type || '').toLowerCase().startsWith('video/') || VIDEO_EXTENSIONS.includes(getFileExtension(file.name))
+      const maxSize = (isVideo ? 1000 : 100) * 1024 * 1024
+      if (file.size > maxSize) {
+        this.$message.warning(isVideo ? '视频文件大小不能超过600M' : '非视频文件大小不能超过100M')
         return false
       }
       return true
