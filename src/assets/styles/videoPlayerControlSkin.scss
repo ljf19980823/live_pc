@@ -1,6 +1,8 @@
 .vp-controlbar-skin {
   .prism-controlbar {
     height: 100px !important;
+    z-index: 10000 !important;
+    overflow: visible !important;
     background: transparent !important;
     font-family: Arial, "Microsoft YaHei", sans-serif;
   }
@@ -11,7 +13,20 @@
   }
 
   .prism-tooltip {
-    display: none !important;
+    z-index: 10030 !important;
+    box-sizing: border-box;
+    min-width: var(--vp-tooltip-min-width, 84px);
+    height: var(--vp-tooltip-height, 36px) !important;
+    padding: 0 var(--vp-tooltip-padding-x, 12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 7px;
+    background: rgba(24, 29, 42, 0.98) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    color: #fff !important;
+    font-size: var(--vp-tooltip-font-size, 14px) !important;
+    line-height: var(--vp-tooltip-line-height, 34px) !important;
+    text-align: center;
+    bottom: 78px !important;
   }
 
   .prism-controlbar > *:not(.prism-controlbar-bg):not(.prism-progress):not(.vp-controlbar-row) {
@@ -58,7 +73,7 @@
     right: 2.3%;
     bottom: 6px;
     left: 2.3%;
-    z-index: 2;
+    z-index: 10001;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -313,6 +328,66 @@
   }
 }
 
+.vp-controlbar-skin .prism-progress {
+  z-index: 10010 !important;
+  overflow: visible !important;
+}
+
+.vp-progress-time {
+  z-index: 10030 !important;
+  top: calc(0px - var(--vp-tooltip-height, 36px) - 8px) !important;
+  height: var(--vp-tooltip-height, 36px) !important;
+  margin: 0 !important;
+  padding: 0 var(--vp-tooltip-padding-x, 12px) !important;
+  border-radius: 7px !important;
+  background: rgba(24, 29, 42, 0.98) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35) !important;
+  font-size: var(--vp-tooltip-font-size, 14px) !important;
+  line-height: var(--vp-tooltip-line-height, 34px) !important;
+}
+
+.vp-progress-time:empty {
+  display: none !important;
+}
+
+.vp-thumbnail-preview {
+  z-index: 10030 !important;
+  bottom: 78px !important;
+}
+
+.vp-thumbnail-preview span {
+  z-index: 10031 !important;
+  padding: 0 var(--vp-thumbnail-time-padding-x, 5px) !important;
+  border-radius: 6px;
+  font-size: var(--vp-thumbnail-time-font-size, 12px) !important;
+  line-height: var(--vp-thumbnail-time-line-height, 20px) !important;
+}
+
+.vp-volume-popup {
+  box-sizing: border-box;
+  width: var(--vp-volume-panel-width, 32px) !important;
+  height: var(--vp-volume-panel-height, 130px) !important;
+  z-index: 10020 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(24, 29, 42, 0.98) !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.36) !important;
+}
+
+.vp-volume-popup .volume-range {
+  left: 50% !important;
+  width: var(--vp-volume-range-width, 4px) !important;
+  height: var(--vp-volume-range-height, 100px) !important;
+  transform: translateX(-50%);
+}
+
+.vp-volume-popup .volume-cursor {
+  left: 50% !important;
+  width: var(--vp-volume-cursor-size, 15px) !important;
+  height: var(--vp-volume-cursor-size, 15px) !important;
+  transform: translateX(-50%);
+}
+
 @media (max-width: 1100px) {
   .vp-controlbar-skin {
     .vp-controlbar-right { gap: 10px; }
@@ -352,6 +427,8 @@
   .prism-controlbar .prism-progress { top: 15px !important; height: 3px !important; }
   .prism-progress .prism-progress-cursor { top: -5px !important; width: 13px !important; height: 13px !important; }
   .vp-controlbar-row { bottom: 3px; height: 48px; }
+  .prism-tooltip,
+  .vp-thumbnail-preview { bottom: 59px !important; }
   .vp-controlbar-right { gap: 8px; }
   .prism-play-btn { flex-basis: 38px; width: 38px !important; height: 38px !important; border-radius: 8px; background-size: 16px 16px !important; }
   .prism-time-display { min-width: 126px; height: 30px !important; margin: 0 10px 0 12px !important; font-size: 12px !important; line-height: 30px !important; }
@@ -378,6 +455,8 @@
   .prism-controlbar .prism-progress { top: 10px !important; height: 3px !important; }
   .prism-progress .prism-progress-cursor { top: -4px !important; width: 11px !important; height: 11px !important; }
   .vp-controlbar-row { right: 1.5%; bottom: 2px; left: 1.5%; height: 38px; }
+  .prism-tooltip,
+  .vp-thumbnail-preview { bottom: 46px !important; }
   .vp-controlbar-left { flex: 1 1 auto; min-width: 0; }
   .vp-controlbar-right { flex: 0 1 auto; gap: 4px; }
   .prism-play-btn { flex-basis: 30px; width: 30px !important; height: 30px !important; border-radius: 6px; background-size: 13px 13px !important; }
@@ -402,6 +481,8 @@
   .prism-controlbar { height: 50px !important; }
   .prism-controlbar .prism-progress { top: 8px !important; }
   .vp-controlbar-row { right: 1.2%; bottom: 1px; left: 1.2%; height: 34px; }
+  .prism-tooltip,
+  .vp-thumbnail-preview { bottom: 42px !important; }
   .prism-play-btn { flex-basis: 27px; width: 27px !important; height: 27px !important; }
   .prism-time-display { width: 76px !important; margin-right: 3px !important; margin-left: 5px !important; font-size: 9px !important; }
   .vp-controlbar-right { gap: 3px; }

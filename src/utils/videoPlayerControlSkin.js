@@ -164,6 +164,14 @@ export function attachVideoPlayerControlSkin(player, {
   let usesWindowResize = false
   let danmuControl = null
   let subtitleControl = null
+  let volumeIcon = null
+  let volumePopup = null
+  let thumbnailPopup = null
+  let progressTime = null
+  let progress = null
+  let onVolumeIconClick = null
+  let onProgressMouseMove = null
+  let playerRoot = null
   let currentSubtitleState = !!subtitleEnabled
   const events = []
 
@@ -211,19 +219,76 @@ export function attachVideoPlayerControlSkin(player, {
   }
 
   function updateResponsiveMode() {
-    const { width, height } = container.getBoundingClientRect()
+    const { width, height } = (playerRoot || container).getBoundingClientRect()
     const compact = width <= 760 && height <= 430
     const mini = width <= 580 && height <= 326
     const nano = width <= 380 && height <= 215
+    const scale = width && height ? Math.max(1, Math.min(1.8, width / 1280, height / 720)) : 1
+    const scaleToken = scale.toFixed(3)
+    if (container.style.getPropertyValue('--vp-control-scale') !== scaleToken) {
+      container.style.setProperty('--vp-control-scale', scaleToken)
+      const scaledSizes = {
+        '--vp-tooltip-min-width': 84,
+        '--vp-tooltip-height': 36,
+        '--vp-tooltip-padding-x': 12,
+        '--vp-tooltip-font-size': 14,
+        '--vp-tooltip-line-height': 34,
+        '--vp-thumbnail-time-font-size': 12,
+        '--vp-thumbnail-time-line-height': 20,
+        '--vp-thumbnail-time-padding-x': 5,
+        '--vp-volume-panel-width': 32,
+        '--vp-volume-panel-height': 130,
+        '--vp-volume-range-width': 4,
+        '--vp-volume-range-height': 100,
+        '--vp-volume-cursor-size': 15
+      }
+      Object.keys(scaledSizes).forEach(property => {
+        container.style.setProperty(property, `${(scaledSizes[property] * scale).toFixed(2)}px`)
+      })
+    }
     container.classList.toggle('vp-controlbar-compact', compact)
     container.classList.toggle('vp-controlbar-mini', mini)
     container.classList.toggle('vp-controlbar-nano', nano)
+    if (volumePopup && volumePopup.style.display !== 'none') {
+      window.requestAnimationFrame(positionVolumePopup)
+    }
+  }
+
+  function positionVolumePopup() {
+    if (!volumeIcon || !volumePopup || volumePopup.style.display === 'none') return
+    const root = playerRoot || container
+    const playerRect = root.getBoundingClientRect()
+    const iconRect = volumeIcon.getBoundingClientRect()
+    const popupRect = volumePopup.getBoundingClientRect()
+    const popupWidth = popupRect.width || 32
+    const popupHeight = popupRect.height || 130
+    const scale = Number(container.style.getPropertyValue('--vp-control-scale')) || 1
+    const popupGap = 24 * scale
+    const left = Math.max(8, Math.min(
+      iconRect.left - playerRect.left + (iconRect.width - popupWidth) / 2,
+      playerRect.width - popupWidth - 8
+    ))
+    const top = Math.max(8, iconRect.top - playerRect.top - popupHeight - popupGap)
+    volumePopup.style.left = `${left}px`
+    volumePopup.style.top = `${top}px`
+    volumePopup.style.bottom = 'auto'
+  }
+
+  function clampProgressTooltip() {
+    const tooltip = container.querySelector('.prism-tooltip')
+    if (!tooltip || tooltip.style.display === 'none') return
+    const playerWidth = (playerRoot || container).getBoundingClientRect().width
+    const tooltipWidth = tooltip.getBoundingClientRect().width
+    const currentLeft = parseFloat(tooltip.style.left) || 0
+    const maxLeft = Math.max(8, playerWidth - tooltipWidth - 8)
+    tooltip.style.left = `${Math.max(8, Math.min(currentLeft, maxLeft))}px`
   }
 
   function inject() {
     if (destroyed) return
     controlBar = container.querySelector('.prism-controlbar')
-    const progress = controlBar && controlBar.querySelector('.prism-progress')
+    playerRoot = container.querySelector('.prism-player') || container
+    progress = controlBar && controlBar.querySelector('.prism-progress')
     const playButton = controlBar && controlBar.querySelector('.prism-play-btn')
     const timeDisplay = controlBar && controlBar.querySelector('.prism-time-display')
     const seekControls = controlBar && controlBar.querySelector('.hrp-seek-controls')
@@ -264,10 +329,25 @@ export function attachVideoPlayerControlSkin(player, {
     right.append(subtitleControl.element, volumeControl, fullscreenButton)
     controlBar.appendChild(row)
     container.classList.add('vp-controlbar-skin')
+    volumeIcon = volumeControl.querySelector('.volume-icon')
+    volumePopup = playerRoot.querySelector('.prism-volume-control')
+    thumbnailPopup = playerRoot.querySelector('.prism-thumbnail')
+    progressTime = progress.querySelector('.prism-progress-time')
+    if (volumePopup) volumePopup.classList.add('vp-volume-popup')
+    if (thumbnailPopup) thumbnailPopup.classList.add('vp-thumbnail-preview')
+    if (progressTime) {
+      progressTime.classList.add('vp-progress-time')
+      if (!progressTime.textContent.trim()) progressTime.style.display = 'none'
+    }
+    onVolumeIconClick = () => window.requestAnimationFrame(positionVolumePopup)
+    onProgressMouseMove = () => window.requestAnimationFrame(clampProgressTooltip)
+    if (volumeIcon) volumeIcon.addEventListener('click', onVolumeIconClick)
+    if (progress) progress.addEventListener('mousemove', onProgressMouseMove)
     updateResponsiveMode()
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(updateResponsiveMode)
       resizeObserver.observe(container)
+      if (playerRoot !== container) resizeObserver.observe(playerRoot)
     } else {
       usesWindowResize = true
       window.addEventListener('resize', updateResponsiveMode)
@@ -288,11 +368,11 @@ export function attachVideoPlayerControlSkin(player, {
       updatePlayIcon(playButton)
       updateVolumeIcon(volumeControl)
       updateFullscreenIcon(fullscreenButton)
+      updateResponsiveMode()
     })
     observer.observe(container, { subtree: true, attributes: true, attributeFilter: ['title'] })
     observer.observe(playButton, { attributes: true, attributeFilter: ['class'] })
     observer.observe(fullscreenButton, { attributes: true, attributeFilter: ['class'] })
-    const volumeIcon = volumeControl.querySelector('.volume-icon')
     if (volumeIcon) observer.observe(volumeIcon, { attributes: true, attributeFilter: ['class'] })
     listen('volumechange', () => updateVolumeIcon(volumeControl))
     listen('volumnchanged', () => updateVolumeIcon(volumeControl))
@@ -313,6 +393,8 @@ export function attachVideoPlayerControlSkin(player, {
       if (observer) observer.disconnect()
       if (resizeObserver) resizeObserver.disconnect()
       if (usesWindowResize) window.removeEventListener('resize', updateResponsiveMode)
+      if (volumeIcon && onVolumeIconClick) volumeIcon.removeEventListener('click', onVolumeIconClick)
+      if (progress && onProgressMouseMove) progress.removeEventListener('mousemove', onProgressMouseMove)
       speedControl.destroy()
       events.forEach(([event, handler]) => {
         if (player.off) player.off(event, handler)
@@ -320,8 +402,24 @@ export function attachVideoPlayerControlSkin(player, {
       if (row) row.remove()
       container.classList.remove('vp-controlbar-compact', 'vp-controlbar-mini', 'vp-controlbar-nano')
       container.classList.remove('vp-controlbar-skin')
+      ;[
+        '--vp-control-scale',
+        '--vp-tooltip-min-width', '--vp-tooltip-height', '--vp-tooltip-padding-x',
+        '--vp-tooltip-font-size', '--vp-tooltip-line-height',
+        '--vp-thumbnail-time-font-size', '--vp-thumbnail-time-line-height', '--vp-thumbnail-time-padding-x',
+        '--vp-volume-panel-width', '--vp-volume-panel-height',
+        '--vp-volume-range-width', '--vp-volume-range-height', '--vp-volume-cursor-size'
+      ].forEach(property => container.style.removeProperty(property))
       danmuControl = null
       subtitleControl = null
+      volumeIcon = null
+      volumePopup = null
+      thumbnailPopup = null
+      progressTime = null
+      progress = null
+      onVolumeIconClick = null
+      onProgressMouseMove = null
+      playerRoot = null
     }
   }
 }
