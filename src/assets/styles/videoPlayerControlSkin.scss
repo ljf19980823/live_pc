@@ -159,6 +159,10 @@
     flex: 0 0 auto;
     white-space: nowrap;
   }
+  //隐藏弹幕设置
+  .vp-control-toggle--danmu {
+    display: none !important;
+  }
 
   .vp-control-toggle__label,
   .vp-control-speed__label {

@@ -251,6 +251,7 @@ export function attachVideoPlayerControlSkin(player, {
       dispatchDanmuState(enabled)
       onDanmuChange(enabled)
     })
+    danmuControl.element.classList.add('vp-control-toggle--danmu')
     subtitleControl = createToggle('字幕', currentSubtitleState, enabled => {
       currentSubtitleState = enabled
       if (useNativeSubtitles) setSubtitleTracks(enabled)
