@@ -819,6 +819,8 @@
     <VideoPlayer
       :visible="showVideoDialog"
       :source="currentVideoUrl"
+      :source-expire-at="currentVideoExpireAt"
+      :refresh-source="currentVideoRefreshSource"
       :title="currentResourceTitle"
       :allow-download="playerAllowDownload"
       @close="closeVideoDialog"
@@ -848,6 +850,7 @@
       <audio
         v-if="showAudioDialog"
         :src="currentAudioUrl"
+        @error="handleResourceAccessError"
         controls
         autoplay
         style="width:100%;margin:16px 0;display:block;"
@@ -865,6 +868,7 @@
       <img
         v-if="showImageDialog"
         :src="currentImageUrl"
+        @error="handleResourceAccessError"
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
@@ -1004,7 +1008,7 @@
 
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
-import { getResourceTypeIcon } from '@/utils/resource'
+import { getResourceTypeIcon, refreshCourseResource } from '@/utils/resource'
 import { confirmScreenPermissionBeforeEntry } from '@/utils/screenPermission'
 import { getAgreement } from '@/api/modules/teacher'
 import { getClassList, getClassDetail, getClassStudents, getClassCourses, searchStudents, toggleClassTop, setClassAlias, createClass, updateClass, deleteClass, getCourseDetail, resetStudentPassword, removeClassStudent, getAfterQuizTeacherList, getSubjectOptions, getAfterQuizOptions, getTeacherOptions } from '@/api'
@@ -1152,6 +1156,8 @@ export default {
       playerAllowDownload: '2',
       showVideoDialog: false,
       currentVideoUrl: '',
+      currentVideoExpireAt: null,
+      currentVideoRefreshSource: null,
       showAudioDialog: false,
       currentAudioUrl: '',
       showImageDialog: false,
@@ -1966,13 +1972,23 @@ export default {
         this.activeLoadingKey = null
       }
     },
-    handleResourceClick(item) {
-      const url = item.filePath
+    async handleResourceClick(item) {
+      const nodeType = String(item.nodeType || '')
+      const refreshParams = { courseId: String(this.selectedCourse ? this.selectedCourse.id || '' : '') }
+      if (this.selectedClassId) refreshParams.classId = this.selectedClassId
+      if (nodeType !== '3') {
+        try {
+          item = await refreshCourseResource(item, refreshParams)
+        } catch (_) {
+          this.$message.error('资料访问地址刷新失败，请重新进入课程后重试')
+          return
+        }
+      }
+      const url = item.filePath || (nodeType === '8' ? item.resourceUrl : '')
       if (!url) {
         this.$message.warning('资源地址不存在')
         return
       }
-      const nodeType = String(item.nodeType || '')
       const videoTypes = ['4']
       const historyVideoTypes = ['3']
       const imageTypes = ['5']
@@ -1983,6 +1999,8 @@ export default {
         this.playerAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
         console.log(url,'视频地址')
         this.currentVideoUrl = url
+        this.currentVideoExpireAt = item.urlExpireAt
+        this.currentVideoRefreshSource = () => refreshCourseResource(item, refreshParams)
         this.showVideoDialog = true
       } else if (historyVideoTypes.includes(nodeType)) {
         this.openVideoPlayer(item, false, true)
@@ -1998,7 +2016,12 @@ export default {
         this.openLinkPreview(url)
       } else {
         console.log(item,'信息')
-        this.filePreviewData = { name: item.title || '', path: url }
+        this.filePreviewData = {
+          name: item.title || '',
+          path: url,
+          urlExpireAt: item.urlExpireAt,
+          refreshSource: () => refreshCourseResource(item, refreshParams)
+        }
         this.filePreviewVisible = true
       }
     },
@@ -2013,6 +2036,9 @@ export default {
         return
       }
       window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    handleResourceAccessError() {
+      this.$message.error('文件访问失败，请重试')
     },
     closeVideoDialog() {
       this.showVideoDialog = false
@@ -2037,9 +2063,11 @@ export default {
         const files = Array.isArray(resource.fileList) ? resource.fileList : []
         return files.filter(file => file && typeof file === 'object').map((file, fileIndex) => ({
           id: `${child.id || childIndex}-${fileIndex}`,
+          resourceNodeId: child.id || child.lessonId || '',
           nodeType: String(child.type || ''),
           title: file.fileName || child.name || resource.name || '未命名课件',
           filePath: file.filePath || '',
+          urlExpireAt: file.urlExpireAt != null ? file.urlExpireAt : resource.urlExpireAt,
           size: file.fileSize != null && file.fileSize !== ''
             ? this._formatCoursewareSize(file.fileSize)
             : (resource.size || ''),
@@ -2122,6 +2150,9 @@ export default {
           filePath: res.fileList && res.fileList.length && res.fileList[0].filePath
             ? res.fileList[0].filePath
             : (res.filePath || ''),
+          urlExpireAt: res.fileList && res.fileList.length && res.fileList[0].urlExpireAt != null
+            ? res.fileList[0].urlExpireAt
+            : res.urlExpireAt,
           historyLessonId:node.type=='3'?res.historyLessonId:"",
           taskUuid:node.type=='3'?res.taskUuid:"",
           fileList: res.fileList || [],

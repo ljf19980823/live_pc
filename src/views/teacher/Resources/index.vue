@@ -375,6 +375,8 @@
     <VideoPlayer
       :visible="showVideoDialog"
       :source="currentVideoUrl"
+      :source-expire-at="currentVideoExpireAt"
+      :refresh-source="currentVideoRefreshSource"
       :title="currentVideoTitle"
       @close="showVideoDialog = false; currentVideoUrl = ''"
     />
@@ -390,6 +392,7 @@
       <img
         v-if="showImageDialog"
         :src="currentImageUrl"
+        @error="handleResourceAccessError"
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
@@ -411,6 +414,7 @@ import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import FilePreview from '@/components/FilePreview/index.vue'
 import { getBusinessFileList, uploadBusinessFile, renameBusinessFile, deleteBusinessFile, getTeachingGroupList } from '@/api/modules/teacher'
 import { getUserInfo } from '@/utils/auth'
+import { isResourceUrlExpiring } from '@/utils/resource'
 export default {
   name: 'Resources',
   components: { DialogCustome, VideoPlayer, FilePreview },
@@ -462,6 +466,8 @@ export default {
       showVideoDialog: false,
       currentVideoUrl: '',
       currentVideoTitle: '',
+      currentVideoExpireAt: null,
+      currentVideoRefreshSource: null,
       showImageDialog: false,
       currentImageUrl: '',
       currentImageTitle: '',
@@ -511,19 +517,20 @@ export default {
     },
 
     // ─── 我的资料 ────────────────────────────────────────────────
-    fetchMyFiles() {
+    async fetchMyFiles() {
       this.myLoading = true
       const params = { type: '1' }
       if (this.myParentId) params.parentId = this.myParentId
-      getBusinessFileList(params)
-        .then(res => {
-          this.myFileList = (res.data || []).map(f => ({
-            ...f,
-            showMore: false,
-            deleteActive: false,
-          }))
-        })
-        .finally(() => { this.myLoading = false })
+      try {
+        const res = await getBusinessFileList(params)
+        this.myFileList = (res.data || []).map(f => ({
+          ...f,
+          fileType: String(f.fileType || ''),
+          showMore: false,
+          deleteActive: false,
+        }))
+        return this.myFileList
+      } finally { this.myLoading = false }
     },
     handleMyItemClick(item) {
       if (item.fileType === '1') {
@@ -531,7 +538,7 @@ export default {
         this.myParentId = item.id
         this.fetchMyFiles()
       } else {
-        this.openFile(item)
+        this.openFile(item, false)
       }
     },
     goToMyBreadcrumb(idx) {
@@ -573,20 +580,21 @@ export default {
     },
 
     // ─── 教研组文件 ──────────────────────────────────────────────
-    fetchGroupFiles() {
+    async fetchGroupFiles() {
       if (!this.selectedGroup) return
       this.groupFileLoading = true
       const params = { type: '2', userGroupId: this.selectedGroup }
       if (this.groupFileParentId) params.parentId = this.groupFileParentId
-      getBusinessFileList(params)
-        .then(res => {
-          this.groupFileList = (res.data || []).map(f => ({
-            ...f,
-            showMore: false,
-            deleteActive: false,
-          }))
-        })
-        .finally(() => { this.groupFileLoading = false })
+      try {
+        const res = await getBusinessFileList(params)
+        this.groupFileList = (res.data || []).map(f => ({
+          ...f,
+          fileType: String(f.fileType || ''),
+          showMore: false,
+          deleteActive: false,
+        }))
+        return this.groupFileList
+      } finally { this.groupFileLoading = false }
     },
     handleGroupItemClick(item) {
       if (item.fileType === '1') {
@@ -594,7 +602,7 @@ export default {
         this.groupFileParentId = item.id
         this.fetchGroupFiles()
       } else {
-        this.openFile(item)
+        this.openFile(item, true)
       }
     },
     goToGroupBreadcrumb(idx) {
@@ -605,9 +613,38 @@ export default {
     },
 
     // ─── 文件打开/预览 ───────────────────────────────────────────
-    openFile(item) {
+    async resolveBusinessFile(item, isGroup = this.activeTab === 'group', groupId = this.selectedGroup, directoryId = isGroup ? this.groupFileParentId : this.myParentId) {
+      if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+      const params = isGroup
+        ? { type: '2', userGroupId: groupId }
+        : { type: '1' }
+      if (directoryId) params.parentId = directoryId
+      const res = await getBusinessFileList(params)
+      const fresh = (res.data || []).find(file => String(file.id) === String(item.id))
+      if (!fresh || !(fresh.fileUrl || fresh.url || fresh.path)) {
+        throw new Error('资料访问地址刷新失败')
+      }
+      const rows = isGroup ? this.groupFileList : this.myFileList
+      const refreshedRows = rows.map(file => String(file.id) === String(item.id) ? { ...file, ...fresh, fileType: String(fresh.fileType || file.fileType || '') } : file)
+      if (isGroup) this.groupFileList = refreshedRows
+      else this.myFileList = refreshedRows
+      return { ...item, ...fresh, fileType: String(fresh.fileType || item.fileType || '') }
+    },
+    async openFile(item, isGroup = this.activeTab === 'group') {
+      const groupId = this.selectedGroup
+      const directoryId = isGroup ? this.groupFileParentId : this.myParentId
+      try {
+        item = await this.resolveBusinessFile(item, isGroup, groupId, directoryId)
+      } catch (_) {
+        this.$message.error('文件访问地址刷新失败，请刷新列表后重试')
+        return
+      }
       const url = item.url || item.fileUrl || item.path || ''
       const { fileType, name } = item
+      if (!url) {
+        this.$message.warning('文件地址不存在')
+        return
+      }
       // 图片
       if (fileType === '2') {
         this.currentImageTitle = name || '图片预览'
@@ -619,12 +656,19 @@ export default {
       if (fileType === '4') {
         this.currentVideoTitle = name || '视频播放'
         this.currentVideoUrl = url
+        this.currentVideoExpireAt = item.urlExpireAt
+        this.currentVideoRefreshSource = () => this.resolveBusinessFile(item, isGroup, groupId, directoryId)
         this.showVideoDialog = true
         return
       }
       // 文档类（doc/ppt/pdf）→ ONLYOFFICE 预览
       if (['3', '5', '6'].includes(fileType)) {
-        this.filePreviewData = { name: name || '', path: url }
+        this.filePreviewData = {
+          name: name || '',
+          path: url,
+          urlExpireAt: item.urlExpireAt,
+          refreshSource: () => this.resolveBusinessFile(item, isGroup, groupId, directoryId)
+        }
         this.filePreviewVisible = true
         return
       }
@@ -732,14 +776,14 @@ export default {
     },
     confirmDelete() {
       if (!this.deleteTarget || this.deleteLoading) return
+      const isGroup = this.activeTab === 'group'
       this.deleteLoading = true
       deleteBusinessFile(this.deleteTarget.id)
         .then(() => {
           this.$message.success('删除成功')
-          const id = this.deleteTarget.id
-          this.myFileList = this.myFileList.filter(f => f.id !== id)
-          this.groupFileList = this.groupFileList.filter(f => f.id !== id)
           this.closeDeleteDialog()
+          // 文件夹删除会递归移除子项，重新查当前目录以同步后端结果。
+          return isGroup ? this.fetchGroupFiles() : this.fetchMyFiles()
         })
         .finally(() => { this.deleteLoading = false })
     },
@@ -845,12 +889,25 @@ export default {
     },
 
     // ─── 下载文件 ────────────────────────────────────────────────
+    handleResourceAccessError() {
+      this.$message.error('文件访问失败，请重试')
+    },
     async handleDownloadFile(item) {
+      try {
+        item = await this.resolveBusinessFile(item, this.activeTab === 'group')
+      } catch (_) {
+        this.$message.error('文件访问地址刷新失败，请刷新列表后重试')
+        return
+      }
       const url = item.url || item.fileUrl || item.path || ''
       if (!url) return
       item.showMore = false
       try {
         const res = await fetch(url)
+        if (!res.ok) {
+          this.$message.error('文件访问失败，请重试')
+          return
+        }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')

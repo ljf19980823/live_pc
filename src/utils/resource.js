@@ -1,3 +1,6 @@
+import { getCourseDetail } from '@/api/modules/teacher'
+import { getRecentViewList } from '@/api/modules/student'
+
 const resourceIcons = {
   doc: require('@/assets/images/icon/Doc.png'),
   docx: require('@/assets/images/icon/Doc.png'),
@@ -22,6 +25,73 @@ const resourceIcons = {
   bmp: require('@/assets/images/icon/img.png')
 }
 const otherIcon = require('@/assets/images/icon/other.png')
+
+export function isResourceUrlExpiring(urlExpireAt, thresholdMs = 30000, now = Date.now()) {
+  if (urlExpireAt === undefined || urlExpireAt === null || urlExpireAt === '') return false
+  const expiresAt = Number(urlExpireAt)
+  return Number.isFinite(expiresAt) && expiresAt - now < thresholdMs
+}
+
+function responseData(response) {
+  if (!response || typeof response !== 'object') return response
+  return response.data !== undefined ? response.data : response
+}
+
+function findCourseResource(nodes, itemId) {
+  if (!Array.isArray(nodes)) return null
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object') continue
+    const nodeId = node.id || node.lessonId
+    if (String(nodeId || '') === String(itemId || '') && (node.resource || node.historyLesson)) return node.resource || node.historyLesson
+    const child = findCourseResource(node.children, itemId)
+    if (child) return child
+  }
+  return null
+}
+
+function pickResourceFile(files, item) {
+  if (!Array.isArray(files) || !files.length) return null
+  const currentFile = Array.isArray(item && item.fileList) ? item.fileList[0] : null
+  const name = currentFile && (currentFile.fileName || currentFile.name)
+  return (name && files.find(file => file && (file.fileName || file.name) === name)) || files[0]
+}
+
+function mergeResourceUrl(item, resource) {
+  const files = Array.isArray(resource && resource.fileList) ? resource.fileList : []
+  const file = pickResourceFile(files, item)
+  const filePath = (file && file.filePath) || (resource && (resource.filePath || resource.fileUrl)) || ''
+  if (!filePath) throw new Error('资料地址刷新失败，请重新进入页面')
+  return {
+    ...item,
+    filePath,
+    urlExpireAt: file && file.urlExpireAt != null ? file.urlExpireAt : (resource && resource.urlExpireAt),
+    fileList: files.length ? files : (item.fileList || [])
+  }
+}
+
+/** Refresh a course resource from the same course detail endpoint that supplied it. */
+export async function refreshCourseResource(item, params) {
+  if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+  const response = await getCourseDetail(params || {})
+  const data = responseData(response) || {}
+  const resource = findCourseResource(data.detailTree, item.resourceNodeId || item.id)
+  if (!resource) throw new Error('资料已不在当前课程中，请重新进入页面')
+  return mergeResourceUrl(item, resource)
+}
+
+/** Refresh a recent-view resource through the existing recent-view query. */
+export async function refreshRecentResource(item, params = {}) {
+  if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+  const response = await getRecentViewList(params)
+  const rows = responseData(response)
+  const row = (Array.isArray(rows) ? rows : []).find(current =>
+    String(current && (current.lessonId || current.id) || '') === String(item.id || '') &&
+    (item.nodeType == null || String(current && current.type || '') === String(item.nodeType)) &&
+    (!item.courseId || !current.courseId || String(current.courseId) === String(item.courseId))
+  )
+  if (!row) throw new Error('资料已不在最近观看中，请刷新页面后重试')
+  return mergeResourceUrl(item, row)
+}
 
 export function getFileExtension(source) {
   const clean = String(source || '').split(/[?#]/)[0]

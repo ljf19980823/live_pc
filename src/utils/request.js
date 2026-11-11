@@ -72,9 +72,14 @@ service.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`
     }
 
-    // 文件上传时自动切换 Content-Type
+    // FormData 的 boundary 必须由浏览器生成，不要手动覆盖 multipart Content-Type。
     if (config.data instanceof FormData) {
-      config.headers['Content-Type'] = 'multipart/form-data'
+      if (typeof config.headers.setContentType === 'function') {
+        config.headers.setContentType(false)
+      } else {
+        delete config.headers['Content-Type']
+        delete config.headers['content-type']
+      }
     }
 
     return config
@@ -309,7 +314,6 @@ export function del(url, params = {}, config = {}) {
  */
 export function upload(url, formData, onProgress) {
   return service.post(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: e => {
       if (onProgress && e.total) {
         onProgress(Math.round((e.loaded * 100) / e.total))

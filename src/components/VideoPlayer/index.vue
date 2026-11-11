@@ -73,6 +73,7 @@ import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
+import { isResourceUrlExpiring } from '@/utils/resource'
 import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
@@ -107,6 +108,18 @@ export default {
     source: {
       type: String,
       default: ''
+    },
+
+    /** OSS signed URL expiry in Unix milliseconds. */
+    sourceExpireAt: {
+      type: [String, Number],
+      default: null
+    },
+
+    /** Re-fetch the owning business record and return its refreshed URL fields. */
+    refreshSource: {
+      type: Function,
+      default: null
     },
 
     /**
@@ -181,6 +194,12 @@ export default {
       playerInstance: null,
       /** 播放器挂载的 DOM 容器 id，每个组件实例唯一 */
       playerId: `aliplayer-${++playerIdCounter}`,
+      runtimeSource: this.source,
+      runtimeExpireAt: this.sourceExpireAt,
+      sourceRefreshAttempted: false,
+      mediaErrorReported: false,
+      initGeneration: 0,
+      sourceRefreshPromise: null,
       /** 是否已收藏 */
       isCollected: false,
       /** 收藏请求进行中 */
@@ -202,6 +221,7 @@ export default {
           this.initPlayer()
         })
       } else {
+        this.initGeneration++
         this.setScreenGuard(false)
         this.destroyPlayer()
       }
@@ -209,11 +229,18 @@ export default {
 
     /** source 变更时（弹窗已打开状态）重新初始化播放器 */
     source(val) {
+      this.runtimeSource = val
+      this.runtimeExpireAt = this.sourceExpireAt
+      this.sourceRefreshAttempted = false
       if (this.visible && val) {
         this.$nextTick(() => {
           this.initPlayer()
         })
       }
+    },
+
+    sourceExpireAt(val) {
+      this.runtimeExpireAt = val
     }
   },
   methods: {
@@ -229,20 +256,35 @@ export default {
      * 2. 销毁已有实例，防止重复创建
      * 3. 创建新的 Aliplayer 实例并绑定到容器
      */
-    async initPlayer() {
+    async initPlayer(restoreState = null) {
+      const generation = ++this.initGeneration
       this.initError = false
+      this.mediaErrorReported = false
 
-      if (!this.source) {
+      if (!this.runtimeSource) {
         this.initError = true
         return
       }
 
       this.destroyPlayer()
 
+      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt)) {
+        try {
+          await this.refreshCurrentSource()
+        } catch (e) {
+          if (generation === this.initGeneration) {
+            this.initError = true
+            this.$message.error('视频访问地址刷新失败，请重新打开')
+          }
+          return
+        }
+        if (generation !== this.initGeneration) return
+      }
+
       try {
         const config = {
           id: this.playerId,
-          source: this.source,
+          source: this.runtimeSource,
           width: '100%',
           height: '100%',
           autoplay: true,
@@ -258,6 +300,7 @@ export default {
         }
 
         this.playerInstance = new Aliplayer(config, player => {
+          if (generation !== this.initGeneration) return
           this._playerControls = attachAliplayerControls(player, {
             container: document.getElementById(this.playerId),
             isActive: () => this.visible && !this.initError,
@@ -268,11 +311,16 @@ export default {
             container: document.getElementById(this.playerId),
             onDanmuChange: enabled => this.$emit('danmu-change', enabled)
           })
+          this.restorePlayerState(restoreState, player)
         })
-        this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.source)
+        if (this.playerInstance && typeof this.playerInstance.on === 'function') {
+          this.playerInstance.on('error', error => this.handleSourceError(error))
+          this.playerInstance.on('play', () => this.handleSourceResume())
+        }
+        this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.runtimeSource)
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
-        this.initError = true
+        if (generation === this.initGeneration) this.initError = true
       }
     },
 
@@ -305,12 +353,93 @@ export default {
       if (el) el.innerHTML = ''
     },
 
+    async refreshCurrentSource() {
+      if (!this.refreshSource) throw new Error('当前资料不支持刷新访问地址')
+      if (this.sourceRefreshPromise) return this.sourceRefreshPromise
+      const request = Promise.resolve().then(() => this.refreshSource()).then(result => {
+        const next = typeof result === 'string' ? { url: result } : (result || {})
+        const url = next.filePath || next.fileUrl || next.path || next.url
+        if (!url) throw new Error('资料访问地址刷新失败')
+        const changed = url !== this.runtimeSource || String(next.urlExpireAt || '') !== String(this.runtimeExpireAt || '')
+        this.runtimeSource = url
+        if (next.urlExpireAt !== undefined) this.runtimeExpireAt = next.urlExpireAt
+        if (changed) this.sourceRefreshAttempted = false
+        return next
+      }).finally(() => {
+        if (this.sourceRefreshPromise === request) this.sourceRefreshPromise = null
+      })
+      this.sourceRefreshPromise = request
+      return request
+    },
+
+    capturePlayerState() {
+      if (!this.playerInstance) return null
+      let currentTime = 0
+      let paused = true
+      try { currentTime = Number(this.playerInstance.getCurrentTime()) || 0 } catch (e) {}
+      try { paused = this.playerInstance.getStatus() !== 'playing' } catch (e) {}
+      return { currentTime, paused }
+    },
+
+    restorePlayerState(state, player = this.playerInstance) {
+      if (!state || !player) return
+      try { if (state.currentTime > 0) player.seek(state.currentTime) } catch (e) {}
+      if (state.paused) {
+        try { player.pause() } catch (e) {}
+      } else {
+        try { player.play() } catch (e) {}
+      }
+    },
+
+    async handleSourceResume() {
+      if (!this.visible || !this.refreshSource || !isResourceUrlExpiring(this.runtimeExpireAt) || this.sourceRefreshAttempted) return
+      await this.recoverExpiredSource()
+    },
+
+    async handleSourceError() {
+      if (!this.visible) return
+      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 60000) && !this.sourceRefreshAttempted) {
+        await this.recoverExpiredSource()
+        return
+      }
+      if (this.mediaErrorReported) return
+      this.mediaErrorReported = true
+      this.initError = true
+      this.$message.error('视频访问失败，请重试')
+    },
+
+    async recoverExpiredSource() {
+      if (this.sourceRefreshPromise || this.sourceRefreshAttempted) return
+      this.sourceRefreshAttempted = true
+      const state = this.capturePlayerState()
+      try { if (this.playerInstance) this.playerInstance.pause() } catch (e) {}
+      try {
+        await this.refreshCurrentSource()
+        if (!this.visible) return
+        await this.$nextTick()
+        await this.initPlayer(state)
+      } catch (e) {
+        this.initError = true
+        this.$message.error('刷新资料访问地址失败，请重新打开')
+      }
+    },
+
     /** 下载当前视频 */
     async handleDownload() {
-      const url = this.source
+      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt)) {
+        try { await this.refreshCurrentSource() } catch (e) {
+          this.$message.error('刷新资料访问地址失败，请重试')
+          return
+        }
+      }
+      const url = this.runtimeSource
       if (!url) return
       try {
         const res = await fetch(url)
+        if (!res.ok) {
+          this.$message.error('视频访问失败，请重试')
+          return
+        }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -369,6 +498,7 @@ export default {
 
   /** 组件销毁前主动释放播放器资源 */
   beforeDestroy() {
+    this.initGeneration++
     this.setScreenGuard(false)
     this.destroyPlayer()
   }

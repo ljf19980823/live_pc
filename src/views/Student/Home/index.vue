@@ -125,6 +125,8 @@
     <VideoPlayer
       :visible="showVideoDialog"
       :source="currentVideoUrl"
+      :source-expire-at="currentVideoExpireAt"
+      :refresh-source="currentVideoRefreshSource"
       :title="currentResourceTitle"
       :allow-multiple="currentAllowMultiple"
       :allow-fast-forward="currentAllowFastForward"
@@ -162,6 +164,7 @@
       <audio
         v-if="showAudioDialog"
         :src="currentAudioUrl"
+        @error="handleResourceAccessError"
         controls
         autoplay
         style="width:100%;margin:16px 0;display:block;"
@@ -207,6 +210,7 @@
       <img
         v-if="showImageDialog"
         :src="currentImageUrl"
+        @error="handleResourceAccessError"
         style="width:100%;max-height:600px;object-fit:contain;display:block;"
         alt=""
       />
@@ -234,6 +238,7 @@ import { formatDate } from '@/utils'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { checkTempStudentLiveRecord, getRecentViewList, addBusinessView } from '@/api/modules/student'
 import FilePreview from '@/components/FilePreview/index.vue'
+import { refreshRecentResource } from '@/utils/resource'
 
 export default {
   components: { FilePreview },
@@ -261,7 +266,10 @@ export default {
       playerHistoryLessonId: '',
       showVideoDialog: false,
       currentVideoUrl: '',
+      currentVideoExpireAt: null,
+      currentVideoRefreshSource: null,
       currentPlayingItem: null,
+      currentResourceItem: null,
       currentPlaybackFiles: [],
       currentPlaybackContext: null,
       showAudioDialog: false,
@@ -453,7 +461,7 @@ export default {
       const type = String(item.type || '')
       const replay = getReplayInfo(item)
       const fileList = replay.fileList
-      const filePath = item.filePath || (fileList.length ? fileList[0].filePath || '' : '')
+      const filePath = (fileList.length ? fileList[0].filePath || '' : '') || item.filePath || ''
       const status = item.status || item.liveStatus || ''
       const isFinish = item.isFinish != null
         ? item.isFinish
@@ -466,6 +474,8 @@ export default {
         name: replay.name,
         nodeType: type,
         filePath,
+        resourceUrl: item.resourceUrl || '',
+        urlExpireAt: (fileList.length && fileList[0].urlExpireAt != null) ? fileList[0].urlExpireAt : item.urlExpireAt,
         fileList,
         progress: Math.round(parseFloat(item.percent)) || 0,
         allowMultiple: item.allowMultiple != null ? String(item.allowMultiple) : '2',
@@ -500,13 +510,22 @@ export default {
       await this.handleResourceClick(mapped)
     },
     async handleResourceClick (item) {
-      const url = item.filePath
+      const nodeType = String(item.nodeType || '')
+      if (nodeType !== '3') {
+        try {
+          item = await refreshRecentResource(item)
+        } catch (_) {
+          this.$message.error('资料访问地址刷新失败，请刷新最近观看后重试')
+          return
+        }
+      }
+      const url = item.filePath || (['1', '8'].includes(nodeType) ? item.resourceUrl : '')
       // 历史课堂(3)走 fileList 双路回放，其余类型依赖 filePath
-      if (String(item.nodeType) !== '3' && !url) {
+      if (nodeType !== '3' && !url) {
         this.$message.warning('资源地址不存在')
         return
       }
-      if (String(item.nodeType) === '3' && !(item.fileList && item.fileList.length)) {
+      if (nodeType === '3' && !(item.fileList && item.fileList.length)) {
         this.$message.warning('资源地址不存在')
         return
       }
@@ -542,6 +561,7 @@ export default {
         historyLessonId: String(item.historyLessonId || ''),
       }
       const initCollected = collectBase.collectCount == 1
+      this.currentResourceItem = item
 
       if (videoTypes.includes(item.nodeType)) {
         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
@@ -549,6 +569,8 @@ export default {
         this.currentAllowMultiple = item.allowMultiple != null ? String(item.allowMultiple) : '2'
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
         this.currentVideoUrl = url
+        this.currentVideoExpireAt = item.urlExpireAt
+        this.currentVideoRefreshSource = () => refreshRecentResource(item)
         this.currentPlayingItem = item
         this.fromLearningTask = true
         this.currentCollectParams = collectBase
@@ -576,7 +598,12 @@ export default {
         await this.openLinkPreview(url)
       } else {
         this.currentAllowDownload = item.allowDownload != null ? String(item.allowDownload) : '2'
-        this.filePreviewData = { name: item.title || '', path: url }
+        this.filePreviewData = {
+          name: item.title || '',
+          path: url,
+          urlExpireAt: item.urlExpireAt,
+          refreshSource: () => refreshRecentResource(item)
+        }
         this.fromLearningTask = true
         this.currentCollectParams = collectBase
         this.isCollected = initCollected
@@ -594,6 +621,9 @@ export default {
         return
       }
       window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    handleResourceAccessError () {
+      this.$message.error('文件访问失败，请重试')
     },
     async openVideoPlayer (item, updateRecent = false) {
       if (updateRecent) {
@@ -692,11 +722,21 @@ export default {
       this.isCollected = false
     },
     async handleAudioDownload () {
+      if (this.currentResourceItem) {
+        try {
+          this.currentResourceItem = await refreshRecentResource(this.currentResourceItem)
+          this.currentAudioUrl = this.currentResourceItem.filePath || this.currentAudioUrl
+        } catch (_) {
+          this.$message.error('音频访问地址刷新失败，请重试')
+          return
+        }
+      }
       const url = this.currentAudioUrl
       if (!url) return
       const filename = this.currentResourceTitle || url.split('/').pop() || '音频'
       try {
         const res = await fetch(url)
+        if (!res.ok) { this.$message.error('音频访问失败，请重试'); return }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -740,11 +780,21 @@ export default {
       }
     },
     async handleImageDownload () {
+      if (this.currentResourceItem) {
+        try {
+          this.currentResourceItem = await refreshRecentResource(this.currentResourceItem)
+          this.currentImageUrl = this.currentResourceItem.filePath || this.currentImageUrl
+        } catch (_) {
+          this.$message.error('图片访问地址刷新失败，请重试')
+          return
+        }
+      }
       const url = this.currentImageUrl
       if (!url) return
       const filename = this.currentResourceTitle || url.split('/').pop() || '图片'
       try {
         const res = await fetch(url)
+        if (!res.ok) { this.$message.error('图片访问失败，请重试'); return }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')

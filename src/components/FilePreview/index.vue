@@ -77,6 +77,7 @@
 import { getUserInfo } from '@/utils/auth'
 import { collectToggle } from '@/api'
 import { getFilePreviewUrl } from '@/api/filePreview'
+import { isResourceUrlExpiring } from '@/utils/resource'
 
 export default {
   name: 'FilePreview',
@@ -101,6 +102,12 @@ export default {
      */
     file: {
       type: Object,
+      default: null
+    },
+
+    /** Re-fetch the owning business record when the signed file URL is near expiry. */
+    refreshSource: {
+      type: Function,
       default: null
     },
 
@@ -192,10 +199,23 @@ export default {
       const controller = new AbortController()
       this.previewController = controller
       this.loading = true
+      let signedUrlRefreshNeeded = false
       try {
+        let file = this.file
+        const refreshSource = this.refreshSource || file.refreshSource
+        signedUrlRefreshNeeded = Boolean(refreshSource && isResourceUrlExpiring(file.urlExpireAt))
+        if (signedUrlRefreshNeeded) {
+          const refreshed = await refreshSource()
+          if (requestId !== this.previewRequestId || !this.visible) return
+          file = {
+            ...file,
+            ...refreshed,
+            path: refreshed.filePath || refreshed.fileUrl || refreshed.path || file.path
+          }
+        }
         const previewUrl = await getFilePreviewUrl({
-          downloadUrl: this.file.path,
-          fileName: this.file.name || '立升教育'
+          downloadUrl: file.path,
+          fileName: file.name || '立升教育'
         }, { signal: controller.signal })
         if (requestId !== this.previewRequestId || !this.visible) return
         this.previewUrl = previewUrl
@@ -203,9 +223,11 @@ export default {
         if (requestId !== this.previewRequestId || !this.visible) return
         this.loading = false
         this.loadError = true
-        this.loadErrorMessage = error.isAxiosError
-          ? '文件预览服务暂不可用，请稍后重试'
-          : error.message || '文件预览失败，请稍后重试'
+        this.loadErrorMessage = signedUrlRefreshNeeded
+          ? '文件访问失败，请稍后重试'
+          : (error.isAxiosError
+            ? '文件预览服务暂不可用，请稍后重试'
+            : error.message || '文件预览失败，请稍后重试')
       } finally {
         if (requestId === this.previewRequestId) this.previewController = null
       }

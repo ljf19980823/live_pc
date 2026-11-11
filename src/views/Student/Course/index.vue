@@ -350,6 +350,8 @@
   <VideoPlayer
     :visible="showVideoDialog"
     :source="currentVideoUrl"
+    :source-expire-at="currentVideoExpireAt"
+    :refresh-source="currentVideoRefreshSource"
     :title="currentResourceTitle"
     :allow-multiple="currentAllowMultiple"
     :allow-fast-forward="currentAllowFastForward"
@@ -397,7 +399,7 @@
     :append-to-body="true"
     @close="closeAudioDialog"
   >
-    <audio v-if="showAudioDialog" :src="currentAudioUrl" controls autoplay style="width:100%;margin:16px 0;display:block;"></audio>
+    <audio v-if="showAudioDialog" :src="currentAudioUrl" controls autoplay style="width:100%;margin:16px 0;display:block;" @error="handleResourceAccessError"></audio>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
       <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleAudioDownload">下载音频</el-button>
     </div>
@@ -411,7 +413,7 @@
     :append-to-body="true"
     @close="closeImageDialog"
   >
-    <img v-if="showImageDialog" :src="currentImageUrl" style="width:100%;max-height:600px;object-fit:contain;display:block;" alt="" />
+    <img v-if="showImageDialog" :src="currentImageUrl" style="width:100%;max-height:600px;object-fit:contain;display:block;" alt="" @error="handleResourceAccessError" />
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
       <el-button v-if="currentAllowDownload === '1'" type="primary" size="small" @click="handleImageDownload">下载图片</el-button>
     </div>
@@ -422,7 +424,7 @@
 
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
-import { getResourceTypeIcon } from '@/utils/resource'
+import { getResourceTypeIcon, refreshCourseResource } from '@/utils/resource'
 import { getAgreement } from '@/api/modules/teacher'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
 import { getAllCourseList, getRecentCourseList } from '@/api/modules/student'
@@ -464,6 +466,9 @@ export default {
       // 视频播放
       showVideoDialog: false,
       currentVideoUrl: '',
+      currentVideoExpireAt: null,
+      currentVideoRefreshSource: null,
+      currentResourceItem: null,
       currentResourceTitle: '',
       currentAllowMultiple: '1',
       currentAllowFastForward: '1',
@@ -626,6 +631,7 @@ export default {
           nodeType: String(child.type || ''),
           title: file.fileName || child.name || resource.name || '未命名课件',
           filePath: file.filePath || '',
+          urlExpireAt: file.urlExpireAt != null ? file.urlExpireAt : resource.urlExpireAt,
           size: file.fileSize != null && file.fileSize !== ''
             ? this._formatCoursewareSize(file.fileSize)
             : (resource.size || ''),
@@ -715,7 +721,11 @@ export default {
           date: '',
           isRecent: res.isRecentStudy === '1',
           progress: Math.round(parseFloat(node.percent)) || 0,
+          resourceUrl: res.resourceUrl || res.url || '',
           filePath: res.fileList && res.fileList.length ? res.fileList[0].filePath : (res.filePath || ''),
+          urlExpireAt: res.fileList && res.fileList.length && res.fileList[0].urlExpireAt != null
+            ? res.fileList[0].urlExpireAt
+            : res.urlExpireAt,
           allowMultiple:  String(node.allowMultiple || '1'),
           allowFastForward:String(node.allowFastForward || '1'),
           allowDownload: String(node.allowDownload || '2'),
@@ -825,14 +835,22 @@ export default {
 
     // ─── 资源点击 ──────────────────────────────────────────────
     async handleResourceClick(item) {
-      const url = item.filePath
+      const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+      const nodeType = String(item.nodeType || '')
+      if (nodeType !== '3') {
+        try {
+          item = await refreshCourseResource(item, { courseId })
+        } catch (_) {
+          this.$message.error('资料访问地址刷新失败，请重新进入课程后重试')
+          return
+        }
+      }
+      const url = item.filePath || (nodeType === '8' ? item.resourceUrl : '')
       if (!url) {
         this.$message.warning('资源地址不存在')
         return
       }
-      const courseId = this.selectedCourse ? String(this.selectedCourse.id || '') : ''
       const lessonId = String(item.id || '')
-      const nodeType = String(item.nodeType || '')
       const videoTypes = ['4']
       const historyVideoTypes = ['3']
       const imageTypes = ['5']
@@ -865,6 +883,7 @@ export default {
       this.fromLearningTask = true
       this.currentCollectParams = collectBase
       this.isCollected = initCollected
+      this.currentResourceItem = item
 
       if (videoTypes.includes(nodeType)) {
            // taskUuid 有值 → 跳转 AI听记页面
@@ -889,6 +908,8 @@ export default {
         // }
         this.currentResourceTitle = item.title || '视频播放'
         this.currentVideoUrl = url
+        this.currentVideoExpireAt = item.urlExpireAt
+        this.currentVideoRefreshSource = () => refreshCourseResource(item, { courseId })
         this.currentPlayingItem = item
         this.showVideoDialog = true
       }else if (historyVideoTypes.includes(nodeType)) {
@@ -904,7 +925,12 @@ export default {
       } else if (linkTypes.includes(nodeType)) {
         this.openLinkPreview(url)
       } else {
-        this.filePreviewData = { name: item.title || '', path: url }
+        this.filePreviewData = {
+          name: item.title || '',
+          path: url,
+          urlExpireAt: item.urlExpireAt,
+          refreshSource: () => refreshCourseResource(item, { courseId })
+        }
         this.filePreviewVisible = true
       }
     },
@@ -919,6 +945,9 @@ export default {
         return
       }
       window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    handleResourceAccessError() {
+      this.$message.error('文件访问失败，请重试')
     },
 
     // ─── 历史视频回放 ──────────────────────────────────────────
@@ -1018,11 +1047,23 @@ export default {
     },
 
     async handleAudioDownload() {
+      if (this.currentResourceItem) {
+        try {
+          this.currentResourceItem = await refreshCourseResource(this.currentResourceItem, {
+            courseId: this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+          })
+          this.currentAudioUrl = this.currentResourceItem.filePath || this.currentAudioUrl
+        } catch (_) {
+          this.$message.error('音频访问地址刷新失败，请重试')
+          return
+        }
+      }
       const url = this.currentAudioUrl
       if (!url) return
       const filename = this.currentResourceTitle || url.split('/').pop() || '音频'
       try {
         const res = await fetch(url)
+        if (!res.ok) { this.$message.error('音频访问失败，请重试'); return }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -1045,11 +1086,23 @@ export default {
     },
 
     async handleImageDownload() {
+      if (this.currentResourceItem) {
+        try {
+          this.currentResourceItem = await refreshCourseResource(this.currentResourceItem, {
+            courseId: this.selectedCourse ? String(this.selectedCourse.id || '') : ''
+          })
+          this.currentImageUrl = this.currentResourceItem.filePath || this.currentImageUrl
+        } catch (_) {
+          this.$message.error('图片访问地址刷新失败，请重试')
+          return
+        }
+      }
       const url = this.currentImageUrl
       if (!url) return
       const filename = this.currentResourceTitle || url.split('/').pop() || '图片'
       try {
         const res = await fetch(url)
+        if (!res.ok) { this.$message.error('图片访问失败，请重试'); return }
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')

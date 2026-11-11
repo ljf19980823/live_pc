@@ -131,6 +131,7 @@
       class="courseware-preview-overlay"
       :visible="previewKind === 'document'"
       :file="previewFile"
+      :refresh-source="previewFile ? previewFile.refreshSource : null"
       :preview-only="!isTeacher"
       @close="closePreview"
     />
@@ -138,6 +139,8 @@
       class="courseware-preview-overlay"
       :visible="previewKind === 'video'"
       :source="previewFile ? previewFile.path : ''"
+      :source-expire-at="previewFile ? previewFile.urlExpireAt : null"
+      :refresh-source="previewFile ? previewFile.refreshSource : null"
       :title="previewFile ? previewFile.name : ''"
       :allow-download="isTeacher ? '1' : '2'"
       @close="closeVideoPreview"
@@ -151,8 +154,8 @@
       @close="closePreview"
     >
       <div @contextmenu="preventReadOnlyContextMenu">
-        <img v-if="previewKind === 'image' && previewFile" :src="previewFile.path" class="courseware-preview-image" alt="课件图片" />
-        <audio v-if="previewKind === 'audio' && previewFile" :src="previewFile.path" controls autoplay :controlslist="isTeacher ? null : 'nodownload'" class="courseware-preview-audio"></audio>
+        <img v-if="previewKind === 'image' && previewFile" :src="previewFile.path" class="courseware-preview-image" alt="课件图片" @error="handleAccessError" />
+        <audio v-if="previewKind === 'audio' && previewFile" :src="previewFile.path" controls autoplay :controlslist="isTeacher ? null : 'nodownload'" class="courseware-preview-audio" @error="handleAccessError"></audio>
       </div>
     </el-dialog>
   </div>
@@ -162,8 +165,8 @@
 import FilePreview from '@/components/FilePreview/index.vue'
 import VideoPlayer from '@/components/VideoPlayer/index.vue'
 import { getUserInfo } from '@/utils/auth'
-import { getFileExtension, getResourceExtension, getResourceTypeIcon, getResourceAssociation, normalizeResourceProgress } from '@/utils/resource'
-import { getSharedResourceList, uploadSharedResource, updateSharedResource, deleteSharedResource } from '@/api/modules/resource'
+import { getFileExtension, getResourceExtension, getResourceTypeIcon, getResourceAssociation, normalizeResourceProgress, isResourceUrlExpiring } from '@/utils/resource'
+import { getSharedResourceList, getSharedResourceDetail, uploadSharedResource, updateSharedResource, deleteSharedResource } from '@/api/modules/resource'
 import { updateCourseProgress } from '@/api/modules/teacher'
 
 // 课件类型转换为进度接口类型：文档/其他→7，视频→4，音频→6，图片→5，链接→8。
@@ -470,7 +473,15 @@ export default {
       return report.pending
     },
     async openResource(item) {
-      const path = item.fileUrl || item.resourceUrl || ''
+      try {
+        item = await this.resolveSharedResource(item)
+      } catch (_) {
+        this.$message.error('课件访问地址刷新失败，请刷新列表后重试')
+        return
+      }
+      const path = String(item.type || '') === '6'
+        ? (item.resourceUrl || item.fileUrl || '')
+        : (item.fileUrl || item.resourceUrl || '')
       if (!path) {
         this.$message.warning('课件地址不存在')
         return
@@ -499,7 +510,13 @@ export default {
         await this.reportResourceProgress(item, 100, version, contextKey)
         return
       }
-      this.previewFile = { name: this.resourceFilename(item), path, extension }
+      this.previewFile = {
+        name: this.resourceFilename(item),
+        path,
+        extension,
+        urlExpireAt: item.urlExpireAt,
+        refreshSource: () => this.resolveSharedResource(item)
+      }
       if (type === '2' || ['mp4', 'mov', 'webm', 'm4v', 'avi', 'mkv'].includes(extension)) this.previewKind = 'video'
       else if (type === '3' || ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(extension)) this.previewKind = 'audio'
       else if (type === '4' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) this.previewKind = 'image'
@@ -518,9 +535,27 @@ export default {
       this.previewFile = null
       this.previewResource = null
     },
+    async resolveSharedResource(item) {
+      if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+      if (!item.id) throw new Error('课件缺少资料 ID，无法刷新访问地址')
+      const version = this.contextVersion
+      const response = await getSharedResourceDetail(item.id)
+      if (!this.isCurrentContext(version)) throw new Error('当前课堂资料已改变，请重新打开')
+      const fresh = response.data || {}
+      if (!(fresh.fileUrl || fresh.resourceUrl)) throw new Error('课件访问地址刷新失败')
+      this.resources = this.resources.map(resource => String(resource.id) === String(item.id) ? { ...resource, ...fresh } : resource)
+      return { ...item, ...fresh }
+    },
     preventReadOnlyContextMenu(event) { if (!this.isTeacher) event.preventDefault() },
+    handleAccessError() { this.$message.error('课件访问失败，请重试') },
     async downloadResource(item) {
       if (!this.canManage(item) || this.downloadingIds.includes(item.id)) return
+      try {
+        item = await this.resolveSharedResource(item)
+      } catch (_) {
+        this.$message.error('课件访问地址刷新失败，请刷新列表后重试')
+        return
+      }
       const url = item.fileUrl || item.resourceUrl || ''
       if (!url) { this.$message.warning('课件地址不存在'); return }
       const version = this.contextVersion
