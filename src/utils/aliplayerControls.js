@@ -73,9 +73,11 @@ export function attachAliplayerControls(player, {
     const video = container.querySelector('video')
     if (!video || event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
     const target = event.target
+    const seekButton = target && target.closest && target.closest('.hrp-seek-btn')
+    const isSeekArrow = seekButton && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
     if (target && (target.isContentEditable || (target.closest && target.closest(
-      'input, textarea, select, button, a, [role="button"], [role="textbox"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
-    )))) return
+      'input, textarea, select, button:not(.hrp-seek-btn), a, [role="button"], [role="textbox"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
+    )) || (seekButton && !isSeekArrow))) return
 
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       if (seekBy(event.key === 'ArrowLeft' ? -SEEK_STEP : SEEK_STEP)) event.preventDefault()

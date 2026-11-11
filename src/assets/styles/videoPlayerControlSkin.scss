@@ -461,7 +461,15 @@
   .vp-controlbar-right { flex: 0 1 auto; gap: 4px; }
   .prism-play-btn { flex-basis: 30px; width: 30px !important; height: 30px !important; border-radius: 6px; background-size: 13px 13px !important; }
   .prism-time-display { flex: 0 1 auto; width: 92px !important; min-width: 0; height: 26px !important; margin: 0 5px 0 7px !important; overflow: hidden; font-size: 10px !important; line-height: 26px !important; }
-  .hrp-seek-controls { display: none !important; }
+  .hrp-seek-controls {
+    display: flex !important;
+    flex: 0 0 auto;
+    gap: 1px !important;
+    height: 30px !important;
+    margin: 0 !important;
+  }
+  .hrp-seek-btn { width: 24px !important; height: 28px !important; padding: 2px !important; }
+  .hrp-seek-btn .hrp-seek-btn__icon { width: 20px !important; height: 20px !important; }
   .vp-control-toggle { gap: 2px; }
   .vp-control-toggle__label { font-size: 9px; }
   .vp-control-speed__label { display: none; }
@@ -485,6 +493,9 @@
   .vp-thumbnail-preview { bottom: 42px !important; }
   .prism-play-btn { flex-basis: 27px; width: 27px !important; height: 27px !important; }
   .prism-time-display { width: 76px !important; margin-right: 3px !important; margin-left: 5px !important; font-size: 9px !important; }
+  .hrp-seek-controls { gap: 0 !important; }
+  .hrp-seek-btn { width: 22px !important; height: 26px !important; }
+  .hrp-seek-btn .hrp-seek-btn__icon { width: 18px !important; height: 18px !important; }
   .vp-controlbar-right { gap: 3px; }
   .vp-control-toggle__label { display: none; }
   .vp-control-speed { min-height: 26px; padding: 0 4px; }
