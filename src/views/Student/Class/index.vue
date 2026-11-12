@@ -676,6 +676,17 @@
             </div>
           </div>
           <EmptyState v-if="!afterQuizLoading && afterQuizList.length === 0" description="暂无课后测数据" />
+          <div class="ls_pagination" v-if="afterQuizTotal > 0">
+            <el-pagination
+              background
+              layout="total, prev, pager, next"
+              :total="afterQuizTotal"
+              :page-count="afterQuizTotalPage"
+              :page-size="afterQuizPageSize"
+              :current-page="afterQuizPageNum"
+              @current-change="handleAfterQuizPageChange"
+            />
+          </div>
         </div>
       </template>
       </template>
@@ -1080,6 +1091,10 @@ export default {
       // 课后测
       afterQuizList: [],
       afterQuizLoading: false,
+      afterQuizPageNum: 1,
+      afterQuizPageSize: 20,
+      afterQuizTotal: 0,
+      afterQuizTotalPage: 0,
       afterQuizFilter: { classIds: [], subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' },
       afterQuizTimeRange: [],
       afterQuizDatePickerOptions: { disabledDate: (time) => time.getTime() > Date.now() },
@@ -1126,6 +1141,7 @@ export default {
     rightTab(val) {
       if (val === 'course') this.fetchCourseList()
       if (val === 'quiz') {
+        this.afterQuizPageNum = 1
         if (!this.afterQuizFilter.classIds.length && this.selectedClassId) {
           this.afterQuizFilter.classIds = [this.selectedClassId]
         }
@@ -1364,16 +1380,23 @@ export default {
       if (this.afterQuizFilter.quizEndTime) params.quizEndTime = this.afterQuizFilter.quizEndTime
       if (this.afterQuizFilter.examConfigId) params.examConfigId = this.afterQuizFilter.examConfigId
       if (this.afterQuizFilter.teacherId) params.quizTeacherId = this.afterQuizFilter.teacherId
+      params.pageNum = this.afterQuizPageNum
+      params.pageSize = this.afterQuizPageSize
       return params
     },
     async fetchAfterQuizList() {
       this.afterQuizLoading = true
       try {
         const res = await getAfterQuizList(this.getAfterQuizPlaybackParams())
-        this.afterQuizList = res.data || []
+        const data = (res && res.data) || {}
+        this.afterQuizList = Array.isArray(data.list) ? data.list : []
+        this.afterQuizTotal = Number(data.total) || 0
+        this.afterQuizTotalPage = Number(data.totalPage) || 0
       } catch (e) {
         console.error(e)
         this.afterQuizList = []
+        this.afterQuizTotal = 0
+        this.afterQuizTotalPage = 0
       } finally {
         this.afterQuizLoading = false
       }
@@ -1394,6 +1417,7 @@ export default {
       }
     },
     handleAfterQuizSearch() {
+      this.afterQuizPageNum = 1
       if (this.afterQuizTimeRange && this.afterQuizTimeRange.length === 2) {
         this.afterQuizFilter.quizStartTime = this.afterQuizTimeRange[0]
         this.afterQuizFilter.quizEndTime = this.afterQuizTimeRange[1]
@@ -1401,6 +1425,10 @@ export default {
         this.afterQuizFilter.quizStartTime = ''
         this.afterQuizFilter.quizEndTime = ''
       }
+      this.fetchAfterQuizList()
+    },
+    handleAfterQuizPageChange(page) {
+      this.afterQuizPageNum = page
       this.fetchAfterQuizList()
     },
     clearAfterQuizTimeRange() {
@@ -1472,6 +1500,7 @@ export default {
       })
     },
     selectClass(index) {
+      this.afterQuizPageNum = 1
       this.selectedClassIndex = index
       this.selectedClassId = this.classList[index]?.classId || null
       this.rightView = 'default'
@@ -3657,6 +3686,12 @@ border-bottom: 1px solid #DBEAFE;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+}
+.quiz-list-wrap .ls_pagination {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  flex-shrink: 0;
 }
 .quiz-grid {
   display: flex;

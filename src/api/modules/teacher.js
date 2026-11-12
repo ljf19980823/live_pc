@@ -195,11 +195,28 @@ export const getAfterQuizRecordList = params => get('/edu/after/quiz/record/list
 // 获取课后测做题记录详情（Path 参数 recordId）
 export const getAfterQuizRecordDetail = recordId => get(`/edu/after/quiz/record/detail/${recordId}`)
 
-// 获取课后测学生做题排行榜（Path 参数 examConfigId, classId）
-export const getAfterQuizLeaderboard = (examConfigId, classId) => get(`/edu/after/quiz/leaderboard/${examConfigId}`)
+// 获取课后测学生做题排行榜（支持按班级或全部班级查询）
+export const getAfterQuizLeaderboard = (examConfigId, classId, params = {}) => get(
+  classId
+    ? `/edu/after/quiz/leaderboard/${examConfigId}/${classId}`
+    : `/edu/after/quiz/leaderboard/${examConfigId}`,
+  params
+)
 
-// 获取课后测未提交学生列表（Path 参数 examConfigId, classId）
-export const getAfterQuizUnSubmitList = (examConfigId, classId) => get(`/edu/after/quiz/student/unSubmit/list/${examConfigId}`)
+// 获取课后测排行榜统计（排名统计由服务端按学生最佳提交计算）
+export const getAfterQuizLeaderboardStatistics = (examConfigId, classId) => get(
+  classId
+    ? `/edu/after/quiz/leaderboard/statistics/${examConfigId}/${classId}`
+    : `/edu/after/quiz/leaderboard/statistics/${examConfigId}`
+)
+
+// 获取课后测未提交学生列表（支持按班级或全部班级查询）
+export const getAfterQuizUnSubmitList = (examConfigId, classId, params = {}) => get(
+  classId
+    ? `/edu/after/quiz/student/unSubmit/list/${examConfigId}/${classId}`
+    : `/edu/after/quiz/student/unSubmit/list/${examConfigId}`,
+  params
+)
 
 // 导出课后测排行榜（Path 参数 examConfigId, classId）
 export const exportAfterQuizLeaderboard = (examConfigId, classId) => download(`/edu/after/quiz/leaderboard/export/${examConfigId}`, {}, '课后测报告.xlsx')

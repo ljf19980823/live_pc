@@ -13,8 +13,20 @@ export const getErrorExercises = (recordId) => get(`/edu/after/quiz/errorExercis
 // 校验临时学生直播观看次数
 export const checkTempStudentLiveRecord = (liveId) => post('/edu/sso/checkEnterLive', null, { params: { liveId } })
 
-// 获取课后测验排行榜
-export const getQuizLeaderboard = (examConfigId, classId) => get(`/edu/after/quiz/leaderboard/${examConfigId}/${classId}`)
+// 获取课后测验排行榜（支持按班级或全部班级查询）
+export const getQuizLeaderboard = (examConfigId, classId, params = {}) => get(
+  classId
+    ? `/edu/after/quiz/leaderboard/${examConfigId}/${classId}`
+    : `/edu/after/quiz/leaderboard/${examConfigId}`,
+  params
+)
+
+// 获取当前登录学生在课后测排行榜范围内的统计和排名
+export const getQuizLeaderboardStatistics = (examConfigId, classId) => get(
+  classId
+    ? `/edu/after/quiz/leaderboard/statistics/${examConfigId}/${classId}`
+    : `/edu/after/quiz/leaderboard/statistics/${examConfigId}`
+)
 
 // 获取全部课程列表
 export const getAllCourseList = (params) => get('/edu/recentView/courses', params)

@@ -14,8 +14,10 @@
 
     <!-- 统计栏 -->
     <div class="ranking-stats">
-      <!-- <span class="ranking-stats-total">总人数: <strong>{{ totalCount }}</strong></span> -->
+      <span class="ranking-stats-total">总人数: <strong>{{ totalCount }}</strong></span>
+      <span class="ranking-stats-total">我的排名: <strong>{{ currentRank === null ? '暂无排名' : currentRank }}</strong></span>
       <span class="ranking-stats-beat">你已超越: <strong class="ranking-stats-percent">{{surpassPercentage}}%</strong> 的同学</span>
+      <span class="ranking-stats-total">提交记录: <strong>{{ recordTotal }}</strong></span>
     </div>
 
     <!-- 加载中 -->
@@ -91,6 +93,18 @@
       </div>
     </div>
 
+    <div class="ranking-pagination" v-if="recordTotal > 0">
+      <el-pagination
+        background
+        layout="total, prev, pager, next"
+        :total="recordTotal"
+        :page-count="totalPage"
+        :page-size="pageSize"
+        :current-page="pageNum"
+        @current-change="handlePageChange"
+      />
+    </div>
+
      <!-- 学生做题详情子组件 -->
     <StudentAnswerDetail
       :visible="studentDetailVisible"
@@ -106,7 +120,7 @@
 
 <script>
 import StudentAnswerDetail from '../../teacher/Class/StudentAnswerDetail.vue'
-import { getQuizLeaderboard } from '@/api/modules/student'
+import { getQuizLeaderboard, getQuizLeaderboardStatistics } from '@/api/modules/student'
 import { getUserInfo } from '@/utils/auth'
 
 const defaultAvatars = [
@@ -134,6 +148,15 @@ function formatSeconds(seconds) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function responsePayload(response) {
+  if (!response || typeof response !== 'object') return {}
+  let payload = response.data !== undefined ? response.data : response
+  if (payload && !Array.isArray(payload) && payload.data && typeof payload.data === 'object' && payload.list === undefined && payload.leaderboardItems === undefined) {
+    payload = payload.data
+  }
+  return payload || {}
+}
+
 export default {
   name: 'RankingPage',
   components: { StudentAnswerDetail },
@@ -159,7 +182,12 @@ export default {
       loading: false,
       totalCount: 0,
       beatPercent: 0,
-      surpassPercentage:0,
+      surpassPercentage: 0,
+      currentRank: null,
+      recordTotal: 0,
+      totalPage: 0,
+      pageNum: 1,
+      pageSize: 20,
       rankList: [],
       studentDetailVisible: false,
       currentStudent: {}
@@ -168,18 +196,23 @@ export default {
   watch: {
     visible(val) {
       if (val && this.examConfigId) {
-        this.fetchLeaderboard()
+        this.loadRankingScope()
       }
     },
     examConfigId(val) {
       if (val && this.visible) {
-        this.fetchLeaderboard()
+        this.loadRankingScope()
+      }
+    },
+    classId(val) {
+      if (this.visible && this.examConfigId) {
+        this.loadRankingScope()
       }
     }
   },
   mounted() {
     if (this.visible && this.examConfigId) {
-      this.fetchLeaderboard()
+      this.loadRankingScope()
     }
   },
   methods: {
@@ -194,49 +227,101 @@ export default {
     handleBack() {
       this.$emit('back')
     },
+    async loadRankingScope() {
+      this.pageNum = 1
+      this.resetScrollPosition()
+      this.currentRank = null
+      this.totalCount = 0
+      this.surpassPercentage = 0
+      this.rankList = []
+      this.recordTotal = 0
+      this.totalPage = 0
+      await Promise.all([this.fetchLeaderboard(), this.fetchStatistics()])
+    },
+    resetScrollPosition() {
+      this.$nextTick(() => {
+        const page = this.$el
+        if (page && typeof page.scrollTo === 'function') {
+          page.scrollTo({ top: 0, behavior: 'auto' })
+        } else if (page) {
+          page.scrollTop = 0
+        }
+
+        let ancestor = page && page.parentElement
+        while (ancestor) {
+          const overflowY = window.getComputedStyle(ancestor).overflowY
+          if (overflowY === 'auto' || overflowY === 'scroll') {
+            ancestor.scrollTop = 0
+          }
+          ancestor = ancestor.parentElement
+        }
+      })
+    },
     async fetchLeaderboard() {
       if (!this.examConfigId) return
       this.loading = true
       try {
-        const res = await getQuizLeaderboard(this.examConfigId, this.classId)
-        const data = res.data || res
-        console.log(res,'测试')
+        const res = await getQuizLeaderboard(this.examConfigId, this.classId, {
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        })
+        const data = responsePayload(res)
         const userInfo = getUserInfo() || {}
         const myStudentId = userInfo.userId || userInfo.id || userInfo.studentId || ''
 
-        this.totalCount = data.totalStudentCount || 0
-        this.surpassPercentage = data.surpassPercentage || 0
-
-        const items = data.leaderboardItems || []
+        const items = Array.isArray(data)
+          ? data
+          : (Array.isArray(data.list)
+              ? data.list
+              : (Array.isArray(data.leaderboardItems)
+                  ? data.leaderboardItems
+                  : (Array.isArray(data.records) ? data.records : [])))
+        const responseTotal = Number(data.total)
+        this.recordTotal = Number.isFinite(responseTotal) && responseTotal >= 0 ? responseTotal : items.length
+        const responseTotalPage = Number(data.totalPage)
+        this.totalPage = Number.isFinite(responseTotalPage) && responseTotalPage >= 0
+          ? responseTotalPage
+          : Math.ceil(this.recordTotal / this.pageSize)
         this.rankList = items.map((item, index) => {
-          const isMine = !!myStudentId && (item.studentId === myStudentId)
+          const isMine = !!myStudentId && String(item.studentId) === String(myStudentId)
           return {
             id: item.recordId || item.examId || index,
-            rank: index + 1,
+            rank: (this.pageNum - 1) * this.pageSize + index + 1,
             name: item.studentName || '未知',
-            score: item.score || 0,
+            score: item.score == null ? 0 : item.score,
             timeStr: formatSeconds(item.examDuration),
             isMine,
             avatar: safeAvatar(item.profilePicture, index),
             recordId: item.recordId || ''
           }
         })
-
-        // 计算"你已超越"百分比：找到自己的排名，超越人数 / 总完成人数
-        const myIndex = this.rankList.findIndex(r => r.isMine)
-        if (myIndex >= 0 && items.length > 1) {
-          const beatenCount = items.length - (myIndex + 1)
-          this.beatPercent = Math.round((beatenCount / (items.length - 1)) * 100)
-        } else if (data.finishedPercentage != null) {
-          this.beatPercent = data.finishedPercentage
-        } else {
-          this.beatPercent = 0
-        }
       } catch (e) {
         console.error('获取排行榜失败', e)
+        this.rankList = []
+        this.recordTotal = 0
+        this.totalPage = 0
       } finally {
         this.loading = false
       }
+    },
+    async fetchStatistics() {
+      if (!this.examConfigId) return
+      try {
+        const res = await getQuizLeaderboardStatistics(this.examConfigId, this.classId)
+        const data = responsePayload(res)
+        this.totalCount = Number(data.totalStudentCount) || 0
+        this.currentRank = data.currentRank == null ? null : Number(data.currentRank)
+        this.surpassPercentage = Number(data.surpassPercentage) || 0
+      } catch (e) {
+        console.error('获取排行榜统计失败', e)
+        this.totalCount = 0
+        this.currentRank = null
+        this.surpassPercentage = 0
+      }
+    },
+    handlePageChange(page) {
+      this.pageNum = page
+      this.fetchLeaderboard()
     }
   }
 }
@@ -244,16 +329,20 @@ export default {
 
 <style scoped>
 .ranking-page {
-  position: absolute;
+  position: fixed;
   top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
+  left: 160px;
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
   background: #F5F7FA;
  z-index: 2000;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Header */
@@ -309,6 +398,9 @@ export default {
   font-weight: 700;
   color: #333;
 }
+.ranking-stats-total {
+  color: #333;
+}
 .ranking-stats-beat {
   color: #333;
 }
@@ -319,9 +411,16 @@ export default {
 
 /* 表格容器 */
 .ranking-table-wrap {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 0 auto;
+  overflow: visible;
   padding: 0 16px 16px;
+}
+.ranking-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px;
+  background: #fff;
+  flex-shrink: 0;
 }
 
 /* 表头 */

@@ -52,9 +52,9 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in leaderboardItems" :key="row.studentId || index">
+            <tr v-for="(row, index) in leaderboardItems" :key="row.recordId || row.studentId || index">
               <td>
-                <span class="act-detail__rank" :class="getRankClass(index + 1)">{{ index + 1 }}</span>
+                <span class="act-detail__rank" :class="getRankClass(getLeaderboardRank(index))">{{ getLeaderboardRank(index) }}</span>
               </td>
               <td class="act-detail__td-student">
                 <!-- <img
@@ -83,6 +83,17 @@
           </tbody>
         </table>
         <div v-else class="act-detail__empty">暂无已做题学生数据</div>
+        <div class="act-detail__pagination" v-if="leaderboardTotal > 0">
+          <el-pagination
+            background
+            layout="total, prev, pager, next"
+            :total="leaderboardTotal"
+            :page-count="leaderboardTotalPage"
+            :page-size="pageSize"
+            :current-page="leaderboardPageNum"
+            @current-change="handleLeaderboardPageChange"
+          />
+        </div>
       </template>
 
       <!-- 未做题列表 -->
@@ -97,7 +108,7 @@
             </thead>
             <tbody>
               <tr v-for="(row, index) in unSubmitList" :key="row.studentId || index">
-                <td>{{ index + 1 }}</td>
+                <td>{{ getUnSubmitRank(index) }}</td>
                 <td class="act-detail__td-student">
                   <img
                     v-if="row.profilePicture"
@@ -112,6 +123,17 @@
             </tbody>
           </table>
           <div v-else-if="!unSubmitLoading" class="act-detail__empty">全部学生已完成做题</div>
+          <div class="act-detail__pagination" v-if="unSubmitTotal > 0">
+            <el-pagination
+              background
+              layout="total, prev, pager, next"
+              :total="unSubmitTotal"
+              :page-count="unSubmitTotalPage"
+              :page-size="pageSize"
+              :current-page="unSubmitPageNum"
+              @current-change="handleUnSubmitPageChange"
+            />
+          </div>
         </div>
       </template>
     </div>
@@ -158,7 +180,7 @@
 <script>
 import StudentAnswerDetail from './StudentAnswerDetail.vue'
 import AfterClassReport from './AfterClassReport.vue'
-import { getAfterQuizLeaderboard, getAfterQuizUnSubmitList, exportAfterQuizLeaderboard } from '@/api'
+import { getAfterQuizLeaderboard, getAfterQuizLeaderboardStatistics, getAfterQuizUnSubmitList, exportAfterQuizLeaderboard } from '@/api'
 
 export default {
   name: 'AfterClassTestDetail',
@@ -188,9 +210,18 @@ export default {
         unFinishedStudentCount: 0,
         totalStudentCount: 0,
         finishedPercentage: 0,
+        surpassPercentage: 0,
+        currentRank: null,
         leaderboardItems: []
       },
       unSubmitList: [],
+      pageSize: 20,
+      leaderboardPageNum: 1,
+      leaderboardTotal: 0,
+      leaderboardTotalPage: 0,
+      unSubmitPageNum: 1,
+      unSubmitTotal: 0,
+      unSubmitTotalPage: 0,
       studentDetailVisible: false,
       currentStudent: {},
       shareDialogVisible: false,
@@ -212,18 +243,24 @@ export default {
     visible(val) {
       if (val) {
         this.filterTab = 'done'
+        this.leaderboardPageNum = 1
+        this.unSubmitPageNum = 1
         this.fetchAll()
       }
     },
     courseInfo(val) {
       if (this.visible && val && val.examConfigId) {
+        this.leaderboardPageNum = 1
+        this.unSubmitPageNum = 1
         this.fetchAll()
       }
     },
     filterTab(val) {
       if (val === 'done') {
+        this.leaderboardPageNum = 1
         this.fetchLeaderboard()
       } else {
+        this.unSubmitPageNum = 1
         this.fetchUnSubmitList()
       }
     }
@@ -235,7 +272,22 @@ export default {
   },
   methods: {
     fetchAll() {
+      this.leaderboardData = {
+        finishedStudentCount: 0,
+        unFinishedStudentCount: 0,
+        totalStudentCount: 0,
+        finishedPercentage: 0,
+        surpassPercentage: 0,
+        currentRank: null,
+        leaderboardItems: []
+      }
+      this.leaderboardTotal = 0
+      this.leaderboardTotalPage = 0
+      this.unSubmitList = []
+      this.unSubmitTotal = 0
+      this.unSubmitTotalPage = 0
       this.fetchLeaderboard()
+      this.fetchStatistics()
       this.fetchUnSubmitList()
     },
     async fetchLeaderboard() {
@@ -244,20 +296,41 @@ export default {
       if (!examConfigId) return
       this.loading = true
       try {
-        const res = await getAfterQuizLeaderboard(examConfigId, classId)
-        if (res && res.data) {
-          this.leaderboardData = {
-            finishedStudentCount: res.data.finishedStudentCount || 0,
-            unFinishedStudentCount: res.data.unFinishedStudentCount || 0,
-            totalStudentCount: res.data.totalStudentCount || 0,
-            finishedPercentage: res.data.finishedPercentage || 0,
-            leaderboardItems: res.data.leaderboardItems || []
-          }
-        }
+        const res = await getAfterQuizLeaderboard(examConfigId, classId, {
+          pageNum: this.leaderboardPageNum,
+          pageSize: this.pageSize
+        })
+        const data = (res && res.data) || {}
+        this.leaderboardData.leaderboardItems = Array.isArray(data.list) ? data.list : []
+        this.leaderboardTotal = Number(data.total) || 0
+        this.leaderboardTotalPage = Number(data.totalPage) || 0
       } catch (e) {
         console.error('获取排行榜失败', e)
+        this.leaderboardData.leaderboardItems = []
+        this.leaderboardTotal = 0
+        this.leaderboardTotalPage = 0
       } finally {
         this.loading = false
+      }
+    },
+    async fetchStatistics() {
+      const examConfigId = this.courseInfo && this.courseInfo.examConfigId
+      const classId = this.courseInfo && this.courseInfo.classId
+      if (!examConfigId) return
+      try {
+        const res = await getAfterQuizLeaderboardStatistics(examConfigId, classId)
+        const data = (res && res.data) || {}
+        this.leaderboardData = {
+          ...this.leaderboardData,
+          finishedStudentCount: Number(data.finishedStudentCount) || 0,
+          unFinishedStudentCount: Number(data.unFinishedStudentCount) || 0,
+          totalStudentCount: Number(data.totalStudentCount) || 0,
+          finishedPercentage: Number(data.finishedPercentage) || 0,
+          surpassPercentage: Number(data.surpassPercentage) || 0,
+          currentRank: data.currentRank == null ? null : Number(data.currentRank)
+        }
+      } catch (e) {
+        console.error('获取排行榜统计失败', e)
       }
     },
     async fetchUnSubmitList() {
@@ -266,14 +339,36 @@ export default {
       if (!examConfigId) return
       this.unSubmitLoading = true
       try {
-        const res = await getAfterQuizUnSubmitList(examConfigId, classId)
-        this.unSubmitList = (res && res.data) ? res.data : []
+        const res = await getAfterQuizUnSubmitList(examConfigId, classId, {
+          pageNum: this.unSubmitPageNum,
+          pageSize: this.pageSize
+        })
+        const data = (res && res.data) || {}
+        this.unSubmitList = Array.isArray(data.list) ? data.list : []
+        this.unSubmitTotal = Number(data.total) || 0
+        this.unSubmitTotalPage = Number(data.totalPage) || 0
       } catch (e) {
         console.error('获取未提交学生列表失败', e)
         this.unSubmitList = []
+        this.unSubmitTotal = 0
+        this.unSubmitTotalPage = 0
       } finally {
         this.unSubmitLoading = false
       }
+    },
+    getLeaderboardRank(index) {
+      return (this.leaderboardPageNum - 1) * this.pageSize + index + 1
+    },
+    getUnSubmitRank(index) {
+      return (this.unSubmitPageNum - 1) * this.pageSize + index + 1
+    },
+    handleLeaderboardPageChange(page) {
+      this.leaderboardPageNum = page
+      this.fetchLeaderboard()
+    },
+    handleUnSubmitPageChange(page) {
+      this.unSubmitPageNum = page
+      this.fetchUnSubmitList()
     },
     getRankClass(rank) {
       if (rank === 1) return 'act-detail__rank--gold'
@@ -456,6 +551,11 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 0 24px 24px;
+}
+.act-detail__pagination {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
 }
 .act-detail__table {
   width: 100%;

@@ -47,11 +47,11 @@
             <div class="exam-record-banner__stat-value">{{ summary.examCount }} <span class="exam-record-banner__stat-unit">次</span></div>
           </div>
           <div class="exam-record-banner__stat">
-            <div class="exam-record-banner__stat-label">最高分</div>
+            <div class="exam-record-banner__stat-label">当前页最高分</div>
             <div class="exam-record-banner__stat-value">{{ summary.maxScore }} <span class="exam-record-banner__stat-unit">分</span></div>
           </div>
           <div class="exam-record-banner__stat">
-            <div class="exam-record-banner__stat-label">最佳作答</div>
+            <div class="exam-record-banner__stat-label">当前页最佳作答</div>
             <div class="exam-record-banner__stat-value">{{ summary.maxCorrect }} <span class="exam-record-banner__stat-unit">题</span></div>
           </div>
         </div>
@@ -66,7 +66,7 @@
         >
           <div class="exam-record-card__header">
             <div class="exam-record-card__header-left">
-              <div class="exam-record-card__title">第 {{ recordList.length - index }} 次考试</div>
+              <div class="exam-record-card__title">第 {{ recordTotal - (pageNum - 1) * pageSize - index }} 次考试</div>
               <div class="exam-record-card__time">{{ formatExamTime(record.examTime) }}</div>
             </div>
             <span class="exam-record-card__score">{{ record.score }} 分</span>
@@ -100,6 +100,17 @@
       <div v-if="!loading && recordList.length === 0" class="exam-record-empty">
         <span class="exam-record-empty-text">暂无考试记录</span>
       </div>
+      <div class="exam-record-pagination" v-if="recordTotal > 0">
+        <el-pagination
+          background
+          layout="total, prev, pager, next"
+          :total="recordTotal"
+          :page-count="totalPage"
+          :page-size="pageSize"
+          :current-page="pageNum"
+          @current-change="handlePageChange"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -126,6 +137,10 @@ export default {
   data() {
     return {
       recordList: [],
+      recordTotal: 0,
+      totalPage: 0,
+      pageNum: 1,
+      pageSize: 20,
       loading: false,
       showDetail: false,
       selectedRecord: null,
@@ -153,7 +168,7 @@ export default {
         if (correct > maxCorrect) maxCorrect = correct
       })
       return {
-        examCount: list.length,
+        examCount: this.recordTotal,
         maxScore,
         maxCorrect
       }
@@ -168,17 +183,31 @@ export default {
       if (!examId) return
       this.loading = true
       try {
-        const res = await getAfterQuizRecordList({ examId, classId: this.classId })
-        this.recordList = res.data.map(item => ({
+        const res = await getAfterQuizRecordList({
+          examId,
+          classId: this.classId,
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        })
+        const data = (res && res.data) || {}
+        this.recordList = (Array.isArray(data.list) ? data.list : []).map(item => ({
           ...item,
           examTime: item.startTime || item.createTime || '',
           totalNum: item.topicNum || 0
         }))
+        this.recordTotal = Number(data.total) || 0
+        this.totalPage = Number(data.totalPage) || 0
       } catch (e) {
         this.recordList = []
+        this.recordTotal = 0
+        this.totalPage = 0
       } finally {
         this.loading = false
       }
+    },
+    handlePageChange(page) {
+      this.pageNum = page
+      this.fetchRecordList()
     },
     formatExamTime(time) {
       if (!time) return '-'
@@ -198,7 +227,7 @@ export default {
     },
     handleViewDetail(record, index) {
       this.selectedRecord = record
-      this.selectedIndex = this.recordList.length - index
+      this.selectedIndex = this.recordTotal - (this.pageNum - 1) * this.pageSize - index
       this.showDetail = true
     },
     handleWrongReview(record) {
@@ -275,6 +304,12 @@ export default {
   overflow-y: auto;
   padding: 0 24px 28px;
   box-sizing: border-box;
+}
+
+.exam-record-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 4px;
 }
 
 /* Banner */

@@ -396,6 +396,17 @@
         </template>
       </div>
       <empty-state v-if="!quizLoading && filteredQuizList.length === 0" description="暂无课后测数据" />
+      <div class="ls_pagination" v-if="quizTotal > 0">
+        <el-pagination
+          background
+          layout="total, prev, pager, next"
+          :total="quizTotal"
+          :page-count="quizTotalPage"
+          :page-size="quizPageSize"
+          :current-page="quizPageNum"
+          @current-change="handleQuizPageChange"
+        />
+      </div>
     </template>
     <!-- 课后测试 - 学生做题详情 -->
     <AfterClassTestDetail
@@ -894,6 +905,10 @@ export default {
       quizKeyword: '',
       quizList: [],
       quizLoading: false,
+      quizPageNum: 1,
+      quizPageSize: 20,
+      quizTotal: 0,
+      quizTotalPage: 0,
       quizClassIds: [],
       quizSubjectId: '',
       quizDateRange: [],
@@ -2099,7 +2114,10 @@ created() {
 
     // ── 课后测试 ─────────────────────────────────────────────────────────
     async initQuizTab() {
+      this.quizPageNum = 1
       this.quizList = []
+      this.quizTotal = 0
+      this.quizTotalPage = 0
       this.quizLoading = true
       await this.fetchClassList()
       if (!this.quizClassIds.length && this.classList.length) {
@@ -2107,6 +2125,8 @@ created() {
       }
       if (!this.quizClassIds.length) {
         this.quizList = []
+        this.quizTotal = 0
+        this.quizTotalPage = 0
         this.quizSubjectOptions = []
         this.afterQuizOptions = []
         this.teacherOptions = []
@@ -2120,6 +2140,7 @@ created() {
       this.fetchQuizList()
     },
     async handleQuizClassChange() {
+      this.quizPageNum = 1
       this.quizSubjectId = ''
       this.quizKeyword = ''
       this.quizFilterExamConfigId = ''
@@ -2132,6 +2153,11 @@ created() {
       this.fetchQuizList()
     },
     handleQuizSearch() {
+      this.quizPageNum = 1
+      this.fetchQuizList()
+    },
+    handleQuizPageChange(page) {
+      this.quizPageNum = page
       this.fetchQuizList()
     },
     switchOnlineTab(key) {
@@ -2272,6 +2298,7 @@ created() {
       if (!keyword && (this.quizFilterExamConfigId || this.quizFilterTeacherId)) {
         this.quizFilterExamConfigId = ''
         this.quizFilterTeacherId = ''
+        this.quizPageNum = 1
         this.fetchQuizList()
       }
     },
@@ -2280,6 +2307,7 @@ created() {
       this.quizFilterExamConfigId = ''
       this.quizFilterTeacherId = ''
       this.quizSuggestVisible = false
+      this.quizPageNum = 1
       this.fetchQuizList()
     },
     closeQuizSuggest() {
@@ -2296,6 +2324,7 @@ created() {
         this.quizFilterTeacherId = opt.value
         this.quizFilterExamConfigId = ''
       }
+      this.quizPageNum = 1
       this.fetchQuizList()
     },
     confirmQuizKeyword() {
@@ -2305,10 +2334,15 @@ created() {
       this.quizLoading = true
       try {
         const res = await getAfterQuizTeacherList(this.buildQuizPlaybackParams())
-        this.quizList = (res && res.data) ? res.data : []
+        const data = (res && res.data) || {}
+        this.quizList = Array.isArray(data.list) ? data.list : []
+        this.quizTotal = Number(data.total) || 0
+        this.quizTotalPage = Number(data.totalPage) || 0
       } catch (e) {
         console.log(e, 'fetchQuizList error')
         this.quizList = []
+        this.quizTotal = 0
+        this.quizTotalPage = 0
       } finally {
         this.quizLoading = false
       }
@@ -2316,6 +2350,8 @@ created() {
     buildQuizPlaybackParams() {
       const { userId } = getUserInfo()
       const params = { teacherId: userId }
+      params.pageNum = this.quizPageNum
+      params.pageSize = this.quizPageSize
       if (this.quizSubjectId) params.subjectId = this.quizSubjectId
       if (this.quizDateRange && this.quizDateRange.length === 2) {
         params.quizStartTime = this.quizDateRange[0]

@@ -719,6 +719,17 @@
               <button class="after-test-item__btn" @click="openAfterTestDetail(item)">查看详情</button>
             </div>
           </div>
+          <div class="ls_pagination" v-if="afterTestTotal > 0">
+            <el-pagination
+              background
+              layout="total, prev, pager, next"
+              :total="afterTestTotal"
+              :page-count="afterTestTotalPage"
+              :page-size="afterTestPageSize"
+              :current-page="afterTestPageNum"
+              @current-change="handleAfterTestPageChange"
+            />
+          </div>
         </div>
       </div>
       <!-- 课后测试 - 学生做题详情子组件 -->
@@ -1071,6 +1082,10 @@ export default {
       currentAfterTestCourse: null,
       afterTestList: [],
       afterTestLoading: false,
+      afterTestPageNum: 1,
+      afterTestPageSize: 20,
+      afterTestTotal: 0,
+      afterTestTotalPage: 0,
       // 课后测筛选条件
       afterTestFilter: {
         classIds: [],
@@ -1205,6 +1220,7 @@ export default {
       if (val === 'student') this.fetchStudentList(this.rightStudentSearch)
       else if (val === 'course') this.fetchCourseList()
       else if (val === 'afterTest') {
+        this.afterTestPageNum = 1
         if (!this.afterTestFilter.classIds.length && this.selectedClassId) {
           this.afterTestFilter.classIds = [this.selectedClassId]
         }
@@ -1336,16 +1352,23 @@ export default {
       if (this.afterTestFilter.quizEndTime) params.quizEndTime = this.afterTestFilter.quizEndTime
       if (this.afterTestFilter.examConfigId) params.examConfigId = this.afterTestFilter.examConfigId
       if (this.afterTestFilter.teacherId) params.teacherId = this.afterTestFilter.teacherId
+      params.pageNum = this.afterTestPageNum
+      params.pageSize = this.afterTestPageSize
       return params
     },
     async fetchAfterTestList() {
       this.afterTestLoading = true
       try {
         const res = await getAfterQuizTeacherList(this.getAfterTestPlaybackParams())
-        this.afterTestList = (res && res.data) ? res.data : []
+        const data = (res && res.data) || {}
+        this.afterTestList = Array.isArray(data.list) ? data.list : []
+        this.afterTestTotal = Number(data.total) || 0
+        this.afterTestTotalPage = Number(data.totalPage) || 0
       } catch (e) {
         console.log(e,'呼呼')
         this.afterTestList = []
+        this.afterTestTotal = 0
+        this.afterTestTotalPage = 0
       } finally {
         this.afterTestLoading = false
       }
@@ -1366,6 +1389,7 @@ export default {
       }
     },
     handleAfterTestSearch() {
+      this.afterTestPageNum = 1
       if (this.afterTestTimeRange && this.afterTestTimeRange.length === 2) {
         this.afterTestFilter.quizStartTime = this.afterTestTimeRange[0]
         this.afterTestFilter.quizEndTime = this.afterTestTimeRange[1]
@@ -1373,6 +1397,10 @@ export default {
         this.afterTestFilter.quizStartTime = ''
         this.afterTestFilter.quizEndTime = ''
       }
+      this.fetchAfterTestList()
+    },
+    handleAfterTestPageChange(page) {
+      this.afterTestPageNum = page
       this.fetchAfterTestList()
     },
     clearAfterTestTimeRange() {
@@ -1386,6 +1414,7 @@ export default {
     handleAfterTestReset() {
       this.afterTestFilter = { classIds: [], subjectId: '', quizStartTime: '', quizEndTime: '', examConfigId: '', teacherId: '' }
       this.afterTestTimeRange = []
+      this.afterTestPageNum = 1
       this.fetchAfterTestList()
     },
     _mapClassItem(item) {
@@ -1580,6 +1609,7 @@ export default {
       })
     },
     selectClass(index) {
+      this.afterTestPageNum = 1
       this.selectedClassIndex = index
       this.selectedClassId = this.classList[index]?.classId || null
       this.rightView = 'default'
@@ -3657,6 +3687,12 @@ color: #333333;
   flex: 1;
   height: 0;
   overflow-y: auto;
+}
+.after-test-list > .ls_pagination {
+  display: flex;
+  justify-content: center;
+  flex: 0 0 100%;
+  padding: 16px 0;
 }
 .after-test-empty {
   flex: 1;
