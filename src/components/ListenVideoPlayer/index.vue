@@ -250,6 +250,12 @@ export default {
     subtitleDefaultOn: {
       type: Boolean,
       default: true
+    },
+
+    /** 是否在播放器控制栏显示字幕开关 */
+    showSubtitleControl: {
+      type: Boolean,
+      default: false
     }
   },
 
@@ -580,6 +586,7 @@ export default {
               this._playerControlSkin = attachVideoPlayerControlSkin(mainPlayer, {
                 container: document.getElementById(this.mainPlayerId),
                 subtitleEnabled: this.subtitleOn,
+                showSubtitleControl: this.showSubtitleControl,
                 useNativeSubtitles: false,
                 onSubtitleChange: enabled => { this.subtitleOn = enabled }
               })

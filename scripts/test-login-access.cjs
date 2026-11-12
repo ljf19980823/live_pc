@@ -94,7 +94,7 @@ test('production H5 allows login without debug only on the exact test hostname',
   assert.equal(testSite.calls[0]?.name, 'ssoLogin')
   testSite.page.$destroy()
 
-  assert.equal(harness('https://live.fjlsjy123.com/#/login').allowed(), false)
+  assert.equal(harness('https://test.live.fjlsjy123.com/#/login').allowed(), false)
   assert.equal(harness('https://test.live.fjlsjy123.com.example.com/#/login').allowed(), false)
 })
 

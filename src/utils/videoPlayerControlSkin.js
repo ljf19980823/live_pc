@@ -150,6 +150,7 @@ export function attachVideoPlayerControlSkin(player, {
   onDanmuChange = () => {},
   onSubtitleChange = () => {},
   subtitleEnabled = false,
+  showSubtitleControl = false,
   useNativeSubtitles = true
 } = {}) {
   if (!player || !container) return { destroy() {} }
@@ -317,16 +318,19 @@ export function attachVideoPlayerControlSkin(player, {
       onDanmuChange(enabled)
     })
     danmuControl.element.classList.add('vp-control-toggle--danmu')
-    subtitleControl = createToggle('字幕', currentSubtitleState, enabled => {
-      currentSubtitleState = enabled
-      if (useNativeSubtitles) setSubtitleTracks(enabled)
-      onSubtitleChange(enabled)
-    })
+    if (showSubtitleControl) {
+      subtitleControl = createToggle('字幕', currentSubtitleState, enabled => {
+        currentSubtitleState = enabled
+        if (useNativeSubtitles) setSubtitleTracks(enabled)
+        onSubtitleChange(enabled)
+      })
+    }
     if (useNativeSubtitles) setSubtitleTracks(currentSubtitleState)
     left.append(playButton, timeDisplay, seekControls)
     right.append(danmuControl.element)
     right.appendChild(speedControl.element)
-    right.append(subtitleControl.element, volumeControl, fullscreenButton)
+    if (subtitleControl) right.appendChild(subtitleControl.element)
+    right.append(volumeControl, fullscreenButton)
     controlBar.appendChild(row)
     container.classList.add('vp-controlbar-skin')
     volumeIcon = volumeControl.querySelector('.volume-icon')
