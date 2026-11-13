@@ -43,6 +43,7 @@
             :inline="true"
             :main-source="videoUrl"
             :teacher-source="teacherVideoUrl"
+            :live-id="$route.query.liveId || ''"
             :playback-files="playbackFiles"
             :refresh-context="playbackContext"
             :title="meetingTitle"

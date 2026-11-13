@@ -10,6 +10,9 @@ export const getLiveList = params => get('/live/list', params)
 // 获取直播间详情
 export const getLiveDetail = id => get(`/live/detail/${id}`)
 
+// 获取直播回放评论（弹幕），可按视频时间偏移筛选
+export const getLiveComments = (liveId, params) => get(`/edu/live/comments/${encodeURIComponent(liveId)}`, params)
+
 // 创建直播间
 export const createLive = data => post('/live/create', data)
 

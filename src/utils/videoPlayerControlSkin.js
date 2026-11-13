@@ -149,6 +149,8 @@ export function attachVideoPlayerControlSkin(player, {
   container,
   onDanmuChange = () => {},
   onSubtitleChange = () => {},
+  danmuEnabled = true,
+  showDanmuControl = false,
   subtitleEnabled = false,
   showSubtitleControl = false,
   useNativeSubtitles = true
@@ -173,6 +175,7 @@ export function attachVideoPlayerControlSkin(player, {
   let onVolumeIconClick = null
   let onProgressMouseMove = null
   let playerRoot = null
+  let currentDanmuState = !!danmuEnabled
   let currentSubtitleState = !!subtitleEnabled
   const events = []
 
@@ -313,7 +316,8 @@ export function attachVideoPlayerControlSkin(player, {
 
     const speedControl = createSpeedControl(player, container)
 
-    danmuControl = createToggle('弹幕', true, enabled => {
+    danmuControl = createToggle('弹幕', currentDanmuState, enabled => {
+      currentDanmuState = enabled
       dispatchDanmuState(enabled)
       onDanmuChange(enabled)
     })
@@ -333,6 +337,7 @@ export function attachVideoPlayerControlSkin(player, {
     right.append(volumeControl, fullscreenButton)
     controlBar.appendChild(row)
     container.classList.add('vp-controlbar-skin')
+    if (showDanmuControl) container.classList.add('vp-controlbar-show-danmu')
     volumeIcon = volumeControl.querySelector('.volume-icon')
     volumePopup = playerRoot.querySelector('.prism-volume-control')
     thumbnailPopup = playerRoot.querySelector('.prism-thumbnail')
@@ -385,6 +390,10 @@ export function attachVideoPlayerControlSkin(player, {
   inject()
 
   return {
+    setDanmuEnabled(enabled) {
+      currentDanmuState = !!enabled
+      if (danmuControl) danmuControl.setValue(currentDanmuState)
+    },
     setSubtitleEnabled(enabled) {
       currentSubtitleState = !!enabled
       if (subtitleControl) subtitleControl.setValue(currentSubtitleState)
@@ -405,7 +414,7 @@ export function attachVideoPlayerControlSkin(player, {
       })
       if (row) row.remove()
       container.classList.remove('vp-controlbar-compact', 'vp-controlbar-mini', 'vp-controlbar-nano')
-      container.classList.remove('vp-controlbar-skin')
+      container.classList.remove('vp-controlbar-skin', 'vp-controlbar-show-danmu')
       ;[
         '--vp-control-scale',
         '--vp-tooltip-min-width', '--vp-tooltip-height', '--vp-tooltip-padding-x',

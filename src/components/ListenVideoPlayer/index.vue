@@ -60,6 +60,48 @@
           :disabled="isTeacher"
         />
 
+        <!-- 与回放进度同步的课堂弹幕 -->
+        <div
+          ref="danmuLayer"
+          v-show="danmuOn && displayDanmuComments.length"
+          class="hrp-danmu-layer"
+          :class="{ 'hrp-danmu-layer--fullscreen': isFullscreen }"
+        >
+          <div class="hrp-danmu-list" @scroll="handleDanmuScroll">
+            <div
+              v-for="(comment, index) in displayDanmuComments"
+              :key="comment.id || (comment.offsetSeconds + '-' + index)"
+              class="hrp-danmu-item"
+            >
+              <span class="hrp-danmu-user">{{ comment.userName || '课堂成员' }}：</span>
+              <button
+                v-if="String(comment.type) === '2'"
+                class="hrp-danmu-image-link"
+                type="button"
+                @click.stop="openDanmuImage(comment.content)"
+              >[图片]</button>
+              <span v-else class="hrp-danmu-content">{{ comment.content }}</span>
+            </div>
+          </div>
+          <button v-if="!danmuAtLatest" class="hrp-danmu-latest" type="button" @click="scrollDanmuToLatest">
+            <img src="@/assets/images/videoControl/xl.png" class="hrp-danmu-latest-icon" alt="">
+            最新消息
+          </button>
+        </div>
+
+        <div
+          v-if="previewDanmuImageUrl"
+          ref="danmuImagePreview"
+          class="hrp-danmu-image-preview"
+          role="dialog"
+          aria-modal="true"
+          aria-label="弹幕图片预览"
+          @click.self="closeDanmuImage"
+        >
+          <button class="hrp-danmu-image-preview-close" type="button" aria-label="关闭预览" @click="closeDanmuImage">×</button>
+          <img :src="previewDanmuImageUrl" class="hrp-danmu-image-preview-content" alt="弹幕图片放大预览" @click.stop>
+        </div>
+
         <!-- 转写字幕（CC 开关注入到播放器底部控制栏） -->
         <div
           v-if="hasSubtitleSource"
@@ -123,6 +165,7 @@
 import Aliplayer from 'aliyun-aliplayer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
+import { getLiveComments } from '@/api/modules/live'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
 import { collectToggle } from '@/api'
@@ -166,6 +209,11 @@ export default {
     /** 讲师摄像头视频地址（选填，不传或传空则不显示画中画） */
     teacherSource: {
       type: String,
+      default: ''
+    },
+    /** 回放所属直播 ID，用于加载课堂弹幕 */
+    liveId: {
+      type: [String, Number],
       default: ''
     },
     playbackFiles: {
@@ -292,7 +340,15 @@ export default {
       isCollected: false,
       collecting: false,
       subtitleOn: true,
-      currentSubtitle: ''
+      currentSubtitle: '',
+      danmuOn: false,
+      currentPlaybackTime: 0,
+      liveComments: [],
+      liveCommentsRequestId: 0,
+      liveCommentsRequestFor: '',
+      liveCommentsLoadedFor: '',
+      danmuAtLatest: true,
+      previewDanmuImageUrl: ''
     }
   },
 
@@ -305,6 +361,11 @@ export default {
       // 有转写列表时用内部拆好的单行字幕；否则回退外部文案
       if (this.subtitles.length > 0) return this.currentSubtitle
       return this.subtitleText || this.currentSubtitle
+    },
+    displayDanmuComments() {
+      const currentTime = Math.max(0, Number(this.currentPlaybackTime) || 0)
+      return this.liveComments
+        .filter(comment => Number(comment.offsetSeconds) <= currentTime)
     }
   },
 
@@ -315,7 +376,11 @@ export default {
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.resetRuntimePlayback()
         this.schedulePrepareAndInitPlayers()
+        this.loadLiveComments()
       } else {
+        this.closeDanmuImage()
+        this.liveCommentsRequestId += 1
+        this.liveCommentsRequestFor = ''
         this.recoveryToken += 1
         this.recoveryPromise = null
         clearTimeout(this.stablePlaybackTimer)
@@ -328,7 +393,15 @@ export default {
       if ((this.visible || this.inline) && val) {
         this.resetRuntimePlayback()
         this.schedulePrepareAndInitPlayers()
+        this.loadLiveComments()
       }
+    },
+    liveId() {
+      this.liveCommentsRequestId += 1
+      this.liveCommentsRequestFor = ''
+      this.liveCommentsLoadedFor = ''
+      this.liveComments = []
+      if (this.inline || this.visible) this.loadLiveComments()
     },
     subtitleDefaultOn: {
       immediate: true,
@@ -362,6 +435,9 @@ export default {
           })
         }
       }
+    },
+    displayDanmuComments() {
+      if (this.danmuAtLatest) this.$nextTick(() => this.scrollDanmuToLatest())
     }
   },
   mounted() {
@@ -372,6 +448,7 @@ export default {
       this.resetRuntimePlayback()
       this.schedulePrepareAndInitPlayers()
     }
+    if (this.inline || this.visible) this.loadLiveComments()
   },
   methods: {
     setScreenGuard(enabled) {
@@ -399,6 +476,63 @@ export default {
       this.runtimePlaybackFiles = this.playbackFiles.slice()
       this.runtimeMainSource = this.mainSource
       this.runtimeTeacherSource = this.teacherSource
+    },
+
+    async loadLiveComments() {
+      const liveId = String(this.liveId || '').trim()
+      if (!liveId || !(this.inline || this.visible)) return
+      if (this.liveCommentsLoadedFor === liveId || this.liveCommentsRequestFor === liveId) return
+
+      const requestId = ++this.liveCommentsRequestId
+      this.liveCommentsRequestFor = liveId
+      this.liveComments = []
+      try {
+        const res = await getLiveComments(liveId)
+        if (requestId !== this.liveCommentsRequestId) return
+        const list = Array.isArray(res && res.data && res.data.list) ? res.data.list : []
+        this.liveComments = list
+          .filter(comment => {
+            if (!comment || comment.content == null || comment.offsetSeconds == null) return false
+            if (!Number.isFinite(Number(comment.offsetSeconds))) return false
+            return comment.outOfRange !== true && comment.outOfRange !== 'true'
+          })
+          .sort((left, right) => Number(left.offsetSeconds) - Number(right.offsetSeconds))
+        this.liveCommentsLoadedFor = liveId
+      } catch (_) {
+        if (requestId === this.liveCommentsRequestId) this.liveComments = []
+      } finally {
+        if (requestId === this.liveCommentsRequestId) this.liveCommentsRequestFor = ''
+      }
+    },
+
+    handleDanmuScroll(event) {
+      const list = event && event.target
+      if (!list) return
+      this.danmuAtLatest = list.scrollHeight - list.scrollTop - list.clientHeight < 12
+    },
+
+    scrollDanmuToLatest() {
+      this.danmuAtLatest = true
+      this.$nextTick(() => {
+        const list = this.$refs.danmuLayer && this.$refs.danmuLayer.querySelector('.hrp-danmu-list')
+        if (list) list.scrollTop = list.scrollHeight
+      })
+    },
+
+    openDanmuImage(imageUrl) {
+      if (!imageUrl) return
+      this.previewDanmuImageUrl = imageUrl
+      this.$nextTick(() => {
+        const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
+        const preview = this.$refs.danmuImagePreview
+        if (fullscreenElement && preview && preview.parentNode !== fullscreenElement) {
+          fullscreenElement.appendChild(preview)
+        }
+      })
+    },
+
+    closeDanmuImage() {
+      this.previewDanmuImageUrl = ''
     },
 
     async prepareAndInitPlayers() {
@@ -585,6 +719,9 @@ export default {
               })
               this._playerControlSkin = attachVideoPlayerControlSkin(mainPlayer, {
                 container: document.getElementById(this.mainPlayerId),
+                showDanmuControl: true,
+                danmuEnabled: this.danmuOn,
+                onDanmuChange: enabled => { this.danmuOn = enabled },
                 subtitleEnabled: this.subtitleOn,
                 showSubtitleControl: this.showSubtitleControl,
                 useNativeSubtitles: false,
@@ -787,6 +924,14 @@ export default {
       if (fsEl && subtitleEl && subtitleEl.parentNode !== fsEl) {
         fsEl.appendChild(subtitleEl)
       }
+      const danmuLayer = this.$refs.danmuLayer
+      if (fsEl && danmuLayer && danmuLayer.parentNode !== fsEl) {
+        fsEl.appendChild(danmuLayer)
+      }
+      const imagePreview = this.$refs.danmuImagePreview
+      if (fsEl && imagePreview && imagePreview.parentNode !== fsEl) {
+        fsEl.appendChild(imagePreview)
+      }
       this.$refs.videoWatermark?.moveTo(fsEl)
       this.isFullscreen = true
     },
@@ -800,6 +945,14 @@ export default {
       const subtitleEl = this.$refs.subtitleLayer
       if (bodyEl && subtitleEl && subtitleEl.parentNode !== bodyEl) {
         bodyEl.appendChild(subtitleEl)
+      }
+      const danmuLayer = this.$refs.danmuLayer
+      if (bodyEl && danmuLayer && danmuLayer.parentNode !== bodyEl) {
+        bodyEl.appendChild(danmuLayer)
+      }
+      const imagePreview = this.$refs.danmuImagePreview
+      if (bodyEl && imagePreview && imagePreview.parentNode !== bodyEl) {
+        bodyEl.appendChild(imagePreview)
       }
       this.$refs.videoWatermark?.restoreTo(bodyEl)
       this.isFullscreen = false
@@ -950,6 +1103,11 @@ export default {
      * @param {Number} timeSec 当前播放秒数
      */
     updateSubtitle(timeSec) {
+      const playbackTime = Number(timeSec)
+      if (Number.isFinite(playbackTime) && playbackTime >= 0) {
+        const playbackSecond = Math.floor(playbackTime)
+        if (this.currentPlaybackTime !== playbackSecond) this.currentPlaybackTime = playbackSecond
+      }
       if (!this.subtitleOn || !this.subtitles.length) {
         if (this.currentSubtitle) this.currentSubtitle = ''
         return
@@ -1098,6 +1256,7 @@ export default {
   },
 
   beforeDestroy() {
+    this.liveCommentsRequestId += 1
     this.recoveryToken += 1
     this.recoveryPromise = null
     this.setScreenGuard(false)
@@ -1363,6 +1522,175 @@ export default {
   /* Aliplayer 内部控制层最高到 99999，字幕必须更高；控制栏自身更高以便点到 CC */
   z-index: 100000;
   pointer-events: none;
+}
+
+.hrp-danmu-layer {
+  position: absolute;
+  left: 3.5%;
+  bottom: 108px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 380px;
+  max-width: calc(100% - 48px);
+  max-height: 55%;
+  pointer-events: none;
+}
+
+.hrp-danmu-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: 250px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+  pointer-events: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.55);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.hrp-danmu-item {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(31, 36, 50, 0.88);
+  color: #e2e8f0;
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.hrp-danmu-user {
+  flex-shrink: 0;
+  color: #9dcaff;
+}
+
+.hrp-danmu-content {
+  min-width: 0;
+}
+
+.hrp-danmu-image-link {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9dcaff;
+  font: inherit;
+  line-height: inherit;
+  text-decoration: underline;
+  cursor: zoom-in;
+}
+
+.hrp-danmu-image-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 100002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.86);
+  cursor: zoom-out;
+}
+
+.hrp-danmu-image-preview-content {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: default;
+}
+
+.hrp-danmu-image-preview-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hrp-danmu-latest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 150px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(76, 64, 126, 0.82);
+  color: #b5c6ed;
+  font-size: 14px;
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+
+}
+
+.hrp-danmu-latest-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.hrp-danmu-layer--fullscreen {
+  bottom: 128px;
+  left: 3.5%;
+
+  .hrp-danmu-item,
+  .hrp-danmu-latest {
+    font-size: 17px;
+  }
+}
+
+@media (max-height: 480px) {
+  .hrp-danmu-layer {
+    bottom: 60px;
+    max-height: 65%;
+  }
+
+  .hrp-danmu-layer--fullscreen {
+    bottom: 72px;
+  }
+
+  .hrp-danmu-list {
+    max-height: 160px;
+  }
 }
 
 .hrp-subtitle {

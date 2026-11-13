@@ -178,6 +178,9 @@
   .vp-control-toggle--danmu {
     display: none !important;
   }
+  &.vp-controlbar-show-danmu .vp-control-toggle--danmu {
+    display: flex !important;
+  }
 
   .vp-control-toggle__label,
   .vp-control-speed__label {
