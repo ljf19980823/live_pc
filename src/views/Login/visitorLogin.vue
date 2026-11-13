@@ -33,7 +33,7 @@
             >
           </div>
 
-          <div class="visitor-login-field visitor-login-code-field">
+          <div v-if="captchaRequired === true" class="visitor-login-field visitor-login-code-field">
             <input
               v-model="form.code"
               type="text"
@@ -56,7 +56,7 @@
         <button
           class="visitor-login-submit"
           type="button"
-          :disabled="loginLoading"
+          :disabled="loginLoading || captchaRequirementLoading"
           @click="handleVisitorLogin"
         >
           {{ loginLoading ? '进入中...' : '进入直播间' }}
@@ -68,7 +68,7 @@
 
 <script>
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
-import { visitorSendCode, visitorLogin } from '@/api'
+import { visitorSendCode, visitorCaptchaRequired, visitorLogin } from '@/api'
 import LiveClassroomFrame from '@/components/LiveClassroomFrame/index.vue'
 import { setToken, setUserInfo } from '@/utils/auth'
 
@@ -85,6 +85,8 @@ export default {
       liveIdFromQuery: '',
       classroomIdFromQuery: '',
       fromExitFromQuery: '',
+      captchaRequired: null,
+      captchaRequirementLoading: false,
       sendCodeLoading: false,
       loginLoading: false,
       countdown: 0,
@@ -120,6 +122,7 @@ export default {
     this.fromExitFromQuery = liveParams.fromExit
     this.liveIdFromQuery = liveParams.liveId
     this.classroomIdFromQuery = liveParams.classroomId
+    this.loadCaptchaRequirement()
     console.log(liveParams, '直播间参数')
     if (!this.liveId) {
     //   this.$message.warning('直播间参数缺失')
@@ -129,6 +132,20 @@ export default {
     this.clearCountdownTimer()
   },
   methods: {
+    async loadCaptchaRequirement() {
+      if (!this.liveId) return
+
+      this.captchaRequirementLoading = true
+      try {
+        const res = await visitorCaptchaRequired(this.liveId)
+        this.captchaRequired = res.data !== 0
+      } catch {
+        // Keep the existing captcha flow if the requirement check fails.
+        this.captchaRequired = true
+      } finally {
+        this.captchaRequirementLoading = false
+      }
+    },
     getLiveParamsFromUrl() {
       const query = window.location.href.split('?')[1] || ''
       const normalizedQuery = query.replace(/&&/g, '&')
@@ -187,24 +204,28 @@ export default {
       }
     },
     async handleVisitorLogin() {
-      if (this.loginLoading || !this.validatePhone()) return
+      if (this.loginLoading || this.captchaRequirementLoading || !this.validatePhone()) return
       if (!this.form.userName.trim()) {
         this.$message.warning('请输入姓名')
         return
       }
-      if (!this.form.code.trim()) {
+      if (this.captchaRequired && !this.form.code.trim()) {
         this.$message.warning('请输入验证码')
         return
       }
 
       this.loginLoading = true
       try {
-        const res = await visitorLogin({
+        const loginParams = {
           liveId: this.liveId,
           userName: this.form.userName.trim(),
-          phone: this.form.phone.trim(),
-          code: this.form.code.trim()
-        })
+          phone: this.form.phone.trim()
+        }
+        if (this.captchaRequired) {
+          loginParams.code = this.form.code.trim()
+        }
+
+        const res = await visitorLogin(loginParams)
         const data = res.data || {}
         this.saveLoginData(data)
         this.enterLiveRoom(data)

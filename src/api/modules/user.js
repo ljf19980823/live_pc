@@ -22,6 +22,10 @@ export const codeLogin = data => post('/edu/sso/codeLogin', data , { skipAuthori
 // 访客发送直播验证码
 export const visitorSendCode = data => post('/edu/live/visitor/sendCode', data, { skipAuthorization: true })
 
+// 访客登录前查询是否需要验证码
+export const visitorCaptchaRequired = liveId =>
+  get(`/edu/live/visitor/captcha-required/${encodeURIComponent(liveId)}`, {}, { skipAuthorization: true })
+
 // 访客验证码登录
 export const visitorLogin = data => post('/edu/live/visitor/login', data, { skipAuthorization: true })
 
