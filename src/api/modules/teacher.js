@@ -2,12 +2,14 @@ import axios from 'axios'
 import { get, post, put, del, download, upload } from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
+const withPageParams = params => ({ pageNum: 1, pageSize: 10, ...(params || {}) })
+
 /**
  * 教师端接口
  */
 
 // 获取教师消息列表
-export const getTeacherNoticeList = params => get('/edu/notice/information', params)
+export const getTeacherNoticeList = params => get('/edu/notice/information', withPageParams(params))
 
 // 获取班级列表
 export const getClassList = params => get('/edu/class/list', params)
@@ -49,7 +51,7 @@ export const getStudentLiveStatistics = params => get('/edu/live/statistics/stud
 export const saveStudentNote = (classId, studentId, content) => post(`/edu/class/${classId}/students/${studentId}/note`, { content })
 
 // 获取实时课堂列表
-export const getLiveList = params => get('/edu/live/list', params)
+export const getLiveList = params => get('/edu/live/list', withPageParams(params))
 
 // 获取历史课堂列表
 export const getHistoryList = params => get('/edu/history/list', params)

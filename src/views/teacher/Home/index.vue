@@ -245,8 +245,8 @@ export default {
     },
     async fetchMessageList () {
       try {
-        const res = await getTeacherNoticeList({type:"1"})
-         this.messageList = res.data || []
+        const res = await getTeacherNoticeList({ type: '1', pageNum: 1, pageSize: 10 })
+         this.messageList = res.data?.list || []
       } catch (e) {
         console.error('获取消息列表失败', e)
       }
@@ -288,8 +288,8 @@ export default {
     async fetchPendingLiveList () {
       this.pendingLiveLoading = true
       try {
-        const res = await getLiveList()
-        const list = res.data || res || []
+        const res = await getLiveList({ pageNum: 1, pageSize: 10 })
+        const list = res.data?.list || []
          this.pendingLiveList = list.map(item => {
           const isLiving = item.status == '直播中' ? true : false
          

@@ -42,7 +42,7 @@
     </transition>
 
       <div class="placeholder_last_top">
-        <div class="placeholder_last_top_total">共有 {{ liveCourses.length }} 节课</div>
+        <div class="placeholder_last_top_total">共有 {{ liveTotal }} 节课</div>
         <div class="placeholder_last_top_btn" @click="openSchedule">查看课表</div>
         <img src="@/assets/images/liveClass/refresh.png" class="placeholder_last_top_sx" alt="" @click="fetchLiveList">
       </div>
@@ -79,6 +79,17 @@
           <empty-state v-if="liveCourses.length === 0" description="暂无直播课堂" />
         </template>
       </div>
+    </div>
+
+    <div v-if="activeTab === 'live' && liveTotal > livePageSize" class="ls_pagination">
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :total="liveTotal"
+        :page-size="livePageSize"
+        :current-page="livePageNum"
+        @current-change="handleLivePageChange"
+      />
     </div>
 
     <!-- 历史课堂 -->
@@ -674,6 +685,9 @@ export default {
       searchKeyword: '',
       classList: [],
       liveCourses: [],
+      livePageNum: 1,
+      livePageSize: 10,
+      liveTotal: 0,
       historyCourses: [],
       liveLoading: false,
       historyLoading: false,
@@ -1369,8 +1383,11 @@ export default {
     async fetchLiveList() {
       this.liveLoading = true
       try {
-        const res = await getLiveList()
-        const list = res.data || res || []
+        const res = await getLiveList({ pageNum: this.livePageNum, pageSize: this.livePageSize })
+        const list = res.data?.list || []
+        this.liveTotal = Number(res.data?.total) || 0
+        this.livePageNum = Number(res.data?.pageNum) || this.livePageNum
+        this.livePageSize = Number(res.data?.pageSize) || this.livePageSize
         this.liveCourses = list.map(item => {
           const isLiving = item.status == '直播中' ? true : false
           const now = Date.now()
@@ -1397,6 +1414,11 @@ export default {
     },
 
     // ── 删除课堂 ────────────────────────────────────────────────────────
+    handleLivePageChange(page) {
+      this.livePageNum = page
+      this.fetchLiveList()
+    },
+
     handleDeleteLive(item) {
       if(item.status=='living'){
         return;

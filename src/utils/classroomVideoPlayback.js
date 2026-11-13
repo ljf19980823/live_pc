@@ -55,16 +55,19 @@ function extractClassroomFiles(context, payload) {
       return filesFromItems(payload && (payload.list || payload.records))
     case 'courseDetail':
       return courseClassroomFiles(payload && payload.detailTree)
-    case 'recentView':
-      return filesFromItems(Array.isArray(payload) ? payload.filter(item => String(item && item.type) === '3') : [])
+    case 'recentView': {
+      const items = Array.isArray(payload) ? payload : payload && payload.list
+      return filesFromItems(Array.isArray(items) ? items.filter(item => String(item && item.type) === '3') : [])
+    }
     case 'scheduleMonth':
     case 'scheduleRange': {
       const groups = Array.isArray(payload) ? payload : []
       return groups.flatMap(group => filesFromItems(group && group.lives))
     }
+    case 'liveList':
+      return filesFromItems(Array.isArray(payload) ? payload : payload && payload.list)
     case 'studentQuiz':
     case 'teacherQuiz':
-    case 'liveList':
       return filesFromItems(payload)
     case 'liveLatest':
       return Array.isArray(payload && payload.fileList) ? payload.fileList : []

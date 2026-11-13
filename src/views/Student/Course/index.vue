@@ -75,6 +75,16 @@
             style="width: 100%;"
           />
         </div>
+        <div v-if="activeTab === 'all' && courseTotal > coursePageSize" class="course-pagination">
+          <el-pagination
+            background
+            layout="prev, pager, next"
+            :current-page="coursePageNum"
+            :page-size="coursePageSize"
+            :total="courseTotal"
+            @current-change="handleCoursePageChange"
+          />
+        </div>
       </div>
     </template>
 
@@ -457,6 +467,9 @@ export default {
       activeLoadingKey: null,
       courseListLoading: false,
       courseList: [],
+      coursePageNum: 1,
+      coursePageSize: 10,
+      courseTotal: 0,
       courseDetail: { taskCount: 0, items: [] },
 
       // 直播
@@ -514,12 +527,15 @@ export default {
 
   watch: {
     activeTab() {
+      this.coursePageNum = 1
       this.fetchCourseList()
     },
     hideDone() {
+      this.coursePageNum = 1
       this.fetchCourseList()
     },
     searchText() {
+      this.coursePageNum = 1
       this.fetchCourseListDebounced()
     },
   },
@@ -562,16 +578,34 @@ export default {
       this.courseListLoading = true
       try {
         const params = { hideStudy: this.hideDone ? '1' : '0' }
+        if (this.activeTab === 'all') {
+          Object.assign(params, { pageNum: this.coursePageNum, pageSize: this.coursePageSize })
+        }
         if (this.searchText.trim()) params.keyword = this.searchText.trim()
         const res = this.activeTab === 'all'
           ? await getAllCourseList(params)
           : await getRecentCourseList(params)
-        this.courseList = (res.data || []).map((item, index) => this.mapCourseItem(item, index))
+        const courseList = this.activeTab === 'all'
+          ? (res.data?.list || [])
+          : (res.data || [])
+        if (this.activeTab === 'all') {
+          this.courseTotal = Number(res.data?.total) || 0
+          this.coursePageNum = Number(res.data?.pageNum) || this.coursePageNum
+          this.coursePageSize = Number(res.data?.pageSize) || this.coursePageSize
+        } else {
+          this.courseTotal = courseList.length
+        }
+        this.courseList = courseList.map((item, index) => this.mapCourseItem(item, index))
       } catch (e) {
         this.courseList = []
       } finally {
         this.courseListLoading = false
       }
+    },
+
+    handleCoursePageChange(page) {
+      this.coursePageNum = page
+      this.fetchCourseList()
     },
 
     mapCourseItem(item, index) {
@@ -1319,6 +1353,13 @@ padding: 4px;
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 16px;
+}
+
+.course-pagination {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  flex-shrink: 0;
 }
 
 .app_container_box_right_last_list_detailCourse {

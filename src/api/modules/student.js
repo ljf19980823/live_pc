@@ -1,11 +1,13 @@
 import { get, post } from '@/utils/request'
 
+const withPageParams = params => ({ pageNum: 1, pageSize: 10, ...(params || {}) })
+
 /**
  * 学生端接口
  */
 
 // 获取学生消息列表
-export const getStudentNoticeList = () => get('/edu/notice/information', { type: 1 })
+export const getStudentNoticeList = params => get('/edu/notice/information', withPageParams({ type: 1, ...(params || {}) }))
 
 // 获取错题练习题目列表
 export const getErrorExercises = (recordId) => get(`/edu/after/quiz/errorExercises/${recordId}`)
@@ -29,16 +31,16 @@ export const getQuizLeaderboardStatistics = (examConfigId, classId) => get(
 )
 
 // 获取全部课程列表
-export const getAllCourseList = (params) => get('/edu/recentView/courses', params)
+export const getAllCourseList = params => get('/edu/recentView/courses', withPageParams(params))
 
 // 获取最近学习课程列表
 export const getRecentCourseList = (params) => get('/edu/recentView/recent', params)
 
 // 获取最近观看列表
-export const getRecentViewList = (params) => get('/edu/recentView/view', params)
+export const getRecentViewList = params => get('/edu/recentView/view', withPageParams(params))
 
 // 获取收藏列表
-export const getRecentCollectList = (params) => get('/edu/recentView/collect', params)
+export const getRecentCollectList = params => get('/edu/recentView/collect', withPageParams(params))
 
 // 上报业务观看时长（type: 3 视频等）
 export const addBusinessView = data => post('/edu/recentView/addBusinessView', data)

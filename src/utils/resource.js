@@ -82,8 +82,9 @@ export async function refreshCourseResource(item, params) {
 /** Refresh a recent-view resource through the existing recent-view query. */
 export async function refreshRecentResource(item, params = {}) {
   if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
-  const response = await getRecentViewList(params)
-  const rows = responseData(response)
+  const response = await getRecentViewList({ pageNum: 1, pageSize: 10, ...params })
+  const data = responseData(response)
+  const rows = Array.isArray(data) ? data : data && data.list
   const row = (Array.isArray(rows) ? rows : []).find(current =>
     String(current && (current.lessonId || current.id) || '') === String(item.id || '') &&
     (item.nodeType == null || String(current && current.type || '') === String(item.nodeType)) &&

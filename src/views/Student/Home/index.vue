@@ -113,6 +113,16 @@
           </div>
           <EmptyState description="暂无最近观看" v-if="!recentViewLoading && recentViewList.length==0"/>
         </div>
+        <div v-if="recentViewTotal > recentViewPageSize" class="recent-view-pagination">
+          <el-pagination
+            small
+            layout="prev, pager, next"
+            :current-page="recentViewPageNum"
+            :page-size="recentViewPageSize"
+            :total="recentViewTotal"
+            @current-change="handleRecentViewPageChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -248,6 +258,9 @@ export default {
       carouselList: [],
       recentViewList: [],
       recentViewLoading: false,
+      recentViewPageNum: 1,
+      recentViewPageSize: 10,
+      recentViewTotal: 0,
       latestLive: null,
       greetingText: '',
       currentDateText: '',
@@ -363,8 +376,8 @@ export default {
     },
     async fetchMessageList () {
       try {
-        const res = await getTeacherNoticeList({ type: '1' })
-        this.messageList = res.data || []
+        const res = await getTeacherNoticeList({ type: '1', pageNum: 1, pageSize: 10 })
+        this.messageList = res.data?.list || []
       } catch (e) {
         console.error('获取消息列表失败', e)
       }
@@ -400,14 +413,21 @@ export default {
     async fetchRecentViewList () {
       this.recentViewLoading = true
       try {
-        const res = await getRecentViewList()
-        this.recentViewList = res.data || []
+        const res = await getRecentViewList({ pageNum: this.recentViewPageNum, pageSize: this.recentViewPageSize })
+        this.recentViewList = res.data?.list || []
+        this.recentViewTotal = Number(res.data?.total) || 0
+        this.recentViewPageNum = Number(res.data?.pageNum) || this.recentViewPageNum
+        this.recentViewPageSize = Number(res.data?.pageSize) || this.recentViewPageSize
       } catch (e) {
         console.error('获取最近观看失败', e)
         this.recentViewList = []
       } finally {
         this.recentViewLoading = false
       }
+    },
+    handleRecentViewPageChange(page) {
+      this.recentViewPageNum = page
+      this.fetchRecentViewList()
     },
     getRecentViewTypeLabel (type) {
       const map = {
@@ -513,7 +533,10 @@ export default {
       const nodeType = String(item.nodeType || '')
       if (nodeType !== '3') {
         try {
-          item = await refreshRecentResource(item)
+          item = await refreshRecentResource(item, {
+            pageNum: this.recentViewPageNum,
+            pageSize: this.recentViewPageSize
+          })
         } catch (_) {
           this.$message.error('资料访问地址刷新失败，请刷新最近观看后重试')
           return
@@ -570,7 +593,10 @@ export default {
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
         this.currentVideoUrl = url
         this.currentVideoExpireAt = item.urlExpireAt
-        this.currentVideoRefreshSource = () => refreshRecentResource(item)
+        this.currentVideoRefreshSource = () => refreshRecentResource(item, {
+          pageNum: this.recentViewPageNum,
+          pageSize: this.recentViewPageSize
+        })
         this.currentPlayingItem = item
         this.fromLearningTask = true
         this.currentCollectParams = collectBase
@@ -602,7 +628,10 @@ export default {
           name: item.title || '',
           path: url,
           urlExpireAt: item.urlExpireAt,
-          refreshSource: () => refreshRecentResource(item)
+          refreshSource: () => refreshRecentResource(item, {
+            pageNum: this.recentViewPageNum,
+            pageSize: this.recentViewPageSize
+          })
         }
         this.fromLearningTask = true
         this.currentCollectParams = collectBase
@@ -644,7 +673,10 @@ export default {
       this.playerSource = mainFile ? mainFile.filePath || '' : (!fileList.length ? item.filePath || '' : '')
       this.playerTeacherSource = teacherFile ? teacherFile.filePath || '' : ''
       this.currentPlaybackFiles = fileList
-      this.currentPlaybackContext = { type: 'recentView', params: {} }
+      this.currentPlaybackContext = {
+        type: 'recentView',
+        params: { pageNum: this.recentViewPageNum, pageSize: this.recentViewPageSize }
+      }
       if (!this.playerSource && !this.playerTeacherSource) {
         this.$message.warning('暂无回放视频')
         return
@@ -1264,6 +1296,11 @@ background: rgba(0,0,0,.1);
   justify-content: flex-start;
   overflow: auto;
   gap: 12px;
+}
+.recent-view-pagination {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .app_container_last_right_list_detail{
   padding: 13px;

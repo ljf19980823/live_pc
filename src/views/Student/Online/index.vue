@@ -42,7 +42,7 @@
         <a class="banner-link" @click="openUpdateDialog">立刻下载 &gt;</a>
       </div>
     </transition>
-      <div class="online-count">共 {{ liveCourses.length }} 节课堂</div>
+      <div class="online-count">共 {{ liveTotal }} 节课堂</div>
       <div class="pending-grid" v-loading="liveLoading">
         <template v-if="!liveLoading">
         <div
@@ -108,6 +108,16 @@
         </template>
       </div>
       <empty-state v-if="liveCourses.length === 0 && !liveLoading" description="暂无待启课堂" />
+      <div v-if="liveTotal > livePageSize" class="ls_pagination">
+        <el-pagination
+          background
+          layout="prev, pager, next"
+          :total="liveTotal"
+          :page-size="livePageSize"
+          :current-page="livePageNum"
+          @current-change="handleLivePageChange"
+        />
+      </div>
     </template>
 
     <!-- 回放课堂 -->
@@ -1153,6 +1163,9 @@ export default {
       searchKeyword: '',
       classList: [],
       liveCourses: [],
+      livePageNum: 1,
+      livePageSize: 10,
+      liveTotal: 0,
       historyCourses: [],
       liveLoading: false,
       historyLoading: false,
@@ -1631,7 +1644,10 @@ created() {
         const month = parts ? parts[2] : String(this.scheduleMonth + 1)
         return { type: 'scheduleMonth', params: { year, month } }
       }
-      return { type: 'liveList', params: {} }
+      return {
+        type: 'liveList',
+        params: { pageNum: this.livePageNum, pageSize: this.livePageSize }
+      }
     },
 
     // ── 分享链接开关 ────────────────────────────────────────────────────
@@ -1918,8 +1934,11 @@ created() {
     async fetchLiveList() {
       this.liveLoading = true
       try {
-        const res = await getLiveList()
-        const list = res.data || res || []
+        const res = await getLiveList({ pageNum: this.livePageNum, pageSize: this.livePageSize })
+        const list = res.data?.list || []
+        this.liveTotal = Number(res.data?.total) || 0
+        this.livePageNum = Number(res.data?.pageNum) || this.livePageNum
+        this.livePageSize = Number(res.data?.pageSize) || this.livePageSize
         this.liveCourses = list.map(item => {
           const isLiving = item.status == '直播中' ? true : false
           const now = Date.now()
@@ -1948,6 +1967,11 @@ created() {
     },
 
     // ── 删除课堂 ────────────────────────────────────────────────────────
+    handleLivePageChange(page) {
+      this.livePageNum = page
+      this.fetchLiveList()
+    },
+
     handleDeleteLive(item) {
       if(item.status=='living'){
         return;

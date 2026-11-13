@@ -21,7 +21,7 @@
 
     <!-- 列表 -->
     <div v-if="!showDetail" class="list_container">
-      <div class="message-count">共 {{ currentList.length }} 条消息</div>
+      <div class="message-count">共 {{ messageTotal }} 条消息</div>
 
       <div class="message-list" v-loading="loading">
         <EmptyState v-if="!loading && currentList.length === 0" description="暂无消息" />
@@ -84,8 +84,19 @@
       </div>
     </div>
 
+    <div v-if="!showDetail && messageTotal > messagePageSize" class="message-pagination">
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :current-page="messagePageNum"
+        :page-size="messagePageSize"
+        :total="messageTotal"
+        @current-change="handleMessagePageChange"
+      />
+    </div>
+
     <!-- 详情 -->
-    <div class="message-detail" v-else-if="currentDetail">
+    <div class="message-detail" v-if="showDetail && currentDetail">
       <div class="message-card message-card--detail">
         <div class="message-card__header">
           <div class="message-card__header-left">
@@ -300,6 +311,9 @@ export default {
       currentDetail: null,
       keyword: '',
       loading: false,
+      messagePageNum: 1,
+      messagePageSize: 10,
+      messageTotal: 0,
       sendLoading: false,
       receiveLoading: false,
 
@@ -338,10 +352,14 @@ export default {
       this.loading = true
       try {
         const type = this.activeTab === 'sent' ? '2' : '1'
-        const params = { type }
+        const params = { type, pageNum: this.messagePageNum, pageSize: this.messagePageSize }
         if (this.keyword) params.keyword = this.keyword
         const res = await getTeacherNoticeList(params)
-        const list = (res.data || []).map(item => {
+        const pageData = res.data || {}
+        this.messageTotal = Number(pageData.total) || 0
+        this.messagePageNum = Number(pageData.pageNum) || this.messagePageNum
+        this.messagePageSize = Number(pageData.pageSize) || this.messagePageSize
+        const list = (res.data?.list || []).map(item => {
           const resourceInfoList = item.resourceInfoList || []
           const images = resourceInfoList.filter(r => r.type === '1')
           const fileItems = resourceInfoList.filter(r => r.type === '2')
@@ -367,6 +385,10 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    handleMessagePageChange(page) {
+      this.messagePageNum = page
+      this.fetchMessages()
     },
     handleDetail(item) {
       this.currentDetail = item
@@ -688,6 +710,13 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.message-pagination {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  flex-shrink: 0;
 }
 
 /* 详情区域 */
