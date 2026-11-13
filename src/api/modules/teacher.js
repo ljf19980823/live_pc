@@ -93,6 +93,12 @@ export const getCourseProgress = (courseId, classId) => get(`/edu/course/${cours
 // 获取课表列表
 export const getScheduleList = params => get('/edu/schedule/list', params)
 
+// 获取课表日历标记（按月返回有课日期和当天场次）
+export const getScheduleMonthMarks = params => get('/edu/schedule/month-marks', params)
+
+// 获取某一天的课表（分页）
+export const getScheduleDayList = params => get('/edu/schedule/day-list', params)
+
 // 按日期区间获取课表列表
 export const getScheduleListByRange = params => get('/edu/schedule/list-by-range', params)
 

@@ -120,9 +120,9 @@
         </div>
       </div>
 
-      <div class="course-panel">
+      <div class="course-panel" v-loading="dayListLoading">
         <div class="course-panel__title">
-          {{ selectedDateLabel }}（共{{ selectedCourses.length }}节）
+          {{ selectedDateLabel }}（共{{ selectedDayTotal }}节）
         </div>
         <div class="course-grid" v-if="selectedCourses.length">
           <div
@@ -179,6 +179,16 @@
           </div>
         </div>
         <EmptyState v-else description="暂无课程" />
+        <div v-if="selectedDayTotal > selectedDayPageSize" class="schedule-pagination">
+          <el-pagination
+            background
+            layout="prev, pager, next"
+            :current-page="selectedDayPageNum"
+            :page-size="selectedDayPageSize"
+            :total="selectedDayTotal"
+            @current-change="handleSelectedDayPageChange"
+          />
+        </div>
       </div>
     </template>
 
@@ -264,7 +274,7 @@
 import { withClassroomAppVersion } from '@/utils/classroomUrl'
 import { getReplayInfo, getAIListeningRoute, resolveReplayInfo } from '@/utils/replayRoute'
 import { getAgreement } from '@/api/modules/teacher'
-import { getScheduleList, getScheduleListByRange } from '@/api/modules/teacher'
+import { getScheduleMonthMarks, getScheduleDayList, getScheduleListByRange } from '@/api/modules/teacher'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
 import { checkTempStudentLiveRecord } from '@/api/modules/student'
@@ -290,7 +300,15 @@ export default {
       listDateRange: [todayStr, endStr],
       weekDays: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
       scheduleApiData: [],
+      scheduleMarks: [],
+      scheduleMarkRequestId: 0,
+      selectedDayCourses: [],
+      selectedDayPageNum: 1,
+      selectedDayPageSize: 10,
+      selectedDayTotal: 0,
+      selectedDayRequestId: 0,
       scheduleLoading: false,
+      dayListLoading: false,
       defaultCover: require('@/assets/images/student/such.png'),
       // 直播
       showLiveIframe: false,
@@ -320,37 +338,19 @@ export default {
     monthLabel() {
       return `${this.scheduleYear}年${pad(this.scheduleMonth + 1)}月`
     },
+    scheduleMarkCountByDate() {
+      const map = {}
+      ;(this.scheduleMarks || []).forEach(item => {
+        if (item && item.date) map[item.date] = Number(item.count) || 0
+      })
+      return map
+    },
      scheduleDataByDate() {
       const map = {}
       ;(this.scheduleApiData || []).forEach(item => {
         const dateStr = item.date
         if (!dateStr) return
-        map[dateStr] = (item.lives || []).map(rawLive => {
-          const live = getReplayInfo(rawLive)
-          return {
-            ...live,
-            id: live.id,
-            name: live.name || '',
-            startTime: live.startTime ? live.startTime.substring(11, 16) : '',
-            endTime: live.endTime ? live.endTime.substring(11, 16) : '',
-            realStartTime: live.realStartTime ? live.realStartTime.substring(11, 16) : '',
-            realEndTime: live.realEndTime ? live.realEndTime.substring(11, 16) : '',
-            fullStartTime: live.startTime || '',
-            liveId: live.liveId || live.id,
-            liveLessonId: live.liveLessonId || '',
-            fileList: live.fileList || [],
-            allowMultiple: live.allowMultiple,
-            allowFastForward: live.allowFastForward,
-            allowDownload: live.allowDownload,
-            status: live.status,
-            isStart: live.isStart,
-            isFinish: live.isFinish,
-            historyLessonId: live.historyLessonId || '',
-            cover: live.coverThumb || live.cover || live.imgUrl || live.image || '',
-            teacherName: live.teacherName2 || live.teacherName || this.realName || '',
-            taskUuid: live.taskUuid || '',
-          }
-        })
+        map[dateStr] = (item.lives || []).map(rawLive => this.mapScheduleCourse(rawLive))
       })
       return map
     },
@@ -387,7 +387,7 @@ export default {
           dateStr,
           currentMonth: true,
           isToday: dateStr === todayStr,
-          hasClass: !!(this.scheduleDataByDate[dateStr]?.length)
+          hasClass: this.scheduleMarkCountByDate[dateStr] > 0
         })
       }
       const remaining = 42 - cells.length
@@ -424,14 +424,13 @@ export default {
           dayText: pad(dayNum),
           dateStr,
           isToday: dateStr === todayStr,
-          hasClass: !!(this.scheduleDataByDate[dateStr]?.length)
+          hasClass: this.scheduleMarkCountByDate[dateStr] > 0
         })
       }
       return cells
     },
     selectedCourses() {
-      if (!this.selectedDate) return []
-      return this.scheduleDataByDate[this.selectedDate] || []
+      return this.selectedDayCourses || []
     },
     selectedDateLabel() {
       if (!this.selectedDate) return '课程列表'
@@ -460,7 +459,7 @@ export default {
     }
   },
   watch: {
-    // 与 Online 课表一致：年月变化时按 year/month 重新拉取（整月模式）
+    // 月份变化时重新拉取日历标记
     scheduleYear(val) {
       if (this.viewMode === 'calendar' && this.calendarScope === 'month') {
         this.fetchScheduleData(val, this.scheduleMonth + 1)
@@ -486,6 +485,7 @@ export default {
 
       this.fetchAgreement()
     this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
+    this.fetchSelectedDayList(this.selectedDate, 1)
   },
   methods: {
      async fetchAgreement() {
@@ -509,22 +509,85 @@ export default {
       const [y, m, d] = str.split('-').map(Number)
       return new Date(y, m - 1, d)
     },
-    /** 与 Online fetchScheduleData 一致：getScheduleList({ year, month }) */
+    mapScheduleCourse(rawLive) {
+      const live = getReplayInfo(rawLive)
+      return {
+        ...live,
+        id: live.id,
+        name: live.name || '',
+        startTime: live.startTime ? live.startTime.substring(11, 16) : '',
+        endTime: live.endTime ? live.endTime.substring(11, 16) : '',
+        realStartTime: live.realStartTime ? live.realStartTime.substring(11, 16) : '',
+        realEndTime: live.realEndTime ? live.realEndTime.substring(11, 16) : '',
+        fullStartTime: live.startTime || '',
+        liveId: live.liveId || live.id,
+        liveLessonId: live.liveLessonId || '',
+        fileList: live.fileList || [],
+        allowMultiple: live.allowMultiple,
+        allowFastForward: live.allowFastForward,
+        allowDownload: live.allowDownload,
+        status: live.status,
+        isStart: live.isStart,
+        isFinish: live.isFinish,
+        historyLessonId: live.historyLessonId || '',
+        cover: live.coverThumb || live.cover || live.imgUrl || live.image || '',
+        teacherName: live.teacherName2 || live.teacherName || this.realName || '',
+        taskUuid: live.taskUuid || '',
+      }
+    },
+    /** 拉取课表日历标记（按月份） */
     async fetchScheduleData(year, month) {
       const y = year != null ? year : this.scheduleYear
       const m = month != null ? month : this.scheduleMonth + 1
+      const requestId = ++this.scheduleMarkRequestId
       this.scheduleLoading = true
       try {
-        const res = await getScheduleList({ year: String(y), month: String(m) })
-        this.scheduleApiData = res.data || res || []
+        const res = await getScheduleMonthMarks({ year: String(y), month: pad(m) })
+        if (requestId !== this.scheduleMarkRequestId) return
+        const data = res.data !== undefined ? res.data : res
+        this.scheduleMarks = Array.isArray(data) ? data : []
       } catch (_) {
-        this.scheduleApiData = []
+        if (requestId !== this.scheduleMarkRequestId) return
+        this.scheduleMarks = []
       } finally {
-        this.scheduleLoading = false
+        if (requestId === this.scheduleMarkRequestId) this.scheduleLoading = false
       }
     },
-    /** 周视图跨月时合并拉取（同一 getScheduleList 接口） */
+    /** 获取选中日期的分页课程 */
+    async fetchSelectedDayList(date, pageNum = this.selectedDayPageNum) {
+      if (!date) return
+      const requestId = ++this.selectedDayRequestId
+      this.dayListLoading = true
+      try {
+        const res = await getScheduleDayList({
+          date,
+          pageNum,
+          pageSize: this.selectedDayPageSize
+        })
+        if (requestId !== this.selectedDayRequestId) return
+        const pageData = res.data || {}
+        this.selectedDayCourses = (pageData.list || []).map(item => this.mapScheduleCourse(item))
+        const pageSize = Number(pageData.pageSize) || this.selectedDayPageSize
+        this.selectedDayTotal = pageData.total !== undefined && pageData.total !== null
+          ? Number(pageData.total) || 0
+          : (Number(pageData.totalPage) || 0) * pageSize
+        this.selectedDayPageNum = Number(pageData.pageNum) || pageNum
+        this.selectedDayPageSize = pageSize
+      } catch (_) {
+        if (requestId !== this.selectedDayRequestId) return
+        this.selectedDayCourses = []
+        this.selectedDayTotal = 0
+      } finally {
+        if (requestId === this.selectedDayRequestId) this.dayListLoading = false
+      }
+    },
+    handleSelectedDayPageChange(page) {
+      this.selectedDayPageNum = page
+      this.fetchSelectedDayList(this.selectedDate, page)
+    },
+    /** 周视图跨月时合并拉取月份标记 */
     async fetchRangeData(startStr, endStr) {
+      const requestId = ++this.scheduleMarkRequestId
       this.scheduleLoading = true
       try {
         const start = this.parseDate(startStr)
@@ -539,20 +602,22 @@ export default {
         const results = await Promise.all(
           [...months].map(key => {
             const [y, m] = key.split('-').map(Number)
-            return getScheduleList({ year: String(y), month: String(m + 1) })
-              .then(res => res.data || res || [])
+            return getScheduleMonthMarks({ year: String(y), month: pad(m + 1) })
+              .then(res => res.data !== undefined ? res.data : res)
               .catch(() => [])
           })
         )
+        if (requestId !== this.scheduleMarkRequestId) return
         const map = {}
         results.flat().forEach(item => {
           if (item && item.date) map[item.date] = item
         })
-        this.scheduleApiData = Object.values(map)
+        this.scheduleMarks = Object.values(map)
       } catch (_) {
-        this.scheduleApiData = []
+        if (requestId !== this.scheduleMarkRequestId) return
+        this.scheduleMarks = []
       } finally {
-        this.scheduleLoading = false
+        if (requestId === this.scheduleMarkRequestId) this.scheduleLoading = false
       }
     },
     /** 列表模式：按时间区间拉取 getScheduleListByRange({ startDate, endDate }) */
@@ -573,10 +638,13 @@ export default {
       const cells = this.weekCells
       if (!cells.length) return
       this.fetchRangeData(cells[0].dateStr, cells[cells.length - 1].dateStr)
+      this.fetchSelectedDayList(this.selectedDate, this.selectedDayPageNum)
     },
     selectDate(dateStr) {
       this.selectedDate = dateStr
+      this.selectedDayPageNum = 1
       this.weekAnchorDate = dateStr
+      this.fetchSelectedDayList(dateStr, 1)
       const d = this.parseDate(dateStr)
       if (d.getFullYear() !== this.scheduleYear || d.getMonth() !== this.scheduleMonth) {
         this.scheduleYear = d.getFullYear()
@@ -626,6 +694,7 @@ export default {
       const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
       this.weekAnchorDate = dateStr
       this.selectedDate = dateStr
+      this.selectedDayPageNum = 1
       // 避免仅改锚点时年月不变导致不请求；周视图统一按周区间拉数
       const y = d.getFullYear()
       const m = d.getMonth()
@@ -642,6 +711,7 @@ export default {
         this.$nextTick(() => this.fetchWeekData())
       } else {
         this.fetchScheduleData(this.scheduleYear, this.scheduleMonth + 1)
+        this.fetchSelectedDayList(this.selectedDate, this.selectedDayPageNum)
       }
     },
     switchToListMode() {
@@ -748,12 +818,12 @@ export default {
         return { type: 'scheduleRange', params: { startDate: this.listDateRange[0], endDate: this.listDateRange[1] } }
       }
       const date = String(course.fullStartTime || course.startTime || '').split(/[ T]/)[0]
-      const parts = date.match(/^(\d{4})-(\d{1,2})/)
       return {
-        type: 'scheduleMonth',
+        type: 'scheduleDay',
         params: {
-          year: parts ? parts[1] : String(this.scheduleYear),
-          month: parts ? parts[2] : String(this.scheduleMonth + 1)
+          date: date || this.selectedDate,
+          pageNum: this.selectedDayPageNum,
+          pageSize: this.selectedDayPageSize
         }
       }
     }
@@ -1054,6 +1124,11 @@ export default {
   font-weight: bold;
   color: #020618;
   margin-bottom: 12px;
+}
+.schedule-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
 }
 .course-grid {
   display: grid;

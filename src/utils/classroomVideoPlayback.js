@@ -3,6 +3,7 @@ import {
   getNoteList,
   getCourseDetail,
   getScheduleList,
+  getScheduleDayList,
   getScheduleListByRange,
   getAfterQuizList,
   getAfterQuizTeacherList,
@@ -64,6 +65,8 @@ function extractClassroomFiles(context, payload) {
       const groups = Array.isArray(payload) ? payload : []
       return groups.flatMap(group => filesFromItems(group && group.lives))
     }
+    case 'scheduleDay':
+      return filesFromItems(Array.isArray(payload) ? payload : payload && payload.list)
     case 'liveList':
       return filesFromItems(Array.isArray(payload) ? payload : payload && payload.list)
     case 'studentQuiz':
@@ -85,6 +88,7 @@ async function requestPlaybackContext(context) {
     case 'courseDetail': return getCourseDetail(params)
     case 'recentView': return getRecentViewList(params)
     case 'scheduleMonth': return getScheduleList(params)
+    case 'scheduleDay': return getScheduleDayList(params)
     case 'scheduleRange': return getScheduleListByRange(params)
     case 'studentQuiz': return getAfterQuizList(params)
     case 'teacherQuiz': return getAfterQuizTeacherList(params)
