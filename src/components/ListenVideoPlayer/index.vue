@@ -1580,7 +1580,7 @@ export default {
   box-sizing: border-box;
   padding: 9px 14px;
   border-radius: 10px;
-  background: rgba(31, 36, 50, 0.88);
+  background: rgba(12, 14, 21, 0.5);
   color: #e2e8f0;
   font-size: 15px;
   line-height: 22px;
@@ -1655,8 +1655,8 @@ export default {
   padding: 0 18px;
   border: 0;
   border-radius: 999px;
-  background: rgba(76, 64, 126, 0.82);
-  color: #b5c6ed;
+  background: rgba(41, 37, 60, 0.52);
+  color: rgba(163, 209, 255, 1);
   font-size: 14px;
   cursor: pointer;
   pointer-events: auto;
@@ -1684,6 +1684,27 @@ export default {
   .hrp-danmu-item,
   .hrp-danmu-latest {
     font-size: 17px;
+  }
+}
+
+/* 播放器缩至 mini 尺寸时，弹幕适当缩小并靠近视频底部。 */
+.hrp-main-player.vp-controlbar-mini ~ .hrp-danmu-layer {
+  bottom: 60px;
+
+  .hrp-danmu-item {
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .hrp-danmu-latest {
+    min-width: 110px;
+    min-height: 32px;
+    padding: 0 12px;
+    gap: 6px;
+    font-size: 12px;
   }
 }
 

@@ -106,15 +106,15 @@
     width: 50px !important;
     height: 50px !important;
     margin: 0 0 0 0 !important;
-    border-radius: 11px;
-    background-color: #292d39 !important;
+    border-radius: 0;
+    background-color: transparent !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
-    background-size: 20px 20px !important;
+    background-size: 46px 46px !important;
   }
 
   .prism-play-btn:hover {
-    background-color: #353b4a !important;
+    background-color: transparent !important;
   }
 
   .prism-time-display {
@@ -401,7 +401,7 @@
     .vp-control-speed { min-height: 42px; padding: 0 8px; }
     .vp-control-speed__button { gap: 7px; min-width: 58px; }
     .vp-control-speed__value { min-width: 36px; font-size: 14px; }
-    .prism-play-btn { flex-basis: 44px; width: 44px !important; height: 44px !important; }
+    .prism-play-btn { flex-basis: 44px; width: 44px !important; height: 44px !important; background-size: 42px 42px !important; }
     .prism-time-display { min-width: 132px; margin-right: 12px !important; margin-left: 18px !important; font-size: 14px !important; }
     .hrp-seek-controls { gap: 8px !important; }
     .hrp-seek-btn { width: 32px !important; }
@@ -433,7 +433,7 @@
   .prism-tooltip,
   .vp-thumbnail-preview { bottom: 59px !important; }
   .vp-controlbar-right { gap: 8px; }
-  .prism-play-btn { flex-basis: 38px; width: 38px !important; height: 38px !important; border-radius: 8px; background-size: 16px 16px !important; }
+  .prism-play-btn { flex-basis: 38px; width: 38px !important; height: 38px !important; border-radius: 8px; background-size: 36px 36px !important; }
   .prism-time-display { min-width: 126px; height: 30px !important; margin: 0 10px 0 12px !important; font-size: 12px !important; line-height: 30px !important; }
   .hrp-seek-controls { gap: 6px !important; height: 32px !important; }
   .hrp-seek-btn { width: 30px !important; height: 32px !important; }
@@ -462,7 +462,7 @@
   .vp-thumbnail-preview { bottom: 46px !important; }
   .vp-controlbar-left { flex: 1 1 auto; min-width: 0; }
   .vp-controlbar-right { flex: 0 1 auto; gap: 4px; }
-  .prism-play-btn { flex-basis: 20px; width: 20px !important; height: 20px !important; border-radius: 6px; background-size: 13px 13px !important; }
+  .prism-play-btn { flex-basis: 28px; width: 28px !important; height: 28px !important; border-radius: 6px; background-size: 28px 28px !important; }
   .prism-time-display { flex: 0 1 auto; width: 92px !important; min-width: 0; height: 26px !important; margin: 0 5px 0 7px !important; overflow: hidden; font-size: 10px !important; line-height: 26px !important; }
   .hrp-seek-controls {
     display: flex !important;
@@ -494,7 +494,7 @@
   .vp-controlbar-row { right: 1.2%; bottom: 1px; left: 1.2%; height: 34px; }
   .prism-tooltip,
   .vp-thumbnail-preview { bottom: 42px !important; }
-  .prism-play-btn { flex-basis: 27px; width: 27px !important; height: 27px !important; }
+  .prism-play-btn { flex-basis: 26px; width: 26px !important; height: 26px !important; background-size: 26px 26px !important; }
   .prism-time-display { width: 76px !important; margin-right: 3px !important; margin-left: 5px !important; font-size: 9px !important; }
   .hrp-seek-controls { gap: 0 !important; }
   .hrp-seek-btn { width: 22px !important; height: 26px !important; }
