@@ -1533,8 +1533,8 @@ export default {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  width: 380px;
-  max-width: calc(100% - 48px);
+  width: fit-content;
+  max-width: min(55vw, 720px, calc(100% - 48px));
   max-height: 55%;
   pointer-events: none;
 }
@@ -1544,7 +1544,9 @@ export default {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  width: 100%;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
   min-height: 0;
   flex: 1 1 auto;
   max-height: 250px;
@@ -1572,6 +1574,7 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  width: fit-content;
   max-width: 100%;
   min-height: 42px;
   box-sizing: border-box;
@@ -1671,6 +1674,12 @@ export default {
 .hrp-danmu-layer--fullscreen {
   bottom: 128px;
   left: 3.5%;
+  max-width: min(65vw, 900px, calc(100% - 48px));
+  max-height: 75%;
+
+  .hrp-danmu-list {
+    max-height: min(65vh, 640px);
+  }
 
   .hrp-danmu-item,
   .hrp-danmu-latest {
@@ -1686,6 +1695,11 @@ export default {
 
   .hrp-danmu-layer--fullscreen {
     bottom: 72px;
+    max-height: 70%;
+  }
+
+  .hrp-danmu-layer--fullscreen .hrp-danmu-list {
+    max-height: min(55vh, 320px);
   }
 
   .hrp-danmu-list {
