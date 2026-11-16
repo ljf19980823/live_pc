@@ -696,6 +696,7 @@ export default {
           autoplay: !restoreState || !restoreState.paused,
           rePlay: false,
           playsinline: true,
+          dbClickFullscreen: true,
           preload: true,
           useH5Prism: true,
           // SDK 快捷键会拦截输入框，统一由组件处理，并只操作主视频。

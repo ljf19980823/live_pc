@@ -534,6 +534,7 @@ export default {
           autoplay: !restoreState || !restoreState.paused,
           rePlay: false,
           playsinline: true,
+          dbClickFullscreen: true,
           preload: true,
           useH5Prism: true,
           keyShortCuts: false,

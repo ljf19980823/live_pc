@@ -290,6 +290,7 @@ export default {
           autoplay: true,
           rePlay: false,
           playsinline: true,
+          dbClickFullscreen: true,
           preload: true,
           controlBarVisibility: 'hover',
           useH5Prism: true,
