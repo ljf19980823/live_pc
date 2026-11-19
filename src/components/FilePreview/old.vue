@@ -58,7 +58,7 @@
  */
 
 /** ONLYOFFICE 文档服务器 API 地址 */
-const ONLYOFFICE_API_URL = 'https://live.fjlsjy123.com/onlyoffice/web-apps/apps/api/documents/api.js'
+const ONLYOFFICE_API_URL = 'https://test.live.fjlsjy123.com/onlyoffice/web-apps/apps/api/documents/api.js'
 
 /**
  * 从路径中提取扩展名（去掉 query/hash）
