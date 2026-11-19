@@ -58,9 +58,7 @@
             <h3 class="dialog-title">
               {{ updateIsForce ? '发现新版本，需要更新后才能继续使用' : '升级提示' }}
             </h3>
-            <p class="dialog-desc">
-              我们为您推出了更快、更稳定的 {{ updateDialogInfo.version }} 客户端。
-            </p>
+            <p class="dialog-desc">{{ updateDialogInfo.updateContent }}</p>
 
             <!-- 下载中 -->
             <template v-if="updateDownloading">
@@ -115,6 +113,7 @@ import {
 import { addSoftwareCheck } from '@/api/modules/student'
 import { getUserInfo } from '@/utils/auth'
 import { formatDate } from '@/utils'
+import { checkForUpdate } from '@/utils/updateCheck'
 
 export default {
   name: 'App',
@@ -130,7 +129,7 @@ export default {
       },
       updateDialogVisible: false,
       updateIsForce: false,
-      updateDialogInfo: { version: '', downloadUrl: '' },
+      updateDialogInfo: { version: '', downloadUrl: '', updateContent: '' },
       updateDownloading: false,
       updateDownloaded: false,
       updateDownloadProgress: 0,
@@ -208,15 +207,14 @@ export default {
     },
 
     async checkUpdate () {
-      if (!window.electronAPI?.checkForUpdate) return
       try {
-        const result = await window.electronAPI.checkForUpdate()
+        const result = await checkForUpdate()
         if (!result || !result.hasUpdate) return
 
         const updateInfo = {
           version: result.version || '新版本',
           downloadUrl: result.downloadUrl || '',
-          description: result.description || ''
+          updateContent: result.updateContent || ''
         }
         const isForceUpdate = result.isForceUpdate ?? '0'
 
@@ -439,6 +437,7 @@ export default {
   color: #595959;
   line-height: 1.6;
   margin: 0 0 20px;
+  white-space: pre-line;
 }
 
 /* ── 操作按钮 ─────────────────────────────────────────────────────────────── */

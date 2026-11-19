@@ -36,7 +36,7 @@ app.commandLine.appendSwitch('enable-precise-memory-info')
 //   "version": "2.0.0",
 //   "win_download_url": "https://example.com/setup-2.0.0.exe",
 //   "mac_download_url": "https://example.com/app-2.0.0.dmg",
-//   "description": "更快、更稳定的2.0客户端"
+//   "updateContent": "更快、更稳定的2.0客户端"
 // }
 // const VERSION_CHECK_URL = 'http://47.92.30.163:8085/edu/sso/latestVersion'
 // const VERSION_CHECK_URL = 'https://test.live.fjlsjy123.com/portal/api/edu/sso/latestVersion'
@@ -1018,7 +1018,13 @@ ipcMain.handle('check-for-update', async () => {
 
     const downloadUrl = process.platform === 'win32' ? winUrl : macUrl
     const isForceUpdate = data.isForceUpdate ?? 0
-    return { hasUpdate: true, version: latestVersion, downloadUrl, isForceUpdate }
+    return {
+      hasUpdate: true,
+      version: latestVersion,
+      downloadUrl,
+      updateContent: data.updateContent || '',
+      isForceUpdate
+    }
   } catch (e) {
     return { hasUpdate: false, error: e.message }
   }

@@ -558,9 +558,7 @@
           <!-- 标题 & 描述 -->
           <div class="dialog-body">
             <h3 class="dialog-title">升级提示</h3>
-            <p class="dialog-desc">
-              我们为您推出了更快、更稳定的 {{ updateInfo.version }} 客户端。
-            </p>
+            <p class="dialog-desc">{{ updateInfo.updateContent }}</p>
 
             <!-- 下载中：进度条 -->
             <template v-if="downloading">
@@ -985,6 +983,7 @@ import RankingPage from '@/views/Student/Class/RankingPage.vue'
 import AfterClassReport from '@/views/teacher/Class/AfterClassReport.vue'
 import { getToken, getUserInfo } from '@/utils/auth'
 import { mapGetters } from 'vuex'
+import { checkForUpdate } from '@/utils/updateCheck'
 export default {
   name: 'StudentOnline',
   components: { EmptyState, DialogCustome, VideoPlayer, ExamPage, StudentAnswerDetail, WrongExercisePage, RankingPage, AfterClassReport },
@@ -2499,9 +2498,8 @@ created() {
     async checkUpdate() {
       // App.vue 启动时已经检查过了，有结果直接复用
       if (this.hasUpdate) return
-      if (!window.electronAPI?.checkForUpdate) return
       try {
-        const result = await window.electronAPI.checkForUpdate()
+        const result = await checkForUpdate()
         if (result && result.hasUpdate) {
           this.$store.commit('app/SET_UPDATE_INFO', {
             hasUpdate: true,
@@ -2509,7 +2507,7 @@ created() {
             updateInfo: {
               version: result.version || '新版本',
               downloadUrl: result.downloadUrl || '',
-              description: result.description || ''
+              updateContent: result.updateContent || ''
             }
           })
         }
@@ -2591,6 +2589,10 @@ created() {
 </script>
 
 <style lang="scss" scoped>
+.dialog-desc {
+  white-space: pre-line;
+}
+
 .online-page {
   position: relative;
   padding: 28px 24px 63px;

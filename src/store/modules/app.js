@@ -15,7 +15,8 @@ const state = {
   updateInfo: {
     version: '',
     downloadUrl: '',
-    description: ''
+    description: '',
+    updateContent: ''
   }
 }
 
