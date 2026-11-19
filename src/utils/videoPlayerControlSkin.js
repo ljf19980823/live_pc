@@ -167,6 +167,7 @@ export function attachVideoPlayerControlSkin(player, {
   let usesWindowResize = false
   let danmuControl = null
   let subtitleControl = null
+  let speedControl = null
   let volumeIcon = null
   let volumePopup = null
   let thumbnailPopup = null
@@ -174,6 +175,8 @@ export function attachVideoPlayerControlSkin(player, {
   let progress = null
   let onVolumeIconClick = null
   let onProgressMouseMove = null
+  let playbackVideo = null
+  let onPlaybackStateChange = null
   let playerRoot = null
   let currentDanmuState = !!danmuEnabled
   let currentSubtitleState = !!subtitleEnabled
@@ -203,7 +206,10 @@ export function attachVideoPlayerControlSkin(player, {
 
   function updatePlayIcon(playButton) {
     if (!playButton) return
-    const playing = playButton.classList.contains('playing')
+    const video = container.querySelector('video')
+    const playing = video
+      ? !video.paused && !video.ended
+      : playButton.classList.contains('playing')
     playButton.style.backgroundImage = `url("${playing ? pauseIcon : playIcon}")`
   }
 
@@ -314,7 +320,7 @@ export function attachVideoPlayerControlSkin(player, {
     right.className = 'vp-controlbar-right'
     row.append(left, right)
 
-    const speedControl = createSpeedControl(player, container)
+    speedControl = createSpeedControl(player, container)
 
     danmuControl = createToggle('弹幕', currentDanmuState, enabled => {
       currentDanmuState = enabled
@@ -341,6 +347,13 @@ export function attachVideoPlayerControlSkin(player, {
     volumeIcon = volumeControl.querySelector('.volume-icon')
     volumePopup = playerRoot.querySelector('.prism-volume-control')
     thumbnailPopup = playerRoot.querySelector('.prism-thumbnail')
+    playbackVideo = container.querySelector('video')
+    onPlaybackStateChange = () => updatePlayIcon(playButton)
+    if (playbackVideo) {
+      ;['play', 'pause', 'ended', 'emptied'].forEach(event => {
+        playbackVideo.addEventListener(event, onPlaybackStateChange)
+      })
+    }
     progressTime = progress.querySelector('.prism-progress-time')
     if (volumePopup) volumePopup.classList.add('vp-volume-popup')
     if (thumbnailPopup) thumbnailPopup.classList.add('vp-thumbnail-preview')
@@ -385,6 +398,7 @@ export function attachVideoPlayerControlSkin(player, {
     if (volumeIcon) observer.observe(volumeIcon, { attributes: true, attributeFilter: ['class'] })
     listen('volumechange', () => updateVolumeIcon(volumeControl))
     listen('volumnchanged', () => updateVolumeIcon(volumeControl))
+    ;['play', 'pause', 'ended'].forEach(event => listen(event, onPlaybackStateChange))
   }
 
   inject()
@@ -408,7 +422,12 @@ export function attachVideoPlayerControlSkin(player, {
       if (usesWindowResize) window.removeEventListener('resize', updateResponsiveMode)
       if (volumeIcon && onVolumeIconClick) volumeIcon.removeEventListener('click', onVolumeIconClick)
       if (progress && onProgressMouseMove) progress.removeEventListener('mousemove', onProgressMouseMove)
-      speedControl.destroy()
+      if (playbackVideo && onPlaybackStateChange) {
+        ;['play', 'pause', 'ended', 'emptied'].forEach(event => {
+          playbackVideo.removeEventListener(event, onPlaybackStateChange)
+        })
+      }
+      if (speedControl) speedControl.destroy()
       events.forEach(([event, handler]) => {
         if (player.off) player.off(event, handler)
       })
@@ -425,6 +444,7 @@ export function attachVideoPlayerControlSkin(player, {
       ].forEach(property => container.style.removeProperty(property))
       danmuControl = null
       subtitleControl = null
+      speedControl = null
       volumeIcon = null
       volumePopup = null
       thumbnailPopup = null
@@ -432,6 +452,8 @@ export function attachVideoPlayerControlSkin(player, {
       progress = null
       onVolumeIconClick = null
       onProgressMouseMove = null
+      playbackVideo = null
+      onPlaybackStateChange = null
       playerRoot = null
     }
   }
