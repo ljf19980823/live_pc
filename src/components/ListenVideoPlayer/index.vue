@@ -168,6 +168,7 @@ import { getUserInfo } from '@/utils/auth'
 import { getLiveComments } from '@/api/modules/live'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
+import { hasAuthKey } from '@/utils/playbackUrlExpiry'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
@@ -625,7 +626,7 @@ export default {
         return
       }
       const file = this.getRuntimeFile(videoType)
-      if (!file || file.urlExpireAt == null || this.recoveryUsed) {
+      if (!file || this.recoveryUsed || (!hasAuthKey(file.filePath) && !fileIsExpiring(file))) {
         if (videoType === '1') this.mainError = true
         else this.teacherError = true
         this.mainLoading = false

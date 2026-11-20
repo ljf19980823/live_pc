@@ -11,6 +11,7 @@ import {
 } from '@/api/modules/teacher'
 import { getRecentViewList } from '@/api/modules/student'
 import { getLatestLive } from '@/api/modules/live'
+import { getPlaybackUrlExpireAt } from '@/utils/playbackUrlExpiry'
 
 const SUCCESS_CODES = [200, 0, '200', '0', 'success']
 
@@ -135,9 +136,9 @@ export function getPlaybackFile(fileList, videoType) {
 }
 
 export function fileIsExpiring(file, thresholdMs = 60000, now = Date.now()) {
-  if (!file || file.urlExpireAt === undefined || file.urlExpireAt === null || file.urlExpireAt === '') return false
-  const expiresAt = Number(file.urlExpireAt)
-  return Number.isFinite(expiresAt) && expiresAt - now < thresholdMs
+  if (!file) return false
+  const expiresAt = getPlaybackUrlExpireAt(file.filePath, file.urlExpireAt)
+  return expiresAt !== null && expiresAt - now < thresholdMs
 }
 
 export function isNotFoundMediaError(error) {

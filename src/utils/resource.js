@@ -1,5 +1,6 @@
 import { getCourseDetail } from '@/api/modules/teacher'
 import { getRecentViewList } from '@/api/modules/student'
+import { getPlaybackUrlExpireAt } from '@/utils/playbackUrlExpiry'
 
 const resourceIcons = {
   doc: require('@/assets/images/icon/Doc.png'),
@@ -26,10 +27,16 @@ const resourceIcons = {
 }
 const otherIcon = require('@/assets/images/icon/other.png')
 
-export function isResourceUrlExpiring(urlExpireAt, thresholdMs = 30000, now = Date.now()) {
-  if (urlExpireAt === undefined || urlExpireAt === null || urlExpireAt === '') return false
-  const expiresAt = Number(urlExpireAt)
-  return Number.isFinite(expiresAt) && expiresAt - now < thresholdMs
+export function isResourceUrlExpiring(urlExpireAt, thresholdMs = 30000, now = Date.now(), sourceUrl = '') {
+  const expiresAt = getPlaybackUrlExpireAt(sourceUrl, urlExpireAt)
+  return expiresAt !== null && expiresAt - now < thresholdMs
+}
+
+export function getResourceUrl(item) {
+  if (!item) return ''
+  const firstFile = Array.isArray(item.fileList) ? item.fileList[0] : null
+  return item.filePath || item.fileUrl || item.path || item.resourceUrl || item.url ||
+    (firstFile && (firstFile.filePath || firstFile.fileUrl || firstFile.path)) || ''
 }
 
 function responseData(response) {
@@ -71,7 +78,7 @@ function mergeResourceUrl(item, resource) {
 
 /** Refresh a course resource from the same course detail endpoint that supplied it. */
 export async function refreshCourseResource(item, params) {
-  if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+  if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item))) return item
   const response = await getCourseDetail(params || {})
   const data = responseData(response) || {}
   const resource = findCourseResource(data.detailTree, item.resourceNodeId || item.id)
@@ -81,7 +88,7 @@ export async function refreshCourseResource(item, params) {
 
 /** Refresh a recent-view resource through the existing recent-view query. */
 export async function refreshRecentResource(item, params = {}) {
-  if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+  if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item))) return item
   const response = await getRecentViewList({ pageNum: 1, pageSize: 10, ...params })
   const data = responseData(response)
   const rows = Array.isArray(data) ? data : data && data.list

@@ -203,7 +203,8 @@ export default {
       try {
         let file = this.file
         const refreshSource = this.refreshSource || file.refreshSource
-        signedUrlRefreshNeeded = Boolean(refreshSource && isResourceUrlExpiring(file.urlExpireAt))
+        const sourceUrl = file.path || file.filePath || file.fileUrl
+        signedUrlRefreshNeeded = Boolean(refreshSource && isResourceUrlExpiring(file.urlExpireAt, 30000, Date.now(), sourceUrl))
         if (signedUrlRefreshNeeded) {
           const refreshed = await refreshSource()
           if (requestId !== this.previewRequestId || !this.visible) return

@@ -614,7 +614,8 @@ export default {
 
     // ─── 文件打开/预览 ───────────────────────────────────────────
     async resolveBusinessFile(item, isGroup = this.activeTab === 'group', groupId = this.selectedGroup, directoryId = isGroup ? this.groupFileParentId : this.myParentId) {
-      if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+      const sourceUrl = item && (item.filePath || item.fileUrl || item.path)
+      if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), sourceUrl)) return item
       const params = isGroup
         ? { type: '2', userGroupId: groupId }
         : { type: '1' }

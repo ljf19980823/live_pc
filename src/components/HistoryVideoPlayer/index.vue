@@ -104,6 +104,7 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
+import { hasAuthKey } from '@/utils/playbackUrlExpiry'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
@@ -463,7 +464,7 @@ export default {
         return
       }
       const file = this.getRuntimeFile(videoType)
-      if (!file || file.urlExpireAt == null || this.recoveryUsed) {
+      if (!file || this.recoveryUsed || (!hasAuthKey(file.filePath) && !fileIsExpiring(file))) {
         if (videoType === '1') this.mainError = true
         else this.teacherError = true
         this.mainLoading = false

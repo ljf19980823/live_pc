@@ -536,7 +536,8 @@ export default {
       this.previewResource = null
     },
     async resolveSharedResource(item) {
-      if (!item || !isResourceUrlExpiring(item.urlExpireAt)) return item
+      const sourceUrl = item && (item.path || item.filePath || item.fileUrl)
+      if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), sourceUrl)) return item
       if (!item.id) throw new Error('课件缺少资料 ID，无法刷新访问地址')
       const version = this.contextVersion
       const response = await getSharedResourceDetail(item.id)

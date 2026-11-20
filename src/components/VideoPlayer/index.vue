@@ -74,6 +74,7 @@ import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
 import { isResourceUrlExpiring } from '@/utils/resource'
+import { hasAuthKey } from '@/utils/playbackUrlExpiry'
 import { collectToggle } from '@/api'
 
 /** 阿里云播放器 License 配置 */
@@ -200,6 +201,7 @@ export default {
       mediaErrorReported: false,
       initGeneration: 0,
       sourceRefreshPromise: null,
+      sourceStablePlaybackTimer: null,
       /** 是否已收藏 */
       isCollected: false,
       /** 收藏请求进行中 */
@@ -217,11 +219,15 @@ export default {
       if (val) {
         this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
+        this.sourceRefreshAttempted = false
+        this.mediaErrorReported = false
         this.$nextTick(() => {
           this.initPlayer()
         })
       } else {
         this.initGeneration++
+        clearTimeout(this.sourceStablePlaybackTimer)
+        this.sourceStablePlaybackTimer = null
         this.setScreenGuard(false)
         this.destroyPlayer()
       }
@@ -232,6 +238,9 @@ export default {
       this.runtimeSource = val
       this.runtimeExpireAt = this.sourceExpireAt
       this.sourceRefreshAttempted = false
+      this.mediaErrorReported = false
+      clearTimeout(this.sourceStablePlaybackTimer)
+      this.sourceStablePlaybackTimer = null
       if (this.visible && val) {
         this.$nextTick(() => {
           this.initPlayer()
@@ -268,7 +277,7 @@ export default {
 
       this.destroyPlayer()
 
-      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt)) {
+      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource)) {
         try {
           await this.refreshCurrentSource()
         } catch (e) {
@@ -316,7 +325,10 @@ export default {
         })
         if (this.playerInstance && typeof this.playerInstance.on === 'function') {
           this.playerInstance.on('error', error => this.handleSourceError(error))
-          this.playerInstance.on('play', () => this.handleSourceResume())
+          this.playerInstance.on('play', () => {
+            this.startSourceStablePlaybackTimer()
+            this.handleSourceResume()
+          })
         }
         this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.runtimeSource)
       } catch (e) {
@@ -330,6 +342,8 @@ export default {
      * 防止下次打开时出现多个播放器重叠的问题。
      */
     destroyPlayer() {
+      clearTimeout(this.sourceStablePlaybackTimer)
+      this.sourceStablePlaybackTimer = null
       if (this._playerControlSkin) {
         this._playerControlSkin.destroy()
         this._playerControlSkin = null
@@ -361,10 +375,8 @@ export default {
         const next = typeof result === 'string' ? { url: result } : (result || {})
         const url = next.filePath || next.fileUrl || next.path || next.url
         if (!url) throw new Error('资料访问地址刷新失败')
-        const changed = url !== this.runtimeSource || String(next.urlExpireAt || '') !== String(this.runtimeExpireAt || '')
         this.runtimeSource = url
-        if (next.urlExpireAt !== undefined) this.runtimeExpireAt = next.urlExpireAt
-        if (changed) this.sourceRefreshAttempted = false
+        this.runtimeExpireAt = next.urlExpireAt !== undefined ? next.urlExpireAt : null
         return next
       }).finally(() => {
         if (this.sourceRefreshPromise === request) this.sourceRefreshPromise = null
@@ -392,14 +404,29 @@ export default {
       }
     },
 
+    startSourceStablePlaybackTimer() {
+      clearTimeout(this.sourceStablePlaybackTimer)
+      const startTime = Number(this.playerInstance && this.playerInstance.getCurrentTime()) || 0
+      this.sourceStablePlaybackTimer = setTimeout(() => {
+        this.sourceStablePlaybackTimer = null
+        let currentTime = 0
+        let isPlaying = false
+        try { currentTime = Number(this.playerInstance && this.playerInstance.getCurrentTime()) || 0 } catch (e) {}
+        try { isPlaying = this.playerInstance && this.playerInstance.getStatus() === 'playing' } catch (e) {}
+        if (this.visible && isPlaying && currentTime > startTime + 5) this.sourceRefreshAttempted = false
+      }, 30000)
+    },
+
     async handleSourceResume() {
-      if (!this.visible || !this.refreshSource || !isResourceUrlExpiring(this.runtimeExpireAt) || this.sourceRefreshAttempted) return
+      if (!this.visible || !this.refreshSource || !isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource) || this.sourceRefreshAttempted) return
       await this.recoverExpiredSource()
     },
 
     async handleSourceError() {
       if (!this.visible) return
-      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 60000) && !this.sourceRefreshAttempted) {
+      if (this.sourceRefreshPromise) return
+      const signedUrlExpired = isResourceUrlExpiring(this.runtimeExpireAt, 60000, Date.now(), this.runtimeSource)
+      if (this.refreshSource && (hasAuthKey(this.runtimeSource) || signedUrlExpired) && !this.sourceRefreshAttempted) {
         await this.recoverExpiredSource()
         return
       }
@@ -427,7 +454,7 @@ export default {
 
     /** 下载当前视频 */
     async handleDownload() {
-      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt)) {
+      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource)) {
         try { await this.refreshCurrentSource() } catch (e) {
           this.$message.error('刷新资料访问地址失败，请重试')
           return
