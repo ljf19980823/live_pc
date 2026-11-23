@@ -167,7 +167,7 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { getLiveComments } from '@/api/modules/live'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
-import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideo, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
+import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
 import { hasAuthKey } from '@/utils/playbackUrlExpiry'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
@@ -326,7 +326,7 @@ export default {
       runtimeMainSource: '',
       runtimeTeacherSource: '',
       runtimePlaybackFiles: [],
-      recoveryUsed: false,
+      recoveryUsed: { main: false, teacher: false },
       recoveryPromise: null,
       recoveryToken: 0,
       pendingPlaybackState: null,
@@ -472,7 +472,7 @@ export default {
     resetRuntimePlayback() {
       this.recoveryToken += 1
       this.recoveryPromise = null
-      this.recoveryUsed = false
+      this.recoveryUsed = { main: false, teacher: false }
       this.pendingPlaybackState = null
       this.runtimePlaybackFiles = this.playbackFiles.slice()
       this.runtimeMainSource = this.mainSource
@@ -602,7 +602,9 @@ export default {
       const startTime = Number(this.mainPlayer && this.mainPlayer.getCurrentTime()) || 0
       this.stablePlaybackTimer = setTimeout(() => {
         const currentTime = Number(this.mainPlayer && this.mainPlayer.getCurrentTime()) || 0
-        if ((this.visible || this.inline) && this.isMainPlaying && currentTime > startTime + 5) this.recoveryUsed = false
+        if ((this.visible || this.inline) && this.isMainPlaying && currentTime > startTime + 5) {
+          this.recoveryUsed = { main: false, teacher: false }
+        }
       }, 30000)
     },
 
@@ -626,7 +628,8 @@ export default {
         return
       }
       const file = this.getRuntimeFile(videoType)
-      if (!file || this.recoveryUsed || (!hasAuthKey(file.filePath) && !fileIsExpiring(file))) {
+      const recoveryKey = videoType === '2' ? 'teacher' : 'main'
+      if (!file || this.recoveryUsed[recoveryKey] || (!hasAuthKey(file.filePath) && !fileIsExpiring(file))) {
         if (videoType === '1') this.mainError = true
         else this.teacherError = true
         this.mainLoading = false
@@ -645,13 +648,35 @@ export default {
         if (isMediaError) this.$message.error('视频暂时无法播放，请重新进入页面')
         return
       }
-      if (isMediaError) this.recoveryUsed = true
+      const recoveryKey = videoType === '2' ? 'teacher' : 'main'
+      if (isMediaError) this.recoveryUsed[recoveryKey] = true
       const token = this.recoveryToken
       const recoveryPromise = (async () => {
         try {
-          const next = await refreshClassroomVideo(this.refreshContext, file.videoId)
+          // Refresh every signed route in one request. Main and teacher streams
+          // often expire together; refreshing only the route that errored leaves
+          // the other player mounted with its stale auth_key.
+          const signedFiles = this.runtimePlaybackFiles.filter(current => current && current.videoId && (
+            String(current.videoId) === String(file.videoId) ||
+            hasAuthKey(current.filePath) ||
+            fileIsExpiring(current)
+          ))
+          const refreshedFiles = await refreshClassroomVideos(
+            this.refreshContext,
+            signedFiles.map(current => current.videoId)
+          )
           if (token !== this.recoveryToken || !(this.visible || this.inline)) return
-          this.replaceRuntimeFile(next)
+          const refreshedIds = new Set(refreshedFiles.map(current => String(current.videoId)))
+          if (!refreshedIds.has(String(file.videoId))) {
+            throw new Error('视频已不在当前结果中，请重新进入页面')
+          }
+          refreshedFiles.forEach(current => this.replaceRuntimeFile(current))
+          if (isMediaError) {
+            refreshedFiles.forEach(current => {
+              const key = String(current.videoType) === '2' ? 'teacher' : 'main'
+              this.recoveryUsed[key] = true
+            })
+          }
           this.pendingPlaybackState = state
           this.mainError = false
           this.teacherError = false

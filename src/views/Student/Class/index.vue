@@ -1800,7 +1800,7 @@ export default {
         
         this.currentVideoUrl = url
         this.currentVideoExpireAt = item.urlExpireAt
-        this.currentVideoRefreshSource = () => refreshCourseResource(item, refreshParams)
+        this.currentVideoRefreshSource = options => refreshCourseResource(item, refreshParams, Boolean(options && options.force))
         this.currentPlayingItem = item
         this.fromLearningTask = true
         this.currentCollectParams = collectBase

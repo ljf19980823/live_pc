@@ -593,10 +593,10 @@ export default {
         this.currentAllowFastForward = item.allowFastForward != null ? String(item.allowFastForward) : '2'
         this.currentVideoUrl = url
         this.currentVideoExpireAt = item.urlExpireAt
-        this.currentVideoRefreshSource = () => refreshRecentResource(item, {
+        this.currentVideoRefreshSource = options => refreshRecentResource(item, {
           pageNum: this.recentViewPageNum,
           pageSize: this.recentViewPageSize
-        })
+        }, Boolean(options && options.force))
         this.currentPlayingItem = item
         this.fromLearningTask = true
         this.currentCollectParams = collectBase

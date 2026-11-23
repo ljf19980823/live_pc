@@ -515,7 +515,7 @@ export default {
         path,
         extension,
         urlExpireAt: item.urlExpireAt,
-        refreshSource: () => this.resolveSharedResource(item)
+        refreshSource: options => this.resolveSharedResource(item, Boolean(options && options.force))
       }
       if (type === '2' || ['mp4', 'mov', 'webm', 'm4v', 'avi', 'mkv'].includes(extension)) this.previewKind = 'video'
       else if (type === '3' || ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(extension)) this.previewKind = 'audio'
@@ -535,9 +535,9 @@ export default {
       this.previewFile = null
       this.previewResource = null
     },
-    async resolveSharedResource(item) {
+    async resolveSharedResource(item, force = false) {
       const sourceUrl = item && (item.path || item.filePath || item.fileUrl)
-      if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), sourceUrl)) return item
+      if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), sourceUrl))) return item
       if (!item.id) throw new Error('课件缺少资料 ID，无法刷新访问地址')
       const version = this.contextVersion
       const response = await getSharedResourceDetail(item.id)

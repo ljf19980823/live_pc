@@ -371,7 +371,14 @@ export default {
     async refreshCurrentSource() {
       if (!this.refreshSource) throw new Error('当前资料不支持刷新访问地址')
       if (this.sourceRefreshPromise) return this.sourceRefreshPromise
-      const request = Promise.resolve().then(() => this.refreshSource()).then(result => {
+      // A playback error can mean the CDN rejected an expired auth_key even
+      // when its timestamp could not be parsed locally. Force the owning
+      // business endpoint to fetch a fresh record instead of returning its
+      // cached item unchanged.
+      const request = Promise.resolve().then(() => this.refreshSource({
+        force: true,
+        currentSource: this.runtimeSource
+      })).then(result => {
         const next = typeof result === 'string' ? { url: result } : (result || {})
         const url = next.filePath || next.fileUrl || next.path || next.url
         if (!url) throw new Error('资料访问地址刷新失败')

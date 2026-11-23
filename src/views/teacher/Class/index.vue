@@ -2030,7 +2030,7 @@ export default {
         console.log(url,'视频地址')
         this.currentVideoUrl = url
         this.currentVideoExpireAt = item.urlExpireAt
-        this.currentVideoRefreshSource = () => refreshCourseResource(item, refreshParams)
+        this.currentVideoRefreshSource = options => refreshCourseResource(item, refreshParams, Boolean(options && options.force))
         this.showVideoDialog = true
       } else if (historyVideoTypes.includes(nodeType)) {
         this.openVideoPlayer(item, false, true)

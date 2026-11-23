@@ -77,8 +77,8 @@ function mergeResourceUrl(item, resource) {
 }
 
 /** Refresh a course resource from the same course detail endpoint that supplied it. */
-export async function refreshCourseResource(item, params) {
-  if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item))) return item
+export async function refreshCourseResource(item, params, force = false) {
+  if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item)))) return item
   const response = await getCourseDetail(params || {})
   const data = responseData(response) || {}
   const resource = findCourseResource(data.detailTree, item.resourceNodeId || item.id)
@@ -87,8 +87,8 @@ export async function refreshCourseResource(item, params) {
 }
 
 /** Refresh a recent-view resource through the existing recent-view query. */
-export async function refreshRecentResource(item, params = {}) {
-  if (!item || !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item))) return item
+export async function refreshRecentResource(item, params = {}, force = false) {
+  if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item)))) return item
   const response = await getRecentViewList({ pageNum: 1, pageSize: 10, ...params })
   const data = responseData(response)
   const rows = Array.isArray(data) ? data : data && data.list

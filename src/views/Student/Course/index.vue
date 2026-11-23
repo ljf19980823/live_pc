@@ -943,7 +943,7 @@ export default {
         this.currentResourceTitle = item.title || '视频播放'
         this.currentVideoUrl = url
         this.currentVideoExpireAt = item.urlExpireAt
-        this.currentVideoRefreshSource = () => refreshCourseResource(item, { courseId })
+        this.currentVideoRefreshSource = options => refreshCourseResource(item, { courseId }, Boolean(options && options.force))
         this.currentPlayingItem = item
         this.showVideoDialog = true
       }else if (historyVideoTypes.includes(nodeType)) {
