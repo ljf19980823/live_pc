@@ -265,7 +265,7 @@ export default {
      * 2. 销毁已有实例，防止重复创建
      * 3. 创建新的 Aliplayer 实例并绑定到容器
      */
-    async initPlayer(restoreState = null) {
+    async initPlayer(restoreState = null, sourceAlreadyRefreshed = false) {
       const generation = ++this.initGeneration
       this.initError = false
       this.mediaErrorReported = false
@@ -277,7 +277,13 @@ export default {
 
       this.destroyPlayer()
 
-      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource)) {
+      // Page and list data can retain a signed URL overnight. Fetch the owning
+      // record whenever it is opened, even if local expiry metadata says it is
+      // still valid.
+      if (!sourceAlreadyRefreshed && this.refreshSource && (
+        hasAuthKey(this.runtimeSource) ||
+        isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource)
+      )) {
         try {
           await this.refreshCurrentSource()
         } catch (e) {
@@ -452,7 +458,7 @@ export default {
         await this.refreshCurrentSource()
         if (!this.visible) return
         await this.$nextTick()
-        await this.initPlayer(state)
+        await this.initPlayer(state, true)
       } catch (e) {
         this.initError = true
         this.$message.error('刷新资料访问地址失败，请重新打开')

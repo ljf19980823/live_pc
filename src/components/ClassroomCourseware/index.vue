@@ -540,7 +540,12 @@ export default {
       if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), sourceUrl))) return item
       if (!item.id) throw new Error('课件缺少资料 ID，无法刷新访问地址')
       const version = this.contextVersion
-      const response = await getSharedResourceDetail(item.id)
+      const response = await getSharedResourceDetail(item.id, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, max-age=0',
+          Pragma: 'no-cache'
+        }
+      })
       if (!this.isCurrentContext(version)) throw new Error('当前课堂资料已改变，请重新打开')
       const fresh = response.data || {}
       if (!(fresh.fileUrl || fresh.resourceUrl)) throw new Error('课件访问地址刷新失败')

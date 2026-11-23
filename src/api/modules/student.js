@@ -37,7 +37,7 @@ export const getAllCourseList = params => get('/edu/recentView/courses', withPag
 export const getRecentCourseList = (params) => get('/edu/recentView/recent', params)
 
 // 获取最近观看列表
-export const getRecentViewList = params => get('/edu/recentView/view', withPageParams(params))
+export const getRecentViewList = (params, config = {}) => get('/edu/recentView/view', withPageParams(params), config)
 
 // 获取收藏列表
 export const getRecentCollectList = params => get('/edu/recentView/collect', withPageParams(params))

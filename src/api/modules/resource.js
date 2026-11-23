@@ -4,7 +4,7 @@ import { get, post, upload } from '@/utils/request'
 // 课件资源列表
 export const getSharedResourceList = params => get('/edu/resource/list', params)
 // 签名地址即将过期时，可用原件 ID 单独刷新访问地址。
-export const getSharedResourceDetail = resourceId => get('/edu/resource/detail', { resourceId })
+export const getSharedResourceDetail = (resourceId, config = {}) => get('/edu/resource/detail', { resourceId }, config)
 // 上传课件资源
 export const uploadSharedResource = (formData, onProgress) => upload('/edu/resource/upload', formData, onProgress)
 // 修改课件资源

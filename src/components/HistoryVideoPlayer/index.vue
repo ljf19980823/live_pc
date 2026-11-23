@@ -377,17 +377,22 @@ export default {
       let teacherUnavailable = false
       try {
         const files = this.runtimePlaybackFiles.slice()
-        const expiring = files.filter(file => file && fileIsExpiring(file))
-        if (expiring.length) {
+        // The page can keep an old signed filePath in memory overnight. Always
+        // refresh signed classroom URLs before mounting a player when the
+        // originating page supplied a refresh context and stable video ID.
+        const refreshableFiles = this.refreshContext
+          ? files.filter(file => file && file.videoId && (hasAuthKey(file.filePath) || fileIsExpiring(file)))
+          : []
+        if (refreshableFiles.length) {
           let refreshedFiles = []
           try {
-            refreshedFiles = await refreshClassroomVideos(this.refreshContext, expiring.map(file => file.videoId))
+            refreshedFiles = await refreshClassroomVideos(this.refreshContext, refreshableFiles.map(file => file.videoId))
             if (!this.visible || token !== this.recoveryToken) return
           } catch (error) {
-            if (expiring.some(file => String(file.videoType) !== '2')) throw error
+            if (refreshableFiles.some(file => String(file.videoType) !== '2')) throw error
             teacherUnavailable = true
           }
-          for (const file of expiring) {
+          for (const file of refreshableFiles) {
             const next = refreshedFiles.find(current => String(current.videoId) === String(file.videoId))
             if (!next) {
               if (String(file.videoType) !== '2') throw new Error('视频已不在当前结果中，请重新进入页面')

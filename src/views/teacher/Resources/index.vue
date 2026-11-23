@@ -620,7 +620,12 @@ export default {
         ? { type: '2', userGroupId: groupId }
         : { type: '1' }
       if (directoryId) params.parentId = directoryId
-      const res = await getBusinessFileList(params)
+      const res = await getBusinessFileList(params, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, max-age=0',
+          Pragma: 'no-cache'
+        }
+      })
       const fresh = (res.data || []).find(file => String(file.id) === String(item.id))
       if (!fresh || !(fresh.fileUrl || fresh.url || fresh.path)) {
         throw new Error('资料访问地址刷新失败')

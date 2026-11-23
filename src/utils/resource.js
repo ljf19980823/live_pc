@@ -2,6 +2,13 @@ import { getCourseDetail } from '@/api/modules/teacher'
 import { getRecentViewList } from '@/api/modules/student'
 import { getPlaybackUrlExpireAt } from '@/utils/playbackUrlExpiry'
 
+const FRESH_URL_REQUEST = {
+  headers: {
+    'Cache-Control': 'no-cache, no-store, max-age=0',
+    Pragma: 'no-cache'
+  }
+}
+
 const resourceIcons = {
   doc: require('@/assets/images/icon/Doc.png'),
   docx: require('@/assets/images/icon/Doc.png'),
@@ -79,7 +86,7 @@ function mergeResourceUrl(item, resource) {
 /** Refresh a course resource from the same course detail endpoint that supplied it. */
 export async function refreshCourseResource(item, params, force = false) {
   if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item)))) return item
-  const response = await getCourseDetail(params || {})
+  const response = await getCourseDetail(params || {}, FRESH_URL_REQUEST)
   const data = responseData(response) || {}
   const resource = findCourseResource(data.detailTree, item.resourceNodeId || item.id)
   if (!resource) throw new Error('资料已不在当前课程中，请重新进入页面')
@@ -89,7 +96,7 @@ export async function refreshCourseResource(item, params, force = false) {
 /** Refresh a recent-view resource through the existing recent-view query. */
 export async function refreshRecentResource(item, params = {}, force = false) {
   if (!item || (!force && !isResourceUrlExpiring(item.urlExpireAt, 30000, Date.now(), getResourceUrl(item)))) return item
-  const response = await getRecentViewList({ pageNum: 1, pageSize: 10, ...params })
+  const response = await getRecentViewList({ pageNum: 1, pageSize: 10, ...params }, FRESH_URL_REQUEST)
   const data = responseData(response)
   const rows = Array.isArray(data) ? data : data && data.list
   const row = (Array.isArray(rows) ? rows : []).find(current =>

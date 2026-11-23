@@ -540,17 +540,21 @@ export default {
       const token = this.recoveryToken
       let teacherUnavailable = false
       try {
-        const expiring = this.runtimePlaybackFiles.filter(file => file && fileIsExpiring(file))
-        if (expiring.length) {
+        // AI listening pages can retain signed URLs in route data. Resolve them
+        // again before playback so reopening never starts with a stale auth_key.
+        const refreshableFiles = this.refreshContext
+          ? this.runtimePlaybackFiles.filter(file => file && file.videoId && (hasAuthKey(file.filePath) || fileIsExpiring(file)))
+          : []
+        if (refreshableFiles.length) {
           let refreshedFiles = []
           try {
-            refreshedFiles = await refreshClassroomVideos(this.refreshContext, expiring.map(file => file.videoId))
+            refreshedFiles = await refreshClassroomVideos(this.refreshContext, refreshableFiles.map(file => file.videoId))
             if (token !== this.recoveryToken || !(this.visible || this.inline)) return
           } catch (error) {
-            if (expiring.some(file => String(file.videoType) !== '2')) throw error
+            if (refreshableFiles.some(file => String(file.videoType) !== '2')) throw error
             teacherUnavailable = true
           }
-          for (const file of expiring) {
+          for (const file of refreshableFiles) {
             const next = refreshedFiles.find(current => String(current.videoId) === String(file.videoId))
             if (!next) {
               if (String(file.videoType) !== '2') throw new Error('视频已不在当前结果中，请重新进入页面')

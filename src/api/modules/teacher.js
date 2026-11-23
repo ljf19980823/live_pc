@@ -51,10 +51,10 @@ export const getStudentLiveStatistics = params => get('/edu/live/statistics/stud
 export const saveStudentNote = (classId, studentId, content) => post(`/edu/class/${classId}/students/${studentId}/note`, { content })
 
 // 获取实时课堂列表
-export const getLiveList = params => get('/edu/live/list', withPageParams(params))
+export const getLiveList = (params, config = {}) => get('/edu/live/list', withPageParams(params), config)
 
 // 获取历史课堂列表
-export const getHistoryList = params => get('/edu/history/list', params)
+export const getHistoryList = (params, config = {}) => get('/edu/history/list', params, config)
 
 // 创建班级
 export const createClass = params => post('/edu/class/create', params)
@@ -66,7 +66,7 @@ export const updateClass = (classId, data) => put(`/edu/class/${classId}`, data)
 export const deleteClass = classId => post('/edu/class/remove', {}, { params: { classId } })
 
 // 获取课程详情（目录树）
-export const getCourseDetail = params => get('/edu/course/detail', params)
+export const getCourseDetail = (params, config = {}) => get('/edu/course/detail', params, config)
 
 // 重置学生密码
 export const resetStudentPassword = data => post('/edu/class/students/resetPassword', data)
@@ -91,16 +91,16 @@ export const getLessonProgress = params => get('/edu/course/lesson/progress', pa
 export const getCourseProgress = (courseId, classId) => get(`/edu/course/${courseId}/class/${classId}/students/progress`)
 
 // 获取课表列表
-export const getScheduleList = params => get('/edu/schedule/list', params)
+export const getScheduleList = (params, config = {}) => get('/edu/schedule/list', params, config)
 
 // 获取课表日历标记（按月返回有课日期和当天场次）
 export const getScheduleMonthMarks = params => get('/edu/schedule/month-marks', params)
 
 // 获取某一天的课表（分页）
-export const getScheduleDayList = params => get('/edu/schedule/day-list', params)
+export const getScheduleDayList = (params, config = {}) => get('/edu/schedule/day-list', params, config)
 
 // 按日期区间获取课表列表
-export const getScheduleListByRange = params => get('/edu/schedule/list-by-range', params)
+export const getScheduleListByRange = (params, config = {}) => get('/edu/schedule/list-by-range', params, config)
 
 // 删除课堂
 export const deleteLiveClass = liveId => del(`/edu/live/${liveId}`)
@@ -166,13 +166,13 @@ export const updateRecentStudy = data => post('/edu/course/recentStudy', data)
 export const updateCourseProgress = data => post('/edu/course/progress', data)
 
 // 获取教师课后测列表
-export const getAfterQuizTeacherList = params => get('/edu/after/quiz/teacher/list', params)
+export const getAfterQuizTeacherList = (params, config = {}) => get('/edu/after/quiz/teacher/list', params, config)
 
 // 科目下拉选项（可按 classId 筛选）
 export const getSubjectOptions = params => get('/edu/subject/options', params)
 
 // 知构笔记列表
-export const getNoteList = params => get('/edu/history/note-list', params)
+export const getNoteList = (params, config = {}) => get('/edu/history/note-list', params, config)
 
 // 更新是否重点笔记（isPoint: 1=设为重点 2=取消重点）
 export const updateNoteIsPoint = data => post('/edu/history/update-is-point', data)
@@ -183,7 +183,7 @@ export const getAfterQuizOptions = params => get('/edu/after/quiz/options', para
 // 上课老师下拉选项
 export const getTeacherOptions = params => get('/edu/sso/teacher/options', params)
 // 获取课后测列表
-export const getAfterQuizList = params => get('/edu/after/quiz/list', params)
+export const getAfterQuizList = (params, config = {}) => get('/edu/after/quiz/list', params, config)
 
 // 根据考试配置 ID 获取考试题目（Path 参数 configId）
 export const getExamQuestionsByConfig = configId => get(`/edu/after/quiz/quests/config/${configId}`)
@@ -233,7 +233,7 @@ export const exportAfterQuizLeaderboard = (examConfigId, classId) => download(`/
 export const collectToggle = data => post('/edu/recentView/collect/toggle', data)
 
 // 获取资料列表（type: '1' 个人资料 '2' 教研组资料）
-export const getBusinessFileList = params => get('/edu/businessFile/list', params)
+export const getBusinessFileList = (params, config = {}) => get('/edu/businessFile/list', params, config)
 
 // 新建文件夹 / 上传资料（multipart/form-data）
 export const uploadBusinessFile = (formData, onProgress) => upload('/edu/businessFile/upload', formData, onProgress)

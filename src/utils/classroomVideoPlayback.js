@@ -14,6 +14,12 @@ import { getLatestLive } from '@/api/modules/live'
 import { getPlaybackUrlExpireAt } from '@/utils/playbackUrlExpiry'
 
 const SUCCESS_CODES = [200, 0, '200', '0', 'success']
+const FRESH_URL_REQUEST = {
+  headers: {
+    'Cache-Control': 'no-cache, no-store, max-age=0',
+    Pragma: 'no-cache'
+  }
+}
 
 function responseData(response) {
   if (!response || typeof response !== 'object') return response
@@ -84,17 +90,17 @@ async function requestPlaybackContext(context) {
   if (!context || typeof context !== 'object') throw new Error('缺少视频刷新上下文')
   const params = context.params || {}
   switch (context.type) {
-    case 'historyList': return getHistoryList(params)
-    case 'noteList': return getNoteList(params)
-    case 'courseDetail': return getCourseDetail(params)
-    case 'recentView': return getRecentViewList(params)
-    case 'scheduleMonth': return getScheduleList(params)
-    case 'scheduleDay': return getScheduleDayList(params)
-    case 'scheduleRange': return getScheduleListByRange(params)
-    case 'studentQuiz': return getAfterQuizList(params)
-    case 'teacherQuiz': return getAfterQuizTeacherList(params)
-    case 'liveList': return getLiveList(params)
-    case 'liveLatest': return getLatestLive()
+    case 'historyList': return getHistoryList(params, FRESH_URL_REQUEST)
+    case 'noteList': return getNoteList(params, FRESH_URL_REQUEST)
+    case 'courseDetail': return getCourseDetail(params, FRESH_URL_REQUEST)
+    case 'recentView': return getRecentViewList(params, FRESH_URL_REQUEST)
+    case 'scheduleMonth': return getScheduleList(params, FRESH_URL_REQUEST)
+    case 'scheduleDay': return getScheduleDayList(params, FRESH_URL_REQUEST)
+    case 'scheduleRange': return getScheduleListByRange(params, FRESH_URL_REQUEST)
+    case 'studentQuiz': return getAfterQuizList(params, FRESH_URL_REQUEST)
+    case 'teacherQuiz': return getAfterQuizTeacherList(params, FRESH_URL_REQUEST)
+    case 'liveList': return getLiveList(params, FRESH_URL_REQUEST)
+    case 'liveLatest': return getLatestLive(FRESH_URL_REQUEST)
     default: throw new Error('当前页面暂不支持自动刷新视频地址')
   }
 }
