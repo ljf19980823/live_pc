@@ -186,7 +186,7 @@ export function readPlaybackState(player, videoElement) {
   let currentTime = 0
   try { currentTime = Number(videoElement ? videoElement.currentTime : player && player.getCurrentTime()) || 0 } catch (e) {}
   let speed = 1
-  try { speed = Number(videoElement && videoElement.playbackRate) || 1 } catch (e) {}
+  try { speed = Number(videoElement && videoElement.playbackRate) || Number(player && player.getSpeed()) || 1 } catch (e) {}
   let paused = true
   try {
     paused = videoElement ? videoElement.paused : !player || player.getStatus() !== 'playing'
