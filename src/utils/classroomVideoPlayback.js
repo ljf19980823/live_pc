@@ -78,7 +78,7 @@ function extractClassroomFiles(context, payload) {
       return filesFromItems(Array.isArray(payload) ? payload : payload && payload.list)
     case 'studentQuiz':
     case 'teacherQuiz':
-      return filesFromItems(payload)
+      return filesFromItems(Array.isArray(payload) ? payload : payload && (payload.records || payload.list))
     case 'liveLatest':
       return Array.isArray(payload && payload.fileList) ? payload.fileList : []
     default:
