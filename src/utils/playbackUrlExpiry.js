@@ -27,8 +27,11 @@ export function hasAuthKey(url) {
 export function getPlaybackUrlExpireAt(url, urlExpireAt) {
   const expirations = []
   if (urlExpireAt !== undefined && urlExpireAt !== null && urlExpireAt !== '') {
-    const value = Number(urlExpireAt)
-    if (Number.isFinite(value)) expirations.push(value)
+    let value = Number(urlExpireAt)
+    if (Number.isFinite(value)) {
+      if (value > 0 && value < 1000000000000) value *= 1000
+      expirations.push(value)
+    }
   }
   const authKeyExpireAt = getAuthKeyExpireAt(url)
   if (authKeyExpireAt !== null) expirations.push(authKeyExpireAt)

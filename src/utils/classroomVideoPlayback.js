@@ -124,7 +124,8 @@ export async function refreshClassroomVideos(context, videoIds) {
     const id = String(file.videoId)
     if (requestedIds.has(id) && !matches.has(id)) matches.set(id, file)
   })
-  return ids.map(id => matches.get(id)).filter(Boolean)
+  const refreshedFiles = ids.map(id => matches.get(id)).filter(Boolean)
+  return refreshedFiles
 }
 
 export async function refreshClassroomVideo(context, videoId) {
@@ -147,22 +148,81 @@ export function fileIsExpiring(file, thresholdMs = 60000, now = Date.now()) {
   return expiresAt !== null && expiresAt - now < thresholdMs
 }
 
-export function isNotFoundMediaError(error) {
+/** Refresh at playback start; renew once more if the returned URL is already near expiry. */
+export async function refreshClassroomVideosForPlayback(context, videoIds) {
+  const files = await refreshClassroomVideos(context, videoIds)
+  const expiringIds = files.filter(file => fileIsExpiring(file, 30000)).map(file => file.videoId)
+  if (!expiringIds.length) return files
+
+  const renewedFiles = await refreshClassroomVideos(context, expiringIds)
+  const renewedById = new Map(renewedFiles.map(file => [String(file.videoId), file]))
+  return files.map(file => renewedById.get(String(file.videoId)) || file)
+}
+
+function findMediaErrorCode(error, expectedCodes) {
   const visited = new Set()
-  const findStatus = value => {
+  const codeKeys = new Set(['status', 'statuscode', 'httpstatus', 'code', 'errorcode', 'errcode', 'errno', 'paramdata'])
+  const findCode = value => {
+    if (typeof value === 'number' && expectedCodes.has(value)) return value
+    if (typeof value === 'string') {
+      const text = value.trim()
+      const code = Number(text)
+      if (text && expectedCodes.has(code)) return code
+      if (/^[\[{]/.test(text)) {
+        try { return findCode(JSON.parse(text)) } catch (e) {}
+      }
+      return null
+    }
     if (!value || typeof value !== 'object' || visited.has(value)) return null
     visited.add(value)
-    for (const key of ['status', 'statusCode', 'httpStatus', 'code']) {
-      const number = Number(value[key])
-      if (number === 404) return 404
+    for (const key of ['status', 'statusCode', 'httpStatus', 'code', 'errorCode', 'errCode', 'errno', 'paramData']) {
+      const nestedValue = value[key]
+      const code = Number(nestedValue)
+      if (nestedValue !== undefined && nestedValue !== null && expectedCodes.has(code)) return code
+      const result = findCode(nestedValue)
+      if (result !== null) return result
     }
-    for (const key of ['response', 'data', 'paramData', 'error', 'payload']) {
-      const result = findStatus(value[key])
-      if (result) return result
+    for (const [key, nestedValue] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase().replace(/[_-]/g, '')
+      if (codeKeys.has(normalizedKey)) {
+        const code = Number(nestedValue)
+        if (expectedCodes.has(code)) return code
+      }
+      const result = findCode(nestedValue)
+      if (result !== null) return result
     }
     return null
   }
-  return findStatus(error) === 404
+  return findCode(error)
+}
+
+export function isNotFoundMediaError(error) {
+  return findMediaErrorCode(error, new Set([404])) === 404
+}
+
+export function isExpiredPlaybackUrlError(error) {
+  // Only an explicit authorization response proves that the signed URL needs renewal.
+  return findMediaErrorCode(error, new Set([403])) === 403
+}
+
+function hasCancellationMessage(error) {
+  const visited = new Set()
+  const cancellationPattern = /(?:\babort(?:ed|ing)?\b|\bcancel(?:led|ed|lation)?\b|ERR_ABORTED)/i
+  const visit = value => {
+    if (typeof value === 'string') return cancellationPattern.test(value)
+    if (!value || typeof value !== 'object' || visited.has(value)) return false
+    visited.add(value)
+    if (String(value.name || '') === 'AbortError') return true
+    if (typeof value.message === 'string' && cancellationPattern.test(value.message)) return true
+    return Object.values(value).some(visit)
+  }
+  return visit(error)
+}
+
+export function isTransientPlaybackRequestError(error) {
+  // Aliplayer normalizes canceled Range requests (CDN 499) to player code 4400.
+  // These can be expected during seeking, source replacement, and teardown.
+  return findMediaErrorCode(error, new Set([499, 4400])) !== null || hasCancellationMessage(error)
 }
 
 export function getMediaRequestId(error) {

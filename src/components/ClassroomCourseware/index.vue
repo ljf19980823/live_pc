@@ -140,6 +140,8 @@
       :visible="previewKind === 'video'"
       :source="previewFile ? previewFile.path : ''"
       :source-expire-at="previewFile ? previewFile.urlExpireAt : null"
+      :resource-id="previewFile ? previewFile.id : ''"
+      :course-id="previewFile ? previewFile.courseId : ''"
       :refresh-source="previewFile ? previewFile.refreshSource : null"
       :title="previewFile ? previewFile.name : ''"
       :allow-download="isTeacher ? '1' : '2'"
@@ -511,6 +513,8 @@ export default {
         return
       }
       this.previewFile = {
+        id: item.id || item.resourceId || '',
+        courseId: item.courseId || '',
         name: this.resourceFilename(item),
         path,
         extension,

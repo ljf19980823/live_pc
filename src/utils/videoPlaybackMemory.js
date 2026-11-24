@@ -2,45 +2,96 @@ import { getUserInfo } from '@/utils/auth'
 
 const STORAGE_PREFIX = 'lisheng_video_progress_v1:'
 const SAVE_INTERVAL = 5000
-// 保留决定视频身份的查询参数，只排除会随播放授权更新的签名参数。
 const AUTH_PARAMS = /^(auth_key|token|access_token|sign|signature|expires|expiration|security-token|ossaccesskeyid|x-oss-.*|x-amz-.*)$/i
+const SIGNED_URL_IN_KEY = /(?:[?&]|%3[fF]|%26)(?:auth_key|token|access_token|sign|signature|expires|expiration|security-token|ossaccesskeyid|x-oss-[^=&]*|x-amz-[^=&]*)(?:=|%3[dD])/i
+let signedUrlProgressKeysPurged = false
 
-function getStorageKey(source, videoId) {
-  let videoKey = source
-  if (videoId !== undefined && videoId !== null && videoId !== '') {
-    // Stable business identity keeps resume progress across signed URL renewals.
-    videoKey = `video:${String(videoId)}`
-  } else {
-    try {
-      const url = new URL(source, window.location.href)
-      Array.from(url.searchParams.keys()).forEach(key => {
-        if (AUTH_PARAMS.test(key)) url.searchParams.delete(key)
-      })
-      url.searchParams.sort()
-      url.hash = ''
-      videoKey = url.href
-    } catch (e) {}
-  }
-
+function getUserKey() {
   let user = {}
   try { user = getUserInfo() || {} } catch (e) {}
-  return STORAGE_PREFIX + JSON.stringify([
+  return [
     String(user.institutionId || ''),
-    String(user.userId ?? user.id ?? 'anonymous'),
-    videoKey
-  ])
+    String(user.userId ?? user.id ?? 'anonymous')
+  ]
 }
 
+function removeAuthParams(url) {
+  Array.from(url.searchParams.keys()).forEach(key => {
+    if (AUTH_PARAMS.test(key)) url.searchParams.delete(key)
+  })
+  url.searchParams.sort()
+  url.hash = ''
+  return url.href
+}
+
+function hashResourceIdentity(value) {
+  let first = 2166136261
+  let second = 5381
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index)
+    first = Math.imul(first ^ code, 16777619)
+    second = Math.imul(second, 33) ^ code
+  }
+  return `${(first >>> 0).toString(36)}${(second >>> 0).toString(36)}`
+}
+
+function getSourceIdentity(source) {
+  try {
+    const baseUrl = typeof window !== 'undefined' ? window.location.href : 'https://localhost/'
+    return removeAuthParams(new URL(source, baseUrl))
+  } catch (e) {
+    return String(source || '')
+      .replace(/([?&])(?:auth_key|token|access_token|sign|signature|expires|expiration|security-token|ossaccesskeyid|x-oss-[^=&]*|x-amz-[^=&]*)=[^&#]*/ig, '$1')
+      .replace(/[?&]$/, '')
+      .split('#')[0]
+  }
+}
+
+function getStorageKey(source, resourceId) {
+  const videoKey = resourceId !== undefined && resourceId !== null && resourceId !== ''
+    ? `resource:${String(resourceId)}`
+    : `source:${hashResourceIdentity(getSourceIdentity(source))}`
+  return STORAGE_PREFIX + JSON.stringify([...getUserKey(), videoKey])
+}
+
+// Previous versions used the unsigned URL as a storage key. Use it only to
+// migrate existing progress; new records always use an opaque resource key.
+function getLegacyStorageKey(source) {
+  try {
+    const baseUrl = typeof window !== 'undefined' ? window.location.href : 'https://localhost/'
+    const legacyIdentity = removeAuthParams(new URL(source, baseUrl))
+    return STORAGE_PREFIX + JSON.stringify([...getUserKey(), legacyIdentity])
+  } catch (e) {
+    return ''
+  }
+}
+
+function purgeSignedUrlProgressKeys() {
+  if (signedUrlProgressKeysPurged) return
+  signedUrlProgressKeysPurged = true
+  try {
+    for (let index = localStorage.length - 1; index >= 0; index--) {
+      const key = localStorage.key(index)
+      if (!key || !key.startsWith(STORAGE_PREFIX)) continue
+      const value = localStorage.getItem(key) || ''
+      if (SIGNED_URL_IN_KEY.test(key) || SIGNED_URL_IN_KEY.test(value)) localStorage.removeItem(key)
+    }
+  } catch (e) {}
+}
+
+purgeSignedUrlProgressKeys()
+
 /** 点播播放器共用的本机续播记录；绑定时固定账号和视频，避免切换时串写进度。 */
-export function rememberVideoPlayback(player, source, videoId) {
+export function rememberVideoPlayback(player, source, resourceId) {
   if (!player || !source) return { save() {}, destroy() {} }
 
-  const key = getStorageKey(source, videoId)
+  purgeSignedUrlProgressKeys()
+  const key = getStorageKey(source, resourceId)
   let restoreTime = 0
   try {
     let rawRecord = localStorage.getItem(key)
-    if (!rawRecord && videoId !== undefined && videoId !== null && videoId !== '') {
-      const legacyKey = getStorageKey(source)
+    const legacyKey = getLegacyStorageKey(source)
+    if (!rawRecord && legacyKey && legacyKey !== key) {
       rawRecord = localStorage.getItem(legacyKey)
       if (rawRecord) {
         localStorage.setItem(key, rawRecord)

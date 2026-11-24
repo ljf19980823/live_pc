@@ -167,12 +167,13 @@ import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css'
 import { getUserInfo } from '@/utils/auth'
 import { getLiveComments } from '@/api/modules/live'
 import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
-import { fileIsExpiring, getMediaRequestId, getPlaybackFile, isNotFoundMediaError, readPlaybackState, refreshClassroomVideos, restorePlaybackState } from '@/utils/classroomVideoPlayback'
+import { getMediaRequestId, getPlaybackFile, isExpiredPlaybackUrlError, isNotFoundMediaError, isTransientPlaybackRequestError, readPlaybackState, refreshClassroomVideos, refreshClassroomVideosForPlayback, restorePlaybackState } from '@/utils/classroomVideoPlayback'
 import { collectToggle } from '@/api'
 import VideoWatermark from '@/components/VideoWatermark'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
+import { createPlayerUuid, reportCdnPlaybackError } from '@/utils/cdnPlaybackErrorReport'
 
 const ALIPLAYER_LICENSE = {
   domain: 'fjlsjy123.com',
@@ -319,6 +320,7 @@ export default {
       teacherPlayerId: `hrp-listen-teacher-${uid}`,
       mainPlayer: null,
       teacherPlayer: null,
+      playerUuid: createPlayerUuid(),
       mainError: false,
       mainLoading: false,
       teacherError: false,
@@ -326,6 +328,7 @@ export default {
       runtimeTeacherSource: '',
       runtimePlaybackFiles: [],
       recoveryAttempts: { main: 0, teacher: 0 },
+      expiredUrlRecoveryAttempts: { main: 0, teacher: 0 },
       recoveryPromise: null,
       recoveryToken: 0,
       playerGeneration: 0,
@@ -474,6 +477,8 @@ export default {
       this.recoveryToken += 1
       this.recoveryPromise = null
       this.recoveryAttempts = { main: 0, teacher: 0 }
+      this.expiredUrlRecoveryAttempts = { main: 0, teacher: 0 }
+      this.playerUuid = createPlayerUuid()
       this.pendingPlaybackState = null
       this.runtimePlaybackFiles = this.playbackFiles.slice()
       this.runtimeMainSource = this.mainSource
@@ -542,12 +547,12 @@ export default {
       let teacherUnavailable = false
       try {
         const refreshableFiles = this.refreshContext
-          ? this.runtimePlaybackFiles.filter(file => file && file.videoId && fileIsExpiring(file))
+          ? this.runtimePlaybackFiles.filter(file => file && file.videoId)
           : []
         if (refreshableFiles.length) {
           let refreshedFiles = []
           try {
-            refreshedFiles = await refreshClassroomVideos(this.refreshContext, refreshableFiles.map(file => file.videoId))
+            refreshedFiles = await refreshClassroomVideosForPlayback(this.refreshContext, refreshableFiles.map(file => file.videoId))
             if (token !== this.recoveryToken || !(this.visible || this.inline)) return
           } catch (error) {
             if (refreshableFiles.some(file => String(file.videoType) !== '2')) throw error
@@ -573,6 +578,11 @@ export default {
         if (teacherUnavailable) this.teacherError = true
       } catch (error) {
         if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+        if (this.runtimeMainSource) {
+          console.warn('[Playback URL refresh failed; using listed URL]', error && error.message)
+          this.initPlayers()
+          return
+        }
         this.mainError = true
         this.mainLoading = false
         this.$message.error('刷新回放地址失败，请重新进入页面')
@@ -607,12 +617,36 @@ export default {
         const currentTime = Number(this.mainPlayer && this.mainPlayer.getCurrentTime()) || 0
         if ((this.visible || this.inline) && this.isMainPlaying && currentTime > startTime + 5) {
           this.recoveryAttempts = { main: 0, teacher: 0 }
+          this.expiredUrlRecoveryAttempts = { main: 0, teacher: 0 }
         }
       }, 30000)
     },
 
+    reportPlayerError(error, videoType) {
+      const file = this.getRuntimeFile(videoType) || {}
+      const player = videoType === '2' ? this.teacherPlayer : this.mainPlayer
+      const params = (this.refreshContext && this.refreshContext.params) || {}
+      const recoveryKey = videoType === '2' ? 'teacher' : 'main'
+      const videoElement = videoType === '2'
+        ? document.getElementById(this.teacherPlayerId)?.querySelector('video')
+        : this._mainVideoEl
+      const state = readPlaybackState(player, videoElement)
+      reportCdnPlaybackError({
+        error,
+        courseId: params.courseId || params.course_id || this.collectParams.courseId || '',
+        resourceId: file.resourceId || file.videoId || this.collectParams.historyLessonId || this.liveId,
+        file,
+        source: videoType === '2' ? this.runtimeTeacherSource : this.runtimeMainSource,
+        playerUuid: this.playerUuid,
+        stage: 'segment_load',
+        currentTimeSeconds: state.currentTime,
+        retryCount: this.recoveryAttempts[recoveryKey]
+      })
+    },
+
     async handleMediaError(error, videoType) {
       if (!(this.visible || this.inline)) return
+      this.reportPlayerError(error, videoType)
       if (isNotFoundMediaError(error)) {
         const file = this.getRuntimeFile(videoType)
         console.warn('[Playback 404]', { videoId: file && file.videoId, time: Date.now(), status: 404, requestId: getMediaRequestId(error) })
@@ -622,7 +656,15 @@ export default {
         this.$message.warning('回放文件不存在，请联系管理员')
         return
       }
+      const refreshLatestUrl = isExpiredPlaybackUrlError(error)
+      if (!refreshLatestUrl && isTransientPlaybackRequestError(error)) return
       const recoveryKey = videoType === '2' ? 'teacher' : 'main'
+      if (refreshLatestUrl && this.expiredUrlRecoveryAttempts[recoveryKey] >= 1) {
+        if (videoType === '1') this.mainError = true
+        else this.teacherError = true
+        if (videoType === '1') this.mainLoading = false
+        return
+      }
       if (this.recoveryAttempts[recoveryKey] >= 2) {
         if (videoType === '1') this.mainError = true
         else this.teacherError = true
@@ -630,17 +672,34 @@ export default {
         return
       }
       this.recoveryAttempts[recoveryKey] += 1
-      await this.retryPlayback(videoType, this.captureMainPlaybackState())
+      if (refreshLatestUrl) this.expiredUrlRecoveryAttempts[recoveryKey] += 1
+      await this.retryPlayback(videoType, this.captureMainPlaybackState(), refreshLatestUrl)
     },
 
-    async retryPlayback(videoType, state) {
+    async retryPlayback(videoType, state, refreshLatestUrl = false) {
       if (this.recoveryPromise) return this.recoveryPromise
       const token = this.recoveryToken
       const recoveryPromise = (async () => {
         try {
           await new Promise(resolve => setTimeout(resolve, 1500))
           if (token !== this.recoveryToken || !(this.visible || this.inline)) return
-          if (videoType === '2') {
+          let refreshedLatestUrls = false
+          const filesWithIds = this.runtimePlaybackFiles.filter(file => file && file.videoId)
+          const failedFile = this.getRuntimeFile(videoType)
+          if (refreshLatestUrl && this.refreshContext && failedFile && failedFile.videoId) {
+            try {
+              const refreshedFiles = await refreshClassroomVideos(this.refreshContext, filesWithIds.map(file => file.videoId))
+              if (token !== this.recoveryToken || !(this.visible || this.inline)) return
+              if (!refreshedFiles.some(file => String(file.videoId) === String(failedFile.videoId))) {
+                throw new Error('刷新结果中没有找到失败的视频')
+              }
+              refreshedFiles.forEach(file => this.replaceRuntimeFile(file))
+              refreshedLatestUrls = true
+            } catch (error) {
+              console.warn('[Playback URL refresh failed]', { videoId: failedFile.videoId, time: Date.now() })
+            }
+          }
+          if (videoType === '2' && !refreshedLatestUrls) {
             this.teacherError = false
             this.destroyTeacherPlayer()
             this.initTeacherPlayer({

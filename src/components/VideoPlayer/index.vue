@@ -73,8 +73,10 @@ import { rememberVideoPlayback } from '@/utils/videoPlaybackMemory'
 import { attachAliplayerControls } from '@/utils/aliplayerControls'
 import { attachVideoPlayerControlSkin } from '@/utils/videoPlayerControlSkin'
 import { ALIPLAYER_SPEED_LEVELS } from '@/utils/aliplayerConfig'
+import { isExpiredPlaybackUrlError, isTransientPlaybackRequestError } from '@/utils/classroomVideoPlayback'
 import { isResourceUrlExpiring } from '@/utils/resource'
 import { collectToggle } from '@/api'
+import { createPlayerUuid, reportCdnPlaybackError } from '@/utils/cdnPlaybackErrorReport'
 
 /** 阿里云播放器 License 配置 */
 const ALIPLAYER_LICENSE = {
@@ -114,6 +116,17 @@ export default {
     sourceExpireAt: {
       type: [String, Number],
       default: null
+    },
+
+    /** Stable resource ID used for resume progress; never persist the signed URL. */
+    resourceId: {
+      type: [String, Number],
+      default: ''
+    },
+
+    courseId: {
+      type: [String, Number],
+      default: ''
     },
 
     /** Re-fetch the owning business record and return its refreshed URL fields. */
@@ -194,12 +207,15 @@ export default {
       playerInstance: null,
       /** 播放器挂载的 DOM 容器 id，每个组件实例唯一 */
       playerId: `aliplayer-${++playerIdCounter}`,
+      playerUuid: createPlayerUuid(),
       runtimeSource: this.source,
       runtimeExpireAt: this.sourceExpireAt,
       sourceRetryCount: 0,
+      expiredUrlRetryAttempted: false,
       sourceRetryTimer: null,
       mediaErrorReported: false,
       initGeneration: 0,
+      playerInitScheduled: false,
       sourceRefreshPromise: null,
       sourceStablePlaybackTimer: null,
       /** 是否已收藏 */
@@ -220,10 +236,10 @@ export default {
         this.setScreenGuard(true)
         this.isCollected = Number(this.collectParams.collectCount || 0) === 1
         this.sourceRetryCount = 0
+        this.expiredUrlRetryAttempted = false
         this.mediaErrorReported = false
-        this.$nextTick(() => {
-          this.initPlayer()
-        })
+        this.playerUuid = createPlayerUuid()
+        this.schedulePlayerInit(true)
       } else {
         this.initGeneration++
         clearTimeout(this.sourceStablePlaybackTimer)
@@ -238,13 +254,13 @@ export default {
       this.runtimeSource = val
       this.runtimeExpireAt = this.sourceExpireAt
       this.sourceRetryCount = 0
+      this.expiredUrlRetryAttempted = false
       this.mediaErrorReported = false
+      this.playerUuid = createPlayerUuid()
       clearTimeout(this.sourceStablePlaybackTimer)
       this.sourceStablePlaybackTimer = null
       if (this.visible && val) {
-        this.$nextTick(() => {
-          this.initPlayer()
-        })
+        this.schedulePlayerInit(true)
       }
     },
 
@@ -253,6 +269,15 @@ export default {
     }
   },
   methods: {
+    schedulePlayerInit(forceRefreshAddress = false) {
+      if (this.playerInitScheduled) return
+      this.playerInitScheduled = true
+      this.$nextTick(() => {
+        this.playerInitScheduled = false
+        if (this.visible) this.initPlayer(null, forceRefreshAddress)
+      })
+    },
+
     setScreenGuard(enabled) {
       if (window.electronAPI?.setScreenGuard) {
         window.electronAPI.setScreenGuard(enabled, { allowScreenshots: enabled })
@@ -265,7 +290,7 @@ export default {
      * 2. 销毁已有实例，防止重复创建
      * 3. 创建新的 Aliplayer 实例并绑定到容器
      */
-    async initPlayer(restoreState = null) {
+    async initPlayer(restoreState = null, forceRefreshAddress = false) {
       const generation = ++this.initGeneration
       this.initError = false
       this.mediaErrorReported = false
@@ -277,9 +302,9 @@ export default {
 
       this.destroyPlayer()
 
-      // Refresh only when the URL is known to be near expiry. Keep the signed
-      // URL stable for the lifetime of this playback session.
-      if (this.refreshSource && isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource)) {
+      // Fetch a fresh signed address whenever playback starts; also renew URLs
+      // that approach their backend-reported expiry during the same session.
+      if (this.refreshSource && (forceRefreshAddress || isResourceUrlExpiring(this.runtimeExpireAt, 30000, Date.now(), this.runtimeSource))) {
         try {
           await this.refreshCurrentSource()
         } catch (e) {
@@ -349,7 +374,7 @@ export default {
             })
           }
         })
-        this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.runtimeSource)
+        this._playbackMemory = rememberVideoPlayback(this.playerInstance, this.runtimeSource, this.resourceId)
       } catch (e) {
         console.error('VideoPlayer: 播放器初始化失败', e)
         if (generation === this.initGeneration) this.initError = true
@@ -444,12 +469,54 @@ export default {
         let isPlaying = false
         try { currentTime = Number(this.playerInstance && this.playerInstance.getCurrentTime()) || 0 } catch (e) {}
         try { isPlaying = this.playerInstance && this.playerInstance.getStatus() === 'playing' } catch (e) {}
-        if (this.visible && isPlaying && currentTime > startTime + 5) this.sourceRetryCount = 0
+        if (this.visible && isPlaying && currentTime > startTime + 5) {
+          this.sourceRetryCount = 0
+          this.expiredUrlRetryAttempted = false
+        }
       }, 30000)
     },
 
-    async handleSourceError() {
-      if (!this.visible || this.mediaErrorReported || this.sourceRetryTimer) return
+    reportPlayerError(error) {
+      const videoElement = document.getElementById(this.playerId)?.querySelector('video')
+      let currentTimeSeconds = 0
+      try { currentTimeSeconds = Number(videoElement ? videoElement.currentTime : this.playerInstance && this.playerInstance.getCurrentTime()) || 0 } catch (e) {}
+      reportCdnPlaybackError({
+        error,
+        courseId: this.courseId || this.collectParams.courseId || '',
+        resourceId: this.resourceId || this.collectParams.resourceId || this.collectParams.lessonId || this.collectParams.historyLessonId || '',
+        file: { filePath: this.runtimeSource, urlExpireAt: this.runtimeExpireAt, resourceId: this.resourceId },
+        source: this.runtimeSource,
+        playerUuid: this.playerUuid,
+        stage: 'segment_load',
+        currentTimeSeconds,
+        retryCount: this.sourceRetryCount
+      })
+    },
+
+    async handleSourceError(error) {
+      if (!this.visible || this.mediaErrorReported) return
+      this.reportPlayerError(error)
+      if (this.sourceRetryTimer) return
+      const refreshLatestUrl = isExpiredPlaybackUrlError(error)
+      if (!refreshLatestUrl && isTransientPlaybackRequestError(error)) return
+      if (refreshLatestUrl) {
+        if (this.expiredUrlRetryAttempted) {
+          this.mediaErrorReported = true
+          this.initError = true
+          this.$message.error('视频访问失败，请重试')
+          return
+        }
+        this.expiredUrlRetryAttempted = true
+        const failedPlayer = this.playerInstance
+        const state = this.capturePlayerState()
+        try { if (failedPlayer) failedPlayer.pause() } catch (e) {}
+        this.sourceRetryTimer = setTimeout(() => {
+          this.sourceRetryTimer = null
+          if (!this.visible || this.playerInstance !== failedPlayer) return
+          this.initPlayer(state, true)
+        }, 1500)
+        return
+      }
       if (this.sourceRetryCount < 2) {
         this.sourceRetryCount += 1
         const failedPlayer = this.playerInstance
