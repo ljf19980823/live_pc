@@ -88,14 +88,14 @@ test('production H5 served on localhost still requires the date key', () => {
 })
 
 test('production H5 allows login without debug only on the exact test hostname', async () => {
-  const testSite = harness('https://live.fjlsjy123.com/#/login')
+  const testSite = harness('https://test.live.fjlsjy123.com/#/login')
   assert.equal(testSite.page.loginAllowed, true)
   await testSite.page.handleLogin()
   assert.equal(testSite.calls[0]?.name, 'ssoLogin')
   testSite.page.$destroy()
 
-  assert.equal(harness('https://live.fjlsjy123.com/#/login').allowed(), false)
-  assert.equal(harness('https://live.fjlsjy123.com.example.com/#/login').allowed(), false)
+  assert.equal(harness('https://test.live.fjlsjy123.com/#/login').allowed(), false)
+  assert.equal(harness('https://test.live.fjlsjy123.com.example.com/#/login').allowed(), false)
 })
 
 test('Electron bridge allows login without debug; an empty bridge does not', () => {
